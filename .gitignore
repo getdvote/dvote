@@ -27,7 +27,7 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 
-/generated/prisma
+apps/api/generated/prisma/
 
 # AI tool folders (only .claude is used)
 .agents/
@@ -38,3 +38,17 @@ Thumbs.db
 # Prisma AI skills (not used)
 .claude/skills/
 skills-lock.json
+# Flutter / Dart (apps/mobile)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+apps/mobile/build/
+apps/mobile/android/local.properties
+apps/mobile/ios/Flutter/Generated.xcconfig
+apps/mobile/ios/Pods/
+*.iml
+
+# Vite (apps/dashboard)
+apps/dashboard/.vite/

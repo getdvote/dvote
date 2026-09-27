@@ -26,7 +26,9 @@ Full spec: `docs/Coffee_Loyalty_Platform_Documentation_v1.2.pdf`. Database sourc
 - **NFC tags:** NTAG 424 DNA with SUN from day one (signed, counter-based taps). Tag secret keys live in a secrets manager/KMS; DB stores only `key_ref`.
 - **Hosting v1:** one backend container + one managed PostgreSQL. No microservices, queues or Redis.
 
-## Suggested repo layout
+## Repo layout (monorepo)
+
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `dashboard`, `mobile` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when `api-client`/`dashboard` get a `package.json`).
 
 ```
 dvote/
@@ -47,7 +49,7 @@ dvote/
 
 ## Database
 
-Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it).
+Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; the baseline `0_init` migration is applied and matches `database/dvote_schema.sql`.
 
 The schema was created with raw SQL (`database/dvote_schema.sql`) and is already applied to the local `dvote` database. **Prisma must adopt it, not recreate it:**
 
