@@ -1,0 +1,322 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model branches {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id    String         @db.Uuid
+  name         String         @db.VarChar(120)
+  address      String?        @db.VarChar(500)
+  lat          Decimal?       @db.Decimal(9, 6)
+  lng          Decimal?       @db.Decimal(9, 6)
+  timezone     String         @default("Africa/Cairo") @db.VarChar(64)
+  status       branch_status  @default(active)
+  created_at   DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
+  vendors      vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fraud_flags  fraud_flags[]
+  nfc_tags     nfc_tags[]
+  point_events point_events[]
+  redemptions  redemptions[]
+  staff_users  staff_users[]
+
+  @@unique([id, vendor_id])
+  @@index([vendor_id], map: "branches_vendor_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fraud_flags {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            fraud_flag_type
+  vendor_id       String?           @db.Uuid
+  branch_id       String?           @db.Uuid
+  user_id         String?           @db.Uuid
+  tag_id          String?           @db.Uuid
+  details         Json              @default("{}")
+  status          fraud_flag_status @default(open)
+  reviewed_by     String?           @db.Uuid
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  branches        branches?         @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platform_admins platform_admins?  @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  nfc_tags        nfc_tags?         @relation(fields: [tag_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users           users?            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors         vendors?          @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status, created_at], map: "fraud_flags_status_time_idx")
+  @@index([vendor_id], map: "fraud_flags_vendor_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model nfc_tags {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branch_id     String          @db.Uuid
+  tag_uid       String          @unique @db.VarChar(32)
+  key_ref       String          @db.VarChar(255)
+  last_counter  BigInt          @default(0)
+  status        tag_status      @default(active)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  fraud_flags   fraud_flags[]
+  branches      branches        @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  point_events  point_events[]
+  scan_sessions scan_sessions[]
+
+  @@index([branch_id], map: "nfc_tags_branch_idx")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model platform_admins {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String         @db.VarChar(120)
+  email           String         @db.VarChar(255)
+  password_hash   String         @db.VarChar(255)
+  totp_secret_ref String?        @db.VarChar(255)
+  status          account_status @default(active)
+  created_at      DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime       @default(now()) @db.Timestamptz(6)
+  fraud_flags     fraud_flags[]
+  point_events    point_events[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model point_events {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wallet_id       String           @db.Uuid
+  branch_id       String           @db.Uuid
+  session_id      String?          @unique(map: "point_events_session_uq", where: raw("(session_id IS NOT NULL)")) @db.Uuid
+  tag_id          String?          @db.Uuid
+  type            point_event_type
+  delta           Int
+  idempotency_key String           @unique @db.VarChar(100)
+  created_by      String?          @db.Uuid
+  reason          String?          @db.VarChar(500)
+  created_at      DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime         @default(now()) @db.Timestamptz(6)
+  branches        branches         @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platform_admins platform_admins? @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  scan_sessions   scan_sessions?   @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  nfc_tags        nfc_tags?        @relation(fields: [tag_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wallets         wallets          @relation(fields: [wallet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  redemptions     redemptions?
+
+  @@index([branch_id, created_at], map: "point_events_branch_time_idx")
+  @@index([wallet_id, branch_id, created_at(sort: Desc)], map: "point_events_cooldown_idx")
+  @@index([wallet_id, created_at], map: "point_events_wallet_time_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model programs {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id          String        @unique(map: "programs_one_active_uq", where: raw("is_active")) @db.Uuid
+  version            Int
+  points_required    Int           @default(5)
+  reward_description String        @default("1 free coffee") @db.VarChar(255)
+  cooldown_minutes   Int           @default(10)
+  is_active          Boolean       @default(true)
+  created_at         DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime      @default(now()) @db.Timestamptz(6)
+  vendors            vendors       @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  redemptions        redemptions[]
+  wallets            wallets[]
+
+  @@unique([id, vendor_id])
+  @@unique([vendor_id, version])
+}
+
+model redemptions {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wallet_id      String       @db.Uuid
+  program_id     String       @db.Uuid
+  branch_id      String       @db.Uuid
+  point_event_id String       @unique @db.Uuid
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  branches       branches     @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  point_events   point_events @relation(fields: [point_event_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  programs       programs     @relation(fields: [program_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wallets        wallets      @relation(fields: [wallet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([branch_id, created_at], map: "redemptions_branch_time_idx")
+  @@index([wallet_id], map: "redemptions_wallet_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model scan_sessions {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String         @db.Uuid
+  vendor_id     String?        @db.Uuid
+  tag_id        String?        @db.Uuid
+  mode          scan_mode
+  status        session_status @default(open)
+  expires_at    DateTime       @default(dbgenerated("(now() + '00:01:30'::interval)")) @db.Timestamptz(6)
+  reject_reason String?        @db.VarChar(100)
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
+  point_events  point_events?
+  nfc_tags      nfc_tags?      @relation(fields: [tag_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users         users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors       vendors?       @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, created_at(sort: Desc)], map: "scan_sessions_user_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model staff_users {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id     String         @db.Uuid
+  branch_id     String?        @db.Uuid
+  name          String         @db.VarChar(120)
+  email         String         @db.VarChar(255)
+  password_hash String         @db.VarChar(255)
+  role          staff_role
+  status        account_status @default(active)
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
+  branches      branches?      @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  vendors       vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([vendor_id], map: "staff_users_vendor_idx")
+}
+
+model user_identities {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String        @db.Uuid
+  provider         auth_provider
+  provider_user_id String        @db.VarChar(255)
+  email            String?       @db.VarChar(255)
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime      @default(now()) @db.Timestamptz(6)
+  users            users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([provider, provider_user_id])
+  @@index([user_id], map: "user_identities_user_idx")
+}
+
+model users {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String?           @db.VarChar(120)
+  email           String?           @db.VarChar(255)
+  avatar_url      String?           @db.VarChar(500)
+  phone           String?           @db.VarChar(20)
+  status          user_status       @default(active)
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  fraud_flags     fraud_flags[]
+  scan_sessions   scan_sessions[]
+  user_identities user_identities[]
+  wallets         wallets[]
+}
+
+model vendors {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String          @db.VarChar(120)
+  logo_url      String?         @db.VarChar(500)
+  contact_email String?         @db.VarChar(255)
+  status        vendor_status   @default(active)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  branches      branches[]
+  fraud_flags   fraud_flags[]
+  programs      programs?
+  scan_sessions scan_sessions[]
+  staff_users   staff_users[]
+  wallets       wallets[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model wallets {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String         @db.Uuid
+  vendor_id       String         @db.Uuid
+  program_id      String         @db.Uuid
+  balance         Int            @default(0)
+  lifetime_points Int            @default(0)
+  created_at      DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime       @default(now()) @db.Timestamptz(6)
+  point_events    point_events[]
+  redemptions     redemptions[]
+  programs        programs       @relation(fields: [program_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  users           users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors         vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, vendor_id])
+  @@index([vendor_id], map: "wallets_vendor_idx")
+}
+
+enum account_status {
+  active
+  disabled
+}
+
+enum auth_provider {
+  google
+  facebook
+  apple
+}
+
+enum branch_status {
+  active
+  closed
+}
+
+enum fraud_flag_status {
+  open
+  dismissed
+  confirmed
+}
+
+enum fraud_flag_type {
+  too_many_earns
+  branch_spike
+  tag_counter_anomaly
+  far_location
+}
+
+enum point_event_type {
+  earn
+  redeem
+  adjust
+}
+
+enum scan_mode {
+  earn
+  redeem
+}
+
+enum session_status {
+  open
+  consumed
+  expired
+  rejected
+}
+
+enum staff_role {
+  vendor_admin
+  branch_manager
+  staff
+}
+
+enum tag_status {
+  active
+  lost
+  revoked
+}
+
+enum user_status {
+  active
+  blocked
+}
+
+enum vendor_status {
+  active
+  suspended
+}
