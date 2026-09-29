@@ -7,7 +7,7 @@ Three clients:
 
 | Client | Users | Purpose |
 |---|---|---|
-| Mobile app (Flutter, iOS + Android) | Customers | Sign in, request a point, see wallets/history, claim free coffee |
+| Mobile app (React Native + Expo, iOS + Android) | Customers | Sign in, request a point, see wallets/history, claim free coffee |
 | Vendor dashboard (React, web) | Vendor admins, branch managers, staff | Own branches, staff, NFC cards, program rules, reports |
 | Admin dashboard (React, web) | Platform admins | All vendors, onboarding, tags, fraud review, support |
 
@@ -19,10 +19,12 @@ Full spec: `docs/Coffee_Loyalty_Platform_Documentation_v1.2.pdf`. Database sourc
 
 - **Backend:** NestJS (TypeScript), Prisma ORM, PostgreSQL 18
 - **Web dashboards:** React + TypeScript (Vite), Ant Design, TanStack Query, Recharts. One app, role-based routes for vendor and admin.
-- **Mobile:** Flutter (Dart), `nfc_manager` for NFC
-- **API contract:** OpenAPI generated from NestJS → typed Dart client (Flutter) and TypeScript client (React)
-- **Customer auth:** Google, Facebook, Apple sign-in (NO phone/OTP). Backend verifies the provider ID token and issues its own JWT access + refresh tokens.
-- **Staff / admin auth:** email + password (bcrypt/argon2), JWT. Platform admins also have 2FA (TOTP).
+- **Mobile:** React Native + Expo (TypeScript), `react-native-nfc-manager` for NFC (NTAG 424 DNA SUN reads), `@supabase/supabase-js` for sign-in. NFC is a native module, so the app runs as an Expo **development build** (not Expo Go).
+- **API contract:** OpenAPI generated from NestJS → one typed TypeScript client (`packages/api-client`) shared by the React dashboard and the React Native app. One language (TypeScript) across backend, web and mobile.
+- **Auth: Supabase Auth (auth only — the database is NOT on Supabase).** Supabase issues and refreshes all tokens; NestJS only verifies them locally against the project's JWKS (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, via `jose`) and maps the token's `sub` to our own rows. NestJS never issues JWTs.
+- **Customer auth:** Google and Facebook sign-in through Supabase (NO phone/OTP, no email/password, no anonymous — the guard rejects other providers with `provider_not_allowed`). Supabase links providers with the same verified email into one auth user. `users.auth_user_id` = Supabase user id; the row is created on the customer's first API call.
+  - **Apple is postponed** (needs the paid Apple Developer Program, $99/yr). To add it: enable it in Supabase and add `'apple'` to `CUSTOMER_PROVIDERS` in `auth/customer-auth.guard.ts`. An iOS App Store release that offers Google/Facebook login will likely need Sign in with Apple too (App Store guideline 4.8).
+- **Staff / admin auth (decided, build in step 5):** also Supabase, email + password. Accounts are invite-only (created server-side), and our `staff_users` / `platform_admins` row decides the role. Platform admins use Supabase MFA (TOTP); require `aal2` in the token. This needs a migration adding `auth_user_id` to both tables and making `password_hash` nullable.
 - **NFC tags:** NTAG 424 DNA with SUN from day one (signed, counter-based taps). Tag secret keys live in a secrets manager/KMS; DB stores only `key_ref`.
 - **Hosting v1:** one backend container + one managed PostgreSQL. No microservices, queues or Redis.
 
@@ -40,7 +42,7 @@ dvote/
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
-│   └── mobile/                # Flutter
+│   └── mobile/                # React Native (Expo)
 └── packages/
     └── api-client/            # generated TS client from OpenAPI
 ```
@@ -49,13 +51,13 @@ dvote/
 
 ## Database
 
-Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; the baseline `0_init` migration is applied and matches `database/dvote_schema.sql`.
+Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; migrations `0_init` (baseline) and `1_users_auth_user_id` are applied, and `database/dvote_schema.sql` includes both. The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
 
 The schema was created with raw SQL (`database/dvote_schema.sql`) and is already applied to the local `dvote` database. **Prisma must adopt it, not recreate it:**
 
 1. `npx prisma db pull` → generates `schema.prisma` from the live DB.
 2. Baseline: copy `dvote_schema.sql` to `prisma/migrations/0_init/migration.sql`, then `npx prisma migrate resolve --applied 0_init`.
-3. Future changes: `npx prisma migrate dev --create-only`, then hand-edit the SQL when needed. Prisma cannot express the partial unique indexes, CHECK constraints or triggers below, so **never let a Prisma migration drop them**.
+3. Future changes: hand-write `prisma/migrations/<n>_<name>/migration.sql` (idempotent where possible), update `schema.prisma` to match, apply with `npx prisma migrate deploy`, run `npx prisma generate`, and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints or triggers below, so **never let a Prisma migration drop them**.
 
 ### Tables (13)
 
@@ -66,8 +68,8 @@ The schema was created with raw SQL (`database/dvote_schema.sql`) and is already
 | `staff_users` | vendor | role: vendor_admin (branch_id NULL) / branch_manager / staff (branch_id required) |
 | `nfc_tags` | vendor | NTAG 424 card per branch. `tag_uid` unique, `key_ref`, `last_counter` |
 | `programs` | vendor | Reward rules ("settings"): `points_required`, `reward_description`, `cooldown_minutes`, `version`, `is_active` |
-| `users` | customer | Customers. email nullable (Apple can hide it), phone optional |
-| `user_identities` | customer | (provider, provider_user_id) unique → user. One user can link Google + Apple + Facebook |
+| `users` | customer | Customers. email nullable (a provider may not share it), phone optional |
+| `user_identities` | customer | (provider, provider_user_id) unique → user. **Currently unused:** Supabase handles provider identities and linking |
 | `wallets` | customer | One per (user, vendor). `balance` (cached), `lifetime_points`, `program_id` |
 | `scan_sessions` | activity | One per button press. mode earn/redeem, status open/consumed/expired/rejected, expires in 90 s |
 | `point_events` | activity | **Ledger, append-only.** type earn(+1)/redeem(−N)/adjust(±, admin + reason) |
@@ -152,11 +154,9 @@ Run the batch rules as a scheduled job; the counter anomaly can be flagged inlin
 
 ## API endpoints
 
-### Mobile — `/api/app` (customer JWT)
+### Mobile — `/api/app` (Supabase access token, `CustomerAuthGuard`)
 | Method | Path | Purpose |
 |---|---|---|
-| POST | /auth/social | `{provider, idToken}` → verify with Google/Facebook/Apple, find/create user via `user_identities`, return tokens |
-| POST | /auth/refresh | Refresh token → new access token |
 | GET / PATCH | /me | Profile / update name, email, phone |
 | GET | /wallets | All wallets: vendor, balance, points_required, remaining |
 | GET | /wallets/{id}/events | History for one vendor |
@@ -164,7 +164,7 @@ Run the batch rules as a scheduled job; the counter anomaly can be flagged inlin
 | POST | /scan-sessions | Open session `{mode, vendorId?}` |
 | POST | /scan-sessions/{id}/complete | `{payload, idempotencyKey}` → result + new balance |
 
-Account linking: if a verified provider email matches an existing user, attach a new `user_identities` row to that user instead of creating a duplicate.
+Sign-in, refresh and account linking happen in the app through the Supabase SDK — there are no `/auth/*` endpoints. Auth errors use stable codes: `missing_token`, `invalid_token`, `token_expired` (401); `provider_not_allowed`, `user_blocked` (403).
 
 ### Vendor — `/api/vendor` (staff JWT, always scoped to staff's vendor)
 `GET /summary?from&to` · `GET|POST|PATCH /branches` · `GET /events?branch_id&from&to` · `GET /redemptions` · `GET|POST|PATCH /staff` · `GET|POST /programs` (POST publishes a new version) · `POST /tags/{id}/report-lost` · `GET /fraud/flags` (own branches, read-only). Vendors never see customer names/emails, only counts.
@@ -187,12 +187,12 @@ Node `crypto` has AES but no CMAC. Use a well-tested CMAC package or implement R
 
 ## Build order
 
-1. `apps/api`: NestJS scaffold, Prisma `db pull` + baseline, seed (Joy Corner), health check.
-2. Customer auth (Google, Facebook, Apple) + JWT.
+1. `apps/api`: NestJS scaffold, Prisma `db pull` + baseline, seed (Joy Corner), health check. ✅
+2. Customer auth (Google, Facebook; Apple postponed) via Supabase + `GET|PATCH /api/app/me`. ✅ backend done.
 3. Scan sessions + earn flow + wallets, with integration tests against a real Postgres.
 4. Redemption flow.
 5. Vendor and admin APIs, fraud-flag job, then the React dashboards.
-6. Flutter app (generated Dart client).
+6. React Native (Expo) app, using the shared `packages/api-client`.
 
 ## Must-have tests
 

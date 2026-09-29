@@ -27,7 +27,7 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 
-apps/api/generated/prisma/
+apps/api/src/generated/
 
 # AI tool folders (only .claude is used)
 .agents/
@@ -38,17 +38,19 @@ apps/api/generated/prisma/
 # Prisma AI skills (not used)
 .claude/skills/
 skills-lock.json
-# Flutter / Dart (apps/mobile)
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-apps/mobile/build/
-apps/mobile/android/local.properties
-apps/mobile/ios/Flutter/Generated.xcconfig
-apps/mobile/ios/Pods/
+# React Native / Expo (apps/mobile)
+.expo/
+web-build/
+apps/mobile/android/
+apps/mobile/ios/
+*.jks
+*.keystore
+*.mobileprovision
+*.p12
 *.iml
 
 # Vite (apps/dashboard)
 apps/dashboard/.vite/
+
+# Apple / signing keys (never commit)
+*.p8

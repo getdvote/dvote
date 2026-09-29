@@ -134,10 +134,12 @@ CREATE TABLE users (
     email       varchar(255),                 -- Apple may hide it; not unique
     avatar_url  varchar(500),
     phone       varchar(20),                  -- optional, not used for login
+    auth_user_id uuid,                        -- Supabase Auth user id (migration 1_users_auth_user_id)
     status      user_status NOT NULL DEFAULT 'active',
     created_at  timestamptz NOT NULL DEFAULT now(),
     updated_at  timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX users_auth_user_id_key ON users (auth_user_id);
 
 CREATE TABLE user_identities (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
