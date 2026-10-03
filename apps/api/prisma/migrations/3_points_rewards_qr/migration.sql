@@ -1,111 +1,55 @@
 -- =====================================================================
---  dvote — Loyalty Platform schema (v2.0: spend-based points, rewards, one-time QR codes)
---  Target: PostgreSQL 18 (also runs on 13+)
---  Run in pgAdmin: open the Query Tool ON THE dvote DATABASE, paste, F5.
---  Wrapped in one transaction: if anything fails, nothing is created.
+--  v2.0 business model: spend-based points, vendor rewards, one-time QR codes.
+--  Replaces NFC cards, "buy N get 1" programs, wallets and scan sessions.
+--  Keeps vendors, branches, staff_users, users, user_identities, platform_admins.
 --
---  A database built from this file already matches every Prisma migration; mark them
---  applied (from apps/api):  npx prisma migrate resolve --applied <name>
---  for 0_init, 1_users_auth_user_id, 2_staff_users_auth_user_id, 3_points_rewards_qr.
+--  NOT idempotent (it drops the v1 loyalty tables). A database built from the
+--  v2.0 database/dvote_schema.sql already has this shape: mark it applied with
+--    npx prisma migrate resolve --applied 3_points_rewards_qr
 -- =====================================================================
-BEGIN;
 
--- ---------------------------------------------------------------------
--- 1. ENUM TYPES
--- ---------------------------------------------------------------------
-CREATE TYPE vendor_status       AS ENUM ('active', 'suspended');
-CREATE TYPE branch_status       AS ENUM ('active', 'closed');
-CREATE TYPE staff_role          AS ENUM ('vendor_admin', 'branch_manager', 'staff');
-CREATE TYPE account_status      AS ENUM ('active', 'disabled');          -- staff + platform admins
-CREATE TYPE user_status         AS ENUM ('active', 'blocked');           -- customers
-CREATE TYPE auth_provider       AS ENUM ('google', 'facebook', 'apple');
-CREATE TYPE reward_status       AS ENUM ('active', 'archived');
-CREATE TYPE qr_purpose          AS ENUM ('collect', 'redeem');
-CREATE TYPE qr_status           AS ENUM ('active', 'used', 'expired', 'cancelled');
-CREATE TYPE point_event_type    AS ENUM ('earn', 'redeem', 'adjust');
-CREATE TYPE fraud_flag_type     AS ENUM ('too_many_collects', 'large_purchase', 'branch_spike', 'staff_spike');
-CREATE TYPE fraud_flag_status   AS ENUM ('open', 'dismissed', 'confirmed');
-
--- ---------------------------------------------------------------------
--- 2. HELPER: keep updated_at current on every UPDATE
--- ---------------------------------------------------------------------
-CREATE FUNCTION set_updated_at() RETURNS trigger
-LANGUAGE plpgsql AS $$
+-- Refuse to run twice (e.g. on a database built from the v2.0 schema file).
+DO $$
 BEGIN
-    NEW.updated_at := now();
-    RETURN NEW;
+    IF to_regclass('public.cards') IS NOT NULL THEN
+        RAISE EXCEPTION 'v2.0 tables already exist; run: prisma migrate resolve --applied 3_points_rewards_qr';
+    END IF;
 END;
 $$;
 
 -- ---------------------------------------------------------------------
--- 3. PLATFORM SIDE
+-- 1. Drop the v1 loyalty tables (order respects foreign keys)
 -- ---------------------------------------------------------------------
-CREATE TABLE platform_admins (
-    id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name             varchar(120)   NOT NULL,
-    email            varchar(255)   NOT NULL,
-    password_hash    varchar(255)   NOT NULL,
-    totp_secret_ref  varchar(255),                       -- 2FA secret lives in the secrets store
-    status           account_status NOT NULL DEFAULT 'active',
-    created_at       timestamptz    NOT NULL DEFAULT now(),
-    updated_at       timestamptz    NOT NULL DEFAULT now()
-);
-CREATE UNIQUE INDEX platform_admins_email_uq ON platform_admins (lower(email));
+DROP TABLE redemptions;
+DROP TABLE point_events;            -- its append-only trigger goes with it
+DROP TABLE scan_sessions;
+DROP TABLE wallets;
+DROP TABLE fraud_flags;
+DROP TABLE nfc_tags;
+DROP TABLE programs;
+DROP FUNCTION point_events_block_changes();
+
+DROP TYPE tag_status;
+DROP TYPE scan_mode;
+DROP TYPE session_status;
+DROP TYPE fraud_flag_type;
 
 -- ---------------------------------------------------------------------
--- 4. VENDOR SIDE
+-- 2. Vendor currency (receipt totals are in the vendor's currency)
 -- ---------------------------------------------------------------------
-CREATE TABLE vendors (
-    id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name           varchar(120)  NOT NULL,
-    logo_url       varchar(500),
-    contact_email  varchar(255),
-    currency       char(3)       NOT NULL DEFAULT 'EGP',    -- receipt totals are in this currency
-    status         vendor_status NOT NULL DEFAULT 'active',
-    created_at     timestamptz   NOT NULL DEFAULT now(),
-    updated_at     timestamptz   NOT NULL DEFAULT now()
-);
+ALTER TABLE vendors ADD COLUMN currency char(3) NOT NULL DEFAULT 'EGP';
 
-CREATE TABLE branches (
-    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    vendor_id   uuid          NOT NULL REFERENCES vendors (id),
-    name        varchar(120)  NOT NULL,
-    address     varchar(500),
-    lat         decimal(9,6)  CHECK (lat BETWEEN -90 AND 90),
-    lng         decimal(9,6)  CHECK (lng BETWEEN -180 AND 180),
-    timezone    varchar(64)   NOT NULL DEFAULT 'Africa/Cairo',
-    status      branch_status NOT NULL DEFAULT 'active',
-    created_at  timestamptz   NOT NULL DEFAULT now(),
-    updated_at  timestamptz   NOT NULL DEFAULT now(),
-    UNIQUE (id, vendor_id)          -- lets other tables prove "this branch belongs to this vendor"
-);
-CREATE INDEX branches_vendor_idx ON branches (vendor_id);
+-- ---------------------------------------------------------------------
+-- 3. New enum types
+-- ---------------------------------------------------------------------
+CREATE TYPE reward_status   AS ENUM ('active', 'archived');
+CREATE TYPE qr_purpose      AS ENUM ('collect', 'redeem');
+CREATE TYPE qr_status       AS ENUM ('active', 'used', 'expired', 'cancelled');
+CREATE TYPE fraud_flag_type AS ENUM ('too_many_collects', 'large_purchase', 'branch_spike', 'staff_spike');
 
-CREATE TABLE staff_users (
-    id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    vendor_id      uuid           NOT NULL REFERENCES vendors (id),
-    branch_id      uuid,                                  -- NULL = vendor-wide admin
-    name           varchar(120)   NOT NULL,
-    email          varchar(255)   NOT NULL,
-    password_hash  varchar(255),                          -- legacy; passwords live in Supabase Auth
-    auth_user_id   uuid,                                  -- Supabase Auth user id
-    role           staff_role     NOT NULL,
-    status         account_status NOT NULL DEFAULT 'active',
-    created_at     timestamptz    NOT NULL DEFAULT now(),
-    updated_at     timestamptz    NOT NULL DEFAULT now(),
-    -- the branch must belong to the same vendor
-    FOREIGN KEY (branch_id, vendor_id) REFERENCES branches (id, vendor_id),
-    -- vendor admins are vendor-wide; managers and staff belong to one branch
-    CONSTRAINT staff_role_branch_ck CHECK (
-        (role = 'vendor_admin' AND branch_id IS NULL) OR
-        (role <> 'vendor_admin' AND branch_id IS NOT NULL)
-    )
-);
-CREATE UNIQUE INDEX staff_users_email_uq ON staff_users (lower(email));
-CREATE UNIQUE INDEX staff_users_auth_user_id_key ON staff_users (auth_user_id);
-CREATE INDEX staff_users_vendor_idx ON staff_users (vendor_id);
-
--- Earning rule ("settings"), versioned: points = floor(total / spend_amount) * points_per_spend
+-- ---------------------------------------------------------------------
+-- 4. Vendor side: earning rules and rewards
+-- ---------------------------------------------------------------------
 CREATE TABLE point_rules (
     id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id               uuid          NOT NULL REFERENCES vendors (id),
@@ -123,7 +67,6 @@ CREATE TABLE point_rules (
 );
 CREATE UNIQUE INDEX point_rules_one_active_uq ON point_rules (vendor_id) WHERE is_active;
 
--- The vendor's reward catalogue, e.g. "Free coffee" for 300 points
 CREATE TABLE rewards (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id    uuid          NOT NULL REFERENCES vendors (id),
@@ -140,35 +83,8 @@ CREATE TABLE rewards (
 CREATE INDEX rewards_vendor_idx ON rewards (vendor_id, status, sort_order);
 
 -- ---------------------------------------------------------------------
--- 5. CUSTOMER SIDE
+-- 5. Customer side: one card (balance) per customer per vendor
 -- ---------------------------------------------------------------------
-CREATE TABLE users (
-    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        varchar(120),
-    email       varchar(255),                 -- a provider may not share it; not unique
-    avatar_url  varchar(500),
-    phone       varchar(20),                  -- optional, not used for login
-    auth_user_id uuid,                        -- Supabase Auth user id
-    status      user_status NOT NULL DEFAULT 'active',
-    created_at  timestamptz NOT NULL DEFAULT now(),
-    updated_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE UNIQUE INDEX users_auth_user_id_key ON users (auth_user_id);
-
--- currently unused: Supabase Auth tracks provider identities and links them
-CREATE TABLE user_identities (
-    id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id           uuid          NOT NULL REFERENCES users (id),
-    provider          auth_provider NOT NULL,
-    provider_user_id  varchar(255)  NOT NULL,  -- the provider's stable "sub" id
-    email             varchar(255),
-    created_at        timestamptz   NOT NULL DEFAULT now(),
-    updated_at        timestamptz   NOT NULL DEFAULT now(),
-    UNIQUE (provider, provider_user_id)
-);
-CREATE INDEX user_identities_user_idx ON user_identities (user_id);
-
--- One card (points balance) per customer per vendor; created on the first purchase
 CREATE TABLE cards (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id           uuid        NOT NULL REFERENCES users (id),
@@ -184,9 +100,8 @@ CREATE TABLE cards (
 CREATE INDEX cards_vendor_idx ON cards (vendor_id);
 
 -- ---------------------------------------------------------------------
--- 6. ACTIVITY
+-- 6. Activity: one-time QR codes, the ledger, redemptions
 -- ---------------------------------------------------------------------
--- One row per QR the app shows; single use, short-lived
 CREATE TABLE qr_codes (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id           uuid        NOT NULL REFERENCES users (id),
@@ -213,7 +128,6 @@ CREATE TABLE qr_codes (
 );
 CREATE INDEX qr_codes_user_idx ON qr_codes (user_id, created_at DESC);
 
--- The ledger: every earn (+), redeem (-) and admin adjust (+/-). Append-only.
 CREATE TABLE point_events (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     card_id          uuid             NOT NULL,
@@ -276,7 +190,7 @@ CREATE INDEX redemptions_card_idx ON redemptions (card_id);
 CREATE INDEX redemptions_branch_time_idx ON redemptions (branch_id, created_at);
 
 -- ---------------------------------------------------------------------
--- 7. FRAUD FLAGS
+-- 7. Fraud flags
 -- ---------------------------------------------------------------------
 CREATE TABLE fraud_flags (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -297,15 +211,12 @@ CREATE INDEX fraud_flags_status_time_idx ON fraud_flags (status, created_at);
 CREATE INDEX fraud_flags_vendor_idx ON fraud_flags (vendor_id);
 
 -- ---------------------------------------------------------------------
--- 8. TRIGGERS
+-- 8. Triggers
 -- ---------------------------------------------------------------------
--- updated_at on every table
 DO $$
 DECLARE t text;
 BEGIN
-    FOREACH t IN ARRAY ARRAY[
-        'platform_admins','vendors','branches','staff_users','point_rules','rewards',
-        'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags']
+    FOREACH t IN ARRAY ARRAY['point_rules','rewards','cards','qr_codes','point_events','redemptions','fraud_flags']
     LOOP
         EXECUTE format(
             'CREATE TRIGGER %I_set_updated_at BEFORE UPDATE ON %I
@@ -324,8 +235,3 @@ $$;
 
 CREATE TRIGGER point_events_no_update BEFORE UPDATE OR DELETE ON point_events
     FOR EACH ROW EXECUTE FUNCTION point_events_block_changes();
-
-COMMIT;
-
--- Check: should list 13 tables
--- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> '_prisma_migrations' ORDER BY 1;

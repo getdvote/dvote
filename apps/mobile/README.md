@@ -1,11 +1,12 @@
 # apps/mobile
 
-Customer mobile app (iOS + Android). **Not scaffolded yet.**
+Customer mobile app (iOS + Android). **Not scaffolded yet.** (Vendor staff use a separate app: `apps/staff`.)
 
-Planned stack: React Native + Expo (TypeScript), `react-native-nfc-manager` for NFC
-(NTAG 424 DNA SUN reads), `@supabase/supabase-js` for Google / Facebook sign-in.
+Planned stack: React Native + Expo (TypeScript), `@supabase/supabase-js` for Google / Facebook
+sign-in, a QR code renderer for the one-time collect / redeem codes. No NFC.
 
-NFC is a native module, so the app runs as an Expo **development build**, not in Expo Go.
+Screens: my cards · vendors (master collect QR) · vendor page (vendor collect QR, rewards,
+redeem QR) · card history · profile.
 
 To scaffold (later), from the repo root:
 

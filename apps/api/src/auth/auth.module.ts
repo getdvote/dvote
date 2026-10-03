@@ -4,6 +4,7 @@ import { createRemoteJWKSet } from 'jose';
 import { Env } from '../config/env.validation';
 import { UsersModule } from '../users/users.module';
 import { CustomerAuthGuard } from './customer-auth.guard';
+import { StaffAuthGuard } from './staff-auth.guard';
 import { SUPABASE_JWKS, SupabaseJwtVerifier } from './supabase-jwt.verifier';
 
 @Module({
@@ -23,7 +24,13 @@ import { SUPABASE_JWKS, SupabaseJwtVerifier } from './supabase-jwt.verifier';
     },
     SupabaseJwtVerifier,
     CustomerAuthGuard,
+    StaffAuthGuard,
   ],
-  exports: [SupabaseJwtVerifier, CustomerAuthGuard, UsersModule],
+  exports: [
+    SupabaseJwtVerifier,
+    CustomerAuthGuard,
+    StaffAuthGuard,
+    UsersModule,
+  ],
 })
 export class AuthModule {}

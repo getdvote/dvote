@@ -8,6 +8,7 @@ import {
 import type { Request } from 'express';
 import type { users } from '../generated/prisma/client.js';
 import { UsersService } from '../users/users.service';
+import { bearerToken } from './bearer-token';
 import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
 
 /**
@@ -56,9 +57,4 @@ export class CustomerAuthGuard implements CanActivate {
     req.user = user;
     return true;
   }
-}
-
-function bearerToken(req: Request): string | undefined {
-  const [scheme, token] = (req.headers.authorization ?? '').split(' ');
-  return scheme?.toLowerCase() === 'bearer' && token ? token : undefined;
 }

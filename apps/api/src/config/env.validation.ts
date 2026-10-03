@@ -32,6 +32,24 @@ export class Env {
   @IsUrl({ require_tld: false, require_protocol: true })
   SUPABASE_URL: string;
 
+  /**
+   * Supabase SECRET key (sb_secret_... or legacy service_role). Server-only: used to
+   * invite staff. Optional (empty = unset) so the API boots without it; staff invites
+   * return 503 until set.
+   */
+  @IsOptional()
+  @IsString()
+  SUPABASE_SECRET_KEY?: string;
+
+  /**
+   * Where the staff invite email link lands (the dashboard's set-password page).
+   * Must be listed in Supabase → Authentication → URL Configuration → Redirect URLs.
+   * Defaults to the dev test page outside production.
+   */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  STAFF_INVITE_REDIRECT_URL?: string;
+
   /** Comma-separated list of allowed origins; unset = CORS disabled. */
   @IsOptional()
   @IsString()

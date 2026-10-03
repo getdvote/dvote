@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dvote staff test</title>
+<!--
+  TEMPORARY dev page: staff sign-in (email + password, or Google) and the
+  /api/vendor/* endpoints, until the React dashboard exists. Also the landing page
+  for staff invite and password-reset emails in development.
+  Served by the API at /dev/staff.html (not in production).
+-->
+<link rel="stylesheet" href="dev.css">
+</head>
+<body>
+<main>
+  <h1>dvote staff test</h1>
+  <p class="sub">Temporary page: staff sign-in and the vendor staff APIs.
+    Customer test page: <a href="login.html">login.html</a></p>
+
+  <section class="card" id="keyCard">
+    <h2>Supabase publishable key</h2>
+    <p class="hint" style="margin-top:0">Same key as the customer page
+      (<code>sb_publishable_…</code> or legacy anon). Never the secret key.</p>
+    <label for="key">Key</label>
+    <input id="key" autocomplete="off" spellcheck="false" placeholder="sb_publishable_...">
+    <div class="row"><button class="primary" id="saveKey">Save key</button></div>
+  </section>
+
+  <section class="card hidden" id="setPwCard">
+    <h2 id="setPwTitle">Set your password</h2>
+    <p class="hint" style="margin-top:0">You opened an invite / reset link. Choose a password (min 6 characters).</p>
+    <label for="newPw">New password</label>
+    <input id="newPw" type="password" autocomplete="new-password">
+    <div class="row"><button class="primary" id="savePw">Save password</button></div>
+  </section>
+
+  <section class="card hidden" id="signInCard">
+    <h2>Staff sign-in</h2>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <div class="row">
+      <button class="primary" id="signIn">Sign in</button>
+      <button id="google">Continue with Google</button>
+      <button id="forgot">Forgot password</button>
+      <button id="changeKey">Change key</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="sessionCard">
+    <h2>Signed in</h2>
+    <div id="who"></div>
+    <div class="row">
+      <button class="primary" id="callMe">GET /api/vendor/me</button>
+      <button id="listStaff">GET /api/vendor/staff</button>
+      <button id="copyToken">Copy access token</button>
+      <button id="signOut">Sign out</button>
+    </div>
+    <div class="tablewrap"><table id="staffTable" class="hidden">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Branch</th><th>Status</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card hidden" id="createCard">
+    <h2>POST /api/vendor/staff (invite)</h2>
+    <div class="grid2">
+      <div><label for="cName">Name</label><input id="cName"></div>
+      <div><label for="cEmail">Email</label><input id="cEmail" type="email"></div>
+      <div><label for="cRole">Role</label>
+        <select id="cRole">
+          <option value="staff">staff</option>
+          <option value="branch_manager">branch_manager</option>
+          <option value="vendor_admin">vendor_admin</option>
+        </select></div>
+      <div><label for="cBranch">Branch id (empty for vendor_admin)</label><input id="cBranch" spellcheck="false"></div>
+    </div>
+    <div class="row"><button class="primary" id="create">Create &amp; invite</button></div>
+  </section>
+
+  <section class="card hidden" id="editCard">
+    <h2>PATCH /api/vendor/staff/{id}</h2>
+    <label for="eId">Staff id (click "Edit" in the table)</label><input id="eId" spellcheck="false">
+    <div class="grid2">
+      <div><label for="eName">Name</label><input id="eName"></div>
+      <div><label for="eRole">Role</label>
+        <select id="eRole">
+          <option value="">(unchanged)</option>
+          <option value="staff">staff</option>
+          <option value="branch_manager">branch_manager</option>
+          <option value="vendor_admin">vendor_admin</option>
+        </select></div>
+      <div><label for="eBranch">Branch id</label><input id="eBranch" spellcheck="false"></div>
+      <div><label for="eStatus">Status</label>
+        <select id="eStatus">
+          <option value="">(unchanged)</option>
+          <option value="active">active</option>
+          <option value="disabled">disabled</option>
+        </select></div>
+    </div>
+    <p class="hint">Only filled fields are sent.</p>
+    <div class="row"><button class="primary" id="save">Save changes</button></div>
+  </section>
+
+  <section class="card hidden" id="resultCard">
+    <h2>API response</h2>
+    <div class="status" id="status"></div>
+    <pre id="result"></pre>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script>
+  const SUPABASE_URL = 'https://cfknsqlixyeihhkleock.supabase.co';
+  const KEY_STORAGE = 'dvote-dev-supabase-key';
+  const $ = (id) => document.getElementById(id);
+  const PAGE_URL = location.origin + location.pathname;
+
+  // Invite / reset links land here as #access_token=...&type=invite|recovery.
+  // Read the type before supabase-js consumes the hash.
+  const linkType = new URLSearchParams(location.hash.slice(1)).get('type');
+  let mustSetPassword = linkType === 'invite' || linkType === 'recovery';
+
+  let client = null;
+
+  function storedKey() {
+    try { return localStorage.getItem(KEY_STORAGE) || ''; } catch { return ''; }
+  }
+
+  function showResult(res, body) {
+    $('resultCard').classList.remove('hidden');
+    $('status').textContent = res ? `${res.status} ${res.statusText}` : 'Error';
+    $('status').className = 'status ' + (res && res.ok ? 'ok' : 'err');
+    $('result').textContent = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+  }
+
+  async function api(method, path, body) {
+    const { data } = await client.auth.getSession();
+    const token = data.session?.access_token;
+    try {
+      const res = await fetch(path, {
+        method,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const text = await res.text();
+      let json; try { json = JSON.parse(text); } catch { json = text; }
+      showResult(res, json);
+      return res.ok ? json : null;
+    } catch (e) {
+      showResult(null, 'Could not reach the API. Is `npm run api:dev` running?\n' + e);
+      return null;
+    }
+  }
+
+  function render(session) {
+    const hasKey = !!client;
+    $('keyCard').classList.toggle('hidden', hasKey);
+    $('setPwCard').classList.toggle('hidden', !(session && mustSetPassword));
+    $('setPwTitle').textContent = linkType === 'recovery' ? 'Reset your password' : 'Set your password';
+    $('signInCard').classList.toggle('hidden', !hasKey || !!session);
+    const signedIn = !!session && !mustSetPassword;
+    for (const id of ['sessionCard', 'createCard', 'editCard']) {
+      $(id).classList.toggle('hidden', !signedIn);
+    }
+    if (session) {
+      const u = session.user;
+      $('who').textContent = `${u.email ?? '(no email)'} · Supabase id: ${u.id}`;
+    }
+  }
+
+  function cell(text) {
+    const td = document.createElement('td');
+    td.textContent = text ?? '';
+    return td;
+  }
+
+  function renderStaff(list) {
+    const tbody = $('staffTable').querySelector('tbody');
+    tbody.replaceChildren();
+    if (!Array.isArray(list)) { $('staffTable').classList.add('hidden'); return; }
+    for (const s of list) {
+      const tr = document.createElement('tr');
+      tr.append(cell(s.name), cell(s.email), cell(s.role), cell(s.branchId ? s.branchId.slice(0, 8) + '…' : '—'), cell(s.status));
+      const td = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.textContent = 'Edit';
+      btn.onclick = () => {
+        $('eId').value = s.id;
+        $('eName').value = s.name;
+        $('eRole').value = '';
+        $('eBranch').value = '';
+        $('eStatus').value = '';
+        $('editCard').scrollIntoView({ behavior: 'smooth' });
+      };
+      td.append(btn);
+      tr.append(td);
+      tbody.append(tr);
+    }
+    $('staffTable').classList.remove('hidden');
+  }
+
+  function start(key) {
+    client = supabase.createClient(SUPABASE_URL, key, {
+      // Separate storage from the customer page so the two sessions don't mix.
+      auth: { storageKey: 'dvote-dev-staff-auth', detectSessionInUrl: true, persistSession: true },
+    });
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') mustSetPassword = true;
+      render(session);
+    });
+    render(null);
+  }
+
+  $('saveKey').onclick = () => {
+    const key = $('key').value.trim();
+    if (!key) return;
+    if (/service_role|sb_secret_/.test(key)) {
+      alert('That is a SECRET key. Use the publishable / anon key instead.');
+      return;
+    }
+    try { localStorage.setItem(KEY_STORAGE, key); } catch {}
+    start(key);
+  };
+
+  $('changeKey').onclick = () => {
+    try { localStorage.removeItem(KEY_STORAGE); } catch {}
+    client = null;
+    render(null);
+  };
+
+  $('signIn').onclick = async () => {
+    const { error } = await client.auth.signInWithPassword({
+      email: $('email').value.trim(),
+      password: $('pw').value,
+    });
+    if (error) showResult(null, error.message);
+  };
+
+  $('google').onclick = async () => {
+    const { error } = await client.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: PAGE_URL },
+    });
+    if (error) showResult(null, error.message);
+  };
+
+  $('forgot').onclick = async () => {
+    const email = $('email').value.trim();
+    if (!email) { showResult(null, 'Type your email first.'); return; }
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: PAGE_URL });
+    showResult(null, error ? error.message : 'If that email has an account, a reset link was sent.');
+  };
+
+  $('savePw').onclick = async () => {
+    const { error } = await client.auth.updateUser({ password: $('newPw').value });
+    if (error) { showResult(null, error.message); return; }
+    mustSetPassword = false;
+    history.replaceState(null, '', PAGE_URL);
+    const { data } = await client.auth.getSession();
+    render(data.session);
+    showResult(null, 'Password saved. You are signed in.');
+  };
+
+  $('callMe').onclick = () => api('GET', '/api/vendor/me');
+  $('listStaff').onclick = async () => renderStaff(await api('GET', '/api/vendor/staff'));
+
+  $('create').onclick = async () => {
+    const body = {
+      name: $('cName').value.trim(),
+      email: $('cEmail').value.trim(),
+      role: $('cRole').value,
+    };
+    const branch = $('cBranch').value.trim();
+    if (branch) body.branchId = branch;
+    if (await api('POST', '/api/vendor/staff', body)) $('cEmail').value = '';
+  };
+
+  $('save').onclick = async () => {
+    const id = $('eId').value.trim();
+    if (!id) { showResult(null, 'Pick a staff member first (Edit in the table).'); return; }
+    const body = {};
+    if ($('eName').value.trim()) body.name = $('eName').value.trim();
+    if ($('eRole').value) body.role = $('eRole').value;
+    if ($('eBranch').value.trim()) body.branchId = $('eBranch').value.trim();
+    if ($('eStatus').value) body.status = $('eStatus').value;
+    await api('PATCH', `/api/vendor/staff/${encodeURIComponent(id)}`, body);
+  };
+
+  $('copyToken').onclick = async () => {
+    const { data } = await client.auth.getSession();
+    await navigator.clipboard.writeText(data.session?.access_token ?? '');
+    $('copyToken').textContent = 'Copied';
+    setTimeout(() => ($('copyToken').textContent = 'Copy access token'), 1500);
+  };
+
+  $('signOut').onclick = async () => {
+    await client.auth.signOut();
+    $('resultCard').classList.add('hidden');
+    $('staffTable').classList.add('hidden');
+  };
+
+  const saved = storedKey();
+  if (saved) { $('key').value = saved; start(saved); } else { render(null); }
+</script>
+</body>
+</html>

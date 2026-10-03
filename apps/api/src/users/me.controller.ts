@@ -9,7 +9,7 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
-import { MeDto } from './dto/me.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UsersService } from './users.service';
 
@@ -26,17 +26,17 @@ export class MeController {
 
   /** The signed-in customer. The first call after sign-up creates the profile. */
   @Get()
-  @ApiOkResponse({ type: MeDto })
-  get(@CurrentUser() user: users): MeDto {
-    return MeDto.from(user);
+  @ApiOkResponse({ type: MeResponseDto })
+  get(@CurrentUser() user: users): MeResponseDto {
+    return MeResponseDto.from(user);
   }
 
   @Patch()
-  @ApiOkResponse({ type: MeDto })
+  @ApiOkResponse({ type: MeResponseDto })
   async update(
     @CurrentUser() user: users,
     @Body() dto: UpdateMeDto,
-  ): Promise<MeDto> {
-    return MeDto.from(await this.users.updateProfile(user.id, dto));
+  ): Promise<MeResponseDto> {
+    return MeResponseDto.from(await this.users.updateProfile(user.id, dto));
   }
 }

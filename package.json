@@ -8,6 +8,7 @@
     "api:build": "npm --prefix apps/api run build",
     "api:test": "npm --prefix apps/api run test",
     "api:test:e2e": "npm --prefix apps/api run test:e2e",
-    "api:lint": "npm --prefix apps/api run lint"
+    "api:lint": "npm --prefix apps/api run lint",
+    "api:create-vendor-admin": "npm --prefix apps/api run staff:create-admin --"
   }
 }

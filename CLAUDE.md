@@ -1,17 +1,18 @@
-# dvote — Coffee Loyalty Platform
+# dvote — Loyalty Platform
 
-NFC-based "buy N coffees, get 1 free" loyalty platform for coffee vendors.
-Customers tap **Request a point** in the mobile app; the barista taps the branch's NFC card on the phone; the backend awards the point. Each vendor sets its own rule (e.g. Joy Corner: 10 points → 1 free coffee).
+Spend-based loyalty points and vendor rewards for coffee shops, collected and redeemed with **one-time QR codes**.
+Each vendor sets a **point rule** (e.g. every 10 EGP = 1 point) and a **reward catalogue** priced in points (e.g. free coffee 300, free cheesecake 500, coffee + cheesecake 750). The customer shows a QR in the app; vendor staff scan it in the staff app and enter the receipt total (collect) or confirm the reward (redeem); the backend decides and records everything.
 
-Three clients:
+Four clients:
 
 | Client | Users | Purpose |
 |---|---|---|
-| Mobile app (React Native + Expo, iOS + Android) | Customers | Sign in, request a point, see wallets/history, claim free coffee |
-| Vendor dashboard (React, web) | Vendor admins, branch managers, staff | Own branches, staff, NFC cards, program rules, reports |
-| Admin dashboard (React, web) | Platform admins | All vendors, onboarding, tags, fraud review, support |
+| Customer app (React Native + Expo, iOS + Android) | Customers | Sign in, see cards (points per vendor), browse vendors + rewards, show collect / redeem QR |
+| Staff app (React Native + Expo, separate app) | Staff, branch managers, vendor admins | Scan customer QR, enter receipt total, confirm redemptions |
+| Vendor dashboard (React, web) | Vendor admins, branch managers | Branches, staff, point rule, rewards, reports |
+| Admin dashboard (React, web) | Platform admins | All vendors, onboarding, support, point corrections, fraud review |
 
-Full spec: `docs/Coffee_Loyalty_Platform_Documentation_v1.2.pdf`. Database source of truth: `database/dvote_schema.sql`.
+Full spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; source `docs/src/documentation.html`, rebuild with `node docs/src/build-pdf.mjs`). Database source of truth: `database/dvote_schema.sql`.
 
 ---
 
@@ -19,30 +20,31 @@ Full spec: `docs/Coffee_Loyalty_Platform_Documentation_v1.2.pdf`. Database sourc
 
 - **Backend:** NestJS (TypeScript), Prisma ORM, PostgreSQL 18
 - **Web dashboards:** React + TypeScript (Vite), Ant Design, TanStack Query, Recharts. One app, role-based routes for vendor and admin.
-- **Mobile:** React Native + Expo (TypeScript), `react-native-nfc-manager` for NFC (NTAG 424 DNA SUN reads), `@supabase/supabase-js` for sign-in. NFC is a native module, so the app runs as an Expo **development build** (not Expo Go).
-- **API contract:** OpenAPI generated from NestJS → one typed TypeScript client (`packages/api-client`) shared by the React dashboard and the React Native app. One language (TypeScript) across backend, web and mobile.
+- **Mobile:** two React Native + Expo (TypeScript) apps — customer app (shows QR codes) and a separate staff app (camera QR scanner). `@supabase/supabase-js` for sign-in. No NFC.
+- **API contract:** OpenAPI generated from NestJS → one typed TypeScript client (`packages/api-client`) shared by the dashboard and both apps.
 - **Auth: Supabase Auth (auth only — the database is NOT on Supabase).** Supabase issues and refreshes all tokens; NestJS only verifies them locally against the project's JWKS (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, via `jose`) and maps the token's `sub` to our own rows. NestJS never issues JWTs.
 - **Customer auth:** Google and Facebook sign-in through Supabase (NO phone/OTP, no email/password, no anonymous — the guard rejects other providers with `provider_not_allowed`). Supabase links providers with the same verified email into one auth user. `users.auth_user_id` = Supabase user id; the row is created on the customer's first API call.
   - **Apple is postponed** (needs the paid Apple Developer Program, $99/yr). To add it: enable it in Supabase and add `'apple'` to `CUSTOMER_PROVIDERS` in `auth/customer-auth.guard.ts`. An iOS App Store release that offers Google/Facebook login will likely need Sign in with Apple too (App Store guideline 4.8).
-- **Staff / admin auth (decided, build in step 5):** also Supabase, email + password. Accounts are invite-only (created server-side), and our `staff_users` / `platform_admins` row decides the role. Platform admins use Supabase MFA (TOTP); require `aal2` in the token. This needs a migration adding `auth_user_id` to both tables and making `password_hash` nullable.
-- **NFC tags:** NTAG 424 DNA with SUN from day one (signed, counter-based taps). Tag secret keys live in a secrets manager/KMS; DB stores only `key_ref`.
+- **Staff auth (built):** Supabase email + password (Google also works if the email matches). Invite-only: `POST /api/vendor/staff` calls Supabase `inviteUserByEmail` with the server-only `SUPABASE_SECRET_KEY` and stores `staff_users.auth_user_id`; if the email already has a Supabase account (e.g. a customer), it is linked without an email. `StaffAuthGuard` requires an active staff row in an active vendor (and active branch for branch roles) and builds the `StaffContext` used for tenant scoping. `password_hash` is legacy/nullable. First vendor admin: `npm run staff:create-admin` (from `apps/api`) until the admin API exists.
+- **Platform admin auth (decided, not built):** Supabase email + password + MFA (TOTP); require `aal2` in the token. Needs the same migration for `platform_admins` (`auth_user_id`, nullable `password_hash`).
 - **Hosting v1:** one backend container + one managed PostgreSQL. No microservices, queues or Redis.
 
 ## Repo layout (monorepo)
 
-`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `dashboard`, `mobile` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when `api-client`/`dashboard` get a `package.json`).
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `dashboard`, `mobile`, `staff` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
 ├── CLAUDE.md
-├── docs/                      # PDF spec, ERD
+├── docs/                      # spec PDF + its HTML source (docs/src)
 ├── database/
-│   ├── dvote_schema.sql       # schema source of truth (13 tables)
-│   └── dvote_seed_joy_corner.sql
+│   ├── dvote_schema.sql       # schema source of truth (13 tables, v2.0)
+│   └── dvote_seed_joy_corner.sql   # dev seed: Joy Corner, 10 EGP = 1 pt, 3 rewards
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
-│   └── mobile/                # React Native (Expo)
+│   ├── mobile/                # React Native (Expo) customer app
+│   └── staff/                 # React Native (Expo) staff scanner app
 └── packages/
     └── api-client/            # generated TS client from OpenAPI
 ```
@@ -51,171 +53,161 @@ dvote/
 
 ## Database
 
-Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; migrations `0_init` (baseline) and `1_users_auth_user_id` are applied, and `database/dvote_schema.sql` includes both. The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
+Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr` are applied. `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
 
-The schema was created with raw SQL (`database/dvote_schema.sql`) and is already applied to the local `dvote` database. **Prisma must adopt it, not recreate it:**
-
-1. `npx prisma db pull` → generates `schema.prisma` from the live DB.
-2. Baseline: copy `dvote_schema.sql` to `prisma/migrations/0_init/migration.sql`, then `npx prisma migrate resolve --applied 0_init`.
-3. Future changes: hand-write `prisma/migrations/<n>_<name>/migration.sql` (idempotent where possible), update `schema.prisma` to match, apply with `npx prisma migrate deploy`, run `npx prisma generate`, and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints or triggers below, so **never let a Prisma migration drop them**.
+**Schema changes:** hand-write `prisma/migrations/<n>_<name>/migration.sql`, apply with `npx prisma migrate deploy`, refresh `schema.prisma` with `npx prisma db pull` (keeps the generator block), run `npx prisma generate`, and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints, composite FKs-with-intent or triggers below, so **never let a Prisma migration drop them**.
 
 ### Tables (13)
 
 | Table | Side | Purpose |
 |---|---|---|
-| `vendors` | vendor | Brand (tenant root). status: active/suspended |
+| `vendors` | vendor | Brand (tenant root). `currency` (default EGP). status active/suspended |
 | `branches` | vendor | Physical shop. FK vendor |
-| `staff_users` | vendor | role: vendor_admin (branch_id NULL) / branch_manager / staff (branch_id required) |
-| `nfc_tags` | vendor | NTAG 424 card per branch. `tag_uid` unique, `key_ref`, `last_counter` |
-| `programs` | vendor | Reward rules ("settings"): `points_required`, `reward_description`, `cooldown_minutes`, `version`, `is_active` |
-| `users` | customer | Customers. email nullable (a provider may not share it), phone optional |
-| `user_identities` | customer | (provider, provider_user_id) unique → user. **Currently unused:** Supabase handles provider identities and linking |
-| `wallets` | customer | One per (user, vendor). `balance` (cached), `lifetime_points`, `program_id` |
-| `scan_sessions` | activity | One per button press. mode earn/redeem, status open/consumed/expired/rejected, expires in 90 s |
-| `point_events` | activity | **Ledger, append-only.** type earn(+1)/redeem(−N)/adjust(±, admin + reason) |
-| `redemptions` | activity | One per free coffee, 1-to-1 with its redeem ledger row |
-| `platform_admins` | platform | Internal team. 2FA via `totp_secret_ref` |
-| `fraud_flags` | platform | Suspicious activity for review. status open/dismissed/confirmed |
+| `staff_users` | vendor | role: vendor_admin (branch_id NULL) / branch_manager / staff (branch_id required); `auth_user_id` |
+| `point_rules` | vendor | Earning rule, versioned: `spend_amount`, `points_per_spend`, `min_purchase`, `max_points_per_purchase`, `is_active` |
+| `rewards` | vendor | Reward catalogue: `name`, `points_cost`, `status` active/archived, `sort_order` |
+| `users` | customer | Customers. email nullable, phone optional, `auth_user_id` |
+| `user_identities` | customer | **Unused** (Supabase handles provider identities and linking) |
+| `cards` | customer | One per (user, vendor), created on first purchase. `balance` (cached), `lifetime_points` |
+| `qr_codes` | activity | One per QR shown. purpose collect/redeem, `vendor_id` (NULL = master QR), `reward_id` (redeem), `token_hash`, status active/used/expired/cancelled, `expires_at` (5 min) |
+| `point_events` | activity | **Ledger, append-only.** earn (+points, `purchase_amount`, `rule_id`) / redeem (−cost, `reward_id`) / adjust (admin + reason). `qr_code_id`, `staff_id`, `branch_id`, `receipt_ref` |
+| `redemptions` | activity | One per reward given, 1-to-1 with its redeem ledger row; snapshots `reward_name`, `points_cost` |
+| `platform_admins` | platform | Internal team. 2FA via `totp_secret_ref` (moving to Supabase MFA) |
+| `fraud_flags` | platform | too_many_collects / large_purchase / branch_spike / staff_spike; targets vendor/branch/user/staff |
 
 All tables: `id uuid` (gen_random_uuid), `created_at`, `updated_at` (trigger-maintained, timestamptz UTC). Soft delete via `status`; never hard-delete business rows.
 
 ### Constraints enforced by the DB (keep them; handle their errors in the API)
 
-- One active program per vendor (partial unique index); `UNIQUE (vendor_id, version)`.
-- `wallets`: `UNIQUE (user_id, vendor_id)`, `balance >= 0`; wallet's program must belong to wallet's vendor (composite FK).
-- `staff_users`: branch must belong to the same vendor (composite FK); role/branch rule (CHECK).
-- `point_events`: earn ⇒ delta = 1 and session_id set; redeem ⇒ delta < 0 and session_id set; adjust ⇒ created_by + reason set. `idempotency_key` UNIQUE. At most one event per session.
+- One active point rule per vendor (partial unique index); `UNIQUE (vendor_id, version)`.
+- `cards`: `UNIQUE (user_id, vendor_id)`, `balance >= 0`.
+- **Points never cross vendors:** `point_events` and `redemptions` carry `vendor_id` and composite FKs `(card_id|branch_id|rule_id|reward_id, vendor_id)`; `qr_codes (reward_id, vendor_id)` likewise.
+- `point_events`: earn ⇒ delta > 0, purchase_amount > 0, rule, QR, staff, branch set; redeem ⇒ delta < 0, reward, QR, staff, branch set; adjust ⇒ created_by + reason. `idempotency_key` UNIQUE. At most one event per QR (partial unique). `receipt_ref` unique per branch for earns.
 - `point_events` UPDATE/DELETE raise an exception (trigger). Corrections = new `adjust` row.
-- `scan_sessions`: redeem ⇒ vendor_id required; rejected ⇒ reject_reason required.
-- `fraud_flags`: at least one target (vendor/branch/user/tag); non-open ⇒ reviewed_by set.
+- `qr_codes`: redeem ⇒ vendor + reward set; collect ⇒ no reward; used ⇒ used_at, used_by_staff_id, used_branch_id set.
+- `staff_users`: branch must belong to the same vendor (composite FK); role/branch rule (CHECK).
+- `fraud_flags`: at least one target; non-open ⇒ reviewed_by set.
 
 ---
 
 ## Core business rules (invariants)
 
-1. **Points live at vendor level.** Earned at a branch, stored in the user's wallet for that vendor. Never move between vendors.
-2. **The server decides points, never the app.** The app only forwards the NFC payload.
-3. **1 tap = 1 point.** Cooldown: max 1 earn per wallet per branch per `cooldown_minutes` (default 10).
-4. **Ledger is the source of truth.** `wallets.balance` must always equal `SUM(point_events.delta)` for that wallet. Every balance change happens in the same DB transaction as its ledger insert.
-5. **Customer claims the reward** with a "Claim free coffee" button (not automatic). Extra points carry over (11 − 10 = 1).
-6. **Program versioning.** When a vendor changes rules, insert a new `programs` row (version + 1) and make it active. Existing wallets keep their old program until they redeem; the redeem transaction moves the wallet to the active program.
-7. **Tenant scoping.** Every vendor-dashboard query filters by the staff token's `vendor_id` (and `branch_id` for branch roles). Enforce once, in a NestJS guard/interceptor — never per endpoint by memory.
+1. **Points live at vendor level** on the customer's card for that vendor. Earned at any branch of the vendor; never move between vendors.
+2. **The server decides points, never the apps.** The customer app only shows a code; the staff app only sends the code and the receipt total.
+3. **Points formula:** `floor(amount / spend_amount) * points_per_spend`, capped at `max_points_per_purchase`; 0 if `amount < min_purchase`. Round **down**. Money is `numeric(12,2)` in the DB and integer minor units (piastres) in code — never floats. 0 points ⇒ reject `no_points_earned`, write nothing.
+4. **Ledger is the source of truth.** `cards.balance` must always equal `SUM(point_events.delta)` for that card. Every balance change happens in the same DB transaction as its ledger insert.
+5. **Cards are created on the first purchase** at a vendor (no points ⇒ no card).
+6. **Customer chooses when to redeem.** Leftover points stay (1000 − 300 = 700).
+7. **Rule / reward versioning.** A new rule = new `point_rules` row (version + 1, active); applies from then on, past earns keep `rule_id`. Reward edits apply to future redemptions; `redemptions` snapshots name + cost. Archived rewards can't be redeemed.
+8. **QR codes are one-time server-issued secrets**: 128-bit random code in the QR (`dvote:q1:<code>`), only its SHA-256 stored, valid 5 min, single use; issuing a new QR of the same purpose cancels the customer's previous active one. Never put the user id in a QR.
+9. **Branch comes from the scanning staff member**, never from the customer's phone. Vendor admins (no branch) must send `branchId`.
+10. **Tenant scoping.** Every vendor-side query filters by the `StaffContext` (vendor, and branch for branch roles), built once in `StaffAuthGuard` — never per endpoint by memory. Other vendors' rows → 404.
 
 ---
 
-## Earn flow (`mode=earn`)
+## Collect flow (earn points)
 
-1. App: `POST /api/app/scan-sessions {mode:"earn"}` → server inserts open session (expires_at = now + 90 s), returns `session_id`.
-2. App enters NFC reader mode; barista taps card; app reads SUN payload (UID, counter, CMAC).
-3. App: `POST /api/app/scan-sessions/{id}/complete {payload, idempotencyKey}`.
-4. Server checks **in order** (any failure → session `rejected` + `reject_reason`, clear error to app):
-   1. Session exists, belongs to this user, status open, not expired.
-   2. `idempotencyKey` already used → return the original result, award nothing.
-   3. Tag exists by UID and is `active`; resolve branch → vendor.
-   4. CMAC valid and counter > `nfc_tags.last_counter` (`bad_signature`, `replayed_counter`).
-   5. User not blocked; vendor and branch active.
-   6. Cooldown: no earn for this wallet at this branch within `cooldown_minutes` (`cooldown`).
-5. **One transaction** (`prisma.$transaction`):
-   - Upsert wallet (on first visit, `program_id` = vendor's active program).
-   - Insert `point_events` (type earn, delta +1, branch, session, tag, idempotency_key).
-   - `UPDATE wallets SET balance = balance + 1, lifetime_points = lifetime_points + 1`.
-   - `UPDATE nfc_tags SET last_counter = <counter>`.
-   - Session → `consumed`, set `tag_id`.
-6. Respond: new balance, points_required, remaining.
+1. Customer app: `POST /api/app/qr-codes {purpose:"collect", vendorId?}` (vendorId = vendor QR from a vendor page; omitted = master QR from the vendors list) → `{id, code, expiresAt}`. App shows QR and polls `GET /api/app/qr-codes/{id}` every 2 s.
+2. Staff app scans → `POST /api/vendor/scans/preview {code}` → what it is (no customer personal data).
+3. Staff enter the total → `POST /api/vendor/scans/collect {code, amount, receiptRef?, branchId?, idempotencyKey}`.
+4. Checks **in order**: code exists, `active`, not expired (`qr_invalid`, `qr_used`, `qr_cancelled`, `qr_expired`) → idempotency key used ⇒ return original result → purpose collect (`wrong_qr_type`) → branch known/active, vendor active (`branch_required`) → vendor QR's vendor == staff vendor (`vendor_mismatch`) → customer not blocked (`user_blocked`) → active rule (`no_active_rule`), amount valid (`invalid_amount`), points > 0 (`no_points_earned`), receipt not reused (`duplicate_receipt`). A failed check changes nothing; the QR stays usable.
+5. **One transaction:** upsert card → insert `point_events` (earn, +points, amount, rule, branch, staff, qr, idempotency_key) → `balance += p, lifetime_points += p, last_activity_at = now()` → `UPDATE qr_codes SET status='used', … WHERE id=$1 AND status='active' AND expires_at > now()` (0 rows ⇒ abort `qr_used`).
+6. Staff app gets `{pointsAdded, …}`; customer app's poll sees `used` + result.
 
-## Redeem flow (`mode=redeem`)
+## Redeem flow
 
-1. App shows **Claim free coffee** when `balance >= points_required` (of the wallet's program).
-2. `POST /scan-sessions {mode:"redeem", vendorId}` → session with `vendor_id`.
-3. Barista taps; app calls `/complete` as above.
-4. Same checks except cooldown, plus: tag's vendor == session's vendor; balance still sufficient.
-5. **One transaction:**
+1. Customer picks a reward → `POST /api/app/qr-codes {purpose:"redeem", rewardId}` (server pre-checks reward active + balance, ties QR to vendor + reward).
+2. Staff scan → preview shows "Redeem: <reward> · <cost> pts" → `POST /api/vendor/scans/redeem {code, branchId?, idempotencyKey}`.
+3. Checks: code valid (as above), purpose redeem, QR vendor == staff vendor (`vendor_mismatch`), reward active (`reward_unavailable`), customer not blocked, balance (`insufficient_points`).
+4. **One transaction:**
    ```sql
-   UPDATE wallets SET balance = balance - $n
-   WHERE id = $wallet AND balance >= $n
-   RETURNING balance;           -- no row ⇒ not enough points ⇒ abort
+   UPDATE cards SET balance = balance - $cost
+   WHERE id = $card AND balance >= $cost
+   RETURNING balance;           -- no row ⇒ insufficient_points ⇒ abort
    ```
-   - Insert `point_events` (type redeem, delta = −n).
-   - Insert `redemptions` (wallet, program, branch, point_event_id).
-   - If the vendor has a newer active program, set `wallets.program_id` to it.
-   - Session → `consumed`.
-6. Respond with a confirmation screen ("Free coffee approved", branch, time) for staff to see.
+   + insert `point_events` (redeem, −cost) + insert `redemptions` (snapshot name/cost) + mark QR used (conditional, as above).
+5. Both apps show "Reward approved: <reward>", branch, time.
 
-## Fraud flags (write rows to `fraud_flags`; never block a tap by themselves)
+## Fraud flags (write rows to `fraud_flags`; never block anything by themselves)
 
-- `too_many_earns`: > 3 earns for one user in a day across one vendor's branches.
+- `too_many_collects`: > 3 collects for one customer in a day at one vendor.
+- `large_purchase`: receipt ≫ branch's usual size (e.g. > 5× 30-day average).
 - `branch_spike`: branch daily points > 3× its 30-day average.
-- `tag_counter_anomaly`: counter goes backwards or skips a large range.
-- `far_location`: tap location far from the tag's branch (if location is sent).
+- `staff_spike`: one staff member's daily points > 3× their own average.
 
-Run the batch rules as a scheduled job; the counter anomaly can be flagged inline in the scan flow.
+Run as a scheduled job.
 
 ---
 
 ## API endpoints
 
-### Mobile — `/api/app` (Supabase access token, `CustomerAuthGuard`)
+### Customer app — `/api/app` (Supabase access token, `CustomerAuthGuard`)
 | Method | Path | Purpose |
 |---|---|---|
-| GET / PATCH | /me | Profile / update name, email, phone |
-| GET | /wallets | All wallets: vendor, balance, points_required, remaining |
-| GET | /wallets/{id}/events | History for one vendor |
-| GET | /vendors | Vendors + branches (discovery, map) |
-| POST | /scan-sessions | Open session `{mode, vendorId?}` |
-| POST | /scan-sessions/{id}/complete | `{payload, idempotencyKey}` → result + new balance |
+| GET / PATCH | /me | Profile / update name, email, phone — **built** |
+| GET | /cards | My cards: vendor, balance, lifetime, next-reward progress |
+| GET | /cards/{id}/events | History for one card |
+| GET | /vendors | Active vendors + branches + rule summary |
+| GET | /vendors/{id} | Vendor page: branches, rule, rewards, my card |
+| POST | /qr-codes | `{purpose:"collect", vendorId?}` or `{purpose:"redeem", rewardId}` → `{id, code, expiresAt}` |
+| GET | /qr-codes/{id} | Status + result once used (polled) |
+| POST | /qr-codes/{id}/cancel | Customer closed the QR |
 
-Sign-in, refresh and account linking happen in the app through the Supabase SDK — there are no `/auth/*` endpoints. Auth errors use stable codes: `missing_token`, `invalid_token`, `token_expired` (401); `provider_not_allowed`, `user_blocked` (403).
+Dev test pages (not in production): `/dev/login.html` (customers), `/dev/staff.html` (staff sign-in, invite/reset landing page, staff CRUD), served from `apps/api/dev-public`.
 
-### Vendor — `/api/vendor` (staff JWT, always scoped to staff's vendor)
-`GET /summary?from&to` · `GET|POST|PATCH /branches` · `GET /events?branch_id&from&to` · `GET /redemptions` · `GET|POST|PATCH /staff` · `GET|POST /programs` (POST publishes a new version) · `POST /tags/{id}/report-lost` · `GET /fraud/flags` (own branches, read-only). Vendors never see customer names/emails, only counts.
+Sign-in, refresh and account linking happen in the apps through the Supabase SDK — there are no `/auth/*` endpoints. Auth errors use stable codes: `missing_token`, `invalid_token`, `token_expired` (401); `provider_not_allowed`, `user_blocked` (403).
 
-### Admin — `/api/admin` (platform admin JWT + 2FA)
-`GET|POST|PATCH /vendors` · `GET /vendors/{id}/summary` · `POST /tags` · `PATCH /tags/{id}` (revoke/reassign) · `GET /users/{id}` · `POST /wallets/{id}/adjust` (writes an `adjust` ledger row with reason, updates balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
+### Staff app + vendor dashboard — `/api/vendor` (Supabase access token, `StaffAuthGuard`, scoped to the staff's vendor)
+
+**Built:** `GET /me` (any role) · `GET|POST /staff`, `GET|PATCH /staff/{id}` (vendor_admin + branch_manager). Rules: vendor_admin manages everyone in the vendor but not their own role/branch/status; branch_manager manages only `staff` in their own branch and can't change role/branch; `staff` role has no access to `/staff`. Other vendors' / branches' rows return 404. Disable = `PATCH {status:"disabled"}` (soft delete). Email can't change. Error codes: `not_staff`, `staff_disabled`, `vendor_suspended`, `branch_closed`, `forbidden_role`, `forbidden_branch`, `forbidden_role_change`, `cannot_modify_self` (403); `staff_not_found` (404); `branch_required`, `branch_not_allowed`, `invalid_branch` (400); `email_taken`, `account_already_staff` (409); `auth_admin_not_configured`, `auth_provider_error` (503).
+
+**Planned — staff app (all staff roles):** `POST /scans/preview` · `POST /scans/collect` · `POST /scans/redeem` · `GET /scans/today`.
+**Planned — dashboard:** `GET|POST|PATCH /branches` · `GET|POST /point-rules` (POST publishes a new version; vendor_admin) · `GET|POST|PATCH /rewards` (archive, never delete; vendor_admin) · `GET /summary?from&to` · `GET /events?branchId&from&to` · `GET /redemptions` · `GET /fraud/flags` (read-only). Vendors never see customer names/emails, only counts.
+
+### Admin — `/api/admin` (platform admin token + 2FA)
+`GET|POST|PATCH /vendors` (incl. first vendor admin) · `GET /vendors/{id}/summary` · `GET|PATCH /users/{id}` (support, block) · `POST /cards/{id}/adjust` (adjust ledger row with reason, balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
 
 ---
 
 ## NestJS modules
 
-`auth`, `users`, `vendors`, `branches`, `staff`, `nfc-tags`, `programs`, `wallets`, `scan-sessions`, `redemptions`, `fraud-flags`, `admin`, `reports`.
-`scan-sessions` is the core: build it first, with tests.
-
-## NTAG 424 DNA verification
-
-Node `crypto` has AES but no CMAC. Use a well-tested CMAC package or implement RFC 4493 on AES-CBC. Test against the sample vectors in NXP application note **AN12196** before trusting it. Keys are fetched from the secrets store via `key_ref`; never log or persist raw keys.
+`auth`, `users`, `vendors`, `branches`, `staff`, `point-rules`, `rewards`, `cards`, `qr-codes`, `scans` (collect + redeem), `redemptions`, `fraud-flags`, `admin`, `reports`.
+`qr-codes` + `scans` are the core: build them with integration tests.
 
 ---
 
 ## Build order
 
-1. `apps/api`: NestJS scaffold, Prisma `db pull` + baseline, seed (Joy Corner), health check. ✅
-2. Customer auth (Google, Facebook; Apple postponed) via Supabase + `GET|PATCH /api/app/me`. ✅ backend done.
-3. Scan sessions + earn flow + wallets, with integration tests against a real Postgres.
-4. Redemption flow.
-5. Vendor and admin APIs, fraud-flag job, then the React dashboards.
-6. React Native (Expo) app, using the shared `packages/api-client`.
+1. `apps/api`: NestJS scaffold, Prisma baseline, health check. ✅
+2. Customer auth (Google, Facebook; Apple postponed) + `GET|PATCH /api/app/me`. ✅
+3. Staff auth + staff CRUD (`/api/vendor/me`, `/api/vendor/staff`). ✅
+4. Vendor setup APIs: branches, point rules, rewards.
+5. QR codes + collect flow + cards, with integration tests against a real Postgres.
+6. Redeem flow.
+7. Reports, admin APIs, fraud-flag job, then the React dashboard.
+8. React Native customer app + staff app, using the shared `packages/api-client`.
 
 ## Must-have tests
 
-- Earn happy path; balance == ledger sum after every operation.
-- Same idempotency key twice → one point, same response.
-- Cooldown rejects the second tap within the window.
-- Replayed/old NFC counter and bad CMAC are rejected.
-- Two concurrent redeems on a wallet with exactly N points → exactly one succeeds.
-- Redeem at 11/10 leaves balance 1; wallet moves to newer program version after redeem.
-- Revoked/lost tag rejected; blocked user rejected.
-- Vendor A's staff can never read vendor B's data.
+- Collect happy path; points = floor(amount / spend) × per_spend (95 EGP @ 10 → 9); card created on first purchase; balance == ledger sum after every operation.
+- Same idempotency key twice → points once, same response.
+- QR single use: second scan → `qr_used`; expired → `qr_expired`; two concurrent scans of one QR → exactly one succeeds.
+- Vendor QR scanned by another vendor's staff → `vendor_mismatch`; master QR works at any vendor.
+- Below one point / below min purchase → `no_points_earned`, nothing written; duplicate receipt → `duplicate_receipt`.
+- Redeem: 1000 − 300 = 700; insufficient balance rejected; two concurrent redeems on exactly-enough balance → exactly one succeeds; archived reward → `reward_unavailable`.
+- New rule version applies only to later purchases; reward price change doesn't alter past redemptions.
+- Blocked customer rejected; disabled staff rejected.
+- Vendor A's staff can never read or act on vendor B's data.
 
 ## Conventions
 
+- **Folder structure: by feature** (`src/<feature>/` with module, controller(s), service, `dto/`), not by layer. Logic lives in services; controllers stay thin.
+- **DTO naming:** requests by action — `Create<X>Dto`, `Update<X>Dto`, `List<X>QueryDto` (files `create-x.dto.ts`, …); responses `<X>ResponseDto` (`x-response.dto.ts`) with a static `from(row)` mapper. API JSON is camelCase; DB columns stay snake_case.
 - TypeScript strict mode. DTOs validated with `class-validator`. All times stored UTC (`timestamptz`); convert with `branches.timezone` for display.
-- Money-like operations only inside `prisma.$transaction`, using conditional `UPDATE ... WHERE balance >= n` (or `SELECT ... FOR UPDATE`), never read-modify-write in JS.
-- Errors returned to the app use stable codes matching `reject_reason` (`cooldown`, `tag_revoked`, `bad_signature`, `replayed_counter`, `session_expired`, `insufficient_points`, `vendor_mismatch`, `user_blocked`).
-- Never commit `.env`, secrets or tag keys.
-
-## Open decision
-
-Cooldown scope: 10 minutes **per branch** (current default) or **per vendor**? Ask before changing.
+- Balance-changing operations only inside `prisma.$transaction`, using conditional `UPDATE ... WHERE balance >= n` / `WHERE status = 'active'`, never read-modify-write in JS.
+- Errors use stable `code`s: scans — `qr_invalid`, `qr_used`, `qr_expired`, `qr_cancelled`, `wrong_qr_type`, `vendor_mismatch`, `branch_required`, `no_active_rule`, `invalid_amount`, `no_points_earned`, `duplicate_receipt`, `reward_unavailable`, `insufficient_points`, `user_blocked`.
+- Never commit `.env`, secrets or keys.
 
 ## Later (not v1)
 
-Push notifications (FCM), point expiry, staff confirmation app / quantity, QR fallback for phones without NFC, vendor promotions, vendor billing.
+Push notifications (FCM), point expiry, vendor-side void of a mistyped collect, vendor promotions (double points), offline QR, POS integration, Apple sign-in, vendor billing.

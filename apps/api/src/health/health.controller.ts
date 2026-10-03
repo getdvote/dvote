@@ -5,7 +5,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
-import { HealthDto } from './health.dto';
+import { HealthResponseDto } from './health-response.dto';
 
 @ApiTags('health')
 @Controller('health')
@@ -13,9 +13,9 @@ export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  @ApiOkResponse({ type: HealthDto })
+  @ApiOkResponse({ type: HealthResponseDto })
   @ApiServiceUnavailableResponse({ description: 'Database unreachable' })
-  async check(): Promise<HealthDto> {
+  async check(): Promise<HealthResponseDto> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
