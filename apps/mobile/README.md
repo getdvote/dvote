@@ -1,18 +1,32 @@
-# apps/mobile
+# apps/mobile — dvote customer app
 
-Customer mobile app (iOS + Android). **Not scaffolded yet.** (Vendor staff use a separate app: `apps/staff`.)
+Expo (React Native) app for customers, **iOS and Android only** (no web).
+Expo SDK 57 + Expo Router; designs from the customer app mockups.
 
-Planned stack: React Native + Expo (TypeScript), `@supabase/supabase-js` for Google / Facebook
-sign-in, a QR code renderer for the one-time collect / redeem codes. No NFC.
+| Route | Screen |
+|---|---|
+| `/welcome` | Log in / Sign up: Google, Facebook, or email + password |
+| `/check-email`, `/forgot-password`, `/reset-password` | Email confirmation and password reset |
+| `/auth-callback` | Where Supabase links open the app (`dvote://auth-callback`) |
+| `/(tabs)/cards` | All cards (one per shop where you have points) → `/card/[id]` history |
+| `/(tabs)/discover` | Discover shops — placeholder until `GET /api/app/vendors` exists |
+| `/(tabs)/you` | Profile hub (side menu) with the ⋮ menu: Logout / Delete account |
+| `/profile-details`, `/settings`, `/about`, `/info/[topic]` | Pushed pages |
+| `/qr` | QR button — placeholder (the QR API exists; screen comes next) |
 
-Screens: my cards · vendors (master collect QR) · vendor page (vendor collect QR, rewards,
-redeem QR) · card history · profile.
+## Run it on a phone
 
-To scaffold (later), from the repo root:
+1. `cp .env.example .env` and fill in `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the **publishable** key).
+   Keep `EXPO_PUBLIC_API_URL=http://localhost:3000`: in development the app points it at the PC
+   Expo runs on (`src/lib/config.ts`).
+2. In Supabase → Authentication → URL Configuration → **Redirect URLs**, add `exp://**` (Expo Go)
+   and `dvote://**` (real builds), so Google / Facebook / email links can come back to the app.
+3. From the repo root: `npm run mobile:install` (first time), then `npm run mobile:start` (Expo on **port 8082**,
+   so it can run next to the staff app on 8081), and scan
+   the QR with **Expo Go** (Android: inside Expo Go; iPhone: Camera app). Phone and PC on the same Wi-Fi.
 
-```bash
-npx create-expo-app@latest apps/mobile --template blank-typescript
-```
+## Checks
 
-API calls use the shared TypeScript client in `packages/api-client` (generated from the
-backend's OpenAPI spec), the same one the dashboard uses.
+`npm run typecheck` · `npx expo-doctor`. Add packages with `npx expo install <pkg>`.
+Expo APIs change every SDK: read the versioned docs (see `AGENTS.md`).
+API types are hand-written in `src/lib/api.ts` until `packages/api-client` is generated.

@@ -31,7 +31,7 @@ Full spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; source `docs/
 
 ## Repo layout (monorepo)
 
-`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `dashboard`, `mobile` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when the other packages get a `package.json`).
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` is the customer app (Expo SDK 57 + Expo Router, **iOS/Android only**, scheme `dvote`; same conventions as `apps/staff`). `dashboard` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
@@ -43,7 +43,7 @@ dvote/
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
-│   ├── mobile/                # React Native (Expo) customer app
+│   ├── mobile/                # React Native (Expo) customer app — iOS/Android (in progress)
 │   └── staff/                 # React Native (Expo) staff scanner app — web + native (built)
 └── packages/
     └── api-client/            # generated TS client from OpenAPI
@@ -195,6 +195,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 6. Redeem flow.
 7. Reports, admin APIs, fraud-flag job, then the React dashboard.
 8. React Native customer app + staff app, using the shared `packages/api-client`.
+   - Customer app: welcome (Google/Facebook/email sign-up + login, reset password), cards + history, You hub, profile details, settings, about ✅ (`apps/mobile`). Placeholders: Discover, QR, feedback/help/terms/join. Supabase Redirect URLs must allow `exp://**` and `dvote://**`.
    - Staff app (login → home → scan → bill amount → done) ✅ (`apps/staff`; types hand-written until api-client exists). The API needs `CORS_ORIGINS` for its web origin (`http://localhost:8081`).
 
 ## Must-have tests

@@ -25,9 +25,11 @@ Each bill gets one random `idempotencyKey`, so a retry after a network error nev
 3. From the repo root: `npm run staff:install` (first time), then `npm run staff:web`
    → opens http://localhost:8081.
 
-On a phone: the browser camera needs **https** (or localhost), and `localhost` means the phone
-itself — use the Expo Go app / a development build, or an https tunnel, and set
-`EXPO_PUBLIC_API_URL` to an address the phone can reach.
+On a phone (development): install **Expo Go**, put the phone on the PC's Wi-Fi and scan the QR from
+`npm run staff:start` (Android: scan inside Expo Go; iPhone: Camera app). Keep
+`EXPO_PUBLIC_API_URL=http://localhost:3000`: in development the app swaps `localhost` for the PC's
+address that Expo Go loaded it from (`src/lib/config.ts`), so it survives Wi-Fi address changes.
+In a phone **browser** the camera needs **https**; deployed builds need a real public API URL.
 
 ## Checks
 

@@ -12,6 +12,10 @@
     "admin:create": "npm --prefix apps/api run admin:create --",
     "staff:install": "npm --prefix apps/staff install",
     "staff:web": "npm --prefix apps/staff run web",
-    "staff:start": "npm --prefix apps/staff run start"
+    "staff:start": "npm --prefix apps/staff run start",
+    "mobile:install": "npm --prefix apps/mobile install",
+    "mobile:start": "npm --prefix apps/mobile run start",
+    "mobile:start:clear": "npm --prefix apps/mobile run start -- --clear",
+    "staff:start:clear": "npm --prefix apps/staff run start -- --clear"
   }
 }
