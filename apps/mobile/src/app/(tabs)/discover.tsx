@@ -1,4 +1,4 @@
-import Globe02Icon from '@hugeicons/core-free-icons/Globe02Icon';
+import MapsSearchIcon from '@hugeicons/core-free-icons/MapsSearchIcon';
 import { Icon } from '../../components/Icon';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
@@ -12,7 +12,7 @@ export default function Discover() {
       <Text style={styles.title}>Explore</Text>
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Icon icon={Globe02Icon} size={36} color={theme.text} />
+          <Icon icon={MapsSearchIcon} size={36} color={theme.text} />
         </View>
         <Text style={styles.heading}>Coffee shops near you</Text>
         <Text style={styles.text}>Soon you'll find every dvote shop here, with its rewards and points rule.</Text>

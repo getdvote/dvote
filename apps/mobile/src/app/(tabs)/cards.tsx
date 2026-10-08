@@ -1,4 +1,4 @@
-import CreditCardIcon from '@hugeicons/core-free-icons/CreditCardIcon';
+import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
 import { Icon } from '../../components/Icon';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -10,7 +10,7 @@ import { api, ApiError, type Card } from '../../lib/api';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
-/** All cards: one card per shop where the customer has points. */
+/** My cards: one card per shop where the customer has points. */
 export default function Cards() {
   const { handleAuthError } = useSession();
   const [cards, setCards] = useState<Card[] | null>(null);
@@ -68,7 +68,7 @@ export default function Cards() {
           ) : (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
-                <Icon icon={CreditCardIcon} size={36} color={theme.text} />
+                <Icon icon={GiftCard02Icon} size={36} color={theme.text} />
               </View>
               <Text style={styles.emptyTitle}>No cards yet</Text>
               <Text style={styles.emptyText}>

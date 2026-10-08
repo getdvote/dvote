@@ -1,6 +1,6 @@
 import BubbleChatIcon from '@hugeicons/core-free-icons/BubbleChatIcon';
 import File01Icon from '@hugeicons/core-free-icons/File01Icon';
-import LifebuoyIcon from '@hugeicons/core-free-icons/LifebuoyIcon';
+import CustomerService02Icon from '@hugeicons/core-free-icons/CustomerService02Icon';
 import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
 import { Icon, type AppIcon } from '../../components/Icon';
 import { useLocalSearchParams } from 'expo-router';
@@ -23,7 +23,7 @@ const TOPICS: Record<string, { title: string; icon: AppIcon; heading: string; te
   },
   help: {
     title: 'Get help',
-    icon: LifebuoyIcon,
+    icon: CustomerService02Icon,
     heading: 'Help is on the way',
     text: 'Answers to common questions and a way to reach our team are coming soon. For points that did not appear, ask the shop staff to check their scan.',
   },
