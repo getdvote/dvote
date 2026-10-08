@@ -10,6 +10,7 @@ import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { ScansModule } from './scans/scans.module';
 import { CardsModule } from './cards/cards.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { VendorImagesModule } from './vendor-images/vendor-images.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FeedbackModule } from './feedback/feedback.module';
     ScansModule,
     CardsModule,
     FeedbackModule,
+    VendorImagesModule,
   ],
 })
 export class AppModule {}

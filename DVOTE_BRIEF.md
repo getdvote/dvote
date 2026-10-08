@@ -121,7 +121,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 **Repo layout:** `apps/api` (NestJS) · `apps/staff` (staff app) · `apps/mobile` (customer app) · `apps/dashboard` + `packages/api-client` (placeholders) · `database/` (schema, seed, Supabase lockdown script) · `docs/` (spec PDF + its HTML source).
 
-**Database (13 tables):** `vendors`, `branches`, `staff_users`, `point_rules`, `rewards`, `users` (customers; includes optional `gender`, `birth_date`), `user_identities` (unused), `cards`, `qr_codes`, `point_events` (ledger), `redemptions`, `platform_admins`, `fraud_flags`. Many rules are enforced by the database itself (constraints, composite foreign keys so points can't cross vendors, a trigger that blocks editing/deleting ledger rows). Migrations `0`–`5` are applied to both cloud and local.
+**Database (14 tables):** `vendors`, `branches`, `staff_users`, `point_rules`, `rewards`, `users` (customers; includes optional `gender`, `birth_date`), `user_identities` (unused), `cards`, `qr_codes`, `point_events` (ledger), `redemptions`, `platform_admins`, `fraud_flags`, `vendor_images` (menu pages + branch photos). Many rules are enforced by the database itself (constraints, composite foreign keys so points can't cross vendors, a trigger that blocks editing/deleting ledger rows). Migrations `0`–`6` are applied to both cloud and local.
 
 **Security notes:**
 - Supabase's automatic public table API is **locked** (`database/supabase_lockdown.sql`: row-level security on every table, no grants for the public roles). Re-run it after adding any table.
@@ -132,13 +132,15 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 ## 7. What's built (as of 2026-10-08)
 
-**API (`apps/api`)** — 111 end-to-end + 39 unit tests passing.
+**API (`apps/api`)** — 128 end-to-end + 47 unit tests passing.
 - Health check, Swagger at `/api/docs` (dev only).
-- Customer: `GET|PATCH /api/app/users/me` (name, phone, gender, birthday), `GET /api/app/cards`, `GET /api/app/cards/{id}/events`, QR codes (create / poll / cancel).
-- Staff: `GET /api/vendor/staff/me`, staff CRUD with role rules, `GET|PATCH /api/vendor/profile`, `POST /api/vendor/scans/preview`, `POST /api/vendor/scans/collect`.
-- Admin: vendors CRUD + invite vendor admin (2FA required).
+- Customer: `GET|PATCH /api/app/users/me` (name, phone, gender, birthday), `PUT|DELETE /api/app/users/me/avatar` (profile photo), `GET /api/app/cards`, `GET /api/app/cards/{id}/events`, QR codes (create / poll / cancel), feedback (to a Google Sheet).
+- Staff: `GET /api/vendor/staff/me`, staff CRUD with role rules, `GET|PATCH /api/vendor/profile`, `PUT|DELETE /api/vendor/profile/logo`, `GET|POST|DELETE /api/vendor/images` (menu pages + branch photos), `POST /api/vendor/scans/preview`, `POST /api/vendor/scans/collect`.
+- Admin: vendors CRUD + logo upload + invite vendor admin (2FA required).
 
-**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, Profile details (name, phone, gender switch, **birthday calendar** with validation), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
+**Image storage (Supabase Storage):** bucket **`vendors`** (public: `<vendor>/logo/…`, `<vendor>/menu/…`, `<vendor>/branches/<branch>/…`) and bucket **`avatars`** (private: `<user>/…`, shown only to the owner via 1-hour signed links). Apps send images to the API, never to Storage directly; the API checks and shrinks them to WebP. Replacing or deleting an image deletes its file. Buckets are created with `npm run storage:setup`.
+
+**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, Profile details (**photo** add/change/remove, name, phone, gender switch, **birthday calendar** with validation), **shop page** (how you earn points, rewards with "pts to go", menu pages, branches with directions and photos), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
 
 **Staff app (`apps/staff`)** — log-in → home (vendor, logo, branch) → scan QR (camera) → enter bill (shows the rule) → "points granted" screen. Runs in the browser and on phones.
 
@@ -158,7 +160,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 **Known gaps / open items for the customer app & launch:**
 - `GET /api/app/vendors` + vendor page (for Discover); vendor `brand_color` (cards use a generated palette today).
-- **Vendor logos:** plan = Supabase Storage public bucket `vendor-logos`, link saved in `vendors.logo_url`; later an upload endpoint in the admin dashboard.
+- **Images:** customers can set their photo and see shop menus/branch photos; vendors still upload menu pages, branch photos and logos through the API (Swagger/Postman) until the dashboard has upload screens.
 - **Delete account:** needs a decision on what happens to points/cards (soft delete).
 - Language & notification preferences (Settings shows "Soon").
 - Content pages: feedback, help, terms, privacy policy, join as vendor.
@@ -175,6 +177,8 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 | Date | Decision |
 |---|---|
+| 2026-10-08 | **Image storage:** Supabase Storage, folders by **id** (never names), random file names, public `vendors` bucket + private `avatars` bucket, uploads only through the API (WebP), deleting an image deletes its file. Menu pages + branch photos in `vendor_images` (migration 6). |
+| 2026-10-08 | Code review: `getdvote` GitHub account is the only code owner/reviewer; Karim and Mohamed open PRs from their own accounts. |
 | 2026-10-08 | Birthday is picked from dvote's own calendar sheet (same on Android/iPhone/web), validated in app and API (real date, 1900 → today). |
 | 2026-10-08 | `users.gender` (male/female, empty = not given) and `users.birth_date` (plain date) added (migration 5). |
 | 2026-10-08 | **No shop-specific collect QRs**: vendor + branch always come from the scanning staff. |

@@ -9,21 +9,23 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
+import { RewardList } from '../../components/RewardList';
 import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
-import { api, ApiError, type Card, type CardEvent } from '../../lib/api';
+import { api, ApiError, type Card, type CardEvent, type VendorPage } from '../../lib/api';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
 
 /**
- * Card details: the card, the shop that issued it (opens the shop page), its rewards and
- * history. The title is fixed ("Card details") so it doesn't change while data loads.
+ * Card details: the card, the shop that issued it (opens the shop page), every reward of
+ * that shop (from GET /api/app/vendors/{id}) and the history. The title is fixed ("Card details") so it doesn't change while data loads.
  */
 export default function CardDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { handleAuthError } = useSession();
   const [card, setCard] = useState<Card | null>(null);
   const [events, setEvents] = useState<CardEvent[] | null>(null);
+  const [rewards, setRewards] = useState<VendorPage['rewards'] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -31,8 +33,11 @@ export default function CardDetails() {
     try {
       setError(null);
       const [cards, history] = await Promise.all([api.cards(), api.cardEvents(id)]);
-      setCard(cards.find((c) => c.id === id) ?? null);
+      const found = cards.find((c) => c.id === id) ?? null;
+      setCard(found);
       setEvents(history);
+      // every reward of the shop (the card itself only knows the next one)
+      if (found) setRewards((await api.vendor(found.vendor.id)).rewards);
     } catch (err) {
       if (await handleAuthError(err)) return;
       setError(err instanceof ApiError ? err.message : 'Could not load this card.');
@@ -75,7 +80,7 @@ export default function CardDetails() {
             <IssuedBy card={card} />
 
             <SectionTitle title="Rewards" />
-            <Rewards card={card} />
+            <Rewards card={card} rewards={rewards} />
 
             <SectionTitle title="History" />
             {events === null ? (
@@ -140,22 +145,10 @@ function IssuedBy({ card }: { card: Card }) {
   );
 }
 
-/**
- * Rewards. The API only sends the next reward and how many are ready (not the shop's full
- * list; that needs GET /api/app/vendors/{id}), so the full list is an empty state for now.
- */
-function Rewards({ card }: { card: Card }) {
+/** What's ready, progress to the next reward, then every reward of the shop. */
+function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards'] | null }) {
   const next = card.nextReward;
   const ready = card.affordableRewards;
-  if (!next && ready === 0) {
-    return (
-      <EmptySection
-        icon={GiftIcon}
-        title="Rewards coming soon"
-        text="The rewards you can get at this shop, and their points, will show here."
-      />
-    );
-  }
   return (
     <View style={{ gap: 12 }}>
       {ready > 0 ? (
@@ -186,11 +179,14 @@ function Rewards({ card }: { card: Card }) {
           </View>
         </View>
       ) : null}
-      <EmptySection
-        icon={GiftIcon}
-        title="All rewards coming soon"
-        text="Soon you'll see every reward at this shop here, not just the next one."
-      />
+      {rewards === null ? (
+        <ActivityIndicator color={theme.text} />
+      ) : (
+        <>
+          {rewards.length > 0 && (ready > 0 || next) ? <Text style={styles.allTitle}>All rewards</Text> : null}
+          <RewardList rewards={rewards} balance={card.balance} />
+        </>
+      )}
     </View>
   );
 }
@@ -252,6 +248,7 @@ const styles = StyleSheet.create({
   },
   rewardName: { fontSize: 17, fontWeight: '600', color: theme.text },
   rewardDetail: { fontSize: 14, color: theme.muted, marginTop: 2 },
+  allTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 8, marginLeft: 2 },
   track: { ...squircle, height: 6, borderRadius: 3, backgroundColor: theme.fill, overflow: 'hidden' },
   fill: { ...squircle, height: '100%', borderRadius: 3, backgroundColor: theme.brand },
   row: {

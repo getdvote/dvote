@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { config } from './config';
 import { supabase } from './supabase';
 
@@ -78,7 +79,9 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown): Promise<T> {
+/** JSON body, or FormData for file uploads (fetch then sets the multipart boundary itself). */
+async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   let res: Response;
@@ -87,9 +90,9 @@ async function call<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: un
       method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: isForm ? (body as FormData) : body ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(0, 'network', "Can't reach dvote right now. Check your connection and try again.");
@@ -115,10 +118,64 @@ export const api = {
   newCollectQr: () => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'collect' }),
   qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
   cancelQr: (id: string) => call<QrCodeStatus>('POST', `/api/app/qr-codes/${id}/cancel`),
+  /** Upload or replace my profile photo (the API shrinks it; the old one is deleted). */
+  uploadAvatar: async (photo: PickedPhoto) => call<Me>('PUT', '/api/app/users/me/avatar', await photoForm(photo)),
+  /** Remove my profile photo. */
+  removeAvatar: () => call<Me>('DELETE', '/api/app/users/me/avatar'),
+  /** A shop's page: point rule, rewards, menu pages, branches and my card there. */
+  vendor: (id: string) => call<VendorPage>('GET', `/api/app/vendors/${id}`),
   /** Adds the feedback to the team's Google Sheet. */
   sendFeedback: (body: { category: FeedbackCategory; message: string }) =>
     call<void>('POST', '/api/app/feedback', body),
 };
+
+/** A photo chosen with expo-image-picker. On the web it also carries the browser File. */
+export interface PickedPhoto {
+  uri: string;
+  mimeType?: string;
+  fileName?: string | null;
+  file?: Blob;
+}
+
+/** multipart/form-data with the photo in the field "file", as the API expects. */
+async function photoForm(photo: PickedPhoto): Promise<FormData> {
+  const form = new FormData();
+  const type = photo.mimeType ?? 'image/jpeg';
+  const name = photo.fileName ?? `photo.${type.split('/')[1] ?? 'jpg'}`;
+  if (Platform.OS === 'web') {
+    form.append('file', photo.file ?? (await (await fetch(photo.uri)).blob()), name);
+  } else {
+    // React Native's FormData reads the file from its uri
+    form.append('file', { uri: photo.uri, name, type } as unknown as Blob);
+  }
+  return form;
+}
+
+export interface VendorPageImage {
+  id: string;
+  url: string;
+}
+
+export interface VendorPage {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  currency: string;
+  /** null = the shop has no point rule yet */
+  rule: { spendAmount: string; pointsPerSpend: number; minPurchase: string; maxPointsPerPurchase: number | null } | null;
+  rewards: { id: string; name: string; description: string | null; imageUrl: string | null; pointsCost: number }[];
+  menu: VendorPageImage[];
+  branches: {
+    id: string;
+    name: string;
+    address: string | null;
+    lat: number | null;
+    lng: number | null;
+    photos: VendorPageImage[];
+  }[];
+  /** My card at this shop; null before my first purchase there */
+  card: { id: string; balance: number; lifetimePoints: number } | null;
+}
 
 /** Same codes as the API (CreateFeedbackDto). */
 export type FeedbackCategory = 'bug' | 'suggestion' | 'points_rewards' | 'account' | 'other';
@@ -133,6 +190,11 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     card_not_found: 'This card was not found.',
     qr_not_found: 'This QR code was not found. Get a new one.',
     feedback_not_configured: "Feedback isn't available yet. Please try again later.",
+    vendor_not_found: 'This shop is not on dvote right now.',
+    unsupported_image: 'Choose a JPG, PNG or HEIC photo.',
+    file_too_large: 'That photo is too big. Choose one under 10 MB.',
+    storage_not_configured: "Photos can't be saved right now. Please try again later.",
+    storage_error: "Photos can't be saved right now. Please try again later.",
   };
   return messages[code] ?? serverMessage ?? 'Something went wrong. Please try again.';
 }

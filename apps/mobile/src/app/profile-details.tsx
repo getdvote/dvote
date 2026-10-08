@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Text';
 import { BirthdayField } from '../components/BirthdayField';
+import { ProfilePhoto } from '../components/ProfilePhoto';
 import { ErrorBox, Group, PageHeader, Screen } from '../components/ui';
 import { api, ApiError, type Gender } from '../lib/api';
 import { birthdayProblem } from '../lib/dates';
@@ -31,7 +32,7 @@ function problems(f: { name: string; phone: string; birthDate: string | null }) 
   };
 }
 
-/** Profile details design: name, email, phone, gender, birthday, "Save changes". */
+/** Profile details design: photo, name, email, phone, gender, birthday, "Save changes". */
 export default function ProfileDetails() {
   const { me, setMe, handleAuthError } = useSession();
   const [name, setName] = useState(me?.name ?? '');
@@ -93,6 +94,7 @@ export default function ProfileDetails() {
     <Screen>
       <PageHeader title="Profile details" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ProfilePhoto />
         <Group>
           <Field error={shown('name')}>
             <TextInput

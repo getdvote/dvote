@@ -7,7 +7,7 @@
 --  A database built from this file already matches every Prisma migration; mark them
 --  applied (from apps/api):  npx prisma migrate resolve --applied <name>
 --  for 0_init, 1_users_auth_user_id, 2_staff_users_auth_user_id, 3_points_rewards_qr,
---  4_platform_admins_auth_user_id.
+--  4_platform_admins_auth_user_id, 5_users_gender_birth_date, 6_storage_images.
 -- =====================================================================
 BEGIN;
 
@@ -27,6 +27,7 @@ CREATE TYPE qr_status           AS ENUM ('active', 'used', 'expired', 'cancelled
 CREATE TYPE point_event_type    AS ENUM ('earn', 'redeem', 'adjust');
 CREATE TYPE fraud_flag_type     AS ENUM ('too_many_collects', 'large_purchase', 'branch_spike', 'staff_spike');
 CREATE TYPE fraud_flag_status   AS ENUM ('open', 'dismissed', 'confirmed');
+CREATE TYPE vendor_image_kind   AS ENUM ('menu', 'branch_photo');
 
 -- ---------------------------------------------------------------------
 -- 2. HELPER: keep updated_at current on every UPDATE
@@ -63,6 +64,7 @@ CREATE TABLE vendors (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name           varchar(120)  NOT NULL,
     logo_url       varchar(500),
+    logo_path      varchar(300),                 -- uploaded logo in Storage bucket "vendors" (NULL = none / external URL)
     contact_email  varchar(255),
     currency       char(3)       NOT NULL DEFAULT 'EGP',    -- receipt totals are in this currency
     status         vendor_status NOT NULL DEFAULT 'active',
@@ -150,7 +152,8 @@ CREATE TABLE users (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name        varchar(120),
     email       varchar(255),                 -- a provider may not share it; not unique
-    avatar_url  varchar(500),
+    avatar_url  varchar(500),                 -- sign-in provider photo (Google/Facebook)
+    avatar_path varchar(300),                 -- uploaded photo in private Storage bucket "avatars"
     phone       varchar(20),                  -- optional, not used for login
     gender      user_gender,                  -- optional (profile)
     birth_date  date,                         -- optional (profile); plain date, no time zone
@@ -283,6 +286,26 @@ CREATE INDEX redemptions_card_idx ON redemptions (card_id);
 CREATE INDEX redemptions_branch_time_idx ON redemptions (branch_id, created_at);
 
 -- ---------------------------------------------------------------------
+-- 6b. VENDOR IMAGES (files in Supabase Storage bucket "vendors"; rows hard-deleted with their file)
+-- ---------------------------------------------------------------------
+CREATE TABLE vendor_images (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id     uuid              NOT NULL REFERENCES vendors (id),
+    branch_id     uuid,                                 -- branch photos only
+    kind          vendor_image_kind NOT NULL,
+    storage_path  varchar(300)      NOT NULL UNIQUE,    -- <vendor>/menu/<f>.webp | <vendor>/branches/<branch>/<f>.webp
+    sort_order    integer           NOT NULL DEFAULT 0,
+    created_at    timestamptz       NOT NULL DEFAULT now(),
+    updated_at    timestamptz       NOT NULL DEFAULT now(),
+    CONSTRAINT vendor_images_branch_fk FOREIGN KEY (branch_id, vendor_id) REFERENCES branches (id, vendor_id),
+    CONSTRAINT vendor_images_kind_ck CHECK (
+        (kind = 'menu' AND branch_id IS NULL) OR
+        (kind = 'branch_photo' AND branch_id IS NOT NULL)
+    )
+);
+CREATE INDEX vendor_images_vendor_idx ON vendor_images (vendor_id, kind, branch_id, sort_order);
+
+-- ---------------------------------------------------------------------
 -- 7. FRAUD FLAGS
 -- ---------------------------------------------------------------------
 CREATE TABLE fraud_flags (
@@ -312,7 +335,8 @@ DECLARE t text;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'platform_admins','vendors','branches','staff_users','point_rules','rewards',
-        'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags']
+        'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags',
+        'vendor_images']
     LOOP
         EXECUTE format(
             'CREATE TRIGGER %I_set_updated_at BEFORE UPDATE ON %I

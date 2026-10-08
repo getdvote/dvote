@@ -10,22 +10,23 @@ datasource db {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model branches {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendor_id    String         @db.Uuid
-  name         String         @db.VarChar(120)
-  address      String?        @db.VarChar(500)
-  lat          Decimal?       @db.Decimal(9, 6)
-  lng          Decimal?       @db.Decimal(9, 6)
-  timezone     String         @default("Africa/Cairo") @db.VarChar(64)
-  status       branch_status  @default(active)
-  created_at   DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
-  vendors      vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  fraud_flags  fraud_flags[]
-  point_events point_events[]
-  qr_codes     qr_codes[]
-  redemptions  redemptions[]
-  staff_users  staff_users[]
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id     String          @db.Uuid
+  name          String          @db.VarChar(120)
+  address       String?         @db.VarChar(500)
+  lat           Decimal?        @db.Decimal(9, 6)
+  lng           Decimal?        @db.Decimal(9, 6)
+  timezone      String          @default("Africa/Cairo") @db.VarChar(64)
+  status        branch_status   @default(active)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  vendors       vendors         @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fraud_flags   fraud_flags[]
+  point_events  point_events[]
+  qr_codes      qr_codes[]
+  redemptions   redemptions[]
+  staff_users   staff_users[]
+  vendor_images vendor_images[]
 
   @@unique([id, vendor_id])
   @@index([vendor_id], map: "branches_vendor_idx")
@@ -179,6 +180,7 @@ model users {
   updated_at      DateTime          @default(now()) @db.Timestamptz(6)
   gender          user_gender?
   birth_date      DateTime?         @db.Date
+  avatar_path     String?           @db.VarChar(300)
   cards           cards[]
   fraud_flags     fraud_flags[]
   qr_codes        qr_codes[]
@@ -186,14 +188,15 @@ model users {
 }
 
 model vendors {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String         @db.VarChar(120)
-  logo_url      String?        @db.VarChar(500)
-  contact_email String?        @db.VarChar(255)
-  currency      String         @default("EGP") @db.Char(3)
-  status        vendor_status  @default(active)
-  created_at    DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String          @db.VarChar(120)
+  logo_url      String?         @db.VarChar(500)
+  contact_email String?         @db.VarChar(255)
+  currency      String          @default("EGP") @db.Char(3)
+  status        vendor_status   @default(active)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  logo_path     String?         @db.VarChar(300)
   branches      branches[]
   cards         cards[]
   fraud_flags   fraud_flags[]
@@ -203,6 +206,7 @@ model vendors {
   redemptions   redemptions[]
   rewards       rewards[]
   staff_users   staff_users[]
+  vendor_images vendor_images[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -292,6 +296,23 @@ model rewards {
   @@index([vendor_id, status, sort_order], map: "rewards_vendor_idx")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model vendor_images {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id    String            @db.Uuid
+  branch_id    String?           @db.Uuid
+  kind         vendor_image_kind
+  storage_path String            @unique @db.VarChar(300)
+  sort_order   Int               @default(0)
+  created_at   DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime          @default(now()) @db.Timestamptz(6)
+  branches     branches?         @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction, map: "vendor_images_branch_fk")
+  vendors      vendors           @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([vendor_id, kind, branch_id, sort_order], map: "vendor_images_vendor_idx")
+}
+
 enum account_status {
   active
   disabled
@@ -363,4 +384,9 @@ enum reward_status {
 enum user_gender {
   male
   female
+}
+
+enum vendor_image_kind {
+  menu
+  branch_photo
 }

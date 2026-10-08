@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  Put,
+  UploadedFile,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -9,6 +18,7 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
+import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
@@ -27,8 +37,8 @@ export class UsersController {
   /** The signed-in customer. The first call after sign-up creates the profile. */
   @Get('me')
   @ApiOkResponse({ type: UserResponseDto })
-  get(@CurrentUser() user: users): UserResponseDto {
-    return UserResponseDto.from(user);
+  get(@CurrentUser() user: users): Promise<UserResponseDto> {
+    return this.users.present(user);
   }
 
   @Patch('me')
@@ -37,6 +47,24 @@ export class UsersController {
     @CurrentUser() user: users,
     @Body() dto: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    return UserResponseDto.from(await this.users.updateProfile(user.id, dto));
+    return this.users.present(await this.users.updateProfile(user.id, dto));
+  }
+
+  /** Upload or replace my profile photo (the previous uploaded photo is deleted). */
+  @Put('me/avatar')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: UserResponseDto })
+  async setAvatar(
+    @CurrentUser() user: users,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<UserResponseDto> {
+    return this.users.present(await this.users.setAvatar(user, file.buffer));
+  }
+
+  /** Remove my profile photo: the file is deleted from storage. */
+  @Delete('me/avatar')
+  @ApiOkResponse({ type: UserResponseDto })
+  async removeAvatar(@CurrentUser() user: users): Promise<UserResponseDto> {
+    return this.users.present(await this.users.removeAvatar(user));
   }
 }
