@@ -55,7 +55,7 @@ export default function You() {
 
         <SectionTitle title="Account" />
         <Group>
-          <Row icon={GiftCard02Icon} label="My cards" onPress={() => router.navigate('/(tabs)/cards')} />
+          <Row icon={GiftCard02Icon} label="My cards" onPress={() => router.push('/my-cards')} />
           <Row icon={UserCircleIcon} label="Profile details" onPress={() => router.push('/profile-details')} />
           <Row icon={Settings01Icon} label="Settings" onPress={() => router.push('/settings')} />
         </Group>

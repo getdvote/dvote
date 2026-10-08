@@ -51,16 +51,22 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
             <View style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: ink }]} />
           </View>
           <Text style={[styles.caption, { color: ink }]} numberOfLines={1}>
-            {next
-              ? `${next.pointsNeeded} pts to ${next.name}`
-              : card.affordableRewards > 0
-                ? `${card.affordableRewards} reward${card.affordableRewards === 1 ? '' : 's'} ready to redeem`
-                : `Lifetime ${card.lifetimePoints.toLocaleString()} pts`}
+            {rewardCaption(card)}
           </Text>
         </View>
       </LinearGradient>
     </Pressable>
   );
+}
+
+/** Progress line shown under a card's balance (also used by the My cards list). */
+export function rewardCaption(card: Card): string {
+  const next = card.nextReward;
+  if (next) return `${next.pointsNeeded} pts to ${next.name}`;
+  if (card.affordableRewards > 0) {
+    return `${card.affordableRewards} reward${card.affordableRewards === 1 ? '' : 's'} ready to redeem`;
+  }
+  return `Lifetime ${card.lifetimePoints.toLocaleString()} pts`;
 }
 
 const styles = StyleSheet.create({
