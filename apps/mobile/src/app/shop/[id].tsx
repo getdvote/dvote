@@ -4,8 +4,10 @@ import Location01Icon from '@hugeicons/core-free-icons/Location01Icon';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { DvoteLogo } from '../../components/DvoteLogo';
+import { ImageViewer } from '../../components/ImageViewer';
 import { MenuGallery } from '../../components/MenuGallery';
 import { Text } from '../../components/Text';
 import { EmptySection, PageHeader, Screen, SectionTitle } from '../../components/ui';
@@ -32,6 +34,7 @@ export default function Shop() {
   const shopName = name || 'Shop';
   const menuImages: string[] = []; // TODO: from GET /api/app/vendors/{id} once menus exist
   const colors = vendorColors(id ?? '');
+  const [logoOpen, setLogoOpen] = useState(false);
 
   return (
     <Screen>
@@ -52,7 +55,14 @@ export default function Shop() {
 
         <View style={styles.hero}>
           {logoUrl ? (
-            <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+            <Pressable
+              accessibilityRole="imagebutton"
+              accessibilityLabel={`${shopName} logo. Open full screen`}
+              onPress={() => setLogoOpen(true)}
+              style={({ pressed }) => pressed && { opacity: 0.85 }}
+            >
+              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+            </Pressable>
           ) : (
             <View style={[styles.logo, { backgroundColor: colors[0] }]}>
               <Text style={styles.logoInitial}>{shopName.slice(0, 1).toUpperCase()}</Text>
@@ -85,6 +95,7 @@ export default function Shop() {
           text="This shop's branches and where to find them will show here."
         />
       </ScrollView>
+      {logoUrl ? <ImageViewer images={[logoUrl]} visible={logoOpen} onClose={() => setLogoOpen(false)} /> : null}
     </Screen>
   );
 }
