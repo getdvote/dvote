@@ -53,7 +53,7 @@ export default function Cards() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>Cards</Text>
+            <Text style={styles.title}>My cards</Text>
             {cards && cards.length > 0 ? (
               <Text style={styles.count}>
                 {cards.length} shop{cards.length === 1 ? '' : 's'}

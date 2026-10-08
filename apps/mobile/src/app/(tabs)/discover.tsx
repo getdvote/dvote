@@ -5,11 +5,11 @@ import { Text } from '../../components/Text';
 import { Screen } from '../../components/ui';
 import { theme } from '../../lib/theme';
 
-/** Discover shops (globe tab). Needs GET /api/app/vendors, not built yet. */
+/** Explore shops (tab shown as "Explore"). Needs GET /api/app/vendors, not built yet. */
 export default function Discover() {
   return (
     <Screen>
-      <Text style={styles.title}>Discover</Text>
+      <Text style={styles.title}>Explore</Text>
       <View style={styles.middle}>
         <View style={styles.icon}>
           <Icon icon={Globe02Icon} size={36} color={theme.text} />

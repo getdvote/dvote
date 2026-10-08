@@ -13,9 +13,9 @@ import { theme } from '../../lib/theme';
 
 // Untitled UI icons are outline-only: the selected tab is shown by colour and its grey pill.
 const ICONS: Record<string, { icon: AppIcon; label: string }> = {
-  cards: { icon: GiftCard02Icon, label: 'Cards' },
-  discover: { icon: MapsSearchIcon, label: 'Discover' },
-  you: { icon: User02Icon, label: 'You' },
+  cards: { icon: GiftCard02Icon, label: 'My cards' },
+  discover: { icon: MapsSearchIcon, label: 'Explore' },
+  you: { icon: User02Icon, label: 'My profile' },
 };
 
 /** Floating pill with 3 tabs + a separate round QR button (side-menu design). */

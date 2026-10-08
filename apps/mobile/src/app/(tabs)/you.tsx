@@ -19,7 +19,7 @@ import { confirmDeleteAccount, confirmLogout } from '../../lib/account';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
-/** "You": profile header + Account / More menus (side-menu design), ⋮ menu (three-dots). */
+/** "My profile" (route: you): profile header + Account / More menus (side-menu design), ⋮ menu (three-dots). */
 export default function You() {
   const { me, meError, session, signOut } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,7 +32,7 @@ export default function You() {
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>You</Text>
+          <Text style={styles.title}>My profile</Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="More options"
