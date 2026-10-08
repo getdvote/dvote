@@ -31,7 +31,7 @@ export function PageHeader({ title, onBack }: { title: string; onBack?: () => vo
         style={styles.backButton}
         hitSlop={8}
       >
-        <Icon icon={ArrowLeft01Icon} size={20} color={theme.text} />
+        <Icon icon={ArrowLeft01Icon} size={24} color={theme.text} />
       </Pressable>
       <Text style={styles.pageTitle} numberOfLines={1}>
         {title}
@@ -252,15 +252,16 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
   },
+  // 44 pt: Apple's minimum comfortable tap size.
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerSpacer: { width: 36, height: 36 },
+  headerSpacer: { width: 44, height: 44 },
   pageTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: theme.text },
   group: { backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },

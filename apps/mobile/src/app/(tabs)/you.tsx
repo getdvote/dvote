@@ -3,27 +3,21 @@ import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
 import File01Icon from '@hugeicons/core-free-icons/File01Icon';
 import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
 import CustomerService02Icon from '@hugeicons/core-free-icons/CustomerService02Icon';
-import MoreVerticalIcon from '@hugeicons/core-free-icons/MoreVerticalIcon';
 import Settings01Icon from '@hugeicons/core-free-icons/Settings01Icon';
 import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
 import UserCircleIcon from '@hugeicons/core-free-icons/UserCircleIcon';
 import { Icon } from '../../components/Icon';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DvoteLogo } from '../../components/DvoteLogo';
 import { Avatar, ErrorBox, Group, Row, Screen, SectionTitle } from '../../components/ui';
-import { confirmDeleteAccount, confirmLogout } from '../../lib/account';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
-/** "My profile" (route: you): profile header + Account / More menus (side-menu design), ⋮ menu (three-dots). */
+/** "My profile" (route: you): profile header + Account / More menus. Logout and Delete account are in Settings. */
 export default function You() {
-  const { me, meError, session, signOut } = useSession();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const insets = useSafeAreaInsets();
+  const { me, meError, session } = useSession();
 
   const name = me?.name ?? 'dvote member';
   const email = me?.email ?? session?.user.email ?? null;
@@ -33,15 +27,6 @@ export default function You() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>My profile</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="More options"
-            onPress={() => setMenuOpen(true)}
-            style={styles.dots}
-            hitSlop={8}
-          >
-            <Icon icon={MoreVerticalIcon} size={20} color={theme.text} />
-          </Pressable>
         </View>
 
         <View style={styles.profile}>
@@ -74,33 +59,6 @@ export default function You() {
         </View>
       </ScrollView>
 
-      {/* three-dots design: a small card with Logout / Delete account */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)} accessibilityLabel="Close menu">
-          <View style={[styles.menu, { top: insets.top + 6 }]}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.menuButton, pressed && { opacity: 0.7 }]}
-              onPress={() => {
-                setMenuOpen(false);
-                confirmLogout(signOut);
-              }}
-            >
-              <Text style={styles.menuText}>Logout</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.menuButton, pressed && { opacity: 0.7 }]}
-              onPress={() => {
-                setMenuOpen(false);
-                confirmDeleteAccount();
-              }}
-            >
-              <Text style={styles.menuText}>Delete account</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
     </Screen>
   );
 }
@@ -109,39 +67,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: TAB_BAR_SPACE },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 },
   title: { fontSize: 34, fontWeight: '700', color: theme.text },
-  dots: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   profile: { alignItems: 'center', gap: 6, marginTop: 24, marginBottom: 8 },
   name: { fontSize: 26, fontWeight: '700', color: theme.text, marginTop: 10 },
   email: { fontSize: 16, color: theme.muted },
   footer: { alignItems: 'center', marginTop: 40 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.08)' },
-  menu: {
-    position: 'absolute',
-    right: theme.gutter,
-    width: 290,
-    backgroundColor: theme.surface,
-    borderRadius: 26,
-    padding: 12,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  menuButton: {
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.fill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuText: { fontSize: 17, fontWeight: '500', color: theme.danger },
 });
