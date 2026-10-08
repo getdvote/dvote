@@ -1,6 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Calendar03Icon from '@hugeicons/core-free-icons/Calendar03Icon';
+import CancelCircleIcon from '@hugeicons/core-free-icons/CancelCircleIcon';
+import { Icon } from '../components/Icon';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { showYmd } from '../lib/dates';
 import { theme } from '../lib/theme';
 import { BirthdayPicker } from './BirthdayPicker';
@@ -24,12 +27,12 @@ export function BirthdayField({
         onPress={() => setOpen(true)}
         style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
       >
-        <Ionicons name="calendar-outline" size={17} color={value ? theme.text : theme.link} />
+        <Icon icon={Calendar03Icon} size={17} color={value ? theme.text : theme.link} />
         <Text style={value ? styles.value : styles.add}>{value ? showYmd(value) : 'Choose date'}</Text>
       </Pressable>
       {value ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Remove birthday" onPress={() => onChange(null)} hitSlop={8}>
-          <Ionicons name="close-circle" size={20} color={theme.placeholder} />
+          <Icon icon={CancelCircleIcon} size={20} color={theme.placeholder} />
         </Pressable>
       ) : null}
       <BirthdayPicker

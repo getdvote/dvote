@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Text';
 import { BirthdayField } from '../components/BirthdayField';
 import { ErrorBox, Group, PageHeader, Screen } from '../components/ui';
 import { api, ApiError, type Gender } from '../lib/api';

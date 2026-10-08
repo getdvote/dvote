@@ -1,4 +1,8 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import Tick02Icon from '@hugeicons/core-free-icons/Tick02Icon';
+import WifiDisconnected01Icon from '@hugeicons/core-free-icons/WifiDisconnected01Icon';
+import { Icon } from '../components/Icon';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -6,12 +10,12 @@ import {
   Animated,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   Vibration,
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { Text } from '../components/Text';
 import { ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type NewQrCode, type QrCollectResult } from '../lib/api';
 import { useSession } from '../lib/session';
@@ -114,7 +118,7 @@ export default function Qr() {
           style={styles.close}
           hitSlop={8}
         >
-          <Ionicons name="close" size={22} color={theme.text} />
+          <Icon icon={Cancel01Icon} size={22} color={theme.text} />
         </Pressable>
       </View>
 
@@ -173,7 +177,7 @@ function Showing({ qr, deadline, offline }: { qr: NewQrCode; deadline: number; o
       <View style={styles.waiting}>
         {offline ? (
           <>
-            <Ionicons name="cloud-offline-outline" size={16} color={theme.muted} />
+            <Icon icon={WifiDisconnected01Icon} size={16} color={theme.muted} />
             <Text style={styles.waitingText}>Reconnecting…</Text>
           </>
         ) : (
@@ -197,7 +201,7 @@ function Done({ result }: { result: QrCollectResult | null }) {
     <View style={styles.body}>
       <View style={styles.middle}>
         <Animated.View style={[styles.check, { transform: [{ scale: pop }] }]}>
-          <Ionicons name="checkmark" size={48} color="#fff" />
+          <Icon icon={Tick02Icon} size={48} color="#fff" strokeWidth={2.5} />
         </Animated.View>
         {result ? (
           <>
@@ -250,7 +254,7 @@ function Ended({
     <View style={styles.body}>
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Ionicons name="qr-code-outline" size={40} color={theme.text} />
+          <Icon icon={QrCodeIcon} size={40} color={theme.text} />
         </View>
         <Text style={styles.lead}>{heading}</Text>
         {text ? <Text style={styles.text}>{text}</Text> : null}

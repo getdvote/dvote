@@ -1,33 +1,35 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import File01Icon from '@hugeicons/core-free-icons/File01Icon';
+import CustomerService02Icon from '@hugeicons/core-free-icons/CustomerService02Icon';
+import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
+import { Icon, type AppIcon } from '../../components/Icon';
 import { useLocalSearchParams } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { PageHeader, Screen } from '../../components/ui';
 import { theme } from '../../lib/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /**
  * "More" menu pages that still need content or a backend (help centre, terms text,
  * vendor sign-up). One placeholder screen so the menu is complete. Send feedback is a
  * bottom sheet (components/FeedbackSheet).
  */
-const TOPICS: Record<string, { title: string; icon: IconName; heading: string; text: string }> = {
+const TOPICS: Record<string, { title: string; icon: AppIcon; heading: string; text: string }> = {
   help: {
     title: 'Get help',
-    icon: 'help-buoy-outline',
+    icon: CustomerService02Icon,
     heading: 'Help is on the way',
     text: 'Answers to common questions and a way to reach our team are coming soon. For points that did not appear, ask the shop staff to check their scan.',
   },
   terms: {
     title: 'Terms and conditions',
-    icon: 'document-text-outline',
+    icon: File01Icon,
     heading: 'Terms and conditions',
     text: 'The full terms and privacy policy will be published here before launch.',
   },
   join: {
     title: 'Join as a vendor',
-    icon: 'storefront-outline',
+    icon: Store01Icon,
     heading: 'Bring dvote to your coffee shop',
     text: 'Reward your regulars with points and free treats. Vendor sign-up is coming soon to the app.',
   },
@@ -41,7 +43,7 @@ export default function InfoTopic() {
       <PageHeader title={info.title} />
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Ionicons name={info.icon} size={34} color={theme.text} />
+          <Icon icon={info.icon} size={34} color={theme.text} />
         </View>
         <Text style={styles.heading}>{info.heading}</Text>
         <Text style={styles.text}>{info.text}</Text>

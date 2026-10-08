@@ -1,16 +1,18 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import MapsSearchIcon from '@hugeicons/core-free-icons/MapsSearchIcon';
+import { Icon } from '../../components/Icon';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Screen } from '../../components/ui';
 import { theme } from '../../lib/theme';
 
-/** Discover shops (globe tab). Needs GET /api/app/vendors, not built yet. */
+/** Explore shops (tab shown as "Explore"). Needs GET /api/app/vendors, not built yet. */
 export default function Discover() {
   return (
     <Screen>
-      <Text style={styles.title}>Discover</Text>
+      <Text style={styles.title}>Explore</Text>
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Ionicons name="earth-outline" size={36} color={theme.text} />
+          <Icon icon={MapsSearchIcon} size={36} color={theme.text} />
         </View>
         <Text style={styles.heading}>Coffee shops near you</Text>
         <Text style={styles.text}>Soon you'll find every dvote shop here, with its rewards and points rule.</Text>

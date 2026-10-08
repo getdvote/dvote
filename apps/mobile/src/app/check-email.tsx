@@ -1,6 +1,8 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Mail01Icon from '@hugeicons/core-free-icons/Mail01Icon';
+import { Icon } from '../components/Icon';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { PrimaryButton, Screen } from '../components/ui';
 import { theme } from '../lib/theme';
 
@@ -11,7 +13,7 @@ export default function CheckEmail() {
     <Screen edges={['top', 'bottom']}>
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Ionicons name="mail-unread-outline" size={40} color={theme.text} />
+          <Icon icon={Mail01Icon} size={40} color={theme.text} />
         </View>
         <Text style={styles.title}>Check your email</Text>
         <Text style={styles.text}>

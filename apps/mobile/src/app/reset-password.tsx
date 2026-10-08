@@ -1,6 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { ErrorBox, Field, PageHeader, PrimaryButton, Screen } from '../components/ui';
 import { setNewPassword } from '../lib/auth';
 import { useSession } from '../lib/session';

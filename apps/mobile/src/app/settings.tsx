@@ -1,4 +1,5 @@
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../components/Text';
 import { Group, PageHeader, PillButton, Row, Screen, SoonTag } from '../components/ui';
 import { confirmDeleteAccount, confirmLogout } from '../lib/account';
 import { useSession } from '../lib/session';

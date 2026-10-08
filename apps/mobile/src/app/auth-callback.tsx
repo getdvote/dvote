@@ -1,7 +1,8 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { PrimaryButton, Screen } from '../components/ui';
 import { completeSignInFromUrl } from '../lib/auth';
 import { theme } from '../lib/theme';

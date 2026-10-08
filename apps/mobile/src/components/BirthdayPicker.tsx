@@ -1,9 +1,14 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import ArrowDown01Icon from '@hugeicons/core-free-icons/ArrowDown01Icon';
+import ArrowLeft01Icon from '@hugeicons/core-free-icons/ArrowLeft01Icon';
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
+import ArrowUp01Icon from '@hugeicons/core-free-icons/ArrowUp01Icon';
+import { Icon, type AppIcon } from './Icon';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OLDEST_BIRTHDAY, todayYmd } from '../lib/dates';
 import { theme } from '../lib/theme';
+import { Text } from './Text';
 import { PrimaryButton } from './ui';
 
 const MONTHS = [
@@ -102,12 +107,12 @@ export function BirthdayPicker({
             <Text style={styles.monthText}>
               {view === 'years' ? 'Choose year' : view === 'months' ? `${shown.y}` : `${MONTHS[shown.m]} ${shown.y}`}
             </Text>
-            <Ionicons name={view === 'days' ? 'chevron-down' : 'chevron-up'} size={16} color={theme.text} />
+            <Icon icon={view === 'days' ? ArrowDown01Icon : ArrowUp01Icon} size={16} color={theme.text} />
           </Pressable>
           {view === 'days' ? (
             <View style={styles.arrows}>
-              <Arrow icon="chevron-back" label="Previous month" disabled={!canPrev} onPress={() => move(-1)} />
-              <Arrow icon="chevron-forward" label="Next month" disabled={!canNext} onPress={() => move(1)} />
+              <Arrow icon={ArrowLeft01Icon} label="Previous month" disabled={!canPrev} onPress={() => move(-1)} />
+              <Arrow icon={ArrowRight01Icon} label="Next month" disabled={!canNext} onPress={() => move(1)} />
             </View>
           ) : null}
         </View>
@@ -218,7 +223,7 @@ function Arrow({
   disabled,
   onPress,
 }: {
-  icon: 'chevron-back' | 'chevron-forward';
+  icon: AppIcon;
   label: string;
   disabled: boolean;
   onPress: () => void;
@@ -232,7 +237,7 @@ function Arrow({
       style={({ pressed }) => [styles.arrow, pressed && { opacity: 0.6 }]}
       hitSlop={6}
     >
-      <Ionicons name={icon} size={20} color={disabled ? theme.placeholder : theme.text} />
+      <Icon icon={icon} size={20} color={disabled ? theme.placeholder : theme.text} />
     </Pressable>
   );
 }
