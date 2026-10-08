@@ -217,6 +217,22 @@ export function Field({
   );
 }
 
+/**
+ * A section with nothing to show yet: icon, short title, one line of text, in a white
+ * rounded box. Used where the backend isn't built yet or there's simply no data.
+ */
+export function EmptySection({ icon, title, text }: { icon: AppIcon; title: string; text: string }) {
+  return (
+    <View style={styles.emptySection}>
+      <View style={styles.emptyIcon}>
+        <Icon icon={icon} size={22} color={theme.muted} />
+      </View>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyText}>{text}</Text>
+    </View>
+  );
+}
+
 export function ErrorBox({ message }: { message: string | null }) {
   if (!message) return null;
   return (
@@ -306,6 +322,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   input: { flex: 1, height: '100%', fontSize: 17, color: theme.text },
+  emptySection: {
+    backgroundColor: theme.surface,
+    borderRadius: theme.radius,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.fill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: theme.text, textAlign: 'center' },
+  emptyText: { fontSize: 14, color: theme.muted, textAlign: 'center', lineHeight: 20 },
   error: { backgroundColor: theme.dangerSoft, borderRadius: 14, padding: 12 },
   errorText: { color: theme.danger, fontSize: 15, textAlign: 'center' },
   avatarBorder: { borderWidth: 3, borderColor: theme.surface },
