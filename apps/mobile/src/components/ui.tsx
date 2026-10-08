@@ -138,11 +138,13 @@ export function PrimaryButton({
   onPress,
   loading,
   disabled,
+  style,
 }: {
   title: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const inactive = disabled || loading;
   return (
@@ -150,40 +152,52 @@ export function PrimaryButton({
       accessibilityRole="button"
       onPress={onPress}
       disabled={inactive}
-      style={({ pressed }) => [styles.primary, inactive && styles.inactive, pressed && !inactive && styles.pressed]}
+      style={({ pressed }) => [styles.primary, style, inactive && styles.inactive, pressed && !inactive && styles.pressed]}
     >
       {loading ? <ActivityIndicator color={theme.onPrimary} /> : <Text style={styles.primaryText}>{title}</Text>}
     </Pressable>
   );
 }
 
-/** White pill button, e.g. "Logout" in red on Settings. */
+/**
+ * White pill button (secondary), e.g. "Logout" in red on Settings. `badge` sits after the
+ * title (e.g. <SoonTag />); `disabled` dims it for features that aren't available yet.
+ */
 export function PillButton({
   title,
   onPress,
   color = theme.text,
   icon,
+  badge,
   loading,
+  disabled,
+  style,
 }: {
   title: string;
   onPress: () => void;
   color?: string;
   icon?: ReactNode;
+  badge?: ReactNode;
   loading?: boolean;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
+  const inactive = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
-      disabled={loading}
-      style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+      disabled={inactive}
+      style={({ pressed }) => [styles.pill, style, pressed && !inactive && styles.pressed]}
     >
       {loading ? (
         <ActivityIndicator color={color} />
       ) : (
         <>
           {icon}
-          <Text style={[styles.pillText, { color }]}>{title}</Text>
+          <Text style={[styles.pillText, { color }, disabled && styles.pillTextOff]}>{title}</Text>
+          {badge}
         </>
       )}
     </Pressable>
@@ -319,6 +333,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   pillText: { fontSize: 17, fontWeight: '500' },
+  pillTextOff: { opacity: 0.4 },
   fieldWrap: { gap: 8 },
   fieldLabel: { fontSize: 15, fontWeight: '600', color: theme.text },
   inputRow: {

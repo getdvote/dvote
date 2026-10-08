@@ -3,18 +3,28 @@ import Coins01Icon from '@hugeicons/core-free-icons/Coins01Icon';
 import Location01Icon from '@hugeicons/core-free-icons/Location01Icon';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { DvoteLogo } from '../../components/DvoteLogo';
 import { Icon } from '../../components/Icon';
 import { ImageViewer } from '../../components/ImageViewer';
 import { MenuGallery } from '../../components/MenuGallery';
 import { RewardList } from '../../components/RewardList';
 import { Text } from '../../components/Text';
-import { EmptySection, ErrorBox, Group, PageHeader, PillButton, Screen, SectionTitle } from '../../components/ui';
+import {
+  EmptySection,
+  ErrorBox,
+  Group,
+  PageHeader,
+  PillButton,
+  PrimaryButton,
+  Screen,
+  SectionTitle,
+} from '../../components/ui';
 import { api, ApiError, type VendorPage } from '../../lib/api';
 import { t as translate, useI18n } from '../../i18n';
+import { openInMaps } from '../../lib/maps';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
 
@@ -88,6 +98,16 @@ export default function Shop() {
           )}
           <Text style={styles.name}>{shopName}</Text>
           {shop?.card ? <Text style={styles.balance}>{t('shop.youHave', { count: shop.card.balance })}</Text> : null}
+        </View>
+
+        {/* Collect opens the normal collect QR, headed with this shop's name: a collect QR
+            names no shop (the scanning staff decide it), so it isn't locked to this one. */}
+        <View style={styles.actions}>
+          <PrimaryButton
+            title={t('shop.collect')}
+            style={styles.action}
+            onPress={() => router.push({ pathname: '/qr', params: { vendorName: shopName } })}
+          />
         </View>
 
         {!shop ? (
@@ -171,11 +191,10 @@ function EarnRule({ shop }: { shop: VendorPage }) {
   );
 }
 
-/** Opens the phone's maps app (Google Maps link works on Android, iPhone and web). */
+/** Opens the branch in a maps app: iOS asks Apple Maps or Google Maps, Android opens Google Maps. */
 function directions(b: VendorPage['branches'][number]) {
-  const query = b.lat !== null && b.lng !== null ? `${b.lat},${b.lng}` : b.address;
-  if (!query) return;
-  void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
+  if ((b.lat === null || b.lng === null) && !b.address) return;
+  openInMaps({ name: b.name, lat: b.lat, lng: b.lng, address: b.address });
 }
 
 function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (images: string[], index: number) => void }) {
@@ -249,6 +268,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surface,
   },
   logoInitial: { fontSize: 32, fontWeight: '700', color: '#fff' },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  action: { flex: 1 },
   name: { fontSize: 24, fontWeight: '700', color: theme.text, textAlign: 'center' },
   balance: { fontSize: 15, fontWeight: '600', color: theme.muted },
   retry: { gap: 12, marginTop: 24 },
