@@ -7,9 +7,9 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../components/Text';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { ErrorBox, Field, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { signInWithEmail, signInWithProvider, signUpWithEmail } from '../lib/auth';

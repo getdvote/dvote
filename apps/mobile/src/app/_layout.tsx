@@ -1,7 +1,16 @@
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { configProblem } from '../lib/config';
 import { SessionProvider } from '../lib/session';
@@ -14,6 +23,18 @@ WebBrowser.maybeCompleteAuthSession();
 export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
+  // Inter, the app font (see lib/theme). Bundled with the app, so this is quick and offline.
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+  // Keep the splash screen until the font is ready, so text never flashes in another font.
+  // If loading fails, carry on with the system font rather than a blank app.
+  if (!fontsLoaded && !fontError) return null;
+
   if (configProblem) return <SetupNeeded message={configProblem} />;
   return (
     <SafeAreaProvider>

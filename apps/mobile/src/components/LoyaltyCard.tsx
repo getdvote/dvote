@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import type { Card } from '../lib/api';
 import { onCardColor, vendorColors } from '../lib/theme';
 import { DvoteLogo } from './DvoteLogo';

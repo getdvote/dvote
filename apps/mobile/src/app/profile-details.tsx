@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Text';
 import { ErrorBox, Group, PageHeader, Row, Screen, SoonTag } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { useSession } from '../lib/session';

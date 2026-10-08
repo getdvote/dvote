@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { ErrorBox, Field, PageHeader, PrimaryButton, Screen } from '../components/ui';
 import { sendPasswordReset } from '../lib/auth';
 import { theme } from '../lib/theme';

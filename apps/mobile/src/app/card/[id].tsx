@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { ErrorBox, PageHeader, Screen } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent } from '../../lib/api';

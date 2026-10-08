@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { ErrorBox, PrimaryButton, Screen } from '../../components/ui';
 import { api, ApiError, type Card } from '../../lib/api';

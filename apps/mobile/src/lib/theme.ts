@@ -20,6 +20,36 @@ export const theme = {
   gutter: 16,
 } as const;
 
+/**
+ * App font: Inter (Google Fonts, via @expo-google-fonts/inter, loaded in app/_layout).
+ * Each weight is a separate font file; components/Text picks the right one from fontWeight.
+ */
+export const INTER_FONTS = {
+  Inter_400Regular: 'Inter_400Regular',
+  Inter_500Medium: 'Inter_500Medium',
+  Inter_600SemiBold: 'Inter_600SemiBold',
+  Inter_700Bold: 'Inter_700Bold',
+  Inter_800ExtraBold: 'Inter_800ExtraBold',
+} as const;
+
+/** The Inter font file for a fontWeight (default and anything up to 400: Regular). */
+export function fontFamily(weight: string | number | undefined): string {
+  switch (String(weight ?? '400')) {
+    case '500':
+      return INTER_FONTS.Inter_500Medium;
+    case '600':
+      return INTER_FONTS.Inter_600SemiBold;
+    case '700':
+    case 'bold':
+      return INTER_FONTS.Inter_700Bold;
+    case '800':
+    case '900':
+      return INTER_FONTS.Inter_800ExtraBold;
+    default:
+      return INTER_FONTS.Inter_400Regular;
+  }
+}
+
 /** Space under scrolling tab content so the floating tab bar never covers it. */
 export const TAB_BAR_SPACE = 120;
 
