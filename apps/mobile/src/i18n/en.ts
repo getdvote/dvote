@@ -133,11 +133,19 @@ export const en = {
     bill: 'Bill {amount} {currency}',
   },
 
+  maps: {
+    apple: 'Apple Maps',
+    google: 'Google Maps',
+  },
   rewards: {
     none: 'No rewards yet',
     noneText: "This shop's rewards will show here.",
     enough: 'You have enough points',
     toGo: { one: '{count} pt to go', other: '{count} pts to go' },
+    details: 'Reward details',
+    required: { one: '{count} point required', other: '{count} points required' },
+    redeem: 'Redeem',
+    collectMore: { one: 'Collect {count} point more to redeem', other: 'Collect {count} points more to redeem' },
   },
 
   explore: {
@@ -275,6 +283,8 @@ export const en = {
     errorTitle: 'Something went wrong',
     newCode: 'Get a new QR code',
     couldNotCreate: 'Could not create your QR code.',
+    collectingFrom: 'Collecting points from {vendor}',
+    atVendor: 'The staff at {vendor} scan it and enter your bill, and your points appear here straight away.',
   },
 
   shop: {
@@ -301,6 +311,7 @@ export const en = {
     menuSoon: 'Menu coming soon',
     menuSoonText: "This shop's menu pages will show here.",
     menuPageA11y: 'Menu page {n} of {total}. Open full screen',
+    collect: 'Collect',
   },
 
   feedback: {
