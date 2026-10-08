@@ -8,9 +8,11 @@ import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
 import UserCircleIcon from '@hugeicons/core-free-icons/UserCircleIcon';
 import { Icon } from '../../components/Icon';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { DvoteLogo } from '../../components/DvoteLogo';
+import { FeedbackSheet } from '../../components/FeedbackSheet';
 import { Avatar, ErrorBox, Group, Row, Screen, SectionTitle } from '../../components/ui';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
@@ -18,6 +20,7 @@ import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 /** "My profile" (route: you): profile header + Account / More menus. Logout and Delete account are in Settings. */
 export default function You() {
   const { me, meError, session } = useSession();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const name = me?.name ?? 'dvote member';
   const email = me?.email ?? session?.user.email ?? null;
@@ -47,7 +50,7 @@ export default function You() {
 
         <SectionTitle title="More" />
         <Group>
-          <Row icon={BubbleChatIcon} label="Send feedback" onPress={() => router.push('/info/feedback')} />
+          <Row icon={BubbleChatIcon} label="Send feedback" onPress={() => setFeedbackOpen(true)} />
           <Row icon={CustomerService02Icon} label="Get help" onPress={() => router.push('/info/help')} />
           <Row icon={File01Icon} label="Terms and conditions" onPress={() => router.push('/info/terms')} />
           <Row icon={InformationCircleIcon} label="About Dvote" onPress={() => router.push('/about')} />
@@ -59,6 +62,7 @@ export default function You() {
         </View>
       </ScrollView>
 
+      <FeedbackSheet visible={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </Screen>
   );
 }

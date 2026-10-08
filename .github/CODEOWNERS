@@ -1,2 +1,4 @@
-# Every change needs approval from Karim before merging.
-* @KarimMohamedDesouki
+# Every change needs approval from the getdvote account before merging.
+# Karim and Mohamed open PRs from their own accounts; getdvote only reviews (it must never open PRs:
+# GitHub does not let anyone approve their own PR).
+* @getdvote

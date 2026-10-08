@@ -77,7 +77,13 @@ export const api = {
   updateMe: (body: { name?: string; phone?: string }) => call<Me>('PATCH', '/api/app/users/me', body),
   cards: () => call<Card[]>('GET', '/api/app/cards'),
   cardEvents: (cardId: string) => call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=100`),
+  /** Adds the feedback to the team's Google Sheet. */
+  sendFeedback: (body: { category: FeedbackCategory; message: string }) =>
+    call<void>('POST', '/api/app/feedback', body),
 };
+
+/** Same codes as the API (CreateFeedbackDto). */
+export type FeedbackCategory = 'bug' | 'suggestion' | 'points_rewards' | 'account' | 'other';
 
 export function friendlyMessage(code: string, serverMessage?: string): string {
   const messages: Record<string, string> = {
@@ -87,6 +93,7 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     invalid_token: 'Please sign in again.',
     missing_token: 'Please sign in again.',
     card_not_found: 'This card was not found.',
+    feedback_not_configured: "Feedback isn't available yet. Please try again later.",
   };
   return messages[code] ?? serverMessage ?? 'Something went wrong. Please try again.';
 }
