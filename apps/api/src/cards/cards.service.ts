@@ -46,6 +46,7 @@ export class CardsService {
           ? {
               id: next.id,
               name: next.name,
+              nameAr: next.name_ar,
               pointsCost: next.points_cost,
               pointsNeeded: next.points_cost - card.balance,
             }
@@ -71,7 +72,7 @@ export class CardsService {
       where: { card_id: card.id },
       include: {
         branches: { select: { name: true } },
-        rewards: { select: { name: true } },
+        rewards: { select: { name: true, name_ar: true } },
       },
       orderBy: { created_at: 'desc' },
       take: limit,
@@ -86,6 +87,7 @@ export class CardsService {
           : fromMinor(toMinor(e.purchase_amount)),
       branchName: e.branches?.name ?? null,
       rewardName: e.rewards?.name ?? null,
+      rewardNameAr: e.rewards?.name_ar ?? null,
       createdAt: e.created_at.toISOString(),
     }));
   }

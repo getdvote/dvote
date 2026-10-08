@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
+import { useI18n } from '../i18n';
 import { showYmd } from '../lib/dates';
 import { theme } from '../lib/theme';
 import { BirthdayPicker } from './BirthdayPicker';
@@ -18,20 +19,21 @@ export function BirthdayField({
   onChange: (value: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>Birthday</Text>
+      <Text style={styles.label}>{t('birthday.label')}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={value ? `Birthday ${showYmd(value)}, change` : 'Choose your birthday'}
+        accessibilityLabel={value ? t('birthday.changeA11y', { date: showYmd(value) }) : t('birthday.chooseA11y')}
         onPress={() => setOpen(true)}
         style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
       >
         <Icon icon={Calendar03Icon} size={17} color={value ? theme.text : theme.link} />
-        <Text style={value ? styles.value : styles.add}>{value ? showYmd(value) : 'Choose date'}</Text>
+        <Text style={value ? styles.value : styles.add}>{value ? showYmd(value) : t('birthday.choose')}</Text>
       </Pressable>
       {value ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Remove birthday" onPress={() => onChange(null)} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('birthday.removeA11y')} onPress={() => onChange(null)} hitSlop={8}>
           <Icon icon={CancelCircleIcon} size={20} color={theme.placeholder} />
         </Pressable>
       ) : null}

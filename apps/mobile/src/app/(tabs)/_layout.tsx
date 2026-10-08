@@ -8,21 +8,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router, Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n, type TKey } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { theme, squircle } from '../../lib/theme';
 
 // Untitled UI icons are outline-only: the selected tab is shown by colour and its grey pill.
-const ICONS: Record<string, { icon: AppIcon; label: string }> = {
-  cards: { icon: GiftCard02Icon, label: 'My cards' },
-  discover: { icon: MapsSearchIcon, label: 'Explore' },
-  you: { icon: User02Icon, label: 'My profile' },
+const ICONS: Record<string, { icon: AppIcon; label: TKey }> = {
+  cards: { icon: GiftCard02Icon, label: 'tabs.cards' },
+  discover: { icon: MapsSearchIcon, label: 'tabs.explore' },
+  you: { icon: User02Icon, label: 'tabs.profile' },
 };
 
 /** Floating pill with 3 tabs + a separate round QR button (side-menu design). */
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { t, rtl } = useI18n();
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12), direction: rtl ? 'rtl' : 'ltr' }]}
+    >
       <LinearGradient
         pointerEvents="none"
         colors={['rgba(242,242,247,0)', 'rgba(242,242,247,0.95)']}
@@ -38,7 +43,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               <Pressable
                 key={route.key}
                 accessibilityRole="tab"
-                accessibilityLabel={icon.label}
+                accessibilityLabel={t(icon.label)}
                 accessibilityState={{ selected: focused }}
                 onPress={() => {
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -53,7 +58,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Show my QR code"
+          accessibilityLabel={t('common.showMyQr')}
           onPress={() => router.push('/qr')}
           style={styles.qr}
         >

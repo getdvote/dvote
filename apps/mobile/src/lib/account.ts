@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Alert, Platform } from 'react-native';
+import { t } from '../i18n';
 
 /**
  * A yes/no question. React Native's Alert has no buttons on the web (it does nothing there),
@@ -11,7 +12,7 @@ function confirm(title: string, message: string, action: string, onConfirm: () =
     return;
   }
   Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
+    { text: t('common.cancel'), style: 'cancel' },
     { text: action, style: 'destructive', onPress: onConfirm },
   ]);
 }
@@ -26,7 +27,7 @@ function notice(title: string, message: string) {
  * and shows the welcome screen.
  */
 export function confirmLogout(signOut: () => Promise<void>) {
-  confirm('Log out?', 'You can log back in any time with the same account.', 'Log out', () => {
+  confirm(t('settings.logoutTitle'), t('settings.logoutText'), t('settings.logoutAction'), () => {
     void (async () => {
       await signOut();
       if (router.canDismiss()) router.dismissAll();
@@ -41,13 +42,10 @@ export function confirmLogout(signOut: () => Promise<void>) {
  */
 export function confirmDeleteAccount() {
   confirm(
-    'Delete your account?',
-    'This permanently removes your dvote account and all your points at every shop. It cannot be undone.',
-    'Delete',
+    t('settings.deleteTitle'),
+    t('settings.deleteText'),
+    t('settings.deleteAction'),
     () =>
-      notice(
-        'Not available yet',
-        'Deleting accounts from the app is coming soon. Your account has not been changed.',
-      ),
+      notice(t('settings.notAvailableTitle'), t('settings.notAvailableText')),
   );
 }

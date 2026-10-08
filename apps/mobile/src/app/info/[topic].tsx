@@ -6,6 +6,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { PageHeader, Screen } from '../../components/ui';
+import { useI18n, type TKey } from '../../i18n';
 import { theme } from '../../lib/theme';
 
 
@@ -14,39 +15,25 @@ import { theme } from '../../lib/theme';
  * vendor sign-up). One placeholder screen so the menu is complete. Send feedback is a
  * bottom sheet (components/FeedbackSheet).
  */
-const TOPICS: Record<string, { title: string; icon: AppIcon; heading: string; text: string }> = {
-  help: {
-    title: 'Get help',
-    icon: CustomerService02Icon,
-    heading: 'Help is on the way',
-    text: 'Answers to common questions and a way to reach our team are coming soon. For points that did not appear, ask the shop staff to check their scan.',
-  },
-  terms: {
-    title: 'Terms and conditions',
-    icon: File01Icon,
-    heading: 'Terms and conditions',
-    text: 'The full terms and privacy policy will be published here before launch.',
-  },
-  join: {
-    title: 'Join as a vendor',
-    icon: Store01Icon,
-    heading: 'Bring dvote to your coffee shop',
-    text: 'Reward your regulars with points and free treats. Vendor sign-up is coming soon to the app.',
-  },
+const TOPICS: Record<string, { title: TKey; icon: AppIcon; heading: TKey; text: TKey }> = {
+  help: { title: 'info.helpTitle', icon: CustomerService02Icon, heading: 'info.helpHeading', text: 'info.helpText' },
+  terms: { title: 'info.termsTitle', icon: File01Icon, heading: 'info.termsHeading', text: 'info.termsText' },
+  join: { title: 'info.joinTitle', icon: Store01Icon, heading: 'info.joinHeading', text: 'info.joinText' },
 };
 
 export default function InfoTopic() {
   const { topic } = useLocalSearchParams<{ topic: string }>();
   const info = TOPICS[topic ?? ''] ?? TOPICS.help;
+  const { t } = useI18n();
   return (
     <Screen>
-      <PageHeader title={info.title} />
+      <PageHeader title={t(info.title)} />
       <View style={styles.middle}>
         <View style={styles.icon}>
           <Icon icon={info.icon} size={34} color={theme.text} />
         </View>
-        <Text style={styles.heading}>{info.heading}</Text>
-        <Text style={styles.text}>{info.text}</Text>
+        <Text style={styles.heading}>{t(info.heading)}</Text>
+        <Text style={styles.text}>{t(info.text)}</Text>
       </View>
     </Screen>
   );

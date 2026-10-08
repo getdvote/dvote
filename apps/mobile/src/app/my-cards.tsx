@@ -9,6 +9,7 @@ import { rewardCaption } from '../components/LoyaltyCard';
 import { Text } from '../components/Text';
 import { ErrorBox, PageHeader, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type Card } from '../lib/api';
+import { t as translate, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
 import { theme, vendorColors, squircle } from '../lib/theme';
 
@@ -18,6 +19,7 @@ import { theme, vendorColors, squircle } from '../lib/theme';
  */
 export default function MyCards() {
   const { handleAuthError } = useSession();
+  const { t } = useI18n();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,9 +30,9 @@ export default function MyCards() {
       setCards(await api.cards());
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not load your cards.');
+      setError(err instanceof ApiError ? err.message : t('cards.couldNotLoad'));
     }
-  }, [handleAuthError]);
+  }, [handleAuthError, t]);
 
   // Reload when the page is shown again (e.g. back from a card after points were added).
   useFocusEffect(
@@ -41,7 +43,7 @@ export default function MyCards() {
 
   return (
     <Screen>
-      <PageHeader title="My cards" />
+      <PageHeader title={t('cards.title')} />
       <FlatList
         data={cards ?? []}
         keyExtractor={(c) => c.id}
@@ -60,9 +62,7 @@ export default function MyCards() {
           <View style={styles.header}>
             <ErrorBox message={error} />
             {cards && cards.length > 0 ? (
-              <Text style={styles.count}>
-                {cards.length} shop{cards.length === 1 ? '' : 's'}
-              </Text>
+              <Text style={styles.count}>{t('cards.shops', { count: cards.length })}</Text>
             ) : null}
           </View>
         }
@@ -74,11 +74,9 @@ export default function MyCards() {
               <View style={styles.emptyIcon}>
                 <Icon icon={GiftCard02Icon} size={36} color={theme.text} />
               </View>
-              <Text style={styles.emptyTitle}>No cards yet</Text>
-              <Text style={styles.emptyText}>
-                Show your QR code at a dvote coffee shop. Your card for that shop appears here with your first points.
-              </Text>
-              <PrimaryButton title="Show my QR code" onPress={() => router.push('/qr')} />
+              <Text style={styles.emptyTitle}>{t('cards.emptyTitle')}</Text>
+              <Text style={styles.emptyText}>{t('cards.emptyListText')}</Text>
+              <PrimaryButton title={t('common.showMyQr')} onPress={() => router.push('/qr')} />
             </View>
           )
         }
@@ -101,7 +99,7 @@ function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; l
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${card.vendor.name}: ${card.balance} points. ${rewardCaption(card)}`}
+      accessibilityLabel={`${translate('cards.cardA11y', { name: card.vendor.name, balance: translate('common.points', { count: card.balance }) })}. ${rewardCaption(card)}`}
       onPress={onPress}
       style={({ pressed }) => [styles.row, first && styles.rowFirst, last && styles.rowLast, pressed && styles.pressed]}
     >
@@ -122,9 +120,9 @@ function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; l
       </View>
       <Text style={styles.balance}>
         {card.balance.toLocaleString()}
-        <Text style={styles.pts}> pts</Text>
+        <Text style={styles.pts}> {translate('common.ptsUnit', { count: card.balance })}</Text>
       </Text>
-      <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} />
+      <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror />
       {!last ? <View style={styles.separator} /> : null}
     </Pressable>
   );

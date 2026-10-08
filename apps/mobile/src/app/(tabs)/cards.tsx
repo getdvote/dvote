@@ -7,12 +7,14 @@ import { Text } from '../../components/Text';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { ErrorBox, PrimaryButton, Screen } from '../../components/ui';
 import { api, ApiError, type Card } from '../../lib/api';
+import { useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
 /** My cards: one card per shop where the customer has points. */
 export default function Cards() {
   const { handleAuthError } = useSession();
+  const { t } = useI18n();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,9 +25,9 @@ export default function Cards() {
       setCards(await api.cards());
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not load your cards.');
+      setError(err instanceof ApiError ? err.message : t('cards.couldNotLoad'));
     }
-  }, [handleAuthError]);
+  }, [handleAuthError, t]);
 
   // Reload every time the tab is shown (points may have been added at the counter).
   useFocusEffect(
@@ -53,11 +55,9 @@ export default function Cards() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>My cards</Text>
+            <Text style={styles.title}>{t('cards.title')}</Text>
             {cards && cards.length > 0 ? (
-              <Text style={styles.count}>
-                {cards.length} shop{cards.length === 1 ? '' : 's'}
-              </Text>
+              <Text style={styles.count}>{t('cards.shops', { count: cards.length })}</Text>
             ) : null}
             <ErrorBox message={error} />
           </View>
@@ -70,12 +70,9 @@ export default function Cards() {
               <View style={styles.emptyIcon}>
                 <Icon icon={GiftCard02Icon} size={36} color={theme.text} />
               </View>
-              <Text style={styles.emptyTitle}>No cards yet</Text>
-              <Text style={styles.emptyText}>
-                Buy something at a dvote coffee shop and show your QR code at the counter. Your card for that shop
-                appears here with your first points.
-              </Text>
-              <PrimaryButton title="Show my QR code" onPress={() => router.push('/qr')} />
+              <Text style={styles.emptyTitle}>{t('cards.emptyTitle')}</Text>
+              <Text style={styles.emptyText}>{t('cards.emptyText')}</Text>
+              <PrimaryButton title={t('common.showMyQr')} onPress={() => router.push('/qr')} />
             </View>
           )
         }

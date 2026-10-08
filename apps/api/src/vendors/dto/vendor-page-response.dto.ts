@@ -24,6 +24,22 @@ export class VendorPageRewardDto {
   @ApiProperty({ type: String, nullable: true })
   description: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'قهوة مجانية',
+    description: 'Arabic name (null = not translated; show the English one)',
+  })
+  nameAr: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'أي قهوة، أي حجم',
+    description: 'Arabic description (null = not translated; show the English one)',
+  })
+  descriptionAr: string | null;
+
   @ApiProperty({ type: String, nullable: true })
   imageUrl: string | null;
 

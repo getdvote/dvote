@@ -299,7 +299,7 @@ describe('Images: customer photos, vendor logos, menu pages, branch photos (e2e)
       await prisma.rewards.createMany({
         data: [
           { vendor_id: ids.vendorA, name: 'Cheesecake', points_cost: 500, sort_order: 2 },
-          { vendor_id: ids.vendorA, name: 'Free coffee', points_cost: 300, sort_order: 1 },
+          { vendor_id: ids.vendorA, name: 'Free coffee', name_ar: 'قهوة مجانية', description_ar: 'أي قهوة', points_cost: 300, sort_order: 1 },
           { vendor_id: ids.vendorA, name: 'Old reward', points_cost: 100, status: 'archived' },
         ],
       });
@@ -323,8 +323,8 @@ describe('Images: customer photos, vendor logos, menu pages, branch photos (e2e)
         currency: 'EGP',
         rule: { spendAmount: '10.00', pointsPerSpend: 2, minPurchase: '25.00', maxPointsPerPurchase: 500 },
         rewards: [
-          { name: 'Free coffee', pointsCost: 300 },
-          { name: 'Cheesecake', pointsCost: 500 },
+          { name: 'Free coffee', nameAr: 'قهوة مجانية', descriptionAr: 'أي قهوة', pointsCost: 300 },
+          { name: 'Cheesecake', nameAr: null, descriptionAr: null, pointsCost: 500 }, // not translated
         ],
         card: null,
       });

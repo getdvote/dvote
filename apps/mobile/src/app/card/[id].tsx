@@ -13,6 +13,8 @@ import { RewardList } from '../../components/RewardList';
 import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent, type VendorPage } from '../../lib/api';
+import { localized, t as translate, useI18n } from '../../i18n';
+import { showDate } from '../../lib/dates';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
 
@@ -23,6 +25,7 @@ import { theme, vendorColors, squircle } from '../../lib/theme';
 export default function CardDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { handleAuthError } = useSession();
+  const { t } = useI18n();
   const [card, setCard] = useState<Card | null>(null);
   const [events, setEvents] = useState<CardEvent[] | null>(null);
   const [rewards, setRewards] = useState<VendorPage['rewards'] | null>(null);
@@ -40,9 +43,9 @@ export default function CardDetails() {
       if (found) setRewards((await api.vendor(found.vendor.id)).rewards);
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not load this card.');
+      setError(err instanceof ApiError ? err.message : t('card.couldNotLoad'));
     }
-  }, [id, handleAuthError]);
+  }, [id, handleAuthError, t]);
 
   // Reload when shown again (points may have been added at the counter).
   useFocusEffect(
@@ -55,7 +58,7 @@ export default function CardDetails() {
 
   return (
     <Screen>
-      <PageHeader title="Card details" />
+      <PageHeader title={t('card.title')} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -76,20 +79,20 @@ export default function CardDetails() {
           <>
             <LoyaltyCard card={card} />
 
-            <SectionTitle title="Issued by" />
+            <SectionTitle title={t('card.issuedBy')} />
             <IssuedBy card={card} />
 
-            <SectionTitle title="Rewards" />
+            <SectionTitle title={t('card.rewards')} />
             <Rewards card={card} rewards={rewards} />
 
-            <SectionTitle title="History" />
+            <SectionTitle title={t('card.history')} />
             {events === null ? (
               <ActivityIndicator color={theme.text} />
             ) : events.length === 0 ? (
               <EmptySection
                 icon={Clock01Icon}
-                title="No activity yet"
-                text="Points you earn and rewards you redeem at this shop will show here."
+                title={t('card.noActivity')}
+                text={t('card.noActivityText')}
               />
             ) : (
               <View>
@@ -118,7 +121,7 @@ function IssuedBy({ card }: { card: Card }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Issued by ${vendor.name}. Open shop`}
+      accessibilityLabel={translate('card.issuedByA11y', { name: vendor.name })}
       onPress={() =>
         router.push({
           pathname: '/shop/[id]',
@@ -138,9 +141,9 @@ function IssuedBy({ card }: { card: Card }) {
         <Text style={styles.shopName} numberOfLines={1}>
           {vendor.name}
         </Text>
-        <Text style={styles.shopHint}>View shop</Text>
+        <Text style={styles.shopHint}>{translate('card.viewShop')}</Text>
       </View>
-      <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} />
+      <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror />
     </Pressable>
   );
 }
@@ -156,9 +159,7 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
           <View style={[styles.rewardIcon, { backgroundColor: '#E6F7EC' }]}>
             <Icon icon={GiftIcon} size={20} color={theme.success} />
           </View>
-          <Text style={styles.readyText}>
-            {ready} reward{ready === 1 ? '' : 's'} ready to redeem
-          </Text>
+          <Text style={styles.readyText}>{translate('cards.ready', { count: ready })}</Text>
         </View>
       ) : null}
       {next ? (
@@ -168,9 +169,9 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
               <Icon icon={GiftIcon} size={20} color={theme.brand} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rewardName}>{next.name}</Text>
+              <Text style={styles.rewardName}>{localized(next.name, next.nameAr)}</Text>
               <Text style={styles.rewardDetail}>
-                {next.pointsCost.toLocaleString()} pts · {next.pointsNeeded.toLocaleString()} to go
+                {translate('common.pts', { count: next.pointsCost })} · {translate('rewards.toGo', { count: next.pointsNeeded })}
               </Text>
             </View>
           </View>
@@ -183,7 +184,7 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
         <ActivityIndicator color={theme.text} />
       ) : (
         <>
-          {rewards.length > 0 && (ready > 0 || next) ? <Text style={styles.allTitle}>All rewards</Text> : null}
+          {rewards.length > 0 && (ready > 0 || next) ? <Text style={styles.allTitle}>{translate('card.allRewards')}</Text> : null}
           <RewardList rewards={rewards} balance={card.balance} />
         </>
       )}
@@ -194,11 +195,15 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
 function EventRow({ event, currency, first, last }: { event: CardEvent; currency: string; first: boolean; last: boolean }) {
   const positive = event.delta > 0;
   const title =
-    event.type === 'earn' ? 'Points earned' : event.type === 'redeem' ? (event.rewardName ?? 'Reward redeemed') : 'Correction by dvote';
+    event.type === 'earn'
+      ? translate('card.earned')
+      : event.type === 'redeem'
+        ? (localized(event.rewardName, event.rewardNameAr) ?? translate('card.redeemed'))
+        : translate('card.correction');
   const detail = [
-    event.purchaseAmount ? `Bill ${event.purchaseAmount.replace(/\.00$/, '')} ${currency}` : null,
+    event.purchaseAmount ? translate('card.bill', { amount: event.purchaseAmount.replace(/\.00$/, ''), currency }) : null,
     event.branchName,
-    new Date(event.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }),
+    showDate(new Date(event.createdAt)),
   ]
     .filter(Boolean)
     .join(' · ');

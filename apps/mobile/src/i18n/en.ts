@@ -1,0 +1,353 @@
+/**
+ * English: the default language and the source of every key. ar.ts must have the same
+ * shape (TypeScript checks it), so a missing Arabic text is a compile error.
+ *
+ * Plurals are objects ({ one, other } here; Arabic also uses zero/two/few/many) chosen by
+ * `count`. `{name}` placeholders are filled by t(key, { name }).
+ */
+export interface PluralForms {
+  zero?: string;
+  one: string;
+  two?: string;
+  few?: string;
+  many?: string;
+  other: string;
+}
+
+export const en = {
+  common: {
+    back: 'Back',
+    close: 'Close',
+    cancel: 'Cancel',
+    done: 'Done',
+    soon: 'Soon',
+    tryAgain: 'Try again',
+    email: 'Email',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    profilePicture: 'Profile picture',
+    image: 'Image',
+    imageOf: 'Image {n} of {total}',
+    backToLogin: 'Back to log in',
+    showMyQr: 'Show my QR code',
+    somethingWrong: 'Something went wrong. Please try again.',
+    /** "95 pts" */
+    pts: { one: '{count} pt', other: '{count} pts' },
+    /** the unit alone, after a big number */
+    ptsUnit: { one: 'pt', other: 'pts' },
+    /** "9 points" */
+    points: { one: '{count} point', other: '{count} points' },
+    /** "+9 points" */
+    plusPoints: { one: '+{count} point', other: '+{count} points' },
+  },
+
+  calendar: {
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    weekdaysMin: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+  },
+
+  auth: {
+    welcomeBack: 'Welcome back',
+    createTitle: 'Create your account',
+    subtitle: 'Collect points at your favourite coffee shops\nand turn them into free treats.',
+    google: 'Continue with Google',
+    facebook: 'Continue with Facebook',
+    orEmail: 'or with email',
+    login: 'Log in',
+    signup: 'Sign up',
+    fullName: 'Full name',
+    password: 'Password',
+    passwordNew: 'Password (6+ characters)',
+    createAccount: 'Create account',
+    forgot: 'Forgot password?',
+    legal: 'By creating an account you agree to the dvote Terms and Privacy Policy.',
+    enterName: 'Enter your name.',
+    invalidEmail: 'Enter a valid email address.',
+    shortPassword: 'Use at least 6 characters for your password.',
+    signInFailed: 'Sign-in failed. Please try again.',
+    couldNotStart: 'Could not start sign-in.',
+    wrongPassword: 'Wrong email or password.',
+    notConfirmed: 'Please confirm your email first: open the link we sent you.',
+    alreadyRegistered: 'This email already has an account. Log in instead.',
+    rateLimited: 'Too many emails were sent. Please try again in a little while.',
+    checkTitle: 'Check your email',
+    checkSentTo: 'We sent a confirmation link to',
+    checkYourEmail: 'your email',
+    checkOpen: 'Open it on this phone to finish creating your account.',
+    checkHint: 'No email? Check your spam folder, or try again in a few minutes.',
+    resetTitle: 'Reset password',
+    resetIntro: "Enter your email and we'll send you a link to set a new password.",
+    resetSentBefore: 'If an account exists for ',
+    resetSentAfter: ', we sent a link to set a new password. Open it on this phone.',
+    resetSend: 'Send reset link',
+    resetCouldNotSend: 'Could not send the email. Try again.',
+    newTitle: 'New password',
+    newIntro: 'Choose a new password for your dvote account.',
+    newPlaceholder: 'New password (6+ characters)',
+    newSave: 'Save password',
+    newShort: 'Use at least 6 characters.',
+    newCouldNotSave: 'Could not save the password.',
+    callbackFailed: "Couldn't sign you in",
+    callbackLinkFailed: 'This link did not work.',
+    callbackSigningIn: 'Signing you in…',
+  },
+
+  tabs: {
+    cards: 'My cards',
+    explore: 'Explore',
+    profile: 'My profile',
+  },
+
+  cards: {
+    title: 'My cards',
+    shops: { one: '{count} shop', other: '{count} shops' },
+    emptyTitle: 'No cards yet',
+    emptyText:
+      'Buy something at a dvote coffee shop and show your QR code at the counter. Your card for that shop appears here with your first points.',
+    emptyListText:
+      'Show your QR code at a dvote coffee shop. Your card for that shop appears here with your first points.',
+    couldNotLoad: 'Could not load your cards.',
+    cardA11y: '{name}: {balance}',
+    toNext: { one: '{count} pt to {reward}', other: '{count} pts to {reward}' },
+    ready: { one: '{count} reward ready to redeem', other: '{count} rewards ready to redeem' },
+    lifetime: { one: 'Lifetime {count} pt', other: 'Lifetime {count} pts' },
+  },
+
+  card: {
+    title: 'Card details',
+    issuedBy: 'Issued by',
+    issuedByA11y: 'Issued by {name}. Open shop',
+    viewShop: 'View shop',
+    rewards: 'Rewards',
+    allRewards: 'All rewards',
+    history: 'History',
+    noActivity: 'No activity yet',
+    noActivityText: 'Points you earn and rewards you redeem at this shop will show here.',
+    couldNotLoad: 'Could not load this card.',
+    earned: 'Points earned',
+    redeemed: 'Reward redeemed',
+    correction: 'Correction by dvote',
+    bill: 'Bill {amount} {currency}',
+  },
+
+  rewards: {
+    none: 'No rewards yet',
+    noneText: "This shop's rewards will show here.",
+    enough: 'You have enough points',
+    toGo: { one: '{count} pt to go', other: '{count} pts to go' },
+  },
+
+  explore: {
+    title: 'Explore',
+    heading: 'Coffee shops near you',
+    text: "Soon you'll find every dvote shop here, with its rewards and points rule.",
+  },
+
+  you: {
+    title: 'My profile',
+    member: 'dvote member',
+    account: 'Account',
+    myCards: 'My cards',
+    profileDetails: 'Profile details',
+    settings: 'Settings',
+    more: 'More',
+    feedback: 'Send feedback',
+    help: 'Get help',
+    terms: 'Terms and conditions',
+    about: 'About Dvote',
+    join: 'Join as a vendor',
+  },
+
+  profile: {
+    title: 'Profile details',
+    namePlaceholder: 'Your name',
+    noEmail: 'No email',
+    phonePlaceholder: 'Phone (optional)',
+    gender: 'Gender',
+    male: 'Male',
+    female: 'Female',
+    save: 'Save changes',
+    saving: 'Saving…',
+    saved: 'Saved',
+    note: 'Your email is the one you sign in with. Shops never see your name, email, phone, gender or birthday.',
+    nameEmpty: 'Enter your name.',
+    nameLong: 'Your name is too long (120 characters max).',
+    phoneInvalid: 'Use digits only, 7 to 15 of them, e.g. 01001234567 or +201001234567.',
+    couldNotSave: 'Could not save. Please try again.',
+    photoAdd: 'Add photo',
+    photoChange: 'Change photo',
+    photoRemove: 'Remove',
+    photoRemoving: 'Removing…',
+    photoAddA11y: 'Add a profile photo',
+    photoChangeA11y: 'Change profile photo',
+    photoFailed: 'Could not update your photo. Please try again.',
+  },
+
+  birthday: {
+    label: 'Birthday',
+    choose: 'Choose date',
+    changeA11y: 'Birthday {date}, change',
+    chooseA11y: 'Choose your birthday',
+    removeA11y: 'Remove birthday',
+    pick: 'Pick your birthday',
+    chooseYear: 'Choose year',
+    chooseMonthYear: 'Choose month and year',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    closeCalendar: 'Close calendar',
+    realDate: 'Choose a real date.',
+    future: "Your birthday can't be in the future.",
+    tooOld: 'Choose a date after 1900.',
+  },
+
+  settings: {
+    title: 'Settings',
+    language: 'Language',
+    notifications: 'Enable notifications',
+    note: 'Point notifications are coming soon.',
+    logout: 'Logout',
+    deleteAccount: 'Delete account',
+    logoutTitle: 'Log out?',
+    logoutText: 'You can log back in any time with the same account.',
+    logoutAction: 'Log out',
+    deleteTitle: 'Delete your account?',
+    deleteText: 'This permanently removes your dvote account and all your points at every shop. It cannot be undone.',
+    deleteAction: 'Delete',
+    notAvailableTitle: 'Not available yet',
+    notAvailableText: 'Deleting accounts from the app is coming soon. Your account has not been changed.',
+  },
+
+  about: {
+    title: 'About Dvote',
+    tagline: 'Every coffee counts.',
+    lead: 'dvote turns the coffee you already buy into rewards at your favourite shops, and helps local coffee shops keep their regulars coming back.',
+    how: 'How it works',
+    step1Title: 'Show your QR',
+    step1Text: 'Pay as usual at any dvote coffee shop and show your QR code at the counter.',
+    step2Title: 'Earn points',
+    step2Text: 'Points land on that shop’s card in seconds, based on how much you spent.',
+    step3Title: 'Enjoy rewards',
+    step3Text: 'Swap points for free coffee, desserts and more, whenever you choose.',
+    promise: 'Our promise',
+    promise1: 'All your coffee shop cards in one app, no paper stamps.',
+    promise2: 'Shops never see your name, email or phone.',
+    promise3: 'Every QR works once and expires in minutes.',
+    terms: 'Terms and conditions',
+    join: 'Own a coffee shop? Join dvote',
+    version: 'Version {version}',
+    madeWith: 'Made with love for coffee lovers in Egypt',
+  },
+
+  info: {
+    helpTitle: 'Get help',
+    helpHeading: 'Help is on the way',
+    helpText:
+      'Answers to common questions and a way to reach our team are coming soon. For points that did not appear, ask the shop staff to check their scan.',
+    termsTitle: 'Terms and conditions',
+    termsHeading: 'Terms and conditions',
+    termsText: 'The full terms and privacy policy will be published here before launch.',
+    joinTitle: 'Join as a vendor',
+    joinHeading: 'Bring dvote to your coffee shop',
+    joinText: 'Reward your regulars with points and free treats. Vendor sign-up is coming soon to the app.',
+  },
+
+  qr: {
+    collect: 'Collect points',
+    pointsAdded: 'Points added',
+    expiresIn: 'Expires in {time}',
+    expired: 'Expired',
+    showAtCounter: 'Show this code at the counter',
+    worksAnywhere:
+      'Works at any dvote coffee shop: the staff scan it and enter your bill, and your points appear here straight away.',
+    reconnecting: 'Reconnecting…',
+    waiting: 'Waiting for the scan…',
+    at: 'at {place}',
+    bill: 'Bill',
+    balance: 'Your balance',
+    viewCard: 'View card',
+    expiredTitle: 'QR code expired',
+    expiredText: 'For your safety each code works for 5 minutes only. Get a new one when you are at the counter.',
+    replacedTitle: 'QR code replaced',
+    replacedText: 'A newer QR code was opened, so this one stopped working.',
+    errorTitle: 'Something went wrong',
+    newCode: 'Get a new QR code',
+    couldNotCreate: 'Could not create your QR code.',
+  },
+
+  shop: {
+    fallbackName: 'Shop',
+    youHave: { one: 'You have {count} pt here', other: 'You have {count} pts here' },
+    logoA11y: '{name} logo. Open full screen',
+    earnTitle: 'How you earn points',
+    rewards: 'Rewards',
+    menu: 'Menu',
+    branches: 'Branches',
+    noRule: 'No points rule yet',
+    noRuleText: "This shop hasn't set how many points you earn. Check back soon.",
+    rule: 'Every {amount} {currency} = {points}',
+    minBill: 'Bills from {amount} {currency}',
+    cap: { one: 'Up to {count} point per purchase', other: 'Up to {count} points per purchase' },
+    roundedDown: 'Points are rounded down and work at every branch',
+    noBranches: 'No branches yet',
+    noBranchesText: "This shop's branches will show here.",
+    addressSoon: 'Address coming soon',
+    directions: 'Get directions',
+    directionsA11y: '{name}. Get directions',
+    photoA11y: '{name} photo {n}. Open full screen',
+    couldNotLoad: 'Could not load this shop.',
+    menuSoon: 'Menu coming soon',
+    menuSoonText: "This shop's menu pages will show here.",
+    menuPageA11y: 'Menu page {n} of {total}. Open full screen',
+  },
+
+  feedback: {
+    title: 'Send feedback',
+    subtitle: "Tell us what's working and what isn't.",
+    category: 'Category',
+    bug: 'Bug',
+    suggestion: 'Suggestion',
+    pointsRewards: 'Points & rewards',
+    accountTopic: 'Account',
+    otherTopic: 'Other',
+    yours: 'Your feedback',
+    placeholder: 'What happened, or what would you like to see?',
+    send: 'Send',
+    thanks: 'Thanks for your feedback',
+    thanksText: 'We read every message to make dvote better.',
+    closeA11y: 'Close feedback',
+    failed: 'Could not send your feedback. Please try again.',
+  },
+
+  /** API error codes → message (lib/api friendlyMessage). Unknown codes fall back to the server text. */
+  errors: {
+    network: "Can't reach dvote right now. Check your connection and try again.",
+    user_blocked: 'Your account is blocked. Please contact dvote support.',
+    provider_not_allowed: 'This sign-in method is not supported. Use Google, Facebook or email.',
+    token_expired: 'Your session expired. Please sign in again.',
+    invalid_token: 'Please sign in again.',
+    missing_token: 'Please sign in again.',
+    card_not_found: 'This card was not found.',
+    qr_not_found: 'This QR code was not found. Get a new one.',
+    feedback_not_configured: "Feedback isn't available yet. Please try again later.",
+    vendor_not_found: 'This shop is not on dvote right now.',
+    unsupported_image: 'Choose a JPG, PNG or HEIC photo.',
+    file_too_large: 'That photo is too big. Choose one under 10 MB.',
+    storage_not_configured: "Photos can't be saved right now. Please try again later.",
+    storage_error: "Photos can't be saved right now. Please try again later.",
+    couldNotLoadProfile: 'Could not load your profile.',
+  },
+};
+
+type Shape<T> = T extends string
+  ? string
+  : T extends readonly string[]
+    ? readonly string[]
+    : T extends PluralForms
+      ? PluralForms
+      : { [K in keyof T]: Shape<T[K]> };
+
+/** The shape every language must have. */
+export type Dictionary = Shape<typeof en>;

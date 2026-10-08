@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { t } from '../i18n';
 import {
   createContext,
   useCallback,
@@ -44,7 +45,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setMeError(null);
       setMe(await api.me());
     } catch (err) {
-      setMeError(err instanceof ApiError ? err.message : 'Could not load your profile.');
+      setMeError(err instanceof ApiError ? err.message : t('errors.couldNotLoadProfile'));
       if (err instanceof ApiError && SIGN_OUT_CODES.has(err.code)) await signOut();
     }
   }, [signOut]);

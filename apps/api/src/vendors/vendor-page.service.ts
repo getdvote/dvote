@@ -58,6 +58,8 @@ export class VendorPageService {
         id: r.id,
         name: r.name,
         description: r.description,
+        nameAr: r.name_ar,
+        descriptionAr: r.description_ar,
         imageUrl: r.image_url,
         pointsCost: r.points_cost,
       })),

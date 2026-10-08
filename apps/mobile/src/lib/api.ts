@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { errorText, t } from '../i18n';
 import { config } from './config';
 import { supabase } from './supabase';
 
@@ -27,7 +28,7 @@ export interface Card {
   balance: number;
   lifetimePoints: number;
   affordableRewards: number;
-  nextReward: { id: string; name: string; pointsCost: number; pointsNeeded: number } | null;
+  nextReward: { id: string; name: string; nameAr: string | null; pointsCost: number; pointsNeeded: number } | null;
   lastActivityAt: string;
 }
 
@@ -38,6 +39,7 @@ export interface CardEvent {
   purchaseAmount: string | null;
   branchName: string | null;
   rewardName: string | null;
+  rewardNameAr: string | null;
   createdAt: string;
 }
 
@@ -95,7 +97,7 @@ async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path
       body: isForm ? (body as FormData) : body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'network', "Can't reach dvote right now. Check your connection and try again.");
+    throw new ApiError(0, 'network', t('errors.network'));
   }
   const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string | string[] };
   if (!res.ok) {
@@ -163,7 +165,16 @@ export interface VendorPage {
   currency: string;
   /** null = the shop has no point rule yet */
   rule: { spendAmount: string; pointsPerSpend: number; minPurchase: string; maxPointsPerPurchase: number | null } | null;
-  rewards: { id: string; name: string; description: string | null; imageUrl: string | null; pointsCost: number }[];
+  rewards: {
+    id: string;
+    name: string;
+    description: string | null;
+    /** Arabic texts (null = not translated; the app shows the English ones) */
+    nameAr: string | null;
+    descriptionAr: string | null;
+    imageUrl: string | null;
+    pointsCost: number;
+  }[];
   menu: VendorPageImage[];
   branches: {
     id: string;
@@ -180,23 +191,9 @@ export interface VendorPage {
 /** Same codes as the API (CreateFeedbackDto). */
 export type FeedbackCategory = 'bug' | 'suggestion' | 'points_rewards' | 'account' | 'other';
 
+/** The message shown for an API error code, in the app language (i18n errors.*). */
 export function friendlyMessage(code: string, serverMessage?: string): string {
-  const messages: Record<string, string> = {
-    user_blocked: 'Your account is blocked. Please contact dvote support.',
-    provider_not_allowed: 'This sign-in method is not supported. Use Google, Facebook or email.',
-    token_expired: 'Your session expired. Please sign in again.',
-    invalid_token: 'Please sign in again.',
-    missing_token: 'Please sign in again.',
-    card_not_found: 'This card was not found.',
-    qr_not_found: 'This QR code was not found. Get a new one.',
-    feedback_not_configured: "Feedback isn't available yet. Please try again later.",
-    vendor_not_found: 'This shop is not on dvote right now.',
-    unsupported_image: 'Choose a JPG, PNG or HEIC photo.',
-    file_too_large: 'That photo is too big. Choose one under 10 MB.',
-    storage_not_configured: "Photos can't be saved right now. Please try again later.",
-    storage_error: "Photos can't be saved right now. Please try again later.",
-  };
-  return messages[code] ?? serverMessage ?? 'Something went wrong. Please try again.';
+  return errorText(code) ?? serverMessage ?? t('common.somethingWrong');
 }
 
 /** Codes that mean the sign-in is no longer valid: back to the welcome screen. */
