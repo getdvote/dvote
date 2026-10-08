@@ -7,7 +7,7 @@
 --  A database built from this file already matches every Prisma migration; mark them
 --  applied (from apps/api):  npx prisma migrate resolve --applied <name>
 --  for 0_init, 1_users_auth_user_id, 2_staff_users_auth_user_id, 3_points_rewards_qr,
---  4_platform_admins_auth_user_id, 5_users_gender_birth_date, 6_storage_images.
+--  4_platform_admins_auth_user_id, 5_users_gender_birth_date, 6_storage_images, 7_rewards_arabic.
 -- =====================================================================
 BEGIN;
 
@@ -135,6 +135,8 @@ CREATE TABLE rewards (
     vendor_id    uuid          NOT NULL REFERENCES vendors (id),
     name         varchar(120)  NOT NULL,
     description  varchar(500),
+    name_ar        varchar(120),               -- Arabic (optional; the app falls back to name)
+    description_ar varchar(500),               -- Arabic (optional)
     image_url    varchar(500),
     points_cost  int           NOT NULL CHECK (points_cost > 0),
     status       reward_status NOT NULL DEFAULT 'active',

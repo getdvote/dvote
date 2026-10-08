@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { t } from '../i18n';
+import { localized, t } from '../i18n';
 import type { Card } from '../lib/api';
 import { onCardColor, vendorColors, squircle } from '../lib/theme';
 import { DvoteLogo } from './DvoteLogo';
@@ -63,7 +63,7 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
 /** Progress line shown under a card's balance (also used by the My cards list). */
 export function rewardCaption(card: Card): string {
   const next = card.nextReward;
-  if (next) return t('cards.toNext', { count: next.pointsNeeded, reward: next.name });
+  if (next) return t('cards.toNext', { count: next.pointsNeeded, reward: localized(next.name, next.nameAr) });
   if (card.affordableRewards > 0) return t('cards.ready', { count: card.affordableRewards });
   return t('cards.lifetime', { count: card.lifetimePoints });
 }

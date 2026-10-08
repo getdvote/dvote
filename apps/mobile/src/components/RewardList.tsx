@@ -1,7 +1,7 @@
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
-import { useI18n } from '../i18n';
+import { localized, useI18n } from '../i18n';
 import type { VendorPage } from '../lib/api';
 import { theme } from '../lib/theme';
 import { Icon } from './Icon';
@@ -33,11 +33,11 @@ export function RewardList({ rewards, balance }: { rewards: VendorPage['rewards'
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name} numberOfLines={1}>
-                {r.name}
+                {localized(r.name, r.nameAr)}
               </Text>
-              {r.description ? (
+              {localized(r.description, r.descriptionAr) ? (
                 <Text style={styles.text} numberOfLines={2}>
-                  {r.description}
+                  {localized(r.description, r.descriptionAr)}
                 </Text>
               ) : null}
               <Text style={[styles.text, short <= 0 && styles.ready]}>

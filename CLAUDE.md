@@ -54,7 +54,7 @@ dvote/
 ## Database
 
 **App DB: Supabase Postgres 17** (project `cfknsqlixyeihhkleock`, region eu-west-1, Free plan: pauses after 1 week idle, no backups — Pro before real customers). `apps/api/.env` `DATABASE_URL` = the **Session pooler** URL (`aws-1-eu-west-1.pooler.supabase.com:5432`, user `postgres.<ref>`; the direct `db.<ref>.supabase.co` host is IPv6-only and unreachable here; password letters+digits only). Never commit it. **Supabase Data API is locked:** `database/supabase_lockdown.sql` (RLS on every table, no policies, no grants for `anon`/`authenticated`; NestJS connects as the owner, unaffected) — re-run it after any migration that adds a table. Migrations on the cloud: `npx prisma migrate deploy` (DATABASE_URL already points there).
-**Local DB** `postgresql://postgres:<password>@localhost:5432/dvote` = `TEST_DATABASE_URL`, used **only by e2e tests** (`test/setup-env.ts` swaps it in and refuses any non-local host: the cleanup needs superuser, and tests must never touch cloud data). Keep local schema in step with the cloud (apply each migration to both). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr`, `4_platform_admins_auth_user_id`, `5_users_gender_birth_date`, `6_storage_images` are applied (local and cloud). `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
+**Local DB** `postgresql://postgres:<password>@localhost:5432/dvote` = `TEST_DATABASE_URL`, used **only by e2e tests** (`test/setup-env.ts` swaps it in and refuses any non-local host: the cleanup needs superuser, and tests must never touch cloud data). Keep local schema in step with the cloud (apply each migration to both). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr`, `4_platform_admins_auth_user_id`, `5_users_gender_birth_date`, `6_storage_images`, `7_rewards_arabic` are applied (local and cloud). `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
 
 **Schema changes:** hand-write `prisma/migrations/<n>_<name>/migration.sql`, apply with `npx prisma migrate deploy`, refresh `schema.prisma` with **`npm run db:pull`** (= `prisma db pull` + `prisma/fix-introspection.cjs` + `prisma generate`; never plain `db pull`: the fix-up stops Prisma reading the partial "one active rule per vendor" index as a one-to-one relation), and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints, composite FKs-with-intent or triggers below, so **never let a Prisma migration drop them**.
 
@@ -66,7 +66,7 @@ dvote/
 | `branches` | vendor | Physical shop. FK vendor |
 | `staff_users` | vendor | role: vendor_admin (branch_id NULL) / branch_manager / staff (branch_id required); `auth_user_id` |
 | `point_rules` | vendor | Earning rule, versioned: `spend_amount`, `points_per_spend`, `min_purchase`, `max_points_per_purchase`, `is_active` |
-| `rewards` | vendor | Reward catalogue: `name`, `points_cost`, `status` active/archived, `sort_order` |
+| `rewards` | vendor | Reward catalogue: `name`, `description`, `name_ar`/`description_ar` (Arabic, optional), `points_cost`, `status` active/archived, `sort_order` |
 | `users` | customer | Customers. email nullable, phone optional, `gender` (male/female, NULL = not given), `birth_date` (plain `date`), `avatar_url` (sign-in provider photo), `avatar_path` (uploaded photo in Storage), `auth_user_id` |
 | `user_identities` | customer | **Unused** (Supabase handles provider identities and linking) |
 | `cards` | customer | One per (user, vendor), created on first purchase. `balance` (cached), `lifetime_points` |
@@ -240,7 +240,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 - **Never hard-code user-facing text** in screens: add the key to `en.ts` and `ar.ts`.
 - **Arabic = right-to-left without a restart:** `Screen`, the tab bar and the sheets set `direction: 'rtl'`; use `marginStart/End` (not Left/Right) for side spacing; directional icons use `<Icon … mirror />`; `TextInput` aligns to the reading side. Numbers stay in Western digits (0-9).
 - **Fonts:** Inter for English, IBM Plex Sans Arabic for Arabic (`components/Text` picks by language; both loaded in `app/_layout`).
-- Not translated: shop/reward names and descriptions (database content), Supabase emails, the staff app.
+- **Shop data in Arabic:** rewards have optional `name_ar`/`description_ar`; the API returns both (`nameAr`, `descriptionAr`, `rewardNameAr`) and the app picks with `localized(en, ar)` (falls back to English). Not translated yet: vendor and branch names/addresses, Supabase emails, the staff app.
 
 ## Later (not v1)
 

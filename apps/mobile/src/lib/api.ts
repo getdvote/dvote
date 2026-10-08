@@ -28,7 +28,7 @@ export interface Card {
   balance: number;
   lifetimePoints: number;
   affordableRewards: number;
-  nextReward: { id: string; name: string; pointsCost: number; pointsNeeded: number } | null;
+  nextReward: { id: string; name: string; nameAr: string | null; pointsCost: number; pointsNeeded: number } | null;
   lastActivityAt: string;
 }
 
@@ -39,6 +39,7 @@ export interface CardEvent {
   purchaseAmount: string | null;
   branchName: string | null;
   rewardName: string | null;
+  rewardNameAr: string | null;
   createdAt: string;
 }
 
@@ -164,7 +165,16 @@ export interface VendorPage {
   currency: string;
   /** null = the shop has no point rule yet */
   rule: { spendAmount: string; pointsPerSpend: number; minPurchase: string; maxPointsPerPurchase: number | null } | null;
-  rewards: { id: string; name: string; description: string | null; imageUrl: string | null; pointsCost: number }[];
+  rewards: {
+    id: string;
+    name: string;
+    description: string | null;
+    /** Arabic texts (null = not translated; the app shows the English ones) */
+    nameAr: string | null;
+    descriptionAr: string | null;
+    imageUrl: string | null;
+    pointsCost: number;
+  }[];
   menu: VendorPageImage[];
   branches: {
     id: string;

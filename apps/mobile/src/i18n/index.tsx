@@ -87,6 +87,16 @@ export function errorText(code: string): string | undefined {
   return typeof v === 'string' ? v : undefined;
 }
 
+/**
+ * Shop data typed by the vendor (reward names…) comes in English plus an optional Arabic
+ * version: the Arabic one in Arabic when there is one, otherwise the English one.
+ */
+export function localized(english: string, arabic: string | null | undefined): string;
+export function localized(english: string | null, arabic: string | null | undefined): string | null;
+export function localized(english: string | null, arabic: string | null | undefined): string | null {
+  return current === 'ar' && arabic?.trim() ? arabic : english;
+}
+
 /** Month and weekday names in the current language. */
 export const calendarNames = () => dictionaries[current].calendar;
 

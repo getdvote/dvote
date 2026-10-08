@@ -13,7 +13,7 @@ import { RewardList } from '../../components/RewardList';
 import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent, type VendorPage } from '../../lib/api';
-import { t as translate, useI18n } from '../../i18n';
+import { localized, t as translate, useI18n } from '../../i18n';
 import { showDate } from '../../lib/dates';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
@@ -169,7 +169,7 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
               <Icon icon={GiftIcon} size={20} color={theme.brand} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rewardName}>{next.name}</Text>
+              <Text style={styles.rewardName}>{localized(next.name, next.nameAr)}</Text>
               <Text style={styles.rewardDetail}>
                 {translate('common.pts', { count: next.pointsCost })} · {translate('rewards.toGo', { count: next.pointsNeeded })}
               </Text>
@@ -198,7 +198,7 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
     event.type === 'earn'
       ? translate('card.earned')
       : event.type === 'redeem'
-        ? (event.rewardName ?? translate('card.redeemed'))
+        ? (localized(event.rewardName, event.rewardNameAr) ?? translate('card.redeemed'))
         : translate('card.correction');
   const detail = [
     event.purchaseAmount ? translate('card.bill', { amount: event.purchaseAmount.replace(/\.00$/, ''), currency }) : null,

@@ -277,20 +277,22 @@ model qr_codes {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model rewards {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendor_id    String         @db.Uuid
-  name         String         @db.VarChar(120)
-  description  String?        @db.VarChar(500)
-  image_url    String?        @db.VarChar(500)
-  points_cost  Int
-  status       reward_status  @default(active)
-  sort_order   Int            @default(0)
-  created_at   DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
-  point_events point_events[]
-  qr_codes     qr_codes[]
-  redemptions  redemptions[]
-  vendors      vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id      String         @db.Uuid
+  name           String         @db.VarChar(120)
+  description    String?        @db.VarChar(500)
+  image_url      String?        @db.VarChar(500)
+  points_cost    Int
+  status         reward_status  @default(active)
+  sort_order     Int            @default(0)
+  created_at     DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime       @default(now()) @db.Timestamptz(6)
+  name_ar        String?        @db.VarChar(120)
+  description_ar String?        @db.VarChar(500)
+  point_events   point_events[]
+  qr_codes       qr_codes[]
+  redemptions    redemptions[]
+  vendors        vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([id, vendor_id])
   @@index([vendor_id, status, sort_order], map: "rewards_vendor_idx")

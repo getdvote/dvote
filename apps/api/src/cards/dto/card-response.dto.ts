@@ -22,6 +22,14 @@ export class NextRewardDto {
   @ApiProperty({ example: 'Free coffee' })
   name: string;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'قهوة مجانية',
+    description: 'Arabic name (null = not translated; show the English one)',
+  })
+  nameAr: string | null;
+
   @ApiProperty({ example: 300 })
   pointsCost: number;
 
@@ -78,6 +86,14 @@ export class CardEventResponseDto {
 
   @ApiProperty({ type: String, nullable: true, example: 'Free coffee' })
   rewardName: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'قهوة مجانية',
+    description: 'Arabic reward name (null = not translated; show the English one)',
+  })
+  rewardNameAr: string | null;
 
   @ApiProperty()
   createdAt: string;
