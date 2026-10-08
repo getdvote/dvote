@@ -13,7 +13,7 @@ import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent } from '../../lib/api';
 import { useSession } from '../../lib/session';
-import { theme, vendorColors } from '../../lib/theme';
+import { theme, vendorColors, squircle } from '../../lib/theme';
 
 /**
  * Card details: the card, the shop that issued it (opens the shop page), its rewards and
@@ -231,7 +231,7 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
-  box: { backgroundColor: theme.surface, borderRadius: theme.radius },
+  box: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius },
   pressed: { opacity: 0.6 },
   issuedBy: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, minHeight: 72 },
   logo: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
@@ -252,8 +252,8 @@ const styles = StyleSheet.create({
   },
   rewardName: { fontSize: 17, fontWeight: '600', color: theme.text },
   rewardDetail: { fontSize: 14, color: theme.muted, marginTop: 2 },
-  track: { height: 6, borderRadius: 3, backgroundColor: theme.fill, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3, backgroundColor: theme.brand },
+  track: { ...squircle, height: 6, borderRadius: 3, backgroundColor: theme.fill, overflow: 'hidden' },
+  fill: { ...squircle, height: '100%', borderRadius: 3, backgroundColor: theme.brand },
   row: {
     backgroundColor: theme.surface,
     flexDirection: 'row',
@@ -262,8 +262,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  rowFirst: { borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
-  rowLast: { borderBottomLeftRadius: theme.radius, borderBottomRightRadius: theme.radius },
+  rowFirst: { ...squircle, borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
+  rowLast: { ...squircle, borderBottomLeftRadius: theme.radius, borderBottomRightRadius: theme.radius },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator },
   icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   rowTitle: { fontSize: 16, fontWeight: '500', color: theme.text },

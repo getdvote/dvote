@@ -11,7 +11,7 @@ import { ImageViewer } from '../../components/ImageViewer';
 import { MenuGallery } from '../../components/MenuGallery';
 import { Text } from '../../components/Text';
 import { EmptySection, PageHeader, Screen, SectionTitle } from '../../components/ui';
-import { theme, vendorColors } from '../../lib/theme';
+import { theme, vendorColors, squircle } from '../../lib/theme';
 
 /**
  * Shop page (opened from Card details → Issued by). Name and logo come in the route params,
@@ -104,7 +104,7 @@ const LOGO_SIZE = 88;
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
-  banner: { height: 160, borderRadius: theme.radius, overflow: 'hidden', backgroundColor: theme.fill },
+  banner: { ...squircle, height: 160, borderRadius: theme.radius, overflow: 'hidden', backgroundColor: theme.fill },
   pattern: { position: 'absolute', right: -40, top: -20 },
   // The logo overlaps the bottom of the banner.
   hero: { alignItems: 'center', gap: 10, marginTop: -LOGO_SIZE / 2 },

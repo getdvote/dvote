@@ -2,7 +2,7 @@ import Coffee02Icon from '@hugeicons/core-free-icons/Coffee02Icon';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
-import { theme } from '../lib/theme';
+import { theme, squircle } from '../lib/theme';
 import { ImageViewer } from './ImageViewer';
 import { EmptySection } from './ui';
 
@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
   row: { paddingHorizontal: theme.gutter },
   pressed: { opacity: 0.85 },
   page: {
+    ...squircle,
     width: PAGE_WIDTH,
     height: PAGE_HEIGHT,
     borderRadius: theme.radius,

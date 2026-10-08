@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import type { Card } from '../lib/api';
-import { onCardColor, vendorColors } from '../lib/theme';
+import { onCardColor, vendorColors, squircle } from '../lib/theme';
 import { DvoteLogo } from './DvoteLogo';
 
 /**
@@ -71,6 +71,7 @@ export function rewardCaption(card: Card): string {
 
 const styles = StyleSheet.create({
   card: {
+    ...squircle,
     height: 200,
     borderRadius: 24,
     padding: 20,
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
   vendor: { flex: 1, fontSize: 17, fontWeight: '700' },
   balance: { fontSize: 34, fontWeight: '800', letterSpacing: 0.5 },
   pts: { fontSize: 17, fontWeight: '600' },
-  track: { height: 6, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3 },
+  track: { ...squircle, height: 6, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
+  fill: { ...squircle, height: '100%', borderRadius: 3 },
   caption: { fontSize: 13, fontWeight: '600', marginTop: 8, opacity: 0.95 },
 });

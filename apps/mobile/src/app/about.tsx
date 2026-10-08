@@ -11,7 +11,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Text';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { Group, PageHeader, Row, Screen } from '../components/ui';
-import { theme } from '../lib/theme';
+import { theme, squircle } from '../lib/theme';
 
 
 const STEPS: { icon: AppIcon; title: string; text: string }[] = [
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
   section: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 28, marginBottom: 10, marginLeft: 2 },
   steps: { gap: 10 },
   step: {
+    ...squircle,
     flexDirection: 'row',
     gap: 14,
     backgroundColor: theme.surface,

@@ -9,7 +9,7 @@ import { Redirect, router, Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../lib/session';
-import { theme } from '../../lib/theme';
+import { theme, squircle } from '../../lib/theme';
 
 // Untitled UI icons are outline-only: the selected tab is shown by colour and its grey pill.
 const ICONS: Record<string, { icon: AppIcon; label: string }> = {
@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 28, alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pill: {
+    ...squircle,
     flexDirection: 'row',
     backgroundColor: theme.surface,
     borderRadius: 32,

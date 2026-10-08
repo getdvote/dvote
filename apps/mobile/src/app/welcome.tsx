@@ -16,7 +16,7 @@ import { DvoteLogo } from '../components/DvoteLogo';
 import { ErrorBox, Field, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { signInWithEmail, signInWithProvider, signUpWithEmail } from '../lib/auth';
 import { useSession } from '../lib/session';
-import { theme } from '../lib/theme';
+import { theme, squircle } from '../lib/theme';
 
 type Mode = 'login' | 'signup';
 
@@ -186,13 +186,14 @@ const styles = StyleSheet.create({
   line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: theme.placeholder },
   or: { fontSize: 13, color: theme.muted },
   segment: {
+    ...squircle,
     flexDirection: 'row',
     backgroundColor: theme.fill,
     borderRadius: 22,
     padding: 3,
     marginBottom: 16,
   },
-  segmentItem: { flex: 1, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  segmentItem: { ...squircle, flex: 1, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: theme.surface },
   segmentText: { fontSize: 15, fontWeight: '600', color: theme.muted },
   segmentTextOn: { color: theme.text },

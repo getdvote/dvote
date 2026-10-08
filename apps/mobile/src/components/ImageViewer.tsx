@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { squircle } from '../lib/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
 
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   counter: {
+    ...squircle,
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 16,

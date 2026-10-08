@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Text, TextInput } from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../lib/theme';
+import { theme, squircle } from '../lib/theme';
 
 
 /** Pushed page: round back button + centred title (Profile details, Settings, About…). */
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   headerSpacer: { width: 44, height: 44 },
   pageTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600', color: theme.text },
-  group: { backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
+  group: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 24, marginBottom: 10, marginLeft: 2 },
   row: { minHeight: theme.rowHeight, flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -288,9 +288,10 @@ const styles = StyleSheet.create({
   rowLabel: { flex: 1, fontSize: 17, color: theme.text },
   rowValue: { fontSize: 17, color: theme.muted, maxWidth: '55%' },
   disabledText: { color: theme.muted },
-  soon: { backgroundColor: theme.fill, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  soon: { ...squircle, backgroundColor: theme.fill, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   soonText: { fontSize: 12, fontWeight: '600', color: theme.muted },
   primary: {
+    ...squircle,
     height: 56,
     borderRadius: 28,
     backgroundColor: theme.primary,
@@ -301,6 +302,7 @@ const styles = StyleSheet.create({
   inactive: { opacity: 0.35 },
   pressed: { opacity: 0.8 },
   pill: {
+    ...squircle,
     height: 56,
     borderRadius: 28,
     backgroundColor: theme.surface,
@@ -313,6 +315,7 @@ const styles = StyleSheet.create({
   fieldWrap: { gap: 8 },
   fieldLabel: { fontSize: 15, fontWeight: '600', color: theme.text },
   inputRow: {
+    ...squircle,
     height: 52,
     borderRadius: 26,
     backgroundColor: theme.surface,
@@ -323,6 +326,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, height: '100%', fontSize: 17, color: theme.text },
   emptySection: {
+    ...squircle,
     backgroundColor: theme.surface,
     borderRadius: theme.radius,
     paddingVertical: 24,
@@ -341,7 +345,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: theme.text, textAlign: 'center' },
   emptyText: { fontSize: 14, color: theme.muted, textAlign: 'center', lineHeight: 20 },
-  error: { backgroundColor: theme.dangerSoft, borderRadius: 14, padding: 12 },
+  error: { ...squircle, backgroundColor: theme.dangerSoft, borderRadius: 14, padding: 12 },
   errorText: { color: theme.danger, fontSize: 15, textAlign: 'center' },
   avatarBorder: { borderWidth: 3, borderColor: theme.surface },
   avatarFallback: { backgroundColor: theme.brand, alignItems: 'center', justifyContent: 'center' },

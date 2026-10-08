@@ -10,7 +10,7 @@ import { Text } from '../components/Text';
 import { ErrorBox, PageHeader, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type Card } from '../lib/api';
 import { useSession } from '../lib/session';
-import { theme, vendorColors } from '../lib/theme';
+import { theme, vendorColors, squircle } from '../lib/theme';
 
 /**
  * My cards list (My profile → My cards): every card as a compact row, for a quick overview.
@@ -142,8 +142,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: theme.surface,
   },
-  rowFirst: { borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
-  rowLast: { borderBottomLeftRadius: theme.radius, borderBottomRightRadius: theme.radius },
+  rowFirst: { ...squircle, borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
+  rowLast: { ...squircle, borderBottomLeftRadius: theme.radius, borderBottomRightRadius: theme.radius },
   pressed: { opacity: 0.6 },
   separator: {
     position: 'absolute',

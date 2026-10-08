@@ -21,6 +21,15 @@ export const theme = {
 } as const;
 
 /**
+ * Smooth "squircle" corners for every rounded rectangle and pill: Apple's continuous corner
+ * curve, the same as Figma's 60% corner smoothing ("iOS" preset). Spread it next to any
+ * borderRadius: `{ borderRadius: theme.radius, ...squircle }`. iOS only (React Native has no
+ * Android support, where corners stay regular). Not used on perfect circles (avatars, round
+ * icon buttons), which stay round.
+ */
+export const squircle = { borderCurve: 'continuous' } as const;
+
+/**
  * App font: Inter (Google Fonts, via @expo-google-fonts/inter, loaded in app/_layout).
  * Each weight is a separate font file; components/Text picks the right one from fontWeight.
  */
