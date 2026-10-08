@@ -38,7 +38,7 @@ dvote/
 ├── CLAUDE.md
 ├── docs/                      # spec PDF + its HTML source (docs/src)
 ├── database/
-│   ├── dvote_schema.sql       # schema source of truth (13 tables, v2.0)
+│   ├── dvote_schema.sql       # schema source of truth (14 tables, v2.0)
 │   └── dvote_seed_joy_corner.sql   # dev seed: Joy Corner, 10 EGP = 1 pt, 3 rewards
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
@@ -54,20 +54,20 @@ dvote/
 ## Database
 
 **App DB: Supabase Postgres 17** (project `cfknsqlixyeihhkleock`, region eu-west-1, Free plan: pauses after 1 week idle, no backups — Pro before real customers). `apps/api/.env` `DATABASE_URL` = the **Session pooler** URL (`aws-1-eu-west-1.pooler.supabase.com:5432`, user `postgres.<ref>`; the direct `db.<ref>.supabase.co` host is IPv6-only and unreachable here; password letters+digits only). Never commit it. **Supabase Data API is locked:** `database/supabase_lockdown.sql` (RLS on every table, no policies, no grants for `anon`/`authenticated`; NestJS connects as the owner, unaffected) — re-run it after any migration that adds a table. Migrations on the cloud: `npx prisma migrate deploy` (DATABASE_URL already points there).
-**Local DB** `postgresql://postgres:<password>@localhost:5432/dvote` = `TEST_DATABASE_URL`, used **only by e2e tests** (`test/setup-env.ts` swaps it in and refuses any non-local host: the cleanup needs superuser, and tests must never touch cloud data). Keep local schema in step with the cloud (apply each migration to both). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr`, `4_platform_admins_auth_user_id`, `5_users_gender_birth_date` are applied (local and cloud). `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
+**Local DB** `postgresql://postgres:<password>@localhost:5432/dvote` = `TEST_DATABASE_URL`, used **only by e2e tests** (`test/setup-env.ts` swaps it in and refuses any non-local host: the cleanup needs superuser, and tests must never touch cloud data). Keep local schema in step with the cloud (apply each migration to both). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr`, `4_platform_admins_auth_user_id`, `5_users_gender_birth_date`, `6_storage_images` are applied (local and cloud). `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
 
 **Schema changes:** hand-write `prisma/migrations/<n>_<name>/migration.sql`, apply with `npx prisma migrate deploy`, refresh `schema.prisma` with **`npm run db:pull`** (= `prisma db pull` + `prisma/fix-introspection.cjs` + `prisma generate`; never plain `db pull`: the fix-up stops Prisma reading the partial "one active rule per vendor" index as a one-to-one relation), and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints, composite FKs-with-intent or triggers below, so **never let a Prisma migration drop them**.
 
-### Tables (13)
+### Tables (14)
 
 | Table | Side | Purpose |
 |---|---|---|
-| `vendors` | vendor | Brand (tenant root). `currency` (default EGP). status active/suspended |
+| `vendors` | vendor | Brand (tenant root). `currency` (default EGP). status active/suspended. `logo_url` (public link) + `logo_path` (set when the logo was uploaded to Storage) |
 | `branches` | vendor | Physical shop. FK vendor |
 | `staff_users` | vendor | role: vendor_admin (branch_id NULL) / branch_manager / staff (branch_id required); `auth_user_id` |
 | `point_rules` | vendor | Earning rule, versioned: `spend_amount`, `points_per_spend`, `min_purchase`, `max_points_per_purchase`, `is_active` |
 | `rewards` | vendor | Reward catalogue: `name`, `points_cost`, `status` active/archived, `sort_order` |
-| `users` | customer | Customers. email nullable, phone optional, `gender` (male/female, NULL = not given), `birth_date` (plain `date`), `auth_user_id` |
+| `users` | customer | Customers. email nullable, phone optional, `gender` (male/female, NULL = not given), `birth_date` (plain `date`), `avatar_url` (sign-in provider photo), `avatar_path` (uploaded photo in Storage), `auth_user_id` |
 | `user_identities` | customer | **Unused** (Supabase handles provider identities and linking) |
 | `cards` | customer | One per (user, vendor), created on first purchase. `balance` (cached), `lifetime_points` |
 | `qr_codes` | activity | One per QR shown. purpose collect/redeem, `vendor_id` (always NULL for collect; the reward's vendor for redeem), `reward_id` (redeem), `token_hash`, status active/used/expired/cancelled, `expires_at` (5 min) |
@@ -75,8 +75,17 @@ dvote/
 | `redemptions` | activity | One per reward given, 1-to-1 with its redeem ledger row; snapshots `reward_name`, `points_cost` |
 | `platform_admins` | platform | Internal team. `auth_user_id`; 2FA via Supabase MFA (`password_hash`, `totp_secret_ref` legacy) |
 | `fraud_flags` | platform | too_many_collects / large_purchase / branch_spike / staff_spike; targets vendor/branch/user/staff |
+| `vendor_images` | vendor | Menu pages (`kind` menu, no branch) and branch photos (`branch_photo`, composite FK branch+vendor). `storage_path`, `sort_order`. **Hard-deleted together with its file** (media, not business history) |
 
-All tables: `id uuid` (gen_random_uuid), `created_at`, `updated_at` (trigger-maintained, timestamptz UTC). Soft delete via `status`; never hard-delete business rows.
+All tables: `id uuid` (gen_random_uuid), `created_at`, `updated_at` (trigger-maintained, timestamptz UTC). Soft delete via `status`; never hard-delete business rows (exception: `vendor_images`, deleted with their file).
+
+### Image storage (Supabase Storage, built 2026-10-08)
+
+Buckets (created/updated by `npm run storage:setup`, idempotent; WebP only, at most 2 MB per file):
+- **`vendors` (public):** `<vendorId>/logo/<uuid>.webp`, `<vendorId>/menu/<uuid>.webp`, `<vendorId>/branches/<branchId>/<uuid>.webp`. Permanent links (`/storage/v1/object/public/...`).
+- **`avatars` (private):** `<userId>/<uuid>.webp`. Only shown to the owner, as a **signed link valid about 1 hour** (`avatarUrl` in `/users/me`).
+
+Rules: **apps never upload to Storage directly.** They send `multipart/form-data` (field `file`, at most 10 MB, JPG/PNG/WebP/HEIC) to the API, which re-encodes it with `sharp` (avatar 512x512 crop, logo fits 512, menu page 1600, branch photo 1280; metadata stripped) and uploads with the secret key. Code: `src/storage/` (`StorageService`, `images.ts`, `ImageUploadInterceptor`, `@ApiImageUpload()`) and `src/vendor-images/`. File names are random and never reused, so links can be cached forever. Replace = upload new file, update the row, then delete the old file; delete = delete the file, then update/delete the row. Setting `logoUrl` by PATCH (or null) deletes an uploaded logo file. e2e tests replace `StorageService` with `test/helpers/fake-storage.ts` (`test/images.e2e-spec.ts`). Limits: 20 menu pages per vendor, 10 photos per branch. Error codes: `file_required`, `invalid_upload` (400), `file_too_large` (413), `unsupported_image` (415), `too_many_images` (409), `image_not_found` (404), `storage_not_configured`, `storage_error` (503).
 
 ### Constraints enforced by the DB (keep them; handle their errors in the API)
 
@@ -146,6 +155,7 @@ Run as a scheduled job.
 | Method | Path | Purpose |
 |---|---|---|
 | GET / PATCH | /users/me | Own profile / update name, email, phone, `gender` (`male`/`female`), `birthDate` (`YYYY-MM-DD`, not future; `null` clears either) — **built** |
+| PUT / DELETE | /users/me/avatar | Upload or replace my photo (private bucket; old file deleted) / remove it (file deleted, provider photo cleared too) — **built** |
 | GET | /cards | My cards: vendor, balance, lifetime, affordableRewards, nextReward — **built** |
 | GET | /cards/{id}/events | History for one card (`?limit`) — **built** |
 | GET | /vendors | Active vendors + branches + rule summary |
@@ -164,7 +174,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 `GET /staff/me` returns the staff row **plus** `vendor` {name, logoUrl, currency}, `branch`, `branches` (scannable: own branch, or all active for vendor_admin) and `activeRule` — everything the staff app needs after sign-in.
 
-**Built:** `GET /profile` (any role: own vendor) · `PATCH /profile` (vendor_admin: name, logoUrl, contactEmail — never status/currency) · `GET /staff/me` (any role) · `GET|POST /staff`, `GET|PATCH /staff/{id}` (vendor_admin + branch_manager). Rules: vendor_admin manages everyone in the vendor but not their own role/branch/status; branch_manager manages only `staff` in their own branch and can't change role/branch; `staff` role has no access to `/staff`. Other vendors' / branches' rows return 404. Disable = `PATCH {status:"disabled"}` (soft delete). Email can't change. Error codes: `not_staff`, `staff_disabled`, `vendor_suspended`, `branch_closed`, `forbidden_role`, `forbidden_branch`, `forbidden_role_change`, `cannot_modify_self` (403); `staff_not_found` (404); `branch_required`, `branch_not_allowed`, `invalid_branch` (400); `email_taken`, `account_already_staff` (409); `email_rate_limited` (429, Supabase's built-in sender allows only a few emails/hour); `auth_admin_not_configured`, `auth_provider_error` (503, with Supabase's message).
+**Built:** `GET /profile` (any role: own vendor) · `PATCH /profile` (vendor_admin: name, logoUrl, contactEmail — never status/currency) · `PUT|DELETE /profile/logo` (vendor_admin; file deleted on replace/remove) · `GET /images?kind&branchId` (any role) · `POST /images` (multipart `file` + `kind` menu|branch_photo + `branchId?`; vendor_admin: menu + any branch; branch_manager: own branch photos only) · `DELETE /images/{id}` (204; file deleted) · `GET /staff/me` (any role) · `GET|POST /staff`, `GET|PATCH /staff/{id}` (vendor_admin + branch_manager). Rules: vendor_admin manages everyone in the vendor but not their own role/branch/status; branch_manager manages only `staff` in their own branch and can't change role/branch; `staff` role has no access to `/staff`. Other vendors' / branches' rows return 404. Disable = `PATCH {status:"disabled"}` (soft delete). Email can't change. Error codes: `not_staff`, `staff_disabled`, `vendor_suspended`, `branch_closed`, `forbidden_role`, `forbidden_branch`, `forbidden_role_change`, `cannot_modify_self` (403); `staff_not_found` (404); `branch_required`, `branch_not_allowed`, `invalid_branch` (400); `email_taken`, `account_already_staff` (409); `email_rate_limited` (429, Supabase's built-in sender allows only a few emails/hour); `auth_admin_not_configured`, `auth_provider_error` (503, with Supabase's message).
 
 **Built — staff app (all staff roles):** `POST /scans/preview` (200, `{purpose, usable, reason, expiresAt}`, changes nothing) · `POST /scans/collect` (200; errors: `qr_invalid` 404, `qr_used`/`qr_expired`/`qr_cancelled`/`no_active_rule`/`duplicate_receipt`/`idempotency_key_reused` 409, `wrong_qr_type`/`branch_required`/`invalid_branch` 400, `forbidden_branch`/`user_blocked` 403, `no_points_earned` 422). Money math in `src/points/points.ts` (minor units), QR tokens in `src/qr-codes/qr-code.token.ts`.
 **Planned — staff app:** `POST /scans/redeem` · `GET /scans/today`.
@@ -172,7 +182,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 ### Admin — `/api/admin` (Supabase access token with aal2, `PlatformAdminGuard`)
 
-**Built:** `GET|POST /vendors`, `GET|PATCH /vendors/{id}` (filters `status`, `search`; PATCH `status:"suspended"` = soft delete; `logoUrl`/`contactEmail` accept null to clear; `currency` locked once the vendor has a point rule → 409 `currency_locked`; `vendor_not_found` 404) · `POST /vendors/{id}/admins` (invite a vendor_admin by email; same rules/errors as staff invites).
+**Built:** `GET|POST /vendors`, `GET|PATCH /vendors/{id}` (filters `status`, `search`; PATCH `status:"suspended"` = soft delete; `logoUrl`/`contactEmail` accept null to clear; `currency` locked once the vendor has a point rule → 409 `currency_locked`; `vendor_not_found` 404) · `POST /vendors/{id}/admins` (invite a vendor_admin by email; same rules/errors as staff invites) · `PUT|DELETE /vendors/{id}/logo` (upload/replace/remove any vendor logo).
 
 **Planned:**  `GET /vendors/{id}/summary` · `GET|PATCH /users/{id}` (support, block) · `POST /cards/{id}/adjust` (adjust ledger row with reason, balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
 
@@ -180,7 +190,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 ## NestJS modules
 
-`auth`, `users`, `vendors` (built: admin CRUD), `branches`, `staff`, `point-rules`, `rewards`, `cards`, `qr-codes`, `scans` (collect + redeem), `redemptions`, `fraud-flags`, `admin`, `reports`.
+`auth`, `users`, `storage` (built: Supabase Storage + image processing), `vendor-images` (built), `vendors` (built: admin CRUD + logo), `branches`, `staff`, `point-rules`, `rewards`, `cards`, `qr-codes`, `scans` (collect + redeem), `redemptions`, `fraud-flags`, `admin`, `reports`.
 `qr-codes` + `scans` are the core: build them with integration tests.
 
 ---

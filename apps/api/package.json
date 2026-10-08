@@ -21,7 +21,8 @@
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
     "admin:create": "nest build && node dist/scripts/create-platform-admin.js",
     "db:pull": "prisma db pull --config prisma7.config.ts && node prisma/fix-introspection.cjs && prisma generate --config prisma7.config.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "storage:setup": "nest build && node dist/scripts/setup-storage.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -38,7 +39,8 @@
     "jose": "^6.2.12",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
@@ -47,6 +49,7 @@
     "@nestjs/testing": "^12.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.0.0",
     "jest": "^30.0.0",
