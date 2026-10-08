@@ -142,8 +142,19 @@ export const en = {
 
   explore: {
     title: 'Explore',
-    heading: 'Coffee shops near you',
-    text: "Soon you'll find every dvote shop here, with its rewards and points rule.",
+    subtitle: 'Every coffee shop on dvote',
+    search: 'Search coffee shops',
+    clearSearch: 'Clear search',
+    rewards: { one: '{count} reward', other: '{count} rewards' },
+    branches: { one: '{count} branch', other: '{count} branches' },
+    noRule: 'Points rule coming soon',
+    myPoints: { one: '{count} pt', other: '{count} pts' },
+    shopA11y: '{name}. Open shop',
+    emptyTitle: 'No coffee shops yet',
+    emptyText: 'dvote coffee shops will show here as they join.',
+    noResultsTitle: 'No matches',
+    noResults: 'No coffee shops match “{search}”.',
+    couldNotLoad: 'Could not load the coffee shops.',
   },
 
   you: {

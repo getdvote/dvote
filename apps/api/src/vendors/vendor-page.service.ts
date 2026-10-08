@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { fromMinor, toMinor, type DecimalLike } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUCKETS, StorageService } from '../storage/storage.service';
+import { VendorListItemDto } from './dto/vendor-list-item.dto';
 import { VendorPageResponseDto } from './dto/vendor-page-response.dto';
 
 const money = (v: DecimalLike) => fromMinor(toMinor(v));
@@ -17,6 +18,40 @@ export class VendorPageService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
+
+  /**
+   * Explore: every active shop, A–Z, with a short summary (rule, how many rewards and
+   * branches, where it is) and the customer's points there. Optionally filtered by name.
+   */
+  async list(userId: string, search?: string): Promise<VendorListItemDto[]> {
+    const vendors = await this.prisma.vendors.findMany({
+      where: {
+        status: 'active',
+        ...(search?.trim() ? { name: { contains: search.trim(), mode: 'insensitive' } } : {}),
+      },
+      orderBy: { name: 'asc' },
+      include: {
+        point_rules: { where: { is_active: true }, take: 1 },
+        branches: { where: { status: 'active' }, orderBy: { name: 'asc' }, select: { address: true } },
+        cards: { where: { user_id: userId }, take: 1, select: { balance: true } },
+        _count: { select: { rewards: { where: { status: 'active' } } } },
+      },
+    });
+    return vendors.map((v) => {
+      const [rule] = v.point_rules;
+      return {
+        id: v.id,
+        name: v.name,
+        logoUrl: v.logo_url,
+        currency: v.currency,
+        rule: rule ? { spendAmount: money(rule.spend_amount), pointsPerSpend: rule.points_per_spend } : null,
+        rewardsCount: v._count.rewards,
+        branchesCount: v.branches.length,
+        firstAddress: v.branches.find((b) => b.address)?.address ?? null,
+        myBalance: v.cards[0]?.balance ?? null,
+      };
+    });
+  }
 
   async get(vendorId: string, userId: string): Promise<VendorPageResponseDto> {
     const vendor = await this.prisma.vendors.findFirst({

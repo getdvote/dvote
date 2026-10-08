@@ -183,8 +183,40 @@ export const ar: Dictionary = {
 
   explore: {
     title: 'استكشف',
-    heading: 'مقاهٍ بالقرب منك',
-    text: 'قريبًا ستجد كل مقاهي dvote هنا، مع مكافآتها ونظام نقاطها.',
+    subtitle: 'كل المقاهي على dvote',
+    search: 'ابحث عن مقهى',
+    clearSearch: 'مسح البحث',
+    rewards: {
+      zero: 'لا توجد مكافآت',
+      one: 'مكافأة واحدة',
+      two: 'مكافأتان',
+      few: '{count} مكافآت',
+      many: '{count} مكافأة',
+      other: '{count} مكافأة',
+    },
+    branches: {
+      zero: 'لا توجد فروع',
+      one: 'فرع واحد',
+      two: 'فرعان',
+      few: '{count} فروع',
+      many: '{count} فرعًا',
+      other: '{count} فرع',
+    },
+    noRule: 'نظام النقاط قريبًا',
+    myPoints: {
+      zero: '{count} نقطة',
+      one: 'نقطة واحدة',
+      two: 'نقطتان',
+      few: '{count} نقاط',
+      many: '{count} نقطة',
+      other: '{count} نقطة',
+    },
+    shopA11y: '{name}. افتح المتجر',
+    emptyTitle: 'لا توجد مقاهٍ بعد',
+    emptyText: 'ستظهر مقاهي dvote هنا عند انضمامها.',
+    noResultsTitle: 'لا توجد نتائج',
+    noResults: 'لا توجد مقاهٍ تطابق «{search}».',
+    couldNotLoad: 'تعذّر تحميل المقاهي.',
   },
 
   you: {

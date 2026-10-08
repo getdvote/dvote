@@ -124,6 +124,9 @@ export const api = {
   uploadAvatar: async (photo: PickedPhoto) => call<Me>('PUT', '/api/app/users/me/avatar', await photoForm(photo)),
   /** Remove my profile photo. */
   removeAvatar: () => call<Me>('DELETE', '/api/app/users/me/avatar'),
+  /** Explore: every active shop A–Z (optionally filtered by name). */
+  vendors: (search?: string) =>
+    call<VendorListItem[]>('GET', `/api/app/vendors${search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : ''}`),
   /** A shop's page: point rule, rewards, menu pages, branches and my card there. */
   vendor: (id: string) => call<VendorPage>('GET', `/api/app/vendors/${id}`),
   /** Adds the feedback to the team's Google Sheet. */
@@ -151,6 +154,22 @@ async function photoForm(photo: PickedPhoto): Promise<FormData> {
     form.append('file', { uri: photo.uri, name, type } as unknown as Blob);
   }
   return form;
+}
+
+/** One shop in the Explore list. */
+export interface VendorListItem {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  currency: string;
+  /** null = the shop has no point rule yet */
+  rule: { spendAmount: string; pointsPerSpend: number } | null;
+  rewardsCount: number;
+  branchesCount: number;
+  /** address of the first open branch, as a hint of where the shop is */
+  firstAddress: string | null;
+  /** my points there; null before my first purchase */
+  myBalance: number | null;
 }
 
 export interface VendorPageImage {

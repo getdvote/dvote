@@ -158,7 +158,7 @@ Run as a scheduled job.
 | PUT / DELETE | /users/me/avatar | Upload or replace my photo (private bucket; old file deleted) / remove it (file deleted, provider photo cleared too) — **built** |
 | GET | /cards | My cards: vendor, balance, lifetime, affordableRewards, nextReward — **built** |
 | GET | /cards/{id}/events | History for one card (`?limit`) — **built** |
-| GET | /vendors | Active vendors + branches + rule summary |
+| GET | /vendors | Explore: active vendors A–Z (`?search` by name) with rule summary, active reward and open branch counts, first branch address, my balance — **built** |
 | GET | /vendors/{id} | Shop page: active rule, active rewards (shop order), menu pages, open branches (address, lat/lng, photos), my card; suspended/unknown → 404 `vendor_not_found` — **built** (`vendors/app-vendors.controller.ts`, `vendor-page.service.ts`) |
 | POST | /qr-codes | `{purpose:"collect"}` (no vendorId: works at any shop) → `{id, code, expiresAt}` — **built** (redeem purpose comes with the redeem flow) |
 | GET | /qr-codes/{id} | Status + result once used (polled) — **built** |
@@ -206,7 +206,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 6. Redeem flow.
 7. Reports, admin APIs, fraud-flag job, then the React dashboard.
 8. React Native customer app + staff app, using the shared `packages/api-client`.
-   - Customer app: welcome (Google/Facebook/email sign-up + login, reset password), cards + history, You hub, profile details (photo via expo-image-picker → `PUT|DELETE /users/me/avatar`, name, phone, gender, birthday calendar), shop page `/shop/[id]` (rule, rewards with "pts to go", menu pages, branches with directions and photos), settings, about, collect QR screen (`/qr`: polls status every 2 s → "+N points" + balance; no push yet) ✅ (`apps/mobile`). Placeholders: Discover, feedback/help/terms/join. Supabase Redirect URLs must allow `exp://**` and `dvote://**`.
+   - Customer app: welcome (Google/Facebook/email sign-up + login, reset password), cards + history, You hub, profile details (photo via expo-image-picker → `PUT|DELETE /users/me/avatar`, name, phone, gender, birthday calendar), shop page `/shop/[id]` (rule, rewards with "pts to go", menu pages, branches with directions and photos), settings, about, collect QR screen (`/qr`: polls status every 2 s → "+N points" + balance; no push yet) ✅ (`apps/mobile`). Explore tab (all shops, search, opens the shop page). Placeholders: help/terms/join. Supabase Redirect URLs must allow `exp://**` and `dvote://**`.
    - Staff app (login → home → scan → bill amount → done) ✅ (`apps/staff`; types hand-written until api-client exists). The API needs `CORS_ORIGINS` for its web origin (`http://localhost:8081`).
 
 ## Must-have tests
