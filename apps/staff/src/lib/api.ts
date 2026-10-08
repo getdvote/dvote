@@ -27,7 +27,6 @@ export interface ScanPreview {
   purpose: 'collect' | 'redeem';
   usable: boolean;
   reason: string | null;
-  vendorQr: boolean;
   expiresAt: string;
 }
 
@@ -101,7 +100,7 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     qr_expired: 'This QR has expired. Ask the customer to show a new one.',
     qr_cancelled: 'The customer opened a newer QR. Please scan the new one.',
     wrong_qr_type: 'This QR is not for collecting points.',
-    vendor_mismatch: 'This QR belongs to another shop.',
+    vendor_mismatch: 'This reward belongs to another shop.', // redeem QRs only
     user_blocked: "This customer's account is blocked.",
     no_active_rule: 'Your shop has no point rule yet. Ask your manager to set one.',
     duplicate_receipt: 'This receipt already earned points.',

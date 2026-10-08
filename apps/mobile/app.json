@@ -30,8 +30,12 @@
     "scheme": "dvote",
     "platforms": [
       "ios",
-      "android"
+      "android",
+      "web"
     ],
+    "web": {
+      "output": "single"
+    },
     "backgroundColor": "#F2F2F7",
     "experiments": {
       "typedRoutes": true

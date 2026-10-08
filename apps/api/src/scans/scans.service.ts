@@ -45,9 +45,11 @@ export class ScansService {
       where: { id: qr.user_id },
       select: { status: true },
     });
+    // Collect QRs name no vendor (the scanning staff's vendor gets the points); only a
+    // redeem QR is tied to the vendor of its reward.
     const reason =
       this.stateProblem(qr) ??
-      (qr.vendor_id && qr.vendor_id !== ctx.vendorId
+      (qr.purpose === 'redeem' && qr.vendor_id !== ctx.vendorId
         ? 'vendor_mismatch'
         : null) ??
       (user.status !== 'active' ? 'user_blocked' : null);
@@ -55,7 +57,6 @@ export class ScansService {
       purpose: qr.purpose,
       usable: reason === null,
       reason,
-      vendorQr: qr.vendor_id !== null,
       expiresAt: qr.expires_at.toISOString(),
     };
   }
@@ -81,10 +82,8 @@ export class ScansService {
       throw new BadRequestException({ code: 'wrong_qr_type' });
     }
 
+    // Vendor and branch come only from the scanning staff member, never from the QR.
     const branch = await this.resolveBranch(ctx, dto.branchId);
-    if (qr.vendor_id && qr.vendor_id !== ctx.vendorId) {
-      throw new ForbiddenException({ code: 'vendor_mismatch' });
-    }
 
     const [user, vendor, rule] = await Promise.all([
       this.prisma.users.findUniqueOrThrow({ where: { id: qr.user_id } }),

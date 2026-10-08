@@ -20,9 +20,6 @@ export class PreviewScanResponseDto {
   })
   reason: string | null;
 
-  @ApiProperty({ description: 'false = master QR (any vendor)' })
-  vendorQr: boolean;
-
   @ApiProperty()
   expiresAt: string;
 }

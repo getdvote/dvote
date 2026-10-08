@@ -38,10 +38,9 @@ import { QrCodesService } from './qr-codes.service';
 export class QrCodesController {
   constructor(private readonly qrCodes: QrCodesService) {}
 
-  /** Get a one-time collect QR (valid 5 minutes). Master QR, or vendor QR with vendorId. */
+  /** Get a one-time collect QR (valid 5 minutes). Works at any shop: the scanning staff decide the vendor. */
   @Post()
   @ApiCreatedResponse({ type: CreateQrCodeResponseDto })
-  @ApiNotFoundResponse({ description: 'vendor_not_found' })
   create(
     @CurrentUser() user: users,
     @Body() dto: CreateQrCodeDto,

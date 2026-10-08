@@ -211,6 +211,43 @@ describe('Customer auth + /api/app/users/me (e2e)', () => {
       await patch({ email: 'not-an-email' }).expect(400);
       await patch({ phone: '12' }).expect(400);
       await patch({ status: 'active' }).expect(400);
+      await patch({ gender: 'robot' }).expect(400);
+      for (const birthDate of [
+        '2001-02-30', // not a real day
+        '12/04/1995',
+        '1899-12-31',
+        new Date(Date.now() + 3 * 86400_000).toISOString().slice(0, 10), // future
+      ]) {
+        await patch({ birthDate }).expect(400);
+      }
+    });
+
+    it('PATCH sets gender and birthday, keeps the exact day, and null clears them', async () => {
+      const sub = randomUUID();
+      const t = await token({ sub });
+      const patch = (body: object) =>
+        request(app.getHttpServer())
+          .patch('/api/app/users/me')
+          .set('Authorization', `Bearer ${t}`)
+          .send(body);
+
+      const fresh = await me(t).expect(200);
+      expect(fresh.body).toMatchObject({ gender: null, birthDate: null });
+
+      const set = await patch({ gender: 'female', birthDate: '1995-01-01' }).expect(200);
+      expect(set.body).toMatchObject({ gender: 'female', birthDate: '1995-01-01' });
+      // stored as that calendar day, whatever the server's time zone
+      const [row] = await prisma.$queryRaw<{ d: string }[]>`
+        SELECT birth_date::text AS d FROM users WHERE auth_user_id = ${sub}::uuid`;
+      expect(row.d).toBe('1995-01-01');
+      expect((await me(t).expect(200)).body.birthDate).toBe('1995-01-01');
+
+      // other fields alone leave them as they are
+      const name = await patch({ name: 'Mona' }).expect(200);
+      expect(name.body).toMatchObject({ gender: 'female', birthDate: '1995-01-01' });
+
+      const cleared = await patch({ gender: null, birthDate: null }).expect(200);
+      expect(cleared.body).toMatchObject({ gender: null, birthDate: null });
     });
 
     it('blocked customer → 403 user_blocked', async () => {

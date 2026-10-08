@@ -19,6 +19,7 @@ CREATE TYPE branch_status       AS ENUM ('active', 'closed');
 CREATE TYPE staff_role          AS ENUM ('vendor_admin', 'branch_manager', 'staff');
 CREATE TYPE account_status      AS ENUM ('active', 'disabled');          -- staff + platform admins
 CREATE TYPE user_status         AS ENUM ('active', 'blocked');           -- customers
+CREATE TYPE user_gender         AS ENUM ('male', 'female');              -- NULL = not given
 CREATE TYPE auth_provider       AS ENUM ('google', 'facebook', 'apple');
 CREATE TYPE reward_status       AS ENUM ('active', 'archived');
 CREATE TYPE qr_purpose          AS ENUM ('collect', 'redeem');
@@ -151,10 +152,13 @@ CREATE TABLE users (
     email       varchar(255),                 -- a provider may not share it; not unique
     avatar_url  varchar(500),
     phone       varchar(20),                  -- optional, not used for login
+    gender      user_gender,                  -- optional (profile)
+    birth_date  date,                         -- optional (profile); plain date, no time zone
     auth_user_id uuid,                        -- Supabase Auth user id
     status      user_status NOT NULL DEFAULT 'active',
     created_at  timestamptz NOT NULL DEFAULT now(),
-    updated_at  timestamptz NOT NULL DEFAULT now()
+    updated_at  timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT users_birth_date_ck CHECK (birth_date >= DATE '1900-01-01')
 );
 CREATE UNIQUE INDEX users_auth_user_id_key ON users (auth_user_id);
 

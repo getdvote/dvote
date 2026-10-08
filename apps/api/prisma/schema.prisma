@@ -61,10 +61,10 @@ model platform_admins {
   email           String         @db.VarChar(255)
   password_hash   String?        @db.VarChar(255)
   totp_secret_ref String?        @db.VarChar(255)
+  auth_user_id    String?        @unique @db.Uuid
   status          account_status @default(active)
   created_at      DateTime       @default(now()) @db.Timestamptz(6)
   updated_at      DateTime       @default(now()) @db.Timestamptz(6)
-  auth_user_id    String?        @unique @db.Uuid
   fraud_flags     fraud_flags[]
   point_events    point_events[]
 }
@@ -137,11 +137,11 @@ model staff_users {
   name          String         @db.VarChar(120)
   email         String         @db.VarChar(255)
   password_hash String?        @db.VarChar(255)
+  auth_user_id  String?        @unique @db.Uuid
   role          staff_role
   status        account_status @default(active)
   created_at    DateTime       @default(now()) @db.Timestamptz(6)
   updated_at    DateTime       @default(now()) @db.Timestamptz(6)
-  auth_user_id  String?        @unique @db.Uuid
   fraud_flags   fraud_flags[]
   point_events  point_events[]
   point_rules   point_rules[]
@@ -173,10 +173,12 @@ model users {
   email           String?           @db.VarChar(255)
   avatar_url      String?           @db.VarChar(500)
   phone           String?           @db.VarChar(20)
+  auth_user_id    String?           @unique @db.Uuid
   status          user_status       @default(active)
   created_at      DateTime          @default(now()) @db.Timestamptz(6)
   updated_at      DateTime          @default(now()) @db.Timestamptz(6)
-  auth_user_id    String?           @unique @db.Uuid
+  gender          user_gender?
+  birth_date      DateTime?         @db.Date
   cards           cards[]
   fraud_flags     fraud_flags[]
   qr_codes        qr_codes[]
@@ -188,10 +190,10 @@ model vendors {
   name          String         @db.VarChar(120)
   logo_url      String?        @db.VarChar(500)
   contact_email String?        @db.VarChar(255)
+  currency      String         @default("EGP") @db.Char(3)
   status        vendor_status  @default(active)
   created_at    DateTime       @default(now()) @db.Timestamptz(6)
   updated_at    DateTime       @default(now()) @db.Timestamptz(6)
-  currency      String         @default("EGP") @db.Char(3)
   branches      branches[]
   cards         cards[]
   fraud_flags   fraud_flags[]
@@ -356,4 +358,9 @@ enum qr_status {
 enum reward_status {
   active
   archived
+}
+
+enum user_gender {
+  male
+  female
 }
