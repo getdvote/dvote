@@ -1,42 +1,83 @@
 import { Redirect } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Text';
-import { ErrorBox, Group, PageHeader, Row, Screen, SoonTag } from '../components/ui';
-import { api, ApiError } from '../lib/api';
+import { BirthdayField } from '../components/BirthdayField';
+import { ErrorBox, Group, PageHeader, Screen } from '../components/ui';
+import { api, ApiError, type Gender } from '../lib/api';
+import { birthdayProblem } from '../lib/dates';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
-/**
- * Profile details design: name, email, gender, birthday, "Save changes".
- * The API stores name and phone today; gender and birthday need backend fields (shown "Soon").
- */
+const GENDERS: { value: Gender; label: string }[] = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+];
+
+/** Spaces and dashes people type in phone numbers ("0120 289-8477") are dropped. */
+const cleanPhone = (v: string) => v.replace(/[\s-]/g, '');
+
+/** Same rules as the API (PATCH /api/app/users/me). */
+function problems(f: { name: string; phone: string; birthDate: string | null }) {
+  const name = f.name.trim();
+  const phone = cleanPhone(f.phone);
+  return {
+    name: !name ? 'Enter your name.' : name.length > 120 ? 'Your name is too long (120 characters max).' : null,
+    phone:
+      phone && !/^\+?[0-9]{7,15}$/.test(phone)
+        ? 'Use digits only, 7 to 15 of them, e.g. 01001234567 or +201001234567.'
+        : null,
+    birthDate: f.birthDate ? birthdayProblem(f.birthDate) : null,
+  };
+}
+
+/** Profile details design: name, email, phone, gender, birthday, "Save changes". */
 export default function ProfileDetails() {
   const { me, setMe, handleAuthError } = useSession();
   const [name, setName] = useState(me?.name ?? '');
   const [phone, setPhone] = useState(me?.phone ?? '');
+  const [gender, setGender] = useState<Gender | null>(me?.gender ?? null);
+  const [birthDate, setBirthDate] = useState<string | null>(me?.birthDate ?? null);
+  const [touched, setTouched] = useState({ name: false, phone: false, birthDate: false });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!me) return <Redirect href="/(tabs)/you" />;
 
-  const changed = name.trim() !== (me.name ?? '') || phone.trim() !== (me.phone ?? '');
+  const errors = problems({ name, phone, birthDate });
+  const valid = !errors.name && !errors.phone && !errors.birthDate;
+  const changed =
+    name.trim() !== (me.name ?? '') ||
+    cleanPhone(phone) !== (me.phone ?? '') ||
+    gender !== me.gender ||
+    birthDate !== me.birthDate;
+  // a field's message shows once the customer has edited that field
+  const shown = (field: keyof typeof touched) => (touched[field] ? errors[field] : null);
+  const edit = (field?: keyof typeof touched) => {
+    setMessage(null);
+    setError(null);
+    if (field) setTouched((t) => ({ ...t, [field]: true }));
+  };
 
   async function save() {
-    if (!name.trim()) return setError('Your name cannot be empty.');
-    if (phone.trim() && !/^\+?[0-9]{7,15}$/.test(phone.trim())) {
-      return setError('Enter the phone number with digits only, e.g. +201001234567.');
+    if (!valid) {
+      setTouched({ name: true, phone: true, birthDate: true });
+      return;
     }
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
+      const p = cleanPhone(phone);
       setMe(
         await api.updateMe({
           name: name.trim(),
-          ...(phone.trim() ? { phone: phone.trim() } : {}),
+          ...(p ? { phone: p } : {}),
+          ...(gender !== me!.gender ? { gender } : {}),
+          ...(birthDate !== me!.birthDate ? { birthDate } : {}),
         }),
       );
+      setPhone(p);
       setMessage('Saved');
     } catch (err) {
       if (await handleAuthError(err)) return;
@@ -46,64 +87,113 @@ export default function ProfileDetails() {
     }
   }
 
+  const canSave = changed && valid && !busy;
+
   return (
     <Screen>
       <PageHeader title="Profile details" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Group>
-          <View style={styles.inputRow}>
+          <Field error={shown('name')}>
             <TextInput
               value={name}
               onChangeText={(v) => {
                 setName(v);
-                setMessage(null);
+                edit('name');
               }}
               placeholder="Your name"
               placeholderTextColor={theme.placeholder}
               style={styles.input}
               autoComplete="name"
+              maxLength={130}
               accessibilityLabel="Name"
             />
-          </View>
-          <View style={styles.inputRow}>
+          </Field>
+          <Field>
             <Text style={[styles.input, styles.readOnly]} numberOfLines={1}>
               {me.email ?? 'No email'}
             </Text>
-          </View>
-          <View style={styles.inputRow}>
+          </Field>
+          <Field error={shown('phone')}>
             <TextInput
               value={phone}
               onChangeText={(v) => {
                 setPhone(v);
-                setMessage(null);
+                edit('phone');
               }}
               placeholder="Phone (optional)"
               placeholderTextColor={theme.placeholder}
               style={styles.input}
               keyboardType="phone-pad"
               autoComplete="tel"
+              maxLength={20}
               accessibilityLabel="Phone"
             />
+          </Field>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.segments} accessibilityRole="radiogroup">
+              {GENDERS.map((g) => {
+                const on = gender === g.value;
+                return (
+                  <Pressable
+                    key={g.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: on }}
+                    // tapping the chosen one again clears it
+                    onPress={() => {
+                      setGender(on ? null : g.value);
+                      edit();
+                    }}
+                    style={[styles.segment, on && styles.segmentOn]}
+                  >
+                    <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{g.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-          <Row label="Gender" disabled right={<SoonTag />} />
-          <Row label="Birthday" disabled right={<SoonTag />} />
-          <Pressable
-            accessibilityRole="button"
-            disabled={!changed || busy}
-            onPress={() => void save()}
-            style={styles.saveRow}
-          >
-            <Text style={[styles.save, (!changed || busy) && styles.saveOff]}>
-              {busy ? 'Saving…' : message ?? 'Save changes'}
-            </Text>
+
+          <View>
+            <BirthdayField
+              value={birthDate}
+              onChange={(v) => {
+                setBirthDate(v);
+                edit('birthDate');
+              }}
+            />
+            <FieldError message={shown('birthDate')} />
+          </View>
+
+          <Pressable accessibilityRole="button" disabled={!canSave} onPress={() => void save()} style={styles.saveRow}>
+            <Text style={[styles.save, !canSave && styles.saveOff]}>{busy ? 'Saving…' : message ?? 'Save changes'}</Text>
           </Pressable>
         </Group>
         <ErrorBox message={error} />
         <Text style={styles.note}>
-          Your email is the one you sign in with. Shops never see your name, email or phone.
+          Your email is the one you sign in with. Shops never see your name, email, phone, gender or birthday.
         </Text>
       </ScrollView>
     </Screen>
+  );
+}
+
+function Field({ children, error }: { children: ReactNode; error?: string | null }) {
+  return (
+    <View>
+      <View style={styles.inputRow}>{children}</View>
+      <FieldError message={error ?? null} />
+    </View>
+  );
+}
+
+function FieldError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <Text style={styles.fieldError} accessibilityRole="alert">
+      {message}
+    </Text>
   );
 }
 
@@ -112,6 +202,14 @@ const styles = StyleSheet.create({
   inputRow: { height: theme.rowHeight, justifyContent: 'center' },
   input: { fontSize: 17, color: theme.text, paddingVertical: 0 },
   readOnly: { color: theme.muted },
+  fieldRow: { minHeight: theme.rowHeight, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  label: { flex: 1, fontSize: 17, color: theme.text },
+  fieldError: { fontSize: 13, color: theme.danger, marginTop: -6, marginBottom: 10 },
+  segments: { flexDirection: 'row', backgroundColor: theme.fill, borderRadius: 18, padding: 3 },
+  segment: { paddingHorizontal: 16, height: 32, borderRadius: 16, justifyContent: 'center' },
+  segmentOn: { backgroundColor: theme.surface },
+  segmentText: { fontSize: 15, color: theme.muted, fontWeight: '500' },
+  segmentTextOn: { color: theme.text, fontWeight: '600' },
   saveRow: { height: theme.rowHeight, alignItems: 'center', justifyContent: 'center' },
   save: { fontSize: 17, color: theme.link },
   saveOff: { color: theme.placeholder },

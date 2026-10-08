@@ -22,7 +22,8 @@ export class CreateQrCodeResponseDto {
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'null = master QR',
+    description:
+      'Always null for collect QRs (the scanning staff decide the vendor); a redeem QR will carry its reward vendor',
   })
   vendorId: string | null;
 

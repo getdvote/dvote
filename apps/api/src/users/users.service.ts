@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type users } from '../generated/prisma/client.js';
 import type { SupabaseClaims } from '../auth/supabase-jwt.verifier';
 import { PrismaService } from '../prisma/prisma.service';
+import type { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -42,11 +43,18 @@ export class UsersService {
     }
   }
 
-  updateProfile(
-    id: string,
-    data: { name?: string; email?: string; phone?: string },
-  ): Promise<users> {
-    return this.prisma.users.update({ where: { id }, data });
+  updateProfile(id: string, dto: UpdateUserDto): Promise<users> {
+    const { birthDate, ...rest } = dto;
+    return this.prisma.users.update({
+      where: { id },
+      data: {
+        ...rest,
+        // a plain date: midnight UTC is stored as that same calendar day
+        ...(birthDate !== undefined
+          ? { birth_date: birthDate ? new Date(`${birthDate}T00:00:00Z`) : null }
+          : {}),
+      },
+    });
   }
 }
 

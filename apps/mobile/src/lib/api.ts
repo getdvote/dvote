@@ -11,9 +11,14 @@ export interface Me {
   name: string | null;
   email: string | null;
   phone: string | null;
+  gender: Gender | null;
+  /** "YYYY-MM-DD" (a plain date, no time zone) */
+  birthDate: string | null;
   avatarUrl: string | null;
   createdAt: string;
 }
+
+export type Gender = 'male' | 'female';
 
 export interface Card {
   id: string;
@@ -33,6 +38,33 @@ export interface CardEvent {
   branchName: string | null;
   rewardName: string | null;
   createdAt: string;
+}
+
+/** A one-time QR to show at the counter. `code` is what gets drawn; it is never shown again. */
+export interface NewQrCode {
+  id: string;
+  code: string;
+  expiresAt: string;
+}
+
+/** What the staff did with the QR: points added and the card balance afterwards. */
+export interface QrCollectResult {
+  pointsAdded: number;
+  purchaseAmount: string;
+  currency: string;
+  vendorId: string;
+  vendorName: string;
+  branchName: string;
+  cardId: string;
+  cardBalance: number;
+  at: string;
+}
+
+export interface QrCodeStatus {
+  id: string;
+  status: 'active' | 'used' | 'expired' | 'cancelled';
+  expiresAt: string;
+  result: QrCollectResult | null;
 }
 
 /** An error from the API with its stable `code` (e.g. user_blocked). */
@@ -74,9 +106,15 @@ async function call<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: un
 export const api = {
   /** First call after sign-up creates the customer profile. */
   me: () => call<Me>('GET', '/api/app/users/me'),
-  updateMe: (body: { name?: string; phone?: string }) => call<Me>('PATCH', '/api/app/users/me', body),
+  /** null clears gender / birthDate; leaving a field out keeps it. */
+  updateMe: (body: { name?: string; phone?: string; gender?: Gender | null; birthDate?: string | null }) =>
+    call<Me>('PATCH', '/api/app/users/me', body),
   cards: () => call<Card[]>('GET', '/api/app/cards'),
   cardEvents: (cardId: string) => call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=100`),
+  /** Collect QR: works at any shop (the staff who scan it decide the shop). Cancels my older one. */
+  newCollectQr: () => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'collect' }),
+  qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
+  cancelQr: (id: string) => call<QrCodeStatus>('POST', `/api/app/qr-codes/${id}/cancel`),
   /** Adds the feedback to the team's Google Sheet. */
   sendFeedback: (body: { category: FeedbackCategory; message: string }) =>
     call<void>('POST', '/api/app/feedback', body),
@@ -93,6 +131,7 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     invalid_token: 'Please sign in again.',
     missing_token: 'Please sign in again.',
     card_not_found: 'This card was not found.',
+    qr_not_found: 'This QR code was not found. Get a new one.',
     feedback_not_configured: "Feedback isn't available yet. Please try again later.",
   };
   return messages[code] ?? serverMessage ?? 'Something went wrong. Please try again.';

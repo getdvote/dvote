@@ -9,6 +9,7 @@ import { configureApp } from './../src/app.setup';
 import { SUPABASE_JWKS } from './../src/auth/supabase-jwt.verifier';
 import type { staff_role } from './../src/generated/prisma/client.js';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { newQrCode } from './../src/qr-codes/qr-code.token';
 import { createTestSigner, type TestSigner } from './helpers/test-auth';
 
 const run = randomUUID().slice(0, 8);
@@ -67,11 +68,11 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
   }
 
   /** Customer gets a QR; returns {id, code}. */
-  async function qr(customer: string, vendorId?: string) {
+  async function qr(customer: string) {
     const res = await as(customer, 'post', '/api/app/qr-codes')
-      .send({ purpose: 'collect', ...(vendorId ? { vendorId } : {}) })
+      .send({ purpose: 'collect' })
       .expect(201);
-    return res.body as { id: string; code: string };
+    return res.body as { id: string; code: string; vendorId: string | null };
   }
 
   const collect = (staff: string, body: Record<string, unknown>) =>
@@ -243,7 +244,6 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
         purpose: 'collect',
         usable: true,
         reason: null,
-        vendorQr: false,
       });
 
       const res = await collect('staffA1', {
@@ -448,36 +448,53 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
   });
 
   describe('vendor and branch rules', () => {
-    it("a vendor QR of A can't be used by B's staff, but a master QR can", async () => {
-      const vendorQr = await qr('karim', ids.vendorA);
-      const preview = await as('staffB1', 'post', '/api/vendor/scans/preview')
-        .send({ code: vendorQr.code })
-        .expect(200);
-      expect(preview.body).toMatchObject({
-        usable: false,
-        reason: 'vendor_mismatch',
-        vendorQr: true,
-      });
-      const res = await collect('staffB1', {
-        code: vendorQr.code,
-        amount: 20,
-      }).expect(403);
-      expect(res.body.code).toBe('vendor_mismatch');
-
-      const master = await qr('karim');
-      const ok = await collect('staffB1', {
-        code: master.code,
+    it("the same kind of QR works at any vendor: the scanning staff's vendor and branch get the points", async () => {
+      const first = await qr('karim');
+      expect(first.vendorId).toBeNull();
+      const atB = await collect('staffB1', {
+        code: first.code,
         amount: 20,
       }).expect(200);
-      expect(ok.body).toMatchObject({ pointsAdded: 4, branchName: 'B1' }); // B: 5 EGP = 1 point
+      expect(atB.body).toMatchObject({ pointsAdded: 4, branchName: 'B1' }); // B: 5 EGP = 1 point
       expect(await cardOf('karim', ids.vendorB)).toMatchObject({ balance: 4 });
+
+      const second = await qr('karim');
+      const atA = await collect('staffA1', {
+        code: second.code,
+        amount: 20,
+      }).expect(200);
+      expect(atA.body).toMatchObject({ branchName: 'A1' });
+      expect(await cardOf('karim', ids.vendorA)).toBeDefined();
     });
 
-    it('vendor QR for an unknown vendor → 404 vendor_not_found', async () => {
+    it('the customer app cannot choose a vendor for a collect QR → 400', async () => {
       const res = await as('karim', 'post', '/api/app/qr-codes')
-        .send({ purpose: 'collect', vendorId: randomUUID() })
-        .expect(404);
-      expect(res.body.code).toBe('vendor_not_found');
+        .send({ purpose: 'collect', vendorId: ids.vendorA })
+        .expect(400);
+      expect(res.body.message).toEqual(
+        expect.arrayContaining([expect.stringContaining('vendorId')]),
+      );
+    });
+
+    it('a collect QR stored with a vendor (old rows) still goes to the scanning vendor', async () => {
+      const { code, tokenHash } = newQrCode();
+      const karim = await prisma.users.findFirstOrThrow({
+        where: { auth_user_id: customerSubs[0] },
+      });
+      await prisma.qr_codes.create({
+        data: {
+          user_id: karim.id,
+          purpose: 'collect',
+          vendor_id: ids.vendorA,
+          token_hash: tokenHash,
+        },
+      });
+      const preview = await as('staffB1', 'post', '/api/vendor/scans/preview')
+        .send({ code })
+        .expect(200);
+      expect(preview.body).toMatchObject({ usable: true, reason: null });
+      const res = await collect('staffB1', { code, amount: 20 }).expect(200);
+      expect(res.body).toMatchObject({ branchName: 'B1' });
     });
 
     it('vendor admin must choose a branch of their vendor', async () => {

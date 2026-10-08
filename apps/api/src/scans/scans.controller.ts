@@ -53,7 +53,7 @@ export class ScansController {
   })
   @ApiForbiddenResponse({
     description:
-      'vendor_mismatch | forbidden_branch | user_blocked | not_staff | staff_disabled | vendor_suspended | branch_closed',
+      'forbidden_branch | user_blocked | not_staff | staff_disabled | vendor_suspended | branch_closed',
   })
   @ApiConflictResponse({
     description:
