@@ -47,15 +47,19 @@ export function BirthdayPicker({
   const [draft, setDraft] = useState<Ymd | null>(null);
   const [shown, setShown] = useState({ y: 2000, m: 0 }); // month on screen
   const [view, setView] = useState<Mode>('days');
-  // The tap that opens the sheet can also land on whatever appears under the finger/pointer
-  // (a 'ghost' click, mostly on web): ignore picks for a moment after opening.
-  const openedAt = useRef(0);
-  const ready = () => Date.now() - openedAt.current > 400;
+  // The tap that opens the sheet (or switches years → months → days) can also land on whatever
+  // appears under the finger/pointer (a 'ghost' click, mostly on web): ignore taps for a moment.
+  const quietUntil = useRef(0);
+  const ready = () => Date.now() > quietUntil.current;
+  const settle = () => {
+    quietUntil.current = Date.now() + 350;
+  };
+  useEffect(settle, [view]);
 
   // Each time it opens: start from the saved birthday, or ask for the year first.
   useEffect(() => {
     if (!visible) return;
-    openedAt.current = Date.now();
+    settle();
     const start = value ? parse(value) : null;
     setDraft(start);
     setShown(start ? { y: start.y, m: start.m } : { y: 2000, m: 0 });
@@ -128,6 +132,7 @@ export function BirthdayPicker({
                   <Pressable
                     key={name}
                     accessibilityRole="button"
+                    accessibilityLabel={`${name} ${shown.y}`}
                     accessibilityState={{ disabled: off, selected: on }}
                     disabled={off}
                     onPress={() => {
