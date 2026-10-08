@@ -1,9 +1,9 @@
+import { ParseUuidPipe } from '../common/uuid';
 import {
   Body,
   Controller,
   Get,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -28,6 +28,7 @@ import {
   type StaffContext,
 } from '../auth/staff-auth.guard';
 import { CreateStaffDto } from './dto/create-staff.dto';
+import { StaffMeResponseDto } from './dto/staff-me-response.dto';
 import { ListStaffQueryDto } from './dto/list-staff-query.dto';
 import {
   CreateStaffResponseDto,
@@ -52,6 +53,17 @@ import { StaffService } from './staff.service';
 export class StaffController {
   constructor(private readonly staff: StaffService) {}
 
+  /**
+   * The signed-in staff member (any role) with vendor, branch(es) and active rule: what the
+   * staff app shows after sign-in. Declared before ':id' so 'me' isn't parsed as an id.
+   */
+  @Get('me')
+  @StaffRoles('vendor_admin', 'branch_manager', 'staff')
+  @ApiOkResponse({ type: StaffMeResponseDto })
+  me(@CurrentStaff() ctx: StaffContext): Promise<StaffMeResponseDto> {
+    return this.staff.me(ctx);
+  }
+
   /** vendor_admin: all staff of the vendor. branch_manager: their branch only. */
   @Get()
   @ApiOkResponse({ type: [StaffResponseDto] })
@@ -67,7 +79,7 @@ export class StaffController {
   @ApiNotFoundResponse({ description: 'staff_not_found' })
   async get(
     @CurrentStaff() ctx: StaffContext,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
   ): Promise<StaffResponseDto> {
     return StaffResponseDto.from(await this.staff.get(ctx, id));
   }
@@ -99,7 +111,7 @@ export class StaffController {
   })
   async update(
     @CurrentStaff() ctx: StaffContext,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
     @Body() dto: UpdateStaffDto,
   ): Promise<StaffResponseDto> {
     return StaffResponseDto.from(await this.staff.update(ctx, id, dto));

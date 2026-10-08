@@ -23,15 +23,15 @@ Full spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; source `docs/
 - **Mobile:** two React Native + Expo (TypeScript) apps — customer app (shows QR codes) and a separate staff app (camera QR scanner). `@supabase/supabase-js` for sign-in. No NFC.
 - **API contract:** OpenAPI generated from NestJS → one typed TypeScript client (`packages/api-client`) shared by the dashboard and both apps.
 - **Auth: Supabase Auth (auth only — the database is NOT on Supabase).** Supabase issues and refreshes all tokens; NestJS only verifies them locally against the project's JWKS (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, via `jose`) and maps the token's `sub` to our own rows. NestJS never issues JWTs.
-- **Customer auth:** Google and Facebook sign-in through Supabase (NO phone/OTP, no email/password, no anonymous — the guard rejects other providers with `provider_not_allowed`). Supabase links providers with the same verified email into one auth user. `users.auth_user_id` = Supabase user id; the row is created on the customer's first API call.
+- **Customer auth:** Google, Facebook, or **email + password** (decided 2026-10-03) through Supabase. Email sign-ups must confirm their email before Supabase issues a token — keep Supabase "Confirm email" ON. NO phone/SMS (costs money; later), no anonymous — the guard (`CUSTOMER_PROVIDERS`) rejects other providers with `provider_not_allowed`. The sign-up name is passed as `full_name` user metadata. Supabase links providers with the same verified email into one auth user. `users.auth_user_id` = Supabase user id; the row is created on the customer's first API call.
   - **Apple is postponed** (needs the paid Apple Developer Program, $99/yr). To add it: enable it in Supabase and add `'apple'` to `CUSTOMER_PROVIDERS` in `auth/customer-auth.guard.ts`. An iOS App Store release that offers Google/Facebook login will likely need Sign in with Apple too (App Store guideline 4.8).
-- **Staff auth (built):** Supabase email + password (Google also works if the email matches). Invite-only: `POST /api/vendor/staff` calls Supabase `inviteUserByEmail` with the server-only `SUPABASE_SECRET_KEY` and stores `staff_users.auth_user_id`; if the email already has a Supabase account (e.g. a customer), it is linked without an email. `StaffAuthGuard` requires an active staff row in an active vendor (and active branch for branch roles) and builds the `StaffContext` used for tenant scoping. `password_hash` is legacy/nullable. First vendor admin: `npm run staff:create-admin` (from `apps/api`) until the admin API exists.
-- **Platform admin auth (decided, not built):** Supabase email + password + MFA (TOTP); require `aal2` in the token. Needs the same migration for `platform_admins` (`auth_user_id`, nullable `password_hash`).
+- **Staff auth (built):** Supabase email + password (Google also works if the email matches). Invite-only: `POST /api/vendor/staff` calls Supabase `inviteUserByEmail` with the server-only `SUPABASE_SECRET_KEY` and stores `staff_users.auth_user_id`; if the email already has a Supabase account (e.g. a customer), it is linked without an email. `StaffAuthGuard` requires an active staff row in an active vendor (and active branch for branch roles) and builds the `StaffContext` used for tenant scoping. `password_hash` is legacy/nullable. Onboarding is API-only: a platform admin creates the vendor (`POST /api/admin/vendors`) and its vendor admin (`POST /api/admin/vendors/{id}/admins`, invite email); that vendor admin adds managers and staff with `POST /api/vendor/staff`. Staff never self-sign-up. (No script for vendor admins — removed on purpose.)
+- **Platform admin auth (built):** Supabase email + password + MFA (TOTP). `PlatformAdminGuard` requires an active `platform_admins` row (`auth_user_id`) and an `aal2` token, unless `ADMIN_MFA_REQUIRED=false` (local dev only; default true). Platform admins are created only by `npm run admin:create -- --name … --email … --password …` (from `apps/api`) — the one bootstrap script; no API. Use an email without an existing Google-only Supabase account (e.g. a `+admin` Gmail alias), or password sign-in fails. Error codes: `not_admin`, `admin_disabled`, `mfa_required` (403).
 - **Hosting v1:** one backend container + one managed PostgreSQL. No microservices, queues or Redis.
 
 ## Repo layout (monorepo)
 
-`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `dashboard`, `mobile`, `staff` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when the other packages get a `package.json`).
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `dashboard`, `mobile` and `api-client` are placeholders — not scaffolded yet. Root `package.json` only has `api:*` convenience scripts (no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
@@ -44,7 +44,7 @@ dvote/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
 │   ├── mobile/                # React Native (Expo) customer app
-│   └── staff/                 # React Native (Expo) staff scanner app
+│   └── staff/                 # React Native (Expo) staff scanner app — web + native (built)
 └── packages/
     └── api-client/            # generated TS client from OpenAPI
 ```
@@ -53,9 +53,9 @@ dvote/
 
 ## Database
 
-Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr` are applied. `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
+Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr`, `4_platform_admins_auth_user_id` are applied. `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
 
-**Schema changes:** hand-write `prisma/migrations/<n>_<name>/migration.sql`, apply with `npx prisma migrate deploy`, refresh `schema.prisma` with `npx prisma db pull` (keeps the generator block), run `npx prisma generate`, and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints, composite FKs-with-intent or triggers below, so **never let a Prisma migration drop them**.
+**Schema changes:** hand-write `prisma/migrations/<n>_<name>/migration.sql`, apply with `npx prisma migrate deploy`, refresh `schema.prisma` with **`npm run db:pull`** (= `prisma db pull` + `prisma/fix-introspection.cjs` + `prisma generate`; never plain `db pull`: the fix-up stops Prisma reading the partial "one active rule per vendor" index as a one-to-one relation), and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints, composite FKs-with-intent or triggers below, so **never let a Prisma migration drop them**.
 
 ### Tables (13)
 
@@ -72,7 +72,7 @@ Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `ap
 | `qr_codes` | activity | One per QR shown. purpose collect/redeem, `vendor_id` (NULL = master QR), `reward_id` (redeem), `token_hash`, status active/used/expired/cancelled, `expires_at` (5 min) |
 | `point_events` | activity | **Ledger, append-only.** earn (+points, `purchase_amount`, `rule_id`) / redeem (−cost, `reward_id`) / adjust (admin + reason). `qr_code_id`, `staff_id`, `branch_id`, `receipt_ref` |
 | `redemptions` | activity | One per reward given, 1-to-1 with its redeem ledger row; snapshots `reward_name`, `points_cost` |
-| `platform_admins` | platform | Internal team. 2FA via `totp_secret_ref` (moving to Supabase MFA) |
+| `platform_admins` | platform | Internal team. `auth_user_id`; 2FA via Supabase MFA (`password_hash`, `totp_secret_ref` legacy) |
 | `fraud_flags` | platform | too_many_collects / large_purchase / branch_spike / staff_spike; targets vendor/branch/user/staff |
 
 All tables: `id uuid` (gen_random_uuid), `created_at`, `updated_at` (trigger-maintained, timestamptz UTC). Soft delete via `status`; never hard-delete business rows.
@@ -144,34 +144,42 @@ Run as a scheduled job.
 ### Customer app — `/api/app` (Supabase access token, `CustomerAuthGuard`)
 | Method | Path | Purpose |
 |---|---|---|
-| GET / PATCH | /me | Profile / update name, email, phone — **built** |
-| GET | /cards | My cards: vendor, balance, lifetime, next-reward progress |
-| GET | /cards/{id}/events | History for one card |
+| GET / PATCH | /users/me | Own profile / update name, email, phone — **built** |
+| GET | /cards | My cards: vendor, balance, lifetime, affordableRewards, nextReward — **built** |
+| GET | /cards/{id}/events | History for one card (`?limit`) — **built** |
 | GET | /vendors | Active vendors + branches + rule summary |
 | GET | /vendors/{id} | Vendor page: branches, rule, rewards, my card |
-| POST | /qr-codes | `{purpose:"collect", vendorId?}` or `{purpose:"redeem", rewardId}` → `{id, code, expiresAt}` |
-| GET | /qr-codes/{id} | Status + result once used (polled) |
-| POST | /qr-codes/{id}/cancel | Customer closed the QR |
+| POST | /qr-codes | `{purpose:"collect", vendorId?}` → `{id, code, expiresAt}` — **built** (redeem purpose comes with the redeem flow) |
+| GET | /qr-codes/{id} | Status + result once used (polled) — **built** |
+| POST | /qr-codes/{id}/cancel | Customer closed the QR — **built** |
 
-Dev test pages (not in production): `/dev/login.html` (customers), `/dev/staff.html` (staff sign-in, invite/reset landing page, staff CRUD), served from `apps/api/dev-public`.
+Dev test pages (not in production): `/dev/login.html` (customers), `/dev/staff.html` (staff sign-in, invite/reset landing page, staff CRUD), served from `apps/api/dev-public`. Don't add new dev pages unless asked.
+
+**`me` convention:** a signed-in user's own record is always `<resource>/me` (`/api/app/users/me`, `/api/vendor/staff/me`): no id in the URL, so nobody can ask for someone else's. Never expose a customer list on `/api/app`.
 
 Sign-in, refresh and account linking happen in the apps through the Supabase SDK — there are no `/auth/*` endpoints. Auth errors use stable codes: `missing_token`, `invalid_token`, `token_expired` (401); `provider_not_allowed`, `user_blocked` (403).
 
 ### Staff app + vendor dashboard — `/api/vendor` (Supabase access token, `StaffAuthGuard`, scoped to the staff's vendor)
 
-**Built:** `GET /me` (any role) · `GET|POST /staff`, `GET|PATCH /staff/{id}` (vendor_admin + branch_manager). Rules: vendor_admin manages everyone in the vendor but not their own role/branch/status; branch_manager manages only `staff` in their own branch and can't change role/branch; `staff` role has no access to `/staff`. Other vendors' / branches' rows return 404. Disable = `PATCH {status:"disabled"}` (soft delete). Email can't change. Error codes: `not_staff`, `staff_disabled`, `vendor_suspended`, `branch_closed`, `forbidden_role`, `forbidden_branch`, `forbidden_role_change`, `cannot_modify_self` (403); `staff_not_found` (404); `branch_required`, `branch_not_allowed`, `invalid_branch` (400); `email_taken`, `account_already_staff` (409); `auth_admin_not_configured`, `auth_provider_error` (503).
+`GET /staff/me` returns the staff row **plus** `vendor` {name, logoUrl, currency}, `branch`, `branches` (scannable: own branch, or all active for vendor_admin) and `activeRule` — everything the staff app needs after sign-in.
 
-**Planned — staff app (all staff roles):** `POST /scans/preview` · `POST /scans/collect` · `POST /scans/redeem` · `GET /scans/today`.
+**Built:** `GET /profile` (any role: own vendor) · `PATCH /profile` (vendor_admin: name, logoUrl, contactEmail — never status/currency) · `GET /staff/me` (any role) · `GET|POST /staff`, `GET|PATCH /staff/{id}` (vendor_admin + branch_manager). Rules: vendor_admin manages everyone in the vendor but not their own role/branch/status; branch_manager manages only `staff` in their own branch and can't change role/branch; `staff` role has no access to `/staff`. Other vendors' / branches' rows return 404. Disable = `PATCH {status:"disabled"}` (soft delete). Email can't change. Error codes: `not_staff`, `staff_disabled`, `vendor_suspended`, `branch_closed`, `forbidden_role`, `forbidden_branch`, `forbidden_role_change`, `cannot_modify_self` (403); `staff_not_found` (404); `branch_required`, `branch_not_allowed`, `invalid_branch` (400); `email_taken`, `account_already_staff` (409); `email_rate_limited` (429, Supabase's built-in sender allows only a few emails/hour); `auth_admin_not_configured`, `auth_provider_error` (503, with Supabase's message).
+
+**Built — staff app (all staff roles):** `POST /scans/preview` (200, `{purpose, usable, reason, vendorQr, expiresAt}`, changes nothing) · `POST /scans/collect` (200; errors: `qr_invalid` 404, `qr_used`/`qr_expired`/`qr_cancelled`/`no_active_rule`/`duplicate_receipt`/`idempotency_key_reused` 409, `wrong_qr_type`/`branch_required`/`invalid_branch` 400, `vendor_mismatch`/`forbidden_branch`/`user_blocked` 403, `no_points_earned` 422). Money math in `src/points/points.ts` (minor units), QR tokens in `src/qr-codes/qr-code.token.ts`.
+**Planned — staff app:** `POST /scans/redeem` · `GET /scans/today`.
 **Planned — dashboard:** `GET|POST|PATCH /branches` · `GET|POST /point-rules` (POST publishes a new version; vendor_admin) · `GET|POST|PATCH /rewards` (archive, never delete; vendor_admin) · `GET /summary?from&to` · `GET /events?branchId&from&to` · `GET /redemptions` · `GET /fraud/flags` (read-only). Vendors never see customer names/emails, only counts.
 
-### Admin — `/api/admin` (platform admin token + 2FA)
-`GET|POST|PATCH /vendors` (incl. first vendor admin) · `GET /vendors/{id}/summary` · `GET|PATCH /users/{id}` (support, block) · `POST /cards/{id}/adjust` (adjust ledger row with reason, balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
+### Admin — `/api/admin` (Supabase access token with aal2, `PlatformAdminGuard`)
+
+**Built:** `GET|POST /vendors`, `GET|PATCH /vendors/{id}` (filters `status`, `search`; PATCH `status:"suspended"` = soft delete; `logoUrl`/`contactEmail` accept null to clear; `currency` locked once the vendor has a point rule → 409 `currency_locked`; `vendor_not_found` 404) · `POST /vendors/{id}/admins` (invite a vendor_admin by email; same rules/errors as staff invites).
+
+**Planned:**  `GET /vendors/{id}/summary` · `GET|PATCH /users/{id}` (support, block) · `POST /cards/{id}/adjust` (adjust ledger row with reason, balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
 
 ---
 
 ## NestJS modules
 
-`auth`, `users`, `vendors`, `branches`, `staff`, `point-rules`, `rewards`, `cards`, `qr-codes`, `scans` (collect + redeem), `redemptions`, `fraud-flags`, `admin`, `reports`.
+`auth`, `users`, `vendors` (built: admin CRUD), `branches`, `staff`, `point-rules`, `rewards`, `cards`, `qr-codes`, `scans` (collect + redeem), `redemptions`, `fraud-flags`, `admin`, `reports`.
 `qr-codes` + `scans` are the core: build them with integration tests.
 
 ---
@@ -179,13 +187,15 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 ## Build order
 
 1. `apps/api`: NestJS scaffold, Prisma baseline, health check. ✅
-2. Customer auth (Google, Facebook; Apple postponed) + `GET|PATCH /api/app/me`. ✅
-3. Staff auth + staff CRUD (`/api/vendor/me`, `/api/vendor/staff`). ✅
+2. Customer auth (Google, Facebook; Apple postponed) + `GET|PATCH /api/app/users/me`. ✅
+3. Staff auth + staff CRUD (`/api/vendor/staff`, `/staff/me`). ✅
+   - Platform admin auth (aal2) + vendors CRUD (`/api/admin/vendors`). ✅
 4. Vendor setup APIs: branches, point rules, rewards.
-5. QR codes + collect flow + cards, with integration tests against a real Postgres.
+5. QR codes + collect flow + cards, with integration tests against a real Postgres. ✅ (`test/collect.e2e-spec.ts`)
 6. Redeem flow.
 7. Reports, admin APIs, fraud-flag job, then the React dashboard.
 8. React Native customer app + staff app, using the shared `packages/api-client`.
+   - Staff app (login → home → scan → bill amount → done) ✅ (`apps/staff`; types hand-written until api-client exists). The API needs `CORS_ORIGINS` for its web origin (`http://localhost:8081`).
 
 ## Must-have tests
 
@@ -203,7 +213,10 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 - **Folder structure: by feature** (`src/<feature>/` with module, controller(s), service, `dto/`), not by layer. Logic lives in services; controllers stay thin.
 - **DTO naming:** requests by action — `Create<X>Dto`, `Update<X>Dto`, `List<X>QueryDto` (files `create-x.dto.ts`, …); responses `<X>ResponseDto` (`x-response.dto.ts`) with a static `from(row)` mapper. API JSON is camelCase; DB columns stay snake_case.
+- **UUIDs:** validate with `@IsUuid()` / `ParseUuidPipe` from `src/common/uuid.ts` (any 8-4-4-4-12 hex, like PostgreSQL), never class-validator `@IsUUID()` or Nest `ParseUUIDPipe`: those reject the hand-written seed ids (`11111111-0000-…`).
 - TypeScript strict mode. DTOs validated with `class-validator`. All times stored UTC (`timestamptz`); convert with `branches.timezone` for display.
+- **DB sessions are forced to UTC** (`PrismaService`: `options: '-c TimeZone=UTC'`). The pg adapter sends/reads timestamps without an offset; without this, Prisma-written times are shifted by the server's timezone (Africa/Cairo = 3 h) while DB `now()` defaults are not — e.g. a 5-minute QR would live 3 h. A collect e2e test guards it. Rows written before this fix (dev data) may have created_at 3 h early.
+- Tests that must delete `point_events` (append-only) do it inside a transaction with `SET LOCAL session_replication_role = replica` — test cleanup only, never in app code.
 - Balance-changing operations only inside `prisma.$transaction`, using conditional `UPDATE ... WHERE balance >= n` / `WHERE status = 'active'`, never read-modify-write in JS.
 - Errors use stable `code`s: scans — `qr_invalid`, `qr_used`, `qr_expired`, `qr_cancelled`, `wrong_qr_type`, `vendor_mismatch`, `branch_required`, `no_active_rule`, `invalid_amount`, `no_points_earned`, `duplicate_receipt`, `reward_unavailable`, `insufficient_points`, `user_blocked`.
 - Never commit `.env`, secrets or keys.

@@ -13,6 +13,10 @@ export class PrismaService
     super({
       adapter: new PrismaPg({
         connectionString: config.get('DATABASE_URL', { infer: true }),
+        // The pg adapter sends and reads timestamps without a UTC offset, so the session
+        // must be UTC or every Prisma-written time is shifted by the server's timezone
+        // (e.g. Africa/Cairo = 3 h) while DB defaults like now() are not.
+        options: '-c TimeZone=UTC',
       }),
     });
   }

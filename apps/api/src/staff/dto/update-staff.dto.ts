@@ -1,3 +1,4 @@
+import { IsUuid } from '../../common/uuid';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
@@ -5,7 +6,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { account_status, staff_role } from '../../generated/prisma/enums.js';
@@ -32,7 +32,7 @@ export class UpdateStaffDto {
     description: 'Move to another branch (branch roles only).',
   })
   @IsOptional()
-  @IsUUID()
+  @IsUuid()
   branchId?: string;
 
   @ApiPropertyOptional({

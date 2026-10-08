@@ -11,10 +11,13 @@ import {
   type staff_users,
 } from '../generated/prisma/client.js';
 import type { StaffContext } from '../auth/staff-auth.guard';
+import { fromMinor, toMinor } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseAdminService } from '../supabase/supabase-admin.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { ListStaffQueryDto } from './dto/list-staff-query.dto';
+import { StaffMeResponseDto } from './dto/staff-me-response.dto';
+import { StaffResponseDto } from './dto/staff-response.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 
 /**
@@ -47,6 +50,48 @@ export class StaffService {
       },
       orderBy: [{ created_at: 'asc' }],
     });
+  }
+
+  /** The signed-in staff member plus their vendor, branch(es) and active point rule. */
+  async me(ctx: StaffContext): Promise<StaffMeResponseDto> {
+    const [staff, vendor, branches, rule] = await Promise.all([
+      this.get(ctx, ctx.staffId),
+      this.prisma.vendors.findUniqueOrThrow({ where: { id: ctx.vendorId } }),
+      this.prisma.branches.findMany({
+        where: {
+          vendor_id: ctx.vendorId,
+          status: 'active',
+          ...(ctx.branchId ? { id: ctx.branchId } : {}),
+        },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.point_rules.findFirst({
+        where: { vendor_id: ctx.vendorId, is_active: true },
+      }),
+    ]);
+    return {
+      ...StaffResponseDto.from(staff),
+      vendor: {
+        id: vendor.id,
+        name: vendor.name,
+        logoUrl: vendor.logo_url,
+        currency: vendor.currency,
+      },
+      branch: ctx.branchId
+        ? (branches.find((b) => b.id === ctx.branchId) ?? null)
+        : null,
+      branches,
+      activeRule: rule
+        ? {
+            version: rule.version,
+            spendAmount: fromMinor(toMinor(rule.spend_amount)),
+            pointsPerSpend: rule.points_per_spend,
+            minPurchase: fromMinor(toMinor(rule.min_purchase)),
+            maxPointsPerPurchase: rule.max_points_per_purchase,
+          }
+        : null,
+    };
   }
 
   async get(ctx: StaffContext, id: string): Promise<staff_users> {
@@ -129,30 +174,24 @@ export class StaffService {
   }
 
   /**
-   * Creates a vendor's first vendor_admin (there is nobody yet to invite them).
-   * Used by the bootstrap script until the platform-admin API exists.
-   * With a password the account is created directly (no email); without, an invite is sent.
+   * Adds a vendor_admin to a vendor on behalf of the platform (not a staff member):
+   * POST /api/admin/vendors/{id}/admins. Sends an invite email (or links an existing account).
    */
-  async bootstrapVendorAdmin(input: {
+  async createVendorAdmin(input: {
     vendorId: string;
     name: string;
     email: string;
-    password?: string;
   }): Promise<{ staff: staff_users; invited: boolean }> {
     const vendor = await this.prisma.vendors.findUnique({
       where: { id: input.vendorId },
     });
     if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
-    return this.insert(
-      vendor.id,
-      {
-        name: input.name.trim(),
-        email: input.email.trim().toLowerCase(),
-        role: 'vendor_admin',
-        branchId: null,
-      },
-      input.password,
-    );
+    return this.insert(vendor.id, {
+      name: input.name.trim(),
+      email: input.email.trim().toLowerCase(),
+      role: 'vendor_admin',
+      branchId: null,
+    });
   }
 
   /** Links (or invites) the Supabase account, then creates the staff row. */
@@ -164,7 +203,6 @@ export class StaffService {
       role: staff_role;
       branchId: string | null;
     },
-    password?: string,
   ): Promise<{ staff: staff_users; invited: boolean }> {
     // Check before inviting so we don't email someone we then fail to add.
     const taken = await this.prisma.staff_users.findFirst({
@@ -173,9 +211,7 @@ export class StaffService {
     });
     if (taken) throw new ConflictException({ code: 'email_taken' });
 
-    const account = password
-      ? await this.authAdmin.createUserWithPassword(s.email, password)
-      : await this.authAdmin.inviteUser(s.email);
+    const account = await this.authAdmin.inviteUser(s.email);
 
     try {
       const staff = await this.prisma.staff_users.create({
@@ -188,7 +224,7 @@ export class StaffService {
           auth_user_id: account.authUserId,
         },
       });
-      return { staff, invited: !password && !account.existing };
+      return { staff, invited: !account.existing };
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&

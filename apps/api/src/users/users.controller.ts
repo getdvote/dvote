@@ -9,34 +9,34 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
-import { MeResponseDto } from './dto/me-response.dto';
-import { UpdateMeDto } from './dto/update-me.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
-@ApiTags('app: me')
+@ApiTags('app: users')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({
   description: 'missing_token | invalid_token | token_expired',
 })
 @ApiForbiddenResponse({ description: 'provider_not_allowed | user_blocked' })
 @UseGuards(CustomerAuthGuard)
-@Controller('app/me')
-export class MeController {
+@Controller('app/users')
+export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   /** The signed-in customer. The first call after sign-up creates the profile. */
-  @Get()
-  @ApiOkResponse({ type: MeResponseDto })
-  get(@CurrentUser() user: users): MeResponseDto {
-    return MeResponseDto.from(user);
+  @Get('me')
+  @ApiOkResponse({ type: UserResponseDto })
+  get(@CurrentUser() user: users): UserResponseDto {
+    return UserResponseDto.from(user);
   }
 
-  @Patch()
-  @ApiOkResponse({ type: MeResponseDto })
+  @Patch('me')
+  @ApiOkResponse({ type: UserResponseDto })
   async update(
     @CurrentUser() user: users,
-    @Body() dto: UpdateMeDto,
-  ): Promise<MeResponseDto> {
-    return MeResponseDto.from(await this.users.updateProfile(user.id, dto));
+    @Body() dto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return UserResponseDto.from(await this.users.updateProfile(user.id, dto));
   }
 }

@@ -8,7 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-export class UpdateMeDto {
+export class UpdateUserDto {
   @ApiPropertyOptional({ maxLength: 120, example: 'Mona Ali' })
   @IsOptional()
   @IsString()

@@ -1,17 +1,37 @@
-# apps/staff
+# apps/staff — dvote staff app
 
-Staff scanner app (iOS + Android) for vendor staff, branch managers and vendor admins. **Not scaffolded yet.**
+Expo (React Native) app for vendor staff: **one codebase for the web (any phone/PC browser)
+and iOS/Android**. Its only job: scan the customer's one-time QR, enter the bill amount,
+and let the server add the points.
 
-Planned stack: React Native + Expo (TypeScript), camera QR scanning, `@supabase/supabase-js`
-for staff sign-in (email + password from the invite).
+Screens (`src/app`, Expo Router), following the designs:
 
-Screens: sign in (vendor admins pick a branch) · scan · enter receipt total (collect) ·
-confirm reward (redeem) · result · today's activity.
+| Route | Screen |
+|---|---|
+| `/login` | Login with your provided account (email + password from the vendor's invite) |
+| `/home` | Welcome + vendor logo + branch, the point rule, **Start scanning** (vendor admins pick a branch) |
+| `/scan` | Camera QR scanner (web and native), or "Type the code instead" |
+| `/amount` | Enter bill amount, live points estimate, the rule, **Grant points** |
+| `/done` | "N points granted, Thanks!" + Back home |
 
-Calls `/api/vendor/scans/*` through the shared TypeScript client in `packages/api-client`.
+The server decides the points (`POST /api/vendor/scans/collect`); the app only shows an estimate.
+Each bill gets one random `idempotencyKey`, so a retry after a network error never adds points twice.
 
-To scaffold (later), from the repo root:
+## Run it
 
-```bash
-npx create-expo-app@latest apps/staff --template blank-typescript
-```
+1. `cp .env.example .env` and fill in `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the **publishable** key).
+2. The API must allow the app's origin: in `apps/api/.env` add
+   `CORS_ORIGINS=http://localhost:8081` and restart the API.
+3. From the repo root: `npm run staff:install` (first time), then `npm run staff:web`
+   → opens http://localhost:8081.
+
+On a phone: the browser camera needs **https** (or localhost), and `localhost` means the phone
+itself — use the Expo Go app / a development build, or an https tunnel, and set
+`EXPO_PUBLIC_API_URL` to an address the phone can reach.
+
+## Checks
+
+`npm run typecheck` · `npx expo-doctor`. Add packages with `npx expo install <pkg>` (SDK-compatible
+versions). Expo APIs change every SDK: read the versioned docs (see `AGENTS.md`).
+
+API types are hand-written in `src/lib/api.ts` until `packages/api-client` is generated.

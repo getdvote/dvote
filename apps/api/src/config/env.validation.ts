@@ -1,5 +1,6 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -49,6 +50,20 @@ export class Env {
   @IsOptional()
   @IsUrl({ require_tld: false, require_protocol: true })
   STAFF_INVITE_REDIRECT_URL?: string;
+
+  /**
+   * Platform admins must have completed two-factor (authenticator app) login, i.e. a
+   * token with aal2. Keep true everywhere real; set false only for local development.
+   */
+  @IsBoolean()
+  // Read the raw env string: implicit conversion would turn "false" into true.
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.ADMIN_MFA_REQUIRED;
+    return typeof raw === 'string'
+      ? raw.trim().toLowerCase() !== 'false'
+      : true;
+  })
+  ADMIN_MFA_REQUIRED: boolean = true;
 
   /** Comma-separated list of allowed origins; unset = CORS disabled. */
   @IsOptional()

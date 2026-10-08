@@ -1,4 +1,6 @@
 import {
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -42,6 +44,11 @@ export class SupabaseAdminService {
       (config.get('NODE_ENV', { infer: true }) === 'production'
         ? undefined // falls back to the Supabase project's Site URL
         : `http://localhost:${port}/dev/staff.html`);
+  }
+
+  /** False when SUPABASE_SECRET_KEY is missing: account creation would fail. */
+  isConfigured(): boolean {
+    return this.client !== null;
   }
 
   /** Emails an invite (the person sets their own password), or reuses an existing account. */
@@ -91,10 +98,35 @@ export class SupabaseAdminService {
     return this.client.auth.admin;
   }
 
-  private failed(action: string, error: unknown): ServiceUnavailableException {
-    const message = error instanceof Error ? error.message : String(error);
-    this.logger.error(`Supabase ${action} failed: ${message}`);
-    return new ServiceUnavailableException({ code: 'auth_provider_error' });
+  /**
+   * Turns a Supabase Auth error into an API error. Supabase's own message is passed
+   * through (it is generic, e.g. "Email rate limit exceeded") so callers know what to fix.
+   */
+  private failed(action: string, error: unknown): HttpException {
+    const e = (error ?? {}) as {
+      message?: string;
+      code?: string;
+      status?: number;
+    };
+    const message = e.message ?? String(error);
+    this.logger.error(
+      `Supabase ${action} failed: ${e.status ?? ''} ${e.code ?? ''} ${message}`,
+    );
+    if (e.code === 'over_email_send_rate_limit' || e.status === 429) {
+      return new HttpException(
+        {
+          code: 'email_rate_limited',
+          message:
+            'Supabase email limit reached (built-in sender: a few emails per hour). ' +
+            'Wait, or configure your own SMTP in Supabase → Authentication → Emails.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    return new ServiceUnavailableException({
+      code: 'auth_provider_error',
+      message: `Supabase ${action} failed: ${message}`,
+    });
   }
 }
 

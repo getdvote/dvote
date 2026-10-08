@@ -13,6 +13,8 @@ export interface SupabaseClaims {
   email?: string;
   role: string;
   is_anonymous?: boolean;
+  /** Authenticator assurance level: aal2 = signed in with a second factor (TOTP). */
+  aal?: 'aal1' | 'aal2';
   app_metadata?: {
     provider?: string;
     providers?: string[];

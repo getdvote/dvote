@@ -1,3 +1,4 @@
+import { IsUuid } from '../../common/uuid';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
@@ -6,7 +7,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { staff_role } from '../../generated/prisma/enums.js';
@@ -40,6 +40,6 @@ export class CreateStaffDto {
       'Branch managers may omit it (defaults to their own branch).',
   })
   @IsOptional()
-  @IsUUID()
+  @IsUuid()
   branchId?: string;
 }

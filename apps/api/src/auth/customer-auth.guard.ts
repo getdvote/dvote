@@ -12,10 +12,11 @@ import { bearerToken } from './bearer-token';
 import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
 
 /**
- * Customers may only sign in with these providers (no email/password, no anonymous).
+ * Customers may sign in with Google, Facebook or email + password (the email is confirmed
+ * by Supabase before it issues a token: keep "Confirm email" on). Never anonymous or phone.
  * Apple is postponed (needs the paid Apple Developer Program); add 'apple' here when enabled.
  */
-const CUSTOMER_PROVIDERS = new Set(['google', 'facebook']);
+const CUSTOMER_PROVIDERS = new Set(['google', 'facebook', 'email']);
 
 export interface CustomerRequest extends Request {
   user: users;

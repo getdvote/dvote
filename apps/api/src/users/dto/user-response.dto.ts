@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import type { users } from '../../generated/prisma/client.js';
 
 /** The signed-in customer's profile as returned to the mobile app. */
-export class MeResponseDto {
+export class UserResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
@@ -25,7 +25,7 @@ export class MeResponseDto {
   @ApiProperty()
   createdAt: string;
 
-  static from(user: users): MeResponseDto {
+  static from(user: users): UserResponseDto {
     return {
       id: user.id,
       name: user.name,

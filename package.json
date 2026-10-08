@@ -9,6 +9,9 @@
     "api:test": "npm --prefix apps/api run test",
     "api:test:e2e": "npm --prefix apps/api run test:e2e",
     "api:lint": "npm --prefix apps/api run lint",
-    "api:create-vendor-admin": "npm --prefix apps/api run staff:create-admin --"
+    "admin:create": "npm --prefix apps/api run admin:create --",
+    "staff:install": "npm --prefix apps/staff install",
+    "staff:web": "npm --prefix apps/staff run web",
+    "staff:start": "npm --prefix apps/staff run start"
   }
 }

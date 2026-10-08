@@ -40,14 +40,14 @@
     <h2>Signed in</h2>
     <div id="who"></div>
     <div class="row">
-      <button class="primary" id="callMe">GET /api/app/me</button>
+      <button class="primary" id="callMe">GET /api/app/users/me</button>
       <button id="copyToken">Copy access token</button>
       <button id="signOut">Sign out</button>
     </div>
   </section>
 
   <section class="card hidden" id="profileCard">
-    <h2>PATCH /api/app/me</h2>
+    <h2>PATCH /api/app/users/me</h2>
     <label for="name">Name</label><input id="name">
     <label for="email">Email</label><input id="email" type="email">
     <label for="phone">Phone</label><input id="phone" placeholder="+201001234567">
@@ -137,7 +137,7 @@
       // Right after sign-in / on page load, create or load the dvote profile once.
       if (session && !loadedMe) {
         loadedMe = true;
-        setTimeout(async () => fillProfile(await api('GET', '/api/app/me')), 0);
+        setTimeout(async () => fillProfile(await api('GET', '/api/app/users/me')), 0);
       }
       if (!session) loadedMe = false;
     });
@@ -176,7 +176,7 @@
     };
   });
 
-  $('callMe').onclick = async () => fillProfile(await api('GET', '/api/app/me'));
+  $('callMe').onclick = async () => fillProfile(await api('GET', '/api/app/users/me'));
 
   $('saveProfile').onclick = async () => {
     const body = {};
@@ -184,7 +184,7 @@
       const v = $(f).value.trim();
       if (v) body[f] = v;
     }
-    fillProfile(await api('PATCH', '/api/app/me', body));
+    fillProfile(await api('PATCH', '/api/app/users/me', body));
   };
 
   $('copyToken').onclick = async () => {

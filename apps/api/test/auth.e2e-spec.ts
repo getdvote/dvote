@@ -21,7 +21,7 @@ import { PrismaService } from './../src/prisma/prisma.service';
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const KID = 'test-key';
 
-describe('Customer auth + /api/app/me (e2e)', () => {
+describe('Customer auth + /api/app/users/me (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
   let privateKey: CryptoKey;
@@ -58,7 +58,7 @@ describe('Customer auth + /api/app/me (e2e)', () => {
   }
 
   const me = (t?: string) => {
-    const req = request(app.getHttpServer()).get('/api/app/me');
+    const req = request(app.getHttpServer()).get('/api/app/users/me');
     return t ? req.set('Authorization', `Bearer ${t}`) : req;
   };
 
@@ -116,9 +116,9 @@ describe('Customer auth + /api/app/me (e2e)', () => {
       expect(res.body.code).toBe('token_expired');
     });
 
-    it('email/password account → 403 provider_not_allowed', async () => {
+    it('phone (SMS) account → 403 provider_not_allowed', async () => {
       const t = await token({
-        app_metadata: { provider: 'email', providers: ['email'] },
+        app_metadata: { provider: 'phone', providers: ['phone'] },
       });
       const res = await me(t).expect(403);
       expect(res.body.code).toBe('provider_not_allowed');
@@ -138,6 +138,21 @@ describe('Customer auth + /api/app/me (e2e)', () => {
   });
 
   describe('profile', () => {
+    it('email + password sign-up: name comes from the sign-up form', async () => {
+      const res = await me(
+        await token({
+          email: 'nour@example.com',
+          app_metadata: { provider: 'email', providers: ['email'] },
+          user_metadata: { full_name: 'Nour Adel', email_verified: true },
+        }),
+      ).expect(200);
+      expect(res.body).toMatchObject({
+        name: 'Nour Adel',
+        email: 'nour@example.com',
+        avatarUrl: null,
+      });
+    });
+
     it('first call creates the customer from the token, later calls reuse it', async () => {
       const sub = randomUUID();
       const first = await me(await token({ sub })).expect(200);
@@ -176,7 +191,7 @@ describe('Customer auth + /api/app/me (e2e)', () => {
     it('PATCH updates name and phone', async () => {
       const t = await token();
       const res = await request(app.getHttpServer())
-        .patch('/api/app/me')
+        .patch('/api/app/users/me')
         .set('Authorization', `Bearer ${t}`)
         .send({ name: 'Mona A.', phone: '+201001234567' })
         .expect(200);
@@ -190,7 +205,7 @@ describe('Customer auth + /api/app/me (e2e)', () => {
       const t = await token();
       const patch = (body: object) =>
         request(app.getHttpServer())
-          .patch('/api/app/me')
+          .patch('/api/app/users/me')
           .set('Authorization', `Bearer ${t}`)
           .send(body);
       await patch({ email: 'not-an-email' }).expect(400);

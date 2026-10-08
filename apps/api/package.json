@@ -19,7 +19,8 @@
     "test:cov": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --inspect-brk --experimental-vm-modules -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
-    "staff:create-admin": "nest build && node dist/scripts/create-vendor-admin.js",
+    "admin:create": "nest build && node dist/scripts/create-platform-admin.js",
+    "db:pull": "prisma db pull --config prisma7.config.ts && node prisma/fix-introspection.cjs && prisma generate --config prisma7.config.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

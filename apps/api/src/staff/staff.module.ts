@@ -3,12 +3,11 @@ import { AuthModule } from '../auth/auth.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { StaffController } from './staff.controller';
 import { StaffService } from './staff.service';
-import { VendorMeController } from './vendor-me.controller';
 
-/** Vendor staff: /api/vendor/me and /api/vendor/staff. */
+/** Vendor staff: /api/vendor/staff (incl. /staff/me). */
 @Module({
   imports: [AuthModule, SupabaseModule],
-  controllers: [VendorMeController, StaffController],
+  controllers: [StaffController],
   providers: [StaffService],
   exports: [StaffService],
 })

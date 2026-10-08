@@ -3,8 +3,12 @@ import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { MeModule } from './users/me.module';
+import { UsersApiModule } from './users/users-api.module';
 import { StaffModule } from './staff/staff.module';
+import { VendorsModule } from './vendors/vendors.module';
+import { QrCodesModule } from './qr-codes/qr-codes.module';
+import { ScansModule } from './scans/scans.module';
+import { CardsModule } from './cards/cards.module';
 
 @Module({
   imports: [
@@ -15,8 +19,12 @@ import { StaffModule } from './staff/staff.module';
     }),
     PrismaModule,
     HealthModule,
-    MeModule,
+    UsersApiModule,
     StaffModule,
+    VendorsModule,
+    QrCodesModule,
+    ScansModule,
+    CardsModule,
   ],
 })
 export class AppModule {}

@@ -6,7 +6,8 @@
 --
 --  A database built from this file already matches every Prisma migration; mark them
 --  applied (from apps/api):  npx prisma migrate resolve --applied <name>
---  for 0_init, 1_users_auth_user_id, 2_staff_users_auth_user_id, 3_points_rewards_qr.
+--  for 0_init, 1_users_auth_user_id, 2_staff_users_auth_user_id, 3_points_rewards_qr,
+--  4_platform_admins_auth_user_id.
 -- =====================================================================
 BEGIN;
 
@@ -44,13 +45,15 @@ CREATE TABLE platform_admins (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name             varchar(120)   NOT NULL,
     email            varchar(255)   NOT NULL,
-    password_hash    varchar(255)   NOT NULL,
-    totp_secret_ref  varchar(255),                       -- 2FA secret lives in the secrets store
+    password_hash    varchar(255),                       -- legacy; passwords live in Supabase Auth
+    totp_secret_ref  varchar(255),                       -- legacy; 2FA (TOTP) is handled by Supabase Auth MFA
+    auth_user_id     uuid,                               -- Supabase Auth user id
     status           account_status NOT NULL DEFAULT 'active',
     created_at       timestamptz    NOT NULL DEFAULT now(),
     updated_at       timestamptz    NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX platform_admins_email_uq ON platform_admins (lower(email));
+CREATE UNIQUE INDEX platform_admins_auth_user_id_key ON platform_admins (auth_user_id);
 
 -- ---------------------------------------------------------------------
 -- 4. VENDOR SIDE

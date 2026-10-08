@@ -1,11 +1,12 @@
+import { IsUuid } from '../../common/uuid';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { account_status, staff_role } from '../../generated/prisma/enums.js';
 
 export class ListStaffQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsUuid()
   branchId?: string;
 
   @ApiPropertyOptional({ enum: staff_role, enumName: 'StaffRole' })

@@ -53,7 +53,7 @@
     <h2>Signed in</h2>
     <div id="who"></div>
     <div class="row">
-      <button class="primary" id="callMe">GET /api/vendor/me</button>
+      <button class="primary" id="callMe">GET /api/vendor/staff/me</button>
       <button id="listStaff">GET /api/vendor/staff</button>
       <button id="copyToken">Copy access token</button>
       <button id="signOut">Sign out</button>
@@ -267,7 +267,7 @@
     showResult(null, 'Password saved. You are signed in.');
   };
 
-  $('callMe').onclick = () => api('GET', '/api/vendor/me');
+  $('callMe').onclick = () => api('GET', '/api/vendor/staff/me');
   $('listStaff').onclick = async () => renderStaff(await api('GET', '/api/vendor/staff'));
 
   $('create').onclick = async () => {

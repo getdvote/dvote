@@ -145,24 +145,30 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
 
   describe('StaffAuthGuard', () => {
     it('no token → 401', async () => {
-      await api(null, 'get', '/api/vendor/me').expect(401);
+      await api(null, 'get', '/api/vendor/staff/me').expect(401);
     });
 
     it('signed-in account without a staff row (e.g. a customer) → 403 not_staff', async () => {
       tokens.customer = await signer.sign(randomUUID(), {
         app_metadata: { provider: 'google', providers: ['google'] },
       });
-      const res = await api('customer', 'get', '/api/vendor/me').expect(403);
+      const res = await api('customer', 'get', '/api/vendor/staff/me').expect(
+        403,
+      );
       expect(res.body.code).toBe('not_staff');
     });
 
     it('disabled staff → 403 staff_disabled', async () => {
-      const res = await api('disabledA1', 'get', '/api/vendor/me').expect(403);
+      const res = await api('disabledA1', 'get', '/api/vendor/staff/me').expect(
+        403,
+      );
       expect(res.body.code).toBe('staff_disabled');
     });
 
-    it('GET /api/vendor/me works for every role, including staff', async () => {
-      const res = await api('staffA1', 'get', '/api/vendor/me').expect(200);
+    it('GET /api/vendor/staff/me works for every role, including staff', async () => {
+      const res = await api('staffA1', 'get', '/api/vendor/staff/me').expect(
+        200,
+      );
       expect(res.body).toMatchObject({
         id: people.staffA1.id,
         role: 'staff',
@@ -182,7 +188,9 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
         data: { status: 'suspended' },
       });
       try {
-        const res = await api('adminB', 'get', '/api/vendor/me').expect(403);
+        const res = await api('adminB', 'get', '/api/vendor/staff/me').expect(
+          403,
+        );
         expect(res.body.code).toBe('vendor_suspended');
       } finally {
         await prisma.vendors.update({
@@ -411,7 +419,9 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
       await api('adminA', 'patch', `/api/vendor/staff/${people.staffA1.id}`)
         .send({ status: 'disabled' })
         .expect(200);
-      const res = await api('staffA1', 'get', '/api/vendor/me').expect(403);
+      const res = await api('staffA1', 'get', '/api/vendor/staff/me').expect(
+        403,
+      );
       expect(res.body.code).toBe('staff_disabled');
       expect(
         await prisma.staff_users.count({ where: { id: people.staffA1.id } }),
@@ -420,7 +430,7 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
       await api('adminA', 'patch', `/api/vendor/staff/${people.staffA1.id}`)
         .send({ status: 'active' })
         .expect(200);
-      await api('staffA1', 'get', '/api/vendor/me').expect(200);
+      await api('staffA1', 'get', '/api/vendor/staff/me').expect(200);
     });
 
     it('vendor_admin cannot change their own role or status → 403 cannot_modify_self', async () => {
@@ -477,6 +487,56 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
       await api('managerA1', 'patch', `/api/vendor/staff/${people.adminA.id}`)
         .send({ name: 'x' })
         .expect(404);
+    });
+  });
+
+  describe('own vendor profile (/api/vendor/profile)', () => {
+    it('every staff role sees their own vendor, never another', async () => {
+      const a = await api('staffA2', 'get', '/api/vendor/profile').expect(200);
+      expect(a.body.id).toBe(ids.vendorA);
+      const b = await api('adminB', 'get', '/api/vendor/profile').expect(200);
+      expect(b.body.id).toBe(ids.vendorB);
+    });
+
+    it('vendor_admin edits name, logo and contact email of their own vendor only', async () => {
+      const res = await api('adminA', 'patch', '/api/vendor/profile')
+        .send({ name: `Vendor A renamed ${run}`, contactEmail: 'Owner@A.test' })
+        .expect(200);
+      expect(res.body).toMatchObject({
+        id: ids.vendorA,
+        name: `Vendor A renamed ${run}`,
+        contactEmail: 'owner@a.test',
+      });
+      const other = await prisma.vendors.findUniqueOrThrow({
+        where: { id: ids.vendorB },
+      });
+      expect(other.name).toBe(`Vendor B ${run}`);
+    });
+
+    it('status and currency stay platform-admin only → 400', async () => {
+      await api('adminA', 'patch', '/api/vendor/profile')
+        .send({ status: 'suspended' })
+        .expect(400);
+      await api('adminA', 'patch', '/api/vendor/profile')
+        .send({ currency: 'USD' })
+        .expect(400);
+    });
+
+    it('branch_manager and staff cannot edit it → 403 forbidden_role', async () => {
+      for (const who of ['managerA1', 'staffA2']) {
+        const res = await api(who, 'patch', '/api/vendor/profile')
+          .send({ name: 'x' })
+          .expect(403);
+        expect(res.body.code).toBe('forbidden_role');
+      }
+    });
+
+    it('customers and anonymous callers are rejected', async () => {
+      await api(null, 'get', '/api/vendor/profile').expect(401);
+      const res = await api('customer', 'get', '/api/vendor/profile').expect(
+        403,
+      );
+      expect(res.body.code).toBe('not_staff');
     });
   });
 });
