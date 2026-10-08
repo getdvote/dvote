@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DvoteLogo } from '../../components/DvoteLogo';
+import { FeedbackSheet } from '../../components/FeedbackSheet';
 import { Avatar, ErrorBox, Group, Row, Screen, SectionTitle } from '../../components/ui';
 import { confirmDeleteAccount, confirmLogout } from '../../lib/account';
 import { useSession } from '../../lib/session';
@@ -13,6 +14,7 @@ import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 export default function You() {
   const { me, meError, session, signOut } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const insets = useSafeAreaInsets();
 
   const name = me?.name ?? 'dvote member';
@@ -52,7 +54,7 @@ export default function You() {
 
         <SectionTitle title="More" />
         <Group>
-          <Row icon="chatbubble-ellipses-outline" label="Send feedback" onPress={() => router.push('/info/feedback')} />
+          <Row icon="chatbubble-ellipses-outline" label="Send feedback" onPress={() => setFeedbackOpen(true)} />
           <Row icon="help-buoy-outline" label="Get help" onPress={() => router.push('/info/help')} />
           <Row icon="document-text-outline" label="Terms and conditions" onPress={() => router.push('/info/terms')} />
           <Row icon="information-circle-outline" label="About Dvote" onPress={() => router.push('/about')} />
@@ -63,6 +65,8 @@ export default function You() {
           <DvoteLogo height={34} color="#C7C7CC" />
         </View>
       </ScrollView>
+
+      <FeedbackSheet visible={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* three-dots design: a small card with Logout / Delete account */}
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
