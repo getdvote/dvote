@@ -1,16 +1,21 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
+import MapsSearchIcon from '@hugeicons/core-free-icons/MapsSearchIcon';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import User02Icon from '@hugeicons/core-free-icons/User02Icon';
+import { Icon, type AppIcon } from '../../components/Icon';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router, Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../lib/session';
-import { theme } from '../../lib/theme';
+import { theme, squircle } from '../../lib/theme';
 
-const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap; label: string }> = {
-  cards: { on: 'card', off: 'card-outline', label: 'Cards' },
-  discover: { on: 'earth', off: 'earth-outline', label: 'Discover' },
-  you: { on: 'person', off: 'person-outline', label: 'You' },
+// Untitled UI icons are outline-only: the selected tab is shown by colour and its grey pill.
+const ICONS: Record<string, { icon: AppIcon; label: string }> = {
+  cards: { icon: GiftCard02Icon, label: 'My cards' },
+  discover: { icon: MapsSearchIcon, label: 'Explore' },
+  you: { icon: User02Icon, label: 'My profile' },
 };
 
 /** Floating pill with 3 tabs + a separate round QR button (side-menu design). */
@@ -41,7 +46,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                 }}
                 style={[styles.tab, focused && styles.tabOn]}
               >
-                <Ionicons name={focused ? icon.on : icon.off} size={23} color={focused ? theme.link : theme.text} />
+                <Icon icon={icon.icon} size={24} color={focused ? theme.link : theme.text} />
               </Pressable>
             );
           })}
@@ -52,7 +57,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           onPress={() => router.push('/qr')}
           style={styles.qr}
         >
-          <Ionicons name="qr-code-outline" size={24} color={theme.text} />
+          <Icon icon={QrCodeIcon} size={24} color={theme.text} />
         </Pressable>
       </View>
     </View>
@@ -83,6 +88,7 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 28, alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pill: {
+    ...squircle,
     flexDirection: 'row',
     backgroundColor: theme.surface,
     borderRadius: 32,

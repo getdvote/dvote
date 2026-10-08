@@ -1,14 +1,16 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
+import { Icon } from '../../components/Icon';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { ErrorBox, PrimaryButton, Screen } from '../../components/ui';
 import { api, ApiError, type Card } from '../../lib/api';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
-/** All cards: one card per shop where the customer has points. */
+/** My cards: one card per shop where the customer has points. */
 export default function Cards() {
   const { handleAuthError } = useSession();
   const [cards, setCards] = useState<Card[] | null>(null);
@@ -51,7 +53,7 @@ export default function Cards() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>Cards</Text>
+            <Text style={styles.title}>My cards</Text>
             {cards && cards.length > 0 ? (
               <Text style={styles.count}>
                 {cards.length} shop{cards.length === 1 ? '' : 's'}
@@ -66,7 +68,7 @@ export default function Cards() {
           ) : (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
-                <Ionicons name="card-outline" size={36} color={theme.text} />
+                <Icon icon={GiftCard02Icon} size={36} color={theme.text} />
               </View>
               <Text style={styles.emptyTitle}>No cards yet</Text>
               <Text style={styles.emptyText}>

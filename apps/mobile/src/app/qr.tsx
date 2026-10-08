@@ -1,6 +1,8 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import { Icon } from '../components/Icon';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { PrimaryButton, Screen } from '../components/ui';
 import { theme } from '../lib/theme';
 
@@ -13,7 +15,7 @@ export default function Qr() {
     <Screen edges={['top', 'bottom']}>
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Ionicons name="qr-code-outline" size={40} color={theme.text} />
+          <Icon icon={QrCodeIcon} size={40} color={theme.text} />
         </View>
         <Text style={styles.heading}>Your QR code</Text>
         <Text style={styles.text}>

@@ -1,22 +1,24 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import ArrowLeft01Icon from '@hugeicons/core-free-icons/ArrowLeft01Icon';
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
+import ViewIcon from '@hugeicons/core-free-icons/ViewIcon';
+import ViewOffSlashIcon from '@hugeicons/core-free-icons/ViewOffSlashIcon';
+import { Icon, type AppIcon } from './Icon';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Children, isValidElement, useState, type ComponentProps, type ReactNode } from 'react';
+import { Children, isValidElement, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
   type StyleProp,
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
+import { Text, TextInput } from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../lib/theme';
+import { theme, squircle } from '../lib/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /** Pushed page: round back button + centred title (Profile details, Settings, About…). */
 export function PageHeader({ title, onBack }: { title: string; onBack?: () => void }) {
@@ -29,7 +31,7 @@ export function PageHeader({ title, onBack }: { title: string; onBack?: () => vo
         style={styles.backButton}
         hitSlop={8}
       >
-        <Ionicons name="chevron-back" size={20} color={theme.text} />
+        <Icon icon={ArrowLeft01Icon} size={24} color={theme.text} />
       </Pressable>
       <Text style={styles.pageTitle} numberOfLines={1}>
         {title}
@@ -85,7 +87,7 @@ export function Row({
   disabled,
 }: {
   label: string;
-  icon?: IconName;
+  icon?: AppIcon;
   value?: string | null;
   onPress?: () => void;
   right?: ReactNode;
@@ -100,7 +102,7 @@ export function Row({
     >
       {icon ? (
         <View style={styles.rowIcon}>
-          <Ionicons name={icon} size={19} color={theme.text} />
+          <Icon icon={icon} size={20} color={theme.text} />
         </View>
       ) : null}
       <Text style={[styles.rowLabel, disabled && styles.disabledText]} numberOfLines={1}>
@@ -112,7 +114,7 @@ export function Row({
         </Text>
       ) : null}
       {right}
-      {onPress && !right ? <Ionicons name="chevron-forward" size={18} color={theme.placeholder} /> : null}
+      {onPress && !right ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} /> : null}
     </Pressable>
   );
 }
@@ -207,10 +209,26 @@ export function Field({
             onPress={() => setHidden((h) => !h)}
             hitSlop={10}
           >
-            <Ionicons name={hidden ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.muted} />
+            <Icon icon={hidden ? ViewOffSlashIcon : ViewIcon} size={20} color={theme.muted} />
           </Pressable>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+/**
+ * A section with nothing to show yet: icon, short title, one line of text, in a white
+ * rounded box. Used where the backend isn't built yet or there's simply no data.
+ */
+export function EmptySection({ icon, title, text }: { icon: AppIcon; title: string; text: string }) {
+  return (
+    <View style={styles.emptySection}>
+      <View style={styles.emptyIcon}>
+        <Icon icon={icon} size={22} color={theme.muted} />
+      </View>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyText}>{text}</Text>
     </View>
   );
 }
@@ -250,17 +268,18 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
   },
+  // 44 pt: Apple's minimum comfortable tap size.
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerSpacer: { width: 36, height: 36 },
-  pageTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: theme.text },
-  group: { backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
+  headerSpacer: { width: 44, height: 44 },
+  pageTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600', color: theme.text },
+  group: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 24, marginBottom: 10, marginLeft: 2 },
   row: { minHeight: theme.rowHeight, flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -269,9 +288,10 @@ const styles = StyleSheet.create({
   rowLabel: { flex: 1, fontSize: 17, color: theme.text },
   rowValue: { fontSize: 17, color: theme.muted, maxWidth: '55%' },
   disabledText: { color: theme.muted },
-  soon: { backgroundColor: theme.fill, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  soon: { ...squircle, backgroundColor: theme.fill, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   soonText: { fontSize: 12, fontWeight: '600', color: theme.muted },
   primary: {
+    ...squircle,
     height: 56,
     borderRadius: 28,
     backgroundColor: theme.primary,
@@ -282,6 +302,7 @@ const styles = StyleSheet.create({
   inactive: { opacity: 0.35 },
   pressed: { opacity: 0.8 },
   pill: {
+    ...squircle,
     height: 56,
     borderRadius: 28,
     backgroundColor: theme.surface,
@@ -294,6 +315,7 @@ const styles = StyleSheet.create({
   fieldWrap: { gap: 8 },
   fieldLabel: { fontSize: 15, fontWeight: '600', color: theme.text },
   inputRow: {
+    ...squircle,
     height: 52,
     borderRadius: 26,
     backgroundColor: theme.surface,
@@ -303,7 +325,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   input: { flex: 1, height: '100%', fontSize: 17, color: theme.text },
-  error: { backgroundColor: theme.dangerSoft, borderRadius: 14, padding: 12 },
+  emptySection: {
+    ...squircle,
+    backgroundColor: theme.surface,
+    borderRadius: theme.radius,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.fill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: theme.text, textAlign: 'center' },
+  emptyText: { fontSize: 14, color: theme.muted, textAlign: 'center', lineHeight: 20 },
+  error: { ...squircle, backgroundColor: theme.dangerSoft, borderRadius: 14, padding: 12 },
   errorText: { color: theme.danger, fontSize: 15, textAlign: 'center' },
   avatarBorder: { borderWidth: 3, borderColor: theme.surface },
   avatarFallback: { backgroundColor: theme.brand, alignItems: 'center', justifyContent: 'center' },
