@@ -1,4 +1,5 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Globe02Icon from '@hugeicons/core-free-icons/Globe02Icon';
+import { Icon } from '../../components/Icon';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Screen } from '../../components/ui';
@@ -11,7 +12,7 @@ export default function Discover() {
       <Text style={styles.title}>Discover</Text>
       <View style={styles.middle}>
         <View style={styles.icon}>
-          <Ionicons name="earth-outline" size={36} color={theme.text} />
+          <Icon icon={Globe02Icon} size={36} color={theme.text} />
         </View>
         <Text style={styles.heading}>Coffee shops near you</Text>
         <Text style={styles.text}>Soon you'll find every dvote shop here, with its rewards and points rule.</Text>

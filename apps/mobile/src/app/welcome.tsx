@@ -1,4 +1,6 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Facebook01Icon from '@hugeicons/core-free-icons/Facebook01Icon';
+import GoogleIcon from '@hugeicons/core-free-icons/GoogleIcon';
+import { Icon } from '../components/Icon';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -84,13 +86,13 @@ export default function Welcome() {
               title="Continue with Google"
               onPress={() => void social('google')}
               loading={busy === 'google'}
-              icon={<FontAwesome name="google" size={20} color="#EA4335" />}
+              icon={<Icon icon={GoogleIcon} size={20} color="#EA4335" />}
             />
             <PillButton
               title="Continue with Facebook"
               onPress={() => void social('facebook')}
               loading={busy === 'facebook'}
-              icon={<FontAwesome name="facebook-square" size={21} color="#1877F2" />}
+              icon={<Icon icon={Facebook01Icon} size={21} color="#1877F2" />}
             />
           </View>
 

@@ -1,7 +1,11 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import ArrowLeft01Icon from '@hugeicons/core-free-icons/ArrowLeft01Icon';
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
+import ViewIcon from '@hugeicons/core-free-icons/ViewIcon';
+import ViewOffSlashIcon from '@hugeicons/core-free-icons/ViewOffSlashIcon';
+import { Icon, type AppIcon } from './Icon';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Children, isValidElement, useState, type ComponentProps, type ReactNode } from 'react';
+import { Children, isValidElement, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -15,7 +19,6 @@ import { Text, TextInput } from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../lib/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /** Pushed page: round back button + centred title (Profile details, Settings, About…). */
 export function PageHeader({ title, onBack }: { title: string; onBack?: () => void }) {
@@ -28,7 +31,7 @@ export function PageHeader({ title, onBack }: { title: string; onBack?: () => vo
         style={styles.backButton}
         hitSlop={8}
       >
-        <Ionicons name="chevron-back" size={20} color={theme.text} />
+        <Icon icon={ArrowLeft01Icon} size={20} color={theme.text} />
       </Pressable>
       <Text style={styles.pageTitle} numberOfLines={1}>
         {title}
@@ -84,7 +87,7 @@ export function Row({
   disabled,
 }: {
   label: string;
-  icon?: IconName;
+  icon?: AppIcon;
   value?: string | null;
   onPress?: () => void;
   right?: ReactNode;
@@ -99,7 +102,7 @@ export function Row({
     >
       {icon ? (
         <View style={styles.rowIcon}>
-          <Ionicons name={icon} size={19} color={theme.text} />
+          <Icon icon={icon} size={20} color={theme.text} />
         </View>
       ) : null}
       <Text style={[styles.rowLabel, disabled && styles.disabledText]} numberOfLines={1}>
@@ -111,7 +114,7 @@ export function Row({
         </Text>
       ) : null}
       {right}
-      {onPress && !right ? <Ionicons name="chevron-forward" size={18} color={theme.placeholder} /> : null}
+      {onPress && !right ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} /> : null}
     </Pressable>
   );
 }
@@ -206,7 +209,7 @@ export function Field({
             onPress={() => setHidden((h) => !h)}
             hitSlop={10}
           >
-            <Ionicons name={hidden ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.muted} />
+            <Icon icon={hidden ? ViewOffSlashIcon : ViewIcon} size={20} color={theme.muted} />
           </Pressable>
         ) : null}
       </View>

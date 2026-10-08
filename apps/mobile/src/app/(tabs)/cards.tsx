@@ -1,4 +1,5 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import CreditCardIcon from '@hugeicons/core-free-icons/CreditCardIcon';
+import { Icon } from '../../components/Icon';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
@@ -67,7 +68,7 @@ export default function Cards() {
           ) : (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
-                <Ionicons name="card-outline" size={36} color={theme.text} />
+                <Icon icon={CreditCardIcon} size={36} color={theme.text} />
               </View>
               <Text style={styles.emptyTitle}>No cards yet</Text>
               <Text style={styles.emptyText}>

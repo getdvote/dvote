@@ -1,4 +1,7 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Add01Icon from '@hugeicons/core-free-icons/Add01Icon';
+import ArrowDataTransferVerticalIcon from '@hugeicons/core-free-icons/ArrowDataTransferVerticalIcon';
+import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
+import { Icon } from '../../components/Icon';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
@@ -71,8 +74,8 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
   return (
     <View style={[styles.row, first && styles.rowFirst, last && styles.rowLast, !last && styles.rowBorder]}>
       <View style={[styles.icon, { backgroundColor: positive ? '#E6F7EC' : '#FFF1E6' }]}>
-        <Ionicons
-          name={event.type === 'earn' ? 'add' : event.type === 'redeem' ? 'gift-outline' : 'swap-vertical'}
+        <Icon
+          icon={event.type === 'earn' ? Add01Icon : event.type === 'redeem' ? GiftIcon : ArrowDataTransferVerticalIcon}
           size={18}
           color={positive ? theme.success : '#E8820C'}
         />

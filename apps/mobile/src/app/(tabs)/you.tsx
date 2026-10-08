@@ -1,4 +1,13 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import BubbleChatIcon from '@hugeicons/core-free-icons/BubbleChatIcon';
+import CreditCardIcon from '@hugeicons/core-free-icons/CreditCardIcon';
+import File01Icon from '@hugeicons/core-free-icons/File01Icon';
+import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
+import LifebuoyIcon from '@hugeicons/core-free-icons/LifebuoyIcon';
+import MoreVerticalIcon from '@hugeicons/core-free-icons/MoreVerticalIcon';
+import Settings01Icon from '@hugeicons/core-free-icons/Settings01Icon';
+import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
+import UserCircleIcon from '@hugeicons/core-free-icons/UserCircleIcon';
+import { Icon } from '../../components/Icon';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -31,7 +40,7 @@ export default function You() {
             style={styles.dots}
             hitSlop={8}
           >
-            <Ionicons name="ellipsis-vertical" size={18} color={theme.text} />
+            <Icon icon={MoreVerticalIcon} size={20} color={theme.text} />
           </Pressable>
         </View>
 
@@ -46,18 +55,18 @@ export default function You() {
 
         <SectionTitle title="Account" />
         <Group>
-          <Row icon="card-outline" label="All cards" onPress={() => router.navigate('/(tabs)/cards')} />
-          <Row icon="person-circle-outline" label="Profile details" onPress={() => router.push('/profile-details')} />
-          <Row icon="settings-outline" label="Settings" onPress={() => router.push('/settings')} />
+          <Row icon={CreditCardIcon} label="All cards" onPress={() => router.navigate('/(tabs)/cards')} />
+          <Row icon={UserCircleIcon} label="Profile details" onPress={() => router.push('/profile-details')} />
+          <Row icon={Settings01Icon} label="Settings" onPress={() => router.push('/settings')} />
         </Group>
 
         <SectionTitle title="More" />
         <Group>
-          <Row icon="chatbubble-ellipses-outline" label="Send feedback" onPress={() => router.push('/info/feedback')} />
-          <Row icon="help-buoy-outline" label="Get help" onPress={() => router.push('/info/help')} />
-          <Row icon="document-text-outline" label="Terms and conditions" onPress={() => router.push('/info/terms')} />
-          <Row icon="information-circle-outline" label="About Dvote" onPress={() => router.push('/about')} />
-          <Row icon="storefront-outline" label="Join as a vendor" onPress={() => router.push('/info/join')} />
+          <Row icon={BubbleChatIcon} label="Send feedback" onPress={() => router.push('/info/feedback')} />
+          <Row icon={LifebuoyIcon} label="Get help" onPress={() => router.push('/info/help')} />
+          <Row icon={File01Icon} label="Terms and conditions" onPress={() => router.push('/info/terms')} />
+          <Row icon={InformationCircleIcon} label="About Dvote" onPress={() => router.push('/about')} />
+          <Row icon={Store01Icon} label="Join as a vendor" onPress={() => router.push('/info/join')} />
         </Group>
 
         <View style={styles.footer}>

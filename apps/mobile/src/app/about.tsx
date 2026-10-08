@@ -1,37 +1,41 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
+import LockIcon from '@hugeicons/core-free-icons/LockIcon';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import SecurityCheckIcon from '@hugeicons/core-free-icons/SecurityCheckIcon';
+import SparklesIcon from '@hugeicons/core-free-icons/SparklesIcon';
+import Wallet01Icon from '@hugeicons/core-free-icons/Wallet01Icon';
+import { Icon, type AppIcon } from '../components/Icon';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Text';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { Group, PageHeader, Row, Screen } from '../components/ui';
 import { theme } from '../lib/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const STEPS: { icon: IconName; title: string; text: string }[] = [
+const STEPS: { icon: AppIcon; title: string; text: string }[] = [
   {
-    icon: 'qr-code-outline',
+    icon: QrCodeIcon,
     title: 'Show your QR',
     text: 'Pay as usual at any dvote coffee shop and show your QR code at the counter.',
   },
   {
-    icon: 'sparkles-outline',
+    icon: SparklesIcon,
     title: 'Earn points',
     text: 'Points land on that shop’s card in seconds, based on how much you spent.',
   },
   {
-    icon: 'gift-outline',
+    icon: GiftIcon,
     title: 'Enjoy rewards',
     text: 'Swap points for free coffee, desserts and more, whenever you choose.',
   },
 ];
 
-const PROMISES: { icon: IconName; text: string }[] = [
-  { icon: 'wallet-outline', text: 'All your coffee shop cards in one app, no paper stamps.' },
-  { icon: 'lock-closed-outline', text: 'Shops never see your name, email or phone.' },
-  { icon: 'shield-checkmark-outline', text: 'Every QR works once and expires in minutes.' },
+const PROMISES: { icon: AppIcon; text: string }[] = [
+  { icon: Wallet01Icon, text: 'All your coffee shop cards in one app, no paper stamps.' },
+  { icon: LockIcon, text: 'Shops never see your name, email or phone.' },
+  { icon: SecurityCheckIcon, text: 'Every QR works once and expires in minutes.' },
 ];
 
 /** About Dvote: brand, how it works, what we promise, version. */
@@ -55,7 +59,7 @@ export default function About() {
           {STEPS.map((s, i) => (
             <View key={s.title} style={styles.step}>
               <View style={styles.stepIcon}>
-                <Ionicons name={s.icon} size={22} color={theme.brand} />
+                <Icon icon={s.icon} size={22} color={theme.brand} />
                 <Text style={styles.stepNumber}>{i + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
@@ -70,7 +74,7 @@ export default function About() {
         <Group style={styles.promises}>
           {PROMISES.map((p) => (
             <View key={p.text} style={styles.promise}>
-              <Ionicons name={p.icon} size={20} color={theme.brand} />
+              <Icon icon={p.icon} size={20} color={theme.brand} />
               <Text style={styles.promiseText}>{p.text}</Text>
             </View>
           ))}
