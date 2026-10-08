@@ -1,6 +1,5 @@
 import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import Coins01Icon from '@hugeicons/core-free-icons/Coins01Icon';
-import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import Location01Icon from '@hugeicons/core-free-icons/Location01Icon';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +10,7 @@ import { DvoteLogo } from '../../components/DvoteLogo';
 import { Icon } from '../../components/Icon';
 import { ImageViewer } from '../../components/ImageViewer';
 import { MenuGallery } from '../../components/MenuGallery';
+import { RewardList } from '../../components/RewardList';
 import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, Group, PageHeader, PillButton, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type VendorPage } from '../../lib/api';
@@ -103,7 +103,7 @@ export default function Shop() {
             <EarnRule shop={shop} />
 
             <SectionTitle title="Rewards" />
-            <Rewards shop={shop} />
+            <RewardList rewards={shop.rewards} balance={shop.card?.balance ?? 0} />
 
             <SectionTitle title="Menu" />
             <MenuGallery images={shop.menu.map((m) => m.url)} />
@@ -160,45 +160,6 @@ function EarnRule({ shop }: { shop: VendorPage }) {
           ))}
         </View>
       </View>
-    </Group>
-  );
-}
-
-function Rewards({ shop }: { shop: VendorPage }) {
-  if (shop.rewards.length === 0) {
-    return <EmptySection icon={GiftIcon} title="No rewards yet" text="This shop's rewards will show here." />;
-  }
-  const balance = shop.card?.balance ?? 0;
-  return (
-    <Group>
-      {shop.rewards.map((r) => {
-        const short = r.pointsCost - balance;
-        return (
-          <View key={r.id} style={styles.reward}>
-            <View style={styles.rewardIcon}>
-              {r.imageUrl ? (
-                <Image source={{ uri: r.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              ) : (
-                <Icon icon={GiftIcon} size={20} color={theme.text} />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rewardName} numberOfLines={1}>
-                {r.name}
-              </Text>
-              {r.description ? (
-                <Text style={styles.rewardText} numberOfLines={2}>
-                  {r.description}
-                </Text>
-              ) : null}
-              <Text style={[styles.rewardText, short <= 0 && styles.ready]}>
-                {short <= 0 ? 'You have enough points' : `${short} pts to go`}
-              </Text>
-            </View>
-            <Text style={styles.rewardCost}>{r.pointsCost} pts</Text>
-          </View>
-        );
-      })}
     </Group>
   );
 }
@@ -295,20 +256,8 @@ const styles = StyleSheet.create({
   },
   ruleMain: { fontSize: 18, fontWeight: '700', color: theme.text, marginBottom: 4 },
   ruleNote: { fontSize: 14, color: theme.muted, lineHeight: 20 },
-  reward: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
-  rewardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
   rewardName: { fontSize: 17, fontWeight: '600', color: theme.text },
   rewardText: { fontSize: 14, color: theme.muted, marginTop: 2 },
-  ready: { color: theme.success, fontWeight: '600' },
-  rewardCost: { fontSize: 16, fontWeight: '700', color: theme.text },
   branch: { paddingVertical: 14, gap: 12 },
   branchRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   link: { fontSize: 14, fontWeight: '600', color: theme.link, marginTop: 4 },
