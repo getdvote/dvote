@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerSpacer: { width: 44, height: 44 },
-  pageTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: theme.text },
+  pageTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600', color: theme.text },
   group: { backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 24, marginBottom: 10, marginLeft: 2 },
