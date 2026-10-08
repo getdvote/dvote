@@ -140,7 +140,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 **Image storage (Supabase Storage):** bucket **`vendors`** (public: `<vendor>/logo/…`, `<vendor>/menu/…`, `<vendor>/branches/<branch>/…`) and bucket **`avatars`** (private: `<user>/…`, shown only to the owner via 1-hour signed links). Apps send images to the API, never to Storage directly; the API checks and shrinks them to WebP. Replacing or deleting an image deletes its file. Buckets are created with `npm run storage:setup`.
 
-**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, Profile details (name, phone, gender switch, **birthday calendar** with validation), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
+**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, Profile details (**photo** add/change/remove, name, phone, gender switch, **birthday calendar** with validation), **shop page** (how you earn points, rewards with "pts to go", menu pages, branches with directions and photos), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
 
 **Staff app (`apps/staff`)** — log-in → home (vendor, logo, branch) → scan QR (camera) → enter bill (shows the rule) → "points granted" screen. Runs in the browser and on phones.
 
@@ -160,7 +160,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 **Known gaps / open items for the customer app & launch:**
 - `GET /api/app/vendors` + vendor page (for Discover); vendor `brand_color` (cards use a generated palette today).
-- **Images in the apps:** the upload/delete APIs exist; still to build: a photo picker in the customer app (Profile), customer-facing `GET /api/app/vendors/{id}` showing logo, menu and branch photos, and upload screens in the dashboard.
+- **Images:** customers can set their photo and see shop menus/branch photos; vendors still upload menu pages, branch photos and logos through the API (Swagger/Postman) until the dashboard has upload screens.
 - **Delete account:** needs a decision on what happens to points/cards (soft delete).
 - Language & notification preferences (Settings shows "Soon").
 - Content pages: feedback, help, terms, privacy policy, join as vendor.

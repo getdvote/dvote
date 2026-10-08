@@ -25,7 +25,15 @@
       "expo-status-bar",
       "expo-web-browser",
       "expo-image",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "dvote uses your photos so you can choose a profile picture.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "dvote",
     "platforms": [

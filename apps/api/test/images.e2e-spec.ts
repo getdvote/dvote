@@ -290,4 +290,66 @@ describe('Images: customer photos, vendor logos, menu pages, branch photos (e2e)
       expect(storage.list('vendors', `${ids.vendorA}/branches/${ids.branchA2}/`)).toHaveLength(MAX_BRANCH_PHOTOS);
     });
   });
+
+  describe('shop page for customers (GET /api/app/vendors/{id})', () => {
+    beforeAll(async () => {
+      await prisma.point_rules.create({
+        data: { vendor_id: ids.vendorA, version: 1, spend_amount: 10, points_per_spend: 2, min_purchase: 25, max_points_per_purchase: 500 },
+      });
+      await prisma.rewards.createMany({
+        data: [
+          { vendor_id: ids.vendorA, name: 'Cheesecake', points_cost: 500, sort_order: 2 },
+          { vendor_id: ids.vendorA, name: 'Free coffee', points_cost: 300, sort_order: 1 },
+          { vendor_id: ids.vendorA, name: 'Old reward', points_cost: 100, status: 'archived' },
+        ],
+      });
+      await prisma.branches.update({
+        where: { id: ids.branchA1 },
+        data: { address: '14 Victor Emmanuel St, Smouha', lat: 31.2156, lng: 29.9553 },
+      });
+      await prisma.branches.create({ data: { vendor_id: ids.vendorA, name: 'Closed one', status: 'closed' } });
+    });
+
+    afterAll(async () => {
+      await prisma.rewards.deleteMany({ where: { vendor_id: ids.vendorA } });
+      await prisma.point_rules.deleteMany({ where: { vendor_id: ids.vendorA } });
+    });
+
+    it('rule, active rewards in order, menu pages, open branches with location and photos', async () => {
+      const res = await as('mona', 'get', `/api/app/vendors/${ids.vendorA}`).expect(200);
+      const menuRows = await prisma.vendor_images.count({ where: { vendor_id: ids.vendorA, kind: 'menu' } });
+      expect(res.body).toMatchObject({
+        id: ids.vendorA,
+        currency: 'EGP',
+        rule: { spendAmount: '10.00', pointsPerSpend: 2, minPurchase: '25.00', maxPointsPerPurchase: 500 },
+        rewards: [
+          { name: 'Free coffee', pointsCost: 300 },
+          { name: 'Cheesecake', pointsCost: 500 },
+        ],
+        card: null,
+      });
+      expect(res.body.rewards).toHaveLength(2); // archived one hidden
+      expect(res.body.menu).toHaveLength(menuRows);
+      expect(res.body.menu[0].url).toContain(`/public/vendors/${ids.vendorA}/menu/`);
+
+      const branches = res.body.branches as { name: string; lat: number | null; photos: unknown[] }[];
+      expect(branches.map((b) => b.name)).toEqual(['A1', 'A2']); // closed branch hidden
+      expect(branches[0]).toMatchObject({ address: '14 Victor Emmanuel St, Smouha', lat: 31.2156, lng: 29.9553, photos: [] });
+      expect(branches[1].photos).toHaveLength(MAX_BRANCH_PHOTOS);
+    });
+
+    it('a shop with no rule yet → rule null; unknown or suspended shop → 404', async () => {
+      const b = await as('mona', 'get', `/api/app/vendors/${ids.vendorB}`).expect(200);
+      expect(b.body).toMatchObject({ rule: null, rewards: [], menu: [], card: null });
+
+      expect((await as('mona', 'get', `/api/app/vendors/${randomUUID()}`).expect(404)).body.code).toBe('vendor_not_found');
+      await prisma.vendors.update({ where: { id: ids.vendorB }, data: { status: 'suspended' } });
+      await as('mona', 'get', `/api/app/vendors/${ids.vendorB}`).expect(404);
+      await prisma.vendors.update({ where: { id: ids.vendorB }, data: { status: 'active' } });
+    });
+
+    it('needs a signed-in customer', async () => {
+      await http().get(`/api/app/vendors/${ids.vendorA}`).expect(401);
+    });
+  });
 });
