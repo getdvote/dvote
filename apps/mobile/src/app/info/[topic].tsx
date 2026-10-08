@@ -8,16 +8,11 @@ import { theme } from '../../lib/theme';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /**
- * "More" menu pages that still need content or a backend (feedback form, help centre,
- * terms text, vendor sign-up). One placeholder screen so the menu is complete.
+ * "More" menu pages that still need content or a backend (help centre, terms text,
+ * vendor sign-up). One placeholder screen so the menu is complete. Send feedback is a
+ * bottom sheet (components/FeedbackSheet).
  */
 const TOPICS: Record<string, { title: string; icon: IconName; heading: string; text: string }> = {
-  feedback: {
-    title: 'Send feedback',
-    icon: 'chatbubble-ellipses-outline',
-    heading: 'Tell us what you think',
-    text: 'A feedback form is coming soon. We read every message to make dvote better.',
-  },
   help: {
     title: 'Get help',
     icon: 'help-buoy-outline',

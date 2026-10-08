@@ -9,6 +9,7 @@ import { VendorsModule } from './vendors/vendors.module';
 import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { ScansModule } from './scans/scans.module';
 import { CardsModule } from './cards/cards.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CardsModule } from './cards/cards.module';
     QrCodesModule,
     ScansModule,
     CardsModule,
+    FeedbackModule,
   ],
 })
 export class AppModule {}

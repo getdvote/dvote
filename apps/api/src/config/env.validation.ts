@@ -65,6 +65,24 @@ export class Env {
   })
   ADMIN_MFA_REQUIRED: boolean = true;
 
+  /**
+   * Google Apps Script web app that appends customer feedback to the feedback Google Sheet
+   * (script: google-apps-script/feedback.gs). Optional: unset = POST /api/app/feedback
+   * returns 503 feedback_not_configured.
+   */
+  @IsOptional()
+  // An empty FEEDBACK_SHEET_URL= line (as in .env.example) means unset.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  )
+  @IsUrl({ require_tld: false, require_protocol: true })
+  FEEDBACK_SHEET_URL?: string;
+
+  /** Shared secret the script checks, so only this API can write to the sheet. */
+  @IsOptional()
+  @IsString()
+  FEEDBACK_SHEET_SECRET?: string;
+
   /** Comma-separated list of allowed origins; unset = CORS disabled. */
   @IsOptional()
   @IsString()

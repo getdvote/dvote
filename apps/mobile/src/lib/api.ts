@@ -115,7 +115,13 @@ export const api = {
   newCollectQr: () => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'collect' }),
   qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
   cancelQr: (id: string) => call<QrCodeStatus>('POST', `/api/app/qr-codes/${id}/cancel`),
+  /** Adds the feedback to the team's Google Sheet. */
+  sendFeedback: (body: { category: FeedbackCategory; message: string }) =>
+    call<void>('POST', '/api/app/feedback', body),
 };
+
+/** Same codes as the API (CreateFeedbackDto). */
+export type FeedbackCategory = 'bug' | 'suggestion' | 'points_rewards' | 'account' | 'other';
 
 export function friendlyMessage(code: string, serverMessage?: string): string {
   const messages: Record<string, string> = {
@@ -126,6 +132,7 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     missing_token: 'Please sign in again.',
     card_not_found: 'This card was not found.',
     qr_not_found: 'This QR code was not found. Get a new one.',
+    feedback_not_configured: "Feedback isn't available yet. Please try again later.",
   };
   return messages[code] ?? serverMessage ?? 'Something went wrong. Please try again.';
 }
