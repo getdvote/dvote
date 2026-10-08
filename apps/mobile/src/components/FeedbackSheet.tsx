@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -24,6 +26,8 @@ const CATEGORIES: { id: FeedbackCategory; label: string }[] = [
   { id: 'other', label: 'Other' },
 ];
 const MAX_LENGTH = 2000; // same limit as the API
+const OPEN_MS = 280;
+const CLOSE_MS = 220;
 
 /** "Send feedback" bottom sheet (You → More): pick a category, write, send. */
 export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -35,18 +39,47 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
+  /**
+   * The backdrop fades in place while only the sheet slides, so the Modal itself doesn't
+   * animate (its built-in "slide" would move the dark backdrop up with the sheet). The
+   * Modal stays mounted until the closing animation has finished.
+   */
+  const [mounted, setMounted] = useState(visible);
+  const [sheetHeight, setSheetHeight] = useState(600);
+  const progress = useRef(new Animated.Value(0)).current; // 0 = hidden, 1 = open
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: OPEN_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(progress, {
+        toValue: 0,
+        duration: CLOSE_MS,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) return;
+        setMounted(false);
+        // Start fresh next time.
+        setCategory(null);
+        setMessage('');
+        setError(null);
+        setSent(false);
+      });
+    }
+  }, [visible, progress]);
+
   const canSend = !!category && message.trim().length > 0 && !busy;
 
   function close() {
     if (busy) return;
     onClose();
-    // Start fresh next time, once the sheet has slid away.
-    setTimeout(() => {
-      setCategory(null);
-      setMessage('');
-      setError(null);
-      setSent(false);
-    }, 300);
   }
 
   async function send() {
@@ -65,10 +98,29 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close feedback" />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={close}>
+      <Animated.View style={[styles.backdrop, { opacity: progress }]}>
+        <Pressable style={styles.fill} onPress={close} accessibilityLabel="Close feedback" />
+      </Animated.View>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents="box-none"
+      >
+        <Animated.View
+          onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
+          style={[
+            styles.sheet,
+            { paddingBottom: insets.bottom + 16 },
+            {
+              transform: [
+                {
+                  translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [sheetHeight, 0] }),
+                },
+              ],
+            },
+          ]}
+        >
           <View style={styles.handle} />
           {sent ? (
             <View style={styles.done}>
@@ -89,10 +141,10 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                   onPress={close}
-                  hitSlop={10}
-                  style={styles.closeButton}
+                  hitSlop={12}
+                  style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
                 >
-                  <Ionicons name="close" size={18} color={theme.text} />
+                  <Ionicons name="close" size={22} color={theme.text} />
                 </Pressable>
               </View>
               <Text style={styles.subtitle}>Tell us what's working and what isn't.</Text>
@@ -138,7 +190,7 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
               <PrimaryButton title="Send" onPress={() => void send()} loading={busy} disabled={!canSend} />
             </>
           )}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -147,6 +199,7 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
 const styles = StyleSheet.create({
   flex: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.25)' },
+  fill: { flex: 1 },
   sheet: {
     backgroundColor: theme.background,
     borderTopLeftRadius: theme.radius,
@@ -166,27 +219,31 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 22, fontWeight: '700', color: theme.text },
   subtitle: { fontSize: 15, color: theme.muted, marginTop: -4 },
+  // Same size as the round back button in PageHeader; hitSlop makes the tap area ~60 pt.
   closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pressed: { opacity: 0.6 },
   label: { fontSize: 15, fontWeight: '600', color: theme.text, marginTop: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  // 44 pt tall: Apple's minimum comfortable tap size.
   chip: {
-    paddingHorizontal: 14,
-    height: 36,
-    borderRadius: 18,
+    paddingHorizontal: 18,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipSelected: { backgroundColor: theme.primary },
-  chipText: { fontSize: 15, color: theme.text },
-  chipTextSelected: { color: theme.onPrimary, fontWeight: '600' },
+  // Same weight in both states, so selecting a pill doesn't widen it and shift the others.
+  chipText: { fontSize: 17, fontWeight: '500', color: theme.text },
+  chipTextSelected: { color: theme.onPrimary },
   input: {
     minHeight: 130,
     maxHeight: 220,
