@@ -31,6 +31,16 @@ export class VendorImagesService {
     private readonly storage: StorageService,
   ) {}
 
+  /**
+   * A platform admin acts like the vendor's own admin (menu pages + any branch's photos).
+   * Unknown vendor → vendor_not_found.
+   */
+  async adminContext(vendorId: string): Promise<StaffContext> {
+    const vendor = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
+    if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
+    return { staffId: 'platform-admin', vendorId, branchId: null, role: 'vendor_admin' };
+  }
+
   async list(ctx: StaffContext, query: ListVendorImagesQueryDto): Promise<VendorImageResponseDto[]> {
     const images = await this.prisma.vendor_images.findMany({
       where: { vendor_id: ctx.vendorId, kind: query.kind, branch_id: query.branchId },

@@ -1,0 +1,268 @@
+import { config } from './config';
+import { supabase } from './supabase';
+
+/**
+ * Typed calls to the dvote admin API (/api/admin). Every call sends the signed-in admin's
+ * Supabase token. TODO: replace the hand-written types with packages/api-client once generated.
+ */
+
+export type VendorStatus = 'active' | 'suspended';
+export type BranchStatus = 'active' | 'closed';
+export type RewardStatus = 'active' | 'archived';
+export type AccountStatus = 'active' | 'disabled';
+export type UserStatus = 'active' | 'blocked';
+export type StaffRole = 'vendor_admin' | 'branch_manager' | 'staff';
+
+export interface AdminMe {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface Overview {
+  vendorsActive: number;
+  vendorsSuspended: number;
+  branchesOpen: number;
+  customers: number;
+  customersBlocked: number;
+  customersNew7d: number;
+  cards: number;
+  pointsEarned: number;
+  pointsRedeemed: number;
+  pointsOutstanding: number;
+  collectsToday: number;
+  days: { date: string; pointsEarned: number; collects: number; newCustomers: number }[];
+  topVendors: { id: string; name: string; logoUrl: string | null; pointsEarned: number; collects: number }[];
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  contactEmail: string | null;
+  currency: string;
+  status: VendorStatus;
+  branchCount: number;
+  staffCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Branch {
+  id: string;
+  vendorId: string;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  timezone: string;
+  status: BranchStatus;
+  createdAt: string;
+}
+
+export interface PointRule {
+  id: string;
+  version: number;
+  spendAmount: string;
+  pointsPerSpend: number;
+  minPurchase: string;
+  maxPointsPerPurchase: number | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface Reward {
+  id: string;
+  vendorId: string;
+  name: string;
+  nameAr: string | null;
+  description: string | null;
+  descriptionAr: string | null;
+  pointsCost: number;
+  status: RewardStatus;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface VendorImage {
+  id: string;
+  kind: 'menu' | 'branch_photo';
+  branchId: string | null;
+  url: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface Staff {
+  id: string;
+  vendorId: string;
+  branchId: string | null;
+  name: string;
+  email: string;
+  role: StaffRole;
+  status: AccountStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserListItem {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  status: UserStatus;
+  avatarUrl: string | null;
+  cardsCount: number;
+  pointsBalance: number;
+  lastActivityAt: string | null;
+  createdAt: string;
+}
+
+export interface UserDetail extends UserListItem {
+  gender: 'male' | 'female' | null;
+  birthDate: string | null;
+  cards: {
+    id: string;
+    vendorId: string;
+    vendorName: string;
+    vendorLogoUrl: string | null;
+    balance: number;
+    lifetimePoints: number;
+    lastActivityAt: string;
+  }[];
+  events: {
+    id: string;
+    type: 'earn' | 'redeem' | 'adjust';
+    delta: number;
+    vendorName: string;
+    branchName: string | null;
+    purchaseAmount: string | null;
+    rewardName: string | null;
+    reason: string | null;
+    createdAt: string;
+  }[];
+}
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** An error from the API with its stable `code` (e.g. mfa_required). */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const MESSAGES: Record<string, string> = {
+  network: "Can't reach the dvote API. Is it running?",
+  not_admin: 'This account is not a dvote platform admin.',
+  admin_disabled: 'This admin account is disabled.',
+  mfa_required: 'Two-factor sign-in is required.',
+  token_expired: 'Your session expired. Sign in again.',
+  invalid_token: 'Sign in again.',
+  missing_token: 'Sign in again.',
+  vendor_not_found: 'This vendor no longer exists.',
+  currency_locked: "The currency can't change once the vendor has a points rule.",
+  email_taken: 'This email is already used by another staff account.',
+  account_already_staff: 'This account already works at a vendor.',
+  email_rate_limited: 'Too many invite emails were sent. Try again in a while.',
+  too_many_images: 'Limit reached: delete an image first.',
+  unsupported_image: 'Use a JPG, PNG, WebP or HEIC image.',
+  file_too_large: 'The image must be under 10 MB.',
+};
+
+type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+
+async function call<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const isForm = body instanceof FormData;
+  let res: Response;
+  try {
+    res = await fetch(`${config.apiUrl}${path}`, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: isForm ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, 'network', MESSAGES.network);
+  }
+  if (res.status === 204) return undefined as T;
+  const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string | string[] };
+  if (!res.ok) {
+    const code = json.code ?? `http_${res.status}`;
+    const server = Array.isArray(json.message) ? json.message.join(', ') : json.message;
+    throw new ApiError(res.status, code, MESSAGES[code] ?? server ?? 'Something went wrong.');
+  }
+  return json as T;
+}
+
+const qs = (params: Record<string, string | number | undefined>) => {
+  const p = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
+  return p.length ? `?${p.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&')}` : '';
+};
+
+const file = (f: File, fields: Record<string, string | undefined> = {}) => {
+  const form = new FormData();
+  form.append('file', f);
+  for (const [k, v] of Object.entries(fields)) if (v) form.append(k, v);
+  return form;
+};
+
+export const api = {
+  me: () => call<AdminMe>('GET', '/api/admin/me'),
+  overview: () => call<Overview>('GET', '/api/admin/overview'),
+
+  vendors: (q: { search?: string; status?: VendorStatus } = {}) => call<Vendor[]>('GET', `/api/admin/vendors${qs(q)}`),
+  vendor: (id: string) => call<Vendor>('GET', `/api/admin/vendors/${id}`),
+  createVendor: (body: { name: string; contactEmail?: string; currency?: string }) =>
+    call<Vendor>('POST', '/api/admin/vendors', body),
+  updateVendor: (id: string, body: Partial<{ name: string; contactEmail: string | null; currency: string; status: VendorStatus }>) =>
+    call<Vendor>('PATCH', `/api/admin/vendors/${id}`, body),
+  uploadLogo: (id: string, f: File) => call<Vendor>('PUT', `/api/admin/vendors/${id}/logo`, file(f)),
+  removeLogo: (id: string) => call<Vendor>('DELETE', `/api/admin/vendors/${id}/logo`),
+  inviteVendorAdmin: (id: string, body: { name: string; email: string }) =>
+    call<Staff & { invited: boolean }>('POST', `/api/admin/vendors/${id}/admins`, body),
+
+  branches: (vendorId: string) => call<Branch[]>('GET', `/api/admin/vendors/${vendorId}/branches`),
+  createBranch: (vendorId: string, body: Partial<Branch>) => call<Branch>('POST', `/api/admin/vendors/${vendorId}/branches`, body),
+  updateBranch: (id: string, body: Partial<Branch>) => call<Branch>('PATCH', `/api/admin/branches/${id}`, body),
+
+  pointRules: (vendorId: string) => call<PointRule[]>('GET', `/api/admin/vendors/${vendorId}/point-rules`),
+  publishRule: (
+    vendorId: string,
+    body: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null },
+  ) => call<PointRule>('POST', `/api/admin/vendors/${vendorId}/point-rules`, body),
+  deactivateRule: (vendorId: string) => call<void>('DELETE', `/api/admin/vendors/${vendorId}/point-rules/active`),
+
+  rewards: (vendorId: string) => call<Reward[]>('GET', `/api/admin/vendors/${vendorId}/rewards`),
+  createReward: (vendorId: string, body: Partial<Reward>) => call<Reward>('POST', `/api/admin/vendors/${vendorId}/rewards`, body),
+  updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/admin/rewards/${id}`, body),
+
+  images: (vendorId: string) => call<VendorImage[]>('GET', `/api/admin/vendors/${vendorId}/images`),
+  uploadImage: (vendorId: string, f: File, kind: VendorImage['kind'], branchId?: string) =>
+    call<VendorImage>('POST', `/api/admin/vendors/${vendorId}/images`, file(f, { kind, branchId })),
+  deleteImage: (vendorId: string, imageId: string) => call<void>('DELETE', `/api/admin/vendors/${vendorId}/images/${imageId}`),
+
+  staff: (vendorId: string) => call<Staff[]>('GET', `/api/admin/vendors/${vendorId}/staff`),
+  updateStaff: (id: string, body: { name?: string; status?: AccountStatus }) => call<Staff>('PATCH', `/api/admin/staff/${id}`, body),
+
+  users: (q: { search?: string; status?: UserStatus; page?: number; pageSize?: number }) =>
+    call<Page<UserListItem>>('GET', `/api/admin/users${qs(q)}`),
+  user: (id: string) => call<UserDetail>('GET', `/api/admin/users/${id}`),
+  setUserStatus: (id: string, status: UserStatus) => call<UserDetail>('PATCH', `/api/admin/users/${id}`, { status }),
+};
+
+/** A readable message for any error thrown by an API call or Supabase. */
+export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong.');
