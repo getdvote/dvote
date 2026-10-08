@@ -1,6 +1,7 @@
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
+import { useI18n } from '../i18n';
 import type { VendorPage } from '../lib/api';
 import { theme } from '../lib/theme';
 import { Icon } from './Icon';
@@ -13,8 +14,9 @@ import { EmptySection, Group } from './ui';
  * and on card details.
  */
 export function RewardList({ rewards, balance }: { rewards: VendorPage['rewards']; balance: number }) {
+  const { t } = useI18n();
   if (rewards.length === 0) {
-    return <EmptySection icon={GiftIcon} title="No rewards yet" text="This shop's rewards will show here." />;
+    return <EmptySection icon={GiftIcon} title={t('rewards.none')} text={t('rewards.noneText')} />;
   }
   return (
     <Group>
@@ -39,10 +41,10 @@ export function RewardList({ rewards, balance }: { rewards: VendorPage['rewards'
                 </Text>
               ) : null}
               <Text style={[styles.text, short <= 0 && styles.ready]}>
-                {short <= 0 ? 'You have enough points' : `${short.toLocaleString()} pts to go`}
+                {short <= 0 ? t('rewards.enough') : t('rewards.toGo', { count: short })}
               </Text>
             </View>
-            <Text style={styles.cost}>{r.pointsCost.toLocaleString()} pts</Text>
+            <Text style={styles.cost}>{t('common.pts', { count: r.pointsCost })}</Text>
           </View>
         );
       })}

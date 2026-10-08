@@ -17,21 +17,23 @@ import {
 } from 'react-native';
 import { Text, TextInput } from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useI18n } from '../i18n';
 import { theme, squircle } from '../lib/theme';
 
 
 /** Pushed page: round back button + centred title (Profile details, Settings, About…). */
 export function PageHeader({ title, onBack }: { title: string; onBack?: () => void }) {
+  const { t } = useI18n();
   return (
     <View style={styles.pageHeader}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Back"
+        accessibilityLabel={t('common.back')}
         onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/you')))}
         style={styles.backButton}
         hitSlop={8}
       >
-        <Icon icon={ArrowLeft01Icon} size={24} color={theme.text} />
+        <Icon icon={ArrowLeft01Icon} size={24} color={theme.text} mirror />
       </Pressable>
       <Text style={styles.pageTitle} numberOfLines={1}>
         {title}
@@ -51,8 +53,10 @@ export function Screen({
   edges?: ('top' | 'bottom')[];
   style?: StyleProp<ViewStyle>;
 }) {
+  // Arabic lays the whole page out right-to-left (rows, margins with start/end, arrows).
+  const { rtl } = useI18n();
   return (
-    <SafeAreaView edges={edges} style={[styles.screen, style]}>
+    <SafeAreaView edges={edges} style={[styles.screen, { direction: rtl ? 'rtl' : 'ltr' }, style]}>
       {children}
     </SafeAreaView>
   );
@@ -114,16 +118,17 @@ export function Row({
         </Text>
       ) : null}
       {right}
-      {onPress && !right ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} /> : null}
+      {onPress && !right ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror /> : null}
     </Pressable>
   );
 }
 
 /** Small grey "Soon" tag for features whose backend isn't ready yet. */
 export function SoonTag() {
+  const { t } = useI18n();
   return (
     <View style={styles.soon}>
-      <Text style={styles.soonText}>Soon</Text>
+      <Text style={styles.soonText}>{t('common.soon')}</Text>
     </View>
   );
 }
@@ -191,6 +196,7 @@ export function Field({
   style,
   ...input
 }: TextInputProps & { label?: string; secure?: boolean }) {
+  const { t } = useI18n();
   const [hidden, setHidden] = useState(true);
   return (
     <View style={styles.fieldWrap}>
@@ -205,7 +211,7 @@ export function Field({
         {secure ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
+            accessibilityLabel={t(hidden ? 'common.showPassword' : 'common.hidePassword')}
             onPress={() => setHidden((h) => !h)}
             hitSlop={10}
           >
@@ -243,6 +249,7 @@ export function ErrorBox({ message }: { message: string | null }) {
 }
 
 export function Avatar({ name, url, size = 80 }: { name: string | null; url: string | null; size?: number }) {
+  const { t } = useI18n();
   const initials = (name ?? '?')
     .split(/\s+/)
     .filter(Boolean)
@@ -251,7 +258,7 @@ export function Avatar({ name, url, size = 80 }: { name: string | null; url: str
     .join('');
   const box = { width: size, height: size, borderRadius: size / 2 };
   return url ? (
-    <Image source={{ uri: url }} style={[box, styles.avatarBorder]} contentFit="cover" accessibilityLabel={name ?? 'Profile picture'} />
+    <Image source={{ uri: url }} style={[box, styles.avatarBorder]} contentFit="cover" accessibilityLabel={name ?? t('common.profilePicture')} />
   ) : (
     <View style={[box, styles.avatarFallback]}>
       <Text style={[styles.avatarInitials, { fontSize: size * 0.36 }]}>{initials || '?'}</Text>

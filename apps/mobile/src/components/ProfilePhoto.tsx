@@ -2,6 +2,7 @@ import Camera01Icon from '@hugeicons/core-free-icons/Camera01Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useI18n } from '../i18n';
 import { api, ApiError } from '../lib/api';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
@@ -18,6 +19,7 @@ const SIZE = 104;
  */
 export function ProfilePhoto() {
   const { me, setMe, handleAuthError } = useSession();
+  const { t } = useI18n();
   const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!me) return null;
@@ -29,7 +31,7 @@ export function ProfilePhoto() {
       setMe(await action());
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not update your photo. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('profile.photoFailed'));
     } finally {
       setBusy(null);
     }
@@ -54,7 +56,7 @@ export function ProfilePhoto() {
     <View style={styles.wrap}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={me.avatarUrl ? 'Change profile photo' : 'Add a profile photo'}
+        accessibilityLabel={me.avatarUrl ? t('profile.photoChangeA11y') : t('profile.photoAddA11y')}
         onPress={() => void change()}
         disabled={busy !== null}
         style={({ pressed }) => pressed && { opacity: 0.85 }}
@@ -72,7 +74,7 @@ export function ProfilePhoto() {
 
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" onPress={() => void change()} disabled={busy !== null} hitSlop={8}>
-          <Text style={[styles.action, busy && styles.off]}>{me.avatarUrl ? 'Change photo' : 'Add photo'}</Text>
+          <Text style={[styles.action, busy && styles.off]}>{me.avatarUrl ? t('profile.photoChange') : t('profile.photoAdd')}</Text>
         </Pressable>
         {me.avatarUrl ? (
           <>
@@ -84,7 +86,7 @@ export function ProfilePhoto() {
               hitSlop={8}
             >
               <Text style={[styles.action, styles.remove, busy && styles.off]}>
-                {busy === 'remove' ? 'Removing…' : 'Remove'}
+                {busy === 'remove' ? t('profile.photoRemoving') : t('profile.photoRemove')}
               </Text>
             </Pressable>
           </>

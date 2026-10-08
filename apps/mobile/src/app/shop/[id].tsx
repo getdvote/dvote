@@ -14,6 +14,7 @@ import { RewardList } from '../../components/RewardList';
 import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, Group, PageHeader, PillButton, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type VendorPage } from '../../lib/api';
+import { t as translate, useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
 
@@ -29,6 +30,7 @@ import { theme, vendorColors, squircle } from '../../lib/theme';
 export default function Shop() {
   const params = useLocalSearchParams<{ id: string; name?: string; logoUrl?: string; coverUrl?: string }>();
   const { handleAuthError } = useSession();
+  const { t } = useI18n();
   const [shop, setShop] = useState<VendorPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null);
@@ -39,15 +41,15 @@ export default function Shop() {
       setShop(await api.vendor(params.id));
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not load this shop.');
+      setError(err instanceof ApiError ? err.message : t('shop.couldNotLoad'));
     }
-  }, [params.id, handleAuthError]);
+  }, [params.id, handleAuthError, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const shopName = shop?.name ?? (params.name || 'Shop');
+  const shopName = shop?.name ?? (params.name || t('shop.fallbackName'));
   const logoUrl = shop?.logoUrl ?? params.logoUrl ?? null;
   const colors = vendorColors(params.id ?? '');
   const open = (images: string[], index = 0) => setViewer({ images, index });
@@ -73,7 +75,7 @@ export default function Shop() {
           {logoUrl ? (
             <Pressable
               accessibilityRole="imagebutton"
-              accessibilityLabel={`${shopName} logo. Open full screen`}
+              accessibilityLabel={t('shop.logoA11y', { name: shopName })}
               onPress={() => open([logoUrl])}
               style={({ pressed }) => pressed && { opacity: 0.85 }}
             >
@@ -85,30 +87,30 @@ export default function Shop() {
             </View>
           )}
           <Text style={styles.name}>{shopName}</Text>
-          {shop?.card ? <Text style={styles.balance}>You have {shop.card.balance} pts here</Text> : null}
+          {shop?.card ? <Text style={styles.balance}>{t('shop.youHave', { count: shop.card.balance })}</Text> : null}
         </View>
 
         {!shop ? (
           error ? (
             <View style={styles.retry}>
               <ErrorBox message={error} />
-              <PillButton title="Try again" onPress={() => void load()} />
+              <PillButton title={t('common.tryAgain')} onPress={() => void load()} />
             </View>
           ) : (
             <ActivityIndicator color={theme.text} style={{ marginTop: 32 }} />
           )
         ) : (
           <>
-            <SectionTitle title="How you earn points" />
+            <SectionTitle title={t('shop.earnTitle')} />
             <EarnRule shop={shop} />
 
-            <SectionTitle title="Rewards" />
+            <SectionTitle title={t('shop.rewards')} />
             <RewardList rewards={shop.rewards} balance={shop.card?.balance ?? 0} />
 
-            <SectionTitle title="Menu" />
+            <SectionTitle title={t('shop.menu')} />
             <MenuGallery images={shop.menu.map((m) => m.url)} />
 
-            <SectionTitle title="Branches" />
+            <SectionTitle title={t('shop.branches')} />
             <Branches shop={shop} onOpenPhotos={open} />
           </>
         )}
@@ -132,16 +134,17 @@ function EarnRule({ shop }: { shop: VendorPage }) {
     return (
       <EmptySection
         icon={Coins01Icon}
-        title="No points rule yet"
-        text="This shop hasn't set how many points you earn. Check back soon."
+        title={translate('shop.noRule')}
+        text={translate('shop.noRuleText')}
       />
     );
   }
-  const points = `${rule.pointsPerSpend} point${rule.pointsPerSpend === 1 ? '' : 's'}`;
   const notes = [
-    Number(rule.minPurchase) > 0 ? `Bills from ${amount(rule.minPurchase)} ${shop.currency}` : null,
-    rule.maxPointsPerPurchase ? `Up to ${rule.maxPointsPerPurchase} points per purchase` : null,
-    'Points are rounded down and work at every branch',
+    Number(rule.minPurchase) > 0
+      ? translate('shop.minBill', { amount: amount(rule.minPurchase), currency: shop.currency })
+      : null,
+    rule.maxPointsPerPurchase ? translate('shop.cap', { count: rule.maxPointsPerPurchase }) : null,
+    translate('shop.roundedDown'),
   ].filter(Boolean);
   return (
     <Group>
@@ -151,7 +154,11 @@ function EarnRule({ shop }: { shop: VendorPage }) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.ruleMain}>
-            Every {amount(rule.spendAmount)} {shop.currency} = {points}
+            {translate('shop.rule', {
+              amount: amount(rule.spendAmount),
+              currency: shop.currency,
+              points: translate('common.points', { count: rule.pointsPerSpend }),
+            })}
           </Text>
           {notes.map((n) => (
             <Text key={n} style={styles.ruleNote}>
@@ -173,7 +180,7 @@ function directions(b: VendorPage['branches'][number]) {
 
 function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (images: string[], index: number) => void }) {
   if (shop.branches.length === 0) {
-    return <EmptySection icon={Location01Icon} title="No branches yet" text="This shop's branches will show here." />;
+    return <EmptySection icon={Location01Icon} title={translate('shop.noBranches')} text={translate('shop.noBranchesText')} />;
   }
   return (
     <Group>
@@ -184,7 +191,7 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
           <View key={b.id} style={styles.branch}>
             <Pressable
               accessibilityRole={canNavigate ? 'link' : undefined}
-              accessibilityLabel={canNavigate ? `${b.name}. Get directions` : b.name}
+              accessibilityLabel={canNavigate ? translate('shop.directionsA11y', { name: b.name }) : b.name}
               disabled={!canNavigate}
               onPress={() => directions(b)}
               style={({ pressed }) => [styles.branchRow, pressed && { opacity: 0.6 }]}
@@ -195,11 +202,11 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
               <View style={{ flex: 1 }}>
                 <Text style={styles.rewardName}>{b.name}</Text>
                 <Text style={styles.rewardText} numberOfLines={2}>
-                  {b.address ?? 'Address coming soon'}
+                  {b.address ?? translate('shop.addressSoon')}
                 </Text>
-                {canNavigate ? <Text style={styles.link}>Get directions</Text> : null}
+                {canNavigate ? <Text style={styles.link}>{translate('shop.directions')}</Text> : null}
               </View>
-              {canNavigate ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} /> : null}
+              {canNavigate ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror /> : null}
             </Pressable>
             {photos.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photos}>
@@ -207,7 +214,7 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
                   <Pressable
                     key={url}
                     accessibilityRole="imagebutton"
-                    accessibilityLabel={`${b.name} photo ${i + 1}. Open full screen`}
+                    accessibilityLabel={translate('shop.photoA11y', { name: b.name, n: i + 1 })}
                     onPress={() => onOpenPhotos(photos, i)}
                   >
                     <Image source={{ uri: url }} style={styles.photo} contentFit="cover" />

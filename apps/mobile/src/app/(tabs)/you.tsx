@@ -14,22 +14,24 @@ import { Text } from '../../components/Text';
 import { DvoteLogo } from '../../components/DvoteLogo';
 import { FeedbackSheet } from '../../components/FeedbackSheet';
 import { Avatar, ErrorBox, Group, Row, Screen, SectionTitle } from '../../components/ui';
+import { useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
 /** "My profile" (route: you): profile header + Account / More menus. Logout and Delete account are in Settings. */
 export default function You() {
   const { me, meError, session } = useSession();
+  const { t } = useI18n();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const name = me?.name ?? 'dvote member';
+  const name = me?.name ?? t('you.member');
   const email = me?.email ?? session?.user.email ?? null;
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>My profile</Text>
+          <Text style={styles.title}>{t('you.title')}</Text>
         </View>
 
         <View style={styles.profile}>
@@ -41,20 +43,20 @@ export default function You() {
         </View>
         <ErrorBox message={meError} />
 
-        <SectionTitle title="Account" />
+        <SectionTitle title={t('you.account')} />
         <Group>
-          <Row icon={GiftCard02Icon} label="My cards" onPress={() => router.push('/my-cards')} />
-          <Row icon={UserCircleIcon} label="Profile details" onPress={() => router.push('/profile-details')} />
-          <Row icon={Settings01Icon} label="Settings" onPress={() => router.push('/settings')} />
+          <Row icon={GiftCard02Icon} label={t('you.myCards')} onPress={() => router.push('/my-cards')} />
+          <Row icon={UserCircleIcon} label={t('you.profileDetails')} onPress={() => router.push('/profile-details')} />
+          <Row icon={Settings01Icon} label={t('you.settings')} onPress={() => router.push('/settings')} />
         </Group>
 
-        <SectionTitle title="More" />
+        <SectionTitle title={t('you.more')} />
         <Group>
-          <Row icon={BubbleChatIcon} label="Send feedback" onPress={() => setFeedbackOpen(true)} />
-          <Row icon={CustomerService02Icon} label="Get help" onPress={() => router.push('/info/help')} />
-          <Row icon={File01Icon} label="Terms and conditions" onPress={() => router.push('/info/terms')} />
-          <Row icon={InformationCircleIcon} label="About Dvote" onPress={() => router.push('/about')} />
-          <Row icon={Store01Icon} label="Join as a vendor" onPress={() => router.push('/info/join')} />
+          <Row icon={BubbleChatIcon} label={t('you.feedback')} onPress={() => setFeedbackOpen(true)} />
+          <Row icon={CustomerService02Icon} label={t('you.help')} onPress={() => router.push('/info/help')} />
+          <Row icon={File01Icon} label={t('you.terms')} onPress={() => router.push('/info/terms')} />
+          <Row icon={InformationCircleIcon} label={t('you.about')} onPress={() => router.push('/about')} />
+          <Row icon={Store01Icon} label={t('you.join')} onPress={() => router.push('/info/join')} />
         </Group>
 
         <View style={styles.footer}>

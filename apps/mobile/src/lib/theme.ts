@@ -41,8 +41,34 @@ export const INTER_FONTS = {
   Inter_800ExtraBold: 'Inter_800ExtraBold',
 } as const;
 
-/** The Inter font file for a fontWeight (default and anything up to 400: Regular). */
-export function fontFamily(weight: string | number | undefined): string {
+/**
+ * Arabic font: IBM Plex Sans Arabic (Inter has no Arabic letters). It also has Latin letters,
+ * so shop names in English still look right inside Arabic screens. No 800 weight: Bold is used.
+ */
+export const ARABIC_FONTS = {
+  IBMPlexSansArabic_400Regular: 'IBMPlexSansArabic_400Regular',
+  IBMPlexSansArabic_500Medium: 'IBMPlexSansArabic_500Medium',
+  IBMPlexSansArabic_600SemiBold: 'IBMPlexSansArabic_600SemiBold',
+  IBMPlexSansArabic_700Bold: 'IBMPlexSansArabic_700Bold',
+} as const;
+
+/** The font file for a fontWeight (default and anything up to 400: Regular), in the app language's font. */
+export function fontFamily(weight: string | number | undefined, arabic = false): string {
+  if (arabic) {
+    switch (String(weight ?? '400')) {
+      case '500':
+        return ARABIC_FONTS.IBMPlexSansArabic_500Medium;
+      case '600':
+        return ARABIC_FONTS.IBMPlexSansArabic_600SemiBold;
+      case '700':
+      case '800':
+      case '900':
+      case 'bold':
+        return ARABIC_FONTS.IBMPlexSansArabic_700Bold;
+      default:
+        return ARABIC_FONTS.IBMPlexSansArabic_400Regular;
+    }
+  }
   switch (String(weight ?? '400')) {
     case '500':
       return INTER_FONTS.Inter_500Medium;

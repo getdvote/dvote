@@ -140,7 +140,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 **Image storage (Supabase Storage):** bucket **`vendors`** (public: `<vendor>/logo/…`, `<vendor>/menu/…`, `<vendor>/branches/<branch>/…`) and bucket **`avatars`** (private: `<user>/…`, shown only to the owner via 1-hour signed links). Apps send images to the API, never to Storage directly; the API checks and shrinks them to WebP. Replacing or deleting an image deletes its file. Buckets are created with `npm run storage:setup`.
 
-**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, Profile details (**photo** add/change/remove, name, phone, gender switch, **birthday calendar** with validation), **shop page** (how you earn points, rewards with "pts to go", menu pages, branches with directions and photos), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
+**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, **English + Arabic** (Settings → Language; English default, right-to-left Arabic), Profile details (**photo** add/change/remove, name, phone, gender switch, **birthday calendar** with validation), **shop page** (how you earn points, rewards with "pts to go", menu pages, branches with directions and photos), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
 
 **Staff app (`apps/staff`)** — log-in → home (vendor, logo, branch) → scan QR (camera) → enter bill (shows the rule) → "points granted" screen. Runs in the browser and on phones.
 
@@ -177,6 +177,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 | Date | Decision |
 |---|---|
+| 2026-10-08 | **Customer app in English and Arabic** (English default; switch in Settings; Arabic is fully right-to-left with an Arabic font; proper Arabic plurals). Shop data (names, rewards) stays as the shop typed it. |
 | 2026-10-08 | **Image storage:** Supabase Storage, folders by **id** (never names), random file names, public `vendors` bucket + private `avatars` bucket, uploads only through the API (WebP), deleting an image deletes its file. Menu pages + branch photos in `vendor_images` (migration 6). |
 | 2026-10-08 | Code review: `getdvote` GitHub account is the only code owner/reviewer; Karim and Mohamed open PRs from their own accounts. |
 | 2026-10-08 | Birthday is picked from dvote's own calendar sheet (same on Android/iPhone/web), validated in app and API (real date, 1900 → today). |

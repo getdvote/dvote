@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
+import { t } from '../i18n';
 import type { Card } from '../lib/api';
 import { onCardColor, vendorColors, squircle } from '../lib/theme';
 import { DvoteLogo } from './DvoteLogo';
@@ -19,7 +20,7 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${card.vendor.name}: ${card.balance} points`}
+      accessibilityLabel={t('cards.cardA11y', { name: card.vendor.name, balance: t('common.points', { count: card.balance }) })}
       onPress={onPress}
       style={({ pressed }) => [pressed && { transform: [{ scale: 0.985 }] }]}
     >
@@ -45,7 +46,7 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
         <View>
           <Text style={[styles.balance, { color: ink }]}>
             {card.balance.toLocaleString()}
-            <Text style={styles.pts}> pts</Text>
+            <Text style={styles.pts}> {t('common.ptsUnit', { count: card.balance })}</Text>
           </Text>
           <View style={[styles.track, { backgroundColor: ink === '#FFFFFF' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.12)' }]}>
             <View style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: ink }]} />
@@ -62,11 +63,9 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
 /** Progress line shown under a card's balance (also used by the My cards list). */
 export function rewardCaption(card: Card): string {
   const next = card.nextReward;
-  if (next) return `${next.pointsNeeded} pts to ${next.name}`;
-  if (card.affordableRewards > 0) {
-    return `${card.affordableRewards} reward${card.affordableRewards === 1 ? '' : 's'} ready to redeem`;
-  }
-  return `Lifetime ${card.lifetimePoints.toLocaleString()} pts`;
+  if (next) return t('cards.toNext', { count: next.pointsNeeded, reward: next.name });
+  if (card.affordableRewards > 0) return t('cards.ready', { count: card.affordableRewards });
+  return t('cards.lifetime', { count: card.lifetimePoints });
 }
 
 const styles = StyleSheet.create({

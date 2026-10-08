@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { theme, squircle } from '../lib/theme';
 import { ImageViewer } from './ImageViewer';
+import { useI18n } from '../i18n';
 import { EmptySection } from './ui';
 
 const PAGE_WIDTH = 220;
@@ -17,12 +18,13 @@ const GAP = 12;
  */
 export function MenuGallery({ images }: { images: string[] }) {
   const [openAt, setOpenAt] = useState<number | null>(null);
+  const { t } = useI18n();
   if (images.length === 0) {
     return (
       <EmptySection
         icon={Coffee02Icon}
-        title="Menu coming soon"
-        text="This shop's menu pages will show here."
+        title={t('shop.menuSoon')}
+        text={t('shop.menuSoonText')}
       />
     );
   }
@@ -42,7 +44,7 @@ export function MenuGallery({ images }: { images: string[] }) {
         renderItem={({ item, index }) => (
           <Pressable
             accessibilityRole="imagebutton"
-            accessibilityLabel={`Menu page ${index + 1} of ${images.length}. Open full screen`}
+            accessibilityLabel={t('shop.menuPageA11y', { n: index + 1, total: images.length })}
             onPress={() => setOpenAt(index)}
             style={({ pressed }) => pressed && styles.pressed}
           >

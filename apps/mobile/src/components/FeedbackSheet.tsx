@@ -8,22 +8,22 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n, type TKey } from '../i18n';
 import { api, ApiError, type FeedbackCategory } from '../lib/api';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
+import { Text, TextInput } from './Text';
 import { ErrorBox, PrimaryButton } from './ui';
 
-const CATEGORIES: { id: FeedbackCategory; label: string }[] = [
-  { id: 'bug', label: 'Bug' },
-  { id: 'suggestion', label: 'Suggestion' },
-  { id: 'points_rewards', label: 'Points & rewards' },
-  { id: 'account', label: 'Account' },
-  { id: 'other', label: 'Other' },
+const CATEGORIES: { id: FeedbackCategory; label: TKey }[] = [
+  { id: 'bug', label: 'feedback.bug' },
+  { id: 'suggestion', label: 'feedback.suggestion' },
+  { id: 'points_rewards', label: 'feedback.pointsRewards' },
+  { id: 'account', label: 'feedback.accountTopic' },
+  { id: 'other', label: 'feedback.otherTopic' },
 ];
 const MAX_LENGTH = 2000; // same limit as the API
 const OPEN_MS = 280;
@@ -32,6 +32,7 @@ const CLOSE_MS = 220;
 /** "Send feedback" bottom sheet (You → More): pick a category, write, send. */
 export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { handleAuthError } = useSession();
+  const { t, rtl } = useI18n();
   const insets = useSafeAreaInsets();
   const [category, setCategory] = useState<FeedbackCategory | null>(null);
   const [message, setMessage] = useState('');
@@ -91,7 +92,7 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
       setSent(true);
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not send your feedback. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('feedback.failed'));
     } finally {
       setBusy(false);
     }
@@ -100,7 +101,7 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={close}>
       <Animated.View style={[styles.backdrop, { opacity: progress }]}>
-        <Pressable style={styles.fill} onPress={close} accessibilityLabel="Close feedback" />
+        <Pressable style={styles.fill} onPress={close} accessibilityLabel={t('feedback.closeA11y')} />
       </Animated.View>
       <KeyboardAvoidingView
         style={styles.flex}
@@ -111,7 +112,7 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
           onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
           style={[
             styles.sheet,
-            { paddingBottom: insets.bottom + 16 },
+            { paddingBottom: insets.bottom + 16, direction: rtl ? 'rtl' : 'ltr' },
             {
               transform: [
                 {
@@ -127,19 +128,19 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
               <View style={styles.doneIcon}>
                 <Ionicons name="checkmark" size={30} color={theme.onPrimary} />
               </View>
-              <Text style={styles.title}>Thanks for your feedback</Text>
-              <Text style={styles.subtitle}>We read every message to make dvote better.</Text>
+              <Text style={styles.title}>{t('feedback.thanks')}</Text>
+              <Text style={styles.subtitle}>{t('feedback.thanksText')}</Text>
               <View style={styles.fullWidth}>
-                <PrimaryButton title="Done" onPress={close} />
+                <PrimaryButton title={t('common.done')} onPress={close} />
               </View>
             </View>
           ) : (
             <>
               <View style={styles.header}>
-                <Text style={styles.title}>Send feedback</Text>
+                <Text style={styles.title}>{t('feedback.title')}</Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t('common.close')}
                   onPress={close}
                   hitSlop={12}
                   style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
@@ -147,9 +148,9 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
                   <Ionicons name="close" size={22} color={theme.text} />
                 </Pressable>
               </View>
-              <Text style={styles.subtitle}>Tell us what's working and what isn't.</Text>
+              <Text style={styles.subtitle}>{t('feedback.subtitle')}</Text>
 
-              <Text style={styles.label}>Category</Text>
+              <Text style={styles.label}>{t('feedback.category')}</Text>
               <View style={styles.chips} accessibilityRole="radiogroup">
                 {CATEGORIES.map((c) => {
                   const selected = category === c.id;
@@ -161,33 +162,33 @@ export function FeedbackSheet({ visible, onClose }: { visible: boolean; onClose:
                       onPress={() => setCategory(c.id)}
                       style={[styles.chip, selected && styles.chipSelected]}
                     >
-                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{c.label}</Text>
+                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{t(c.label)}</Text>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>Your feedback</Text>
+              <Text style={styles.label}>{t('feedback.yours')}</Text>
               <TextInput
                 value={message}
                 onChangeText={(v) => {
                   setMessage(v);
                   setError(null);
                 }}
-                placeholder="What happened, or what would you like to see?"
+                placeholder={t('feedback.placeholder')}
                 placeholderTextColor={theme.placeholder}
                 multiline
                 maxLength={MAX_LENGTH}
                 textAlignVertical="top"
                 style={styles.input}
-                accessibilityLabel="Your feedback"
+                accessibilityLabel={t('feedback.yours')}
               />
               <Text style={styles.counter}>
                 {message.length}/{MAX_LENGTH}
               </Text>
 
               <ErrorBox message={error} />
-              <PrimaryButton title="Send" onPress={() => void send()} loading={busy} disabled={!canSend} />
+              <PrimaryButton title={t('feedback.send')} onPress={() => void send()} loading={busy} disabled={!canSend} />
             </>
           )}
         </Animated.View>

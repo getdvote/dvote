@@ -31,7 +31,7 @@ Four clients:
 
 ## Repo layout (monorepo)
 
-`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` is the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). `dashboard` and `api-client` are placeholders — not scaffolded yet. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, `mobile:*` (no npm workspaces yet; add them when the other packages get a `package.json`).
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` is the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). **Languages: English (default) + Arabic** — see "Customer app localization" below. `dashboard` and `api-client` are placeholders — not scaffolded yet. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, `mobile:*` (no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
@@ -232,6 +232,15 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 - Balance-changing operations only inside `prisma.$transaction`, using conditional `UPDATE ... WHERE balance >= n` / `WHERE status = 'active'`, never read-modify-write in JS.
 - Errors use stable `code`s: scans — `qr_invalid`, `qr_used`, `qr_expired`, `qr_cancelled`, `wrong_qr_type`, `vendor_mismatch`, `branch_required`, `no_active_rule`, `invalid_amount`, `no_points_earned`, `duplicate_receipt`, `reward_unavailable`, `insufficient_points`, `user_blocked`.
 - Never commit `.env`, secrets or keys.
+
+## Customer app localization (apps/mobile, built 2026-10-08)
+
+- **English is the default; Arabic is the other language.** Chosen in Settings → Language, saved on the device (AsyncStorage `dvote.language`); not stored on the server yet.
+- `src/i18n/`: `en.ts` is the source of every key; `ar.ts` is typed as the same `Dictionary`, so a missing Arabic text fails the typecheck. In components: `const { t } = useI18n(); t('cards.title')`; outside components (API errors, dialogs, dates) use the plain `t` export. Placeholders: `t('qr.expiresIn', { time })`. **Plurals**: objects `{ one, other }` (Arabic also `zero, two, few, many`) chosen by `count`. Lists (month/weekday names): `calendarNames()`. API error codes → `errors.<code>` (`friendlyMessage` in `lib/api.ts`).
+- **Never hard-code user-facing text** in screens: add the key to `en.ts` and `ar.ts`.
+- **Arabic = right-to-left without a restart:** `Screen`, the tab bar and the sheets set `direction: 'rtl'`; use `marginStart/End` (not Left/Right) for side spacing; directional icons use `<Icon … mirror />`; `TextInput` aligns to the reading side. Numbers stay in Western digits (0-9).
+- **Fonts:** Inter for English, IBM Plex Sans Arabic for Arabic (`components/Text` picks by language; both loaded in `app/_layout`).
+- Not translated: shop/reward names and descriptions (database content), Supabase emails, the staff app.
 
 ## Later (not v1)
 

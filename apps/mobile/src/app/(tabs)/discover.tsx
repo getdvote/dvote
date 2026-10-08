@@ -3,19 +3,21 @@ import { Icon } from '../../components/Icon';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Screen } from '../../components/ui';
+import { useI18n } from '../../i18n';
 import { theme } from '../../lib/theme';
 
 /** Explore shops (tab shown as "Explore"). Needs GET /api/app/vendors, not built yet. */
 export default function Discover() {
+  const { t } = useI18n();
   return (
     <Screen>
-      <Text style={styles.title}>Explore</Text>
+      <Text style={styles.title}>{t('explore.title')}</Text>
       <View style={styles.middle}>
         <View style={styles.icon}>
           <Icon icon={MapsSearchIcon} size={36} color={theme.text} />
         </View>
-        <Text style={styles.heading}>Coffee shops near you</Text>
-        <Text style={styles.text}>Soon you'll find every dvote shop here, with its rewards and points rule.</Text>
+        <Text style={styles.heading}>{t('explore.heading')}</Text>
+        <Text style={styles.text}>{t('explore.text')}</Text>
       </View>
     </Screen>
   );

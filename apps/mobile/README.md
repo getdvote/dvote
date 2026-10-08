@@ -31,6 +31,12 @@ The product is iOS/Android; the web build is only a quick preview (e.g. Claude's
 `npm run web` (port 8082). The API's `CORS_ORIGINS` must include `http://localhost:8082`, and Google /
 Facebook on web need `http://localhost:8082/**` in Supabase Redirect URLs. Email sign-in works as is.
 
+## Languages
+
+English (default) and Arabic, switched in Settings → Language (saved on the phone). Texts live in
+`src/i18n/en.ts` and `src/i18n/ar.ts` (same keys, checked by TypeScript); screens use
+`useI18n().t('key')`. Arabic turns the layout right-to-left and uses IBM Plex Sans Arabic.
+
 ## Checks
 
 `npm run typecheck` · `npx expo-doctor`. Add packages with `npx expo install <pkg>`.

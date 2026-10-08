@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { squircle } from '../lib/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
+import { t } from '../i18n';
 
 /**
  * Full-screen image viewer: black background, swipe between images, "2 / 3" counter, close
@@ -64,7 +65,7 @@ export function ImageViewer({
                 style={{ width, height }}
                 contentFit="contain"
                 transition={150}
-                accessibilityLabel={images.length > 1 ? `Image ${i + 1} of ${images.length}` : 'Image'}
+                accessibilityLabel={images.length > 1 ? t('common.imageOf', { n: i + 1, total: images.length }) : t('common.image')}
               />
             </ScrollView>
           )}
@@ -82,7 +83,7 @@ export function ImageViewer({
           )}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close')}
             onPress={onClose}
             hitSlop={8}
             style={({ pressed }) => [styles.close, pressed && { opacity: 0.7 }]}

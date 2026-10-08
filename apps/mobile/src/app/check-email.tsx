@@ -3,28 +3,32 @@ import { Icon } from '../components/Icon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../components/Text';
+import { useI18n } from '../i18n';
 import { PrimaryButton, Screen } from '../components/ui';
 import { theme } from '../lib/theme';
 
 /** After email sign-up: Supabase sent a confirmation link. */
 export default function CheckEmail() {
   const { email } = useLocalSearchParams<{ email?: string }>();
+  const { t } = useI18n();
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.middle}>
         <View style={styles.icon}>
           <Icon icon={Mail01Icon} size={40} color={theme.text} />
         </View>
-        <Text style={styles.title}>Check your email</Text>
+        <Text style={styles.title}>{t('auth.checkTitle')}</Text>
         <Text style={styles.text}>
-          We sent a confirmation link to{'\n'}
-          <Text style={styles.email}>{email ?? 'your email'}</Text>.{'\n'}Open it on this phone to finish
-          creating your account.
+          {t('auth.checkSentTo')}
+          {'\n'}
+          <Text style={styles.email}>{email ?? t('auth.checkYourEmail')}</Text>
+          {'\n'}
+          {t('auth.checkOpen')}
         </Text>
-        <Text style={styles.hint}>No email? Check your spam folder, or try again in a few minutes.</Text>
+        <Text style={styles.hint}>{t('auth.checkHint')}</Text>
       </View>
       <View style={styles.footer}>
-        <PrimaryButton title="Back to log in" onPress={() => router.replace('/welcome')} />
+        <PrimaryButton title={t('common.backToLogin')} onPress={() => router.replace('/welcome')} />
       </View>
     </Screen>
   );

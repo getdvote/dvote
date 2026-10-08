@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Text';
+import { useI18n } from '../i18n';
 import { PrimaryButton, Screen } from '../components/ui';
 import { completeSignInFromUrl } from '../lib/auth';
 import { theme } from '../lib/theme';
@@ -13,28 +14,29 @@ import { theme } from '../lib/theme';
  */
 export default function AuthCallback() {
   const url = Linking.useLinkingURL();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!url) return;
     completeSignInFromUrl(url)
       .then((kind) => router.replace(kind === 'recovery' ? '/reset-password' : '/(tabs)/cards'))
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'This link did not work.'));
-  }, [url]);
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : t('auth.callbackLinkFailed')));
+  }, [url, t]);
 
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.middle}>
         {error ? (
           <>
-            <Text style={styles.title}>Couldn't sign you in</Text>
+            <Text style={styles.title}>{t('auth.callbackFailed')}</Text>
             <Text style={styles.text}>{error}</Text>
-            <PrimaryButton title="Back to log in" onPress={() => router.replace('/welcome')} />
+            <PrimaryButton title={t('common.backToLogin')} onPress={() => router.replace('/welcome')} />
           </>
         ) : (
           <>
             <ActivityIndicator color={theme.text} />
-            <Text style={styles.text}>Signing you in…</Text>
+            <Text style={styles.text}>{t('auth.callbackSigningIn')}</Text>
           </>
         )}
       </View>

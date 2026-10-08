@@ -7,12 +7,13 @@ import { ProfilePhoto } from '../components/ProfilePhoto';
 import { ErrorBox, Group, PageHeader, Screen } from '../components/ui';
 import { api, ApiError, type Gender } from '../lib/api';
 import { birthdayProblem } from '../lib/dates';
+import { t as translate, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
-const GENDERS: { value: Gender; label: string }[] = [
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
+const GENDERS: { value: Gender; label: 'profile.male' | 'profile.female' }[] = [
+  { value: 'male', label: 'profile.male' },
+  { value: 'female', label: 'profile.female' },
 ];
 
 /** Spaces and dashes people type in phone numbers ("0120 289-8477") are dropped. */
@@ -23,10 +24,10 @@ function problems(f: { name: string; phone: string; birthDate: string | null }) 
   const name = f.name.trim();
   const phone = cleanPhone(f.phone);
   return {
-    name: !name ? 'Enter your name.' : name.length > 120 ? 'Your name is too long (120 characters max).' : null,
+    name: !name ? translate('profile.nameEmpty') : name.length > 120 ? translate('profile.nameLong') : null,
     phone:
       phone && !/^\+?[0-9]{7,15}$/.test(phone)
-        ? 'Use digits only, 7 to 15 of them, e.g. 01001234567 or +201001234567.'
+        ? translate('profile.phoneInvalid')
         : null,
     birthDate: f.birthDate ? birthdayProblem(f.birthDate) : null,
   };
@@ -35,6 +36,7 @@ function problems(f: { name: string; phone: string; birthDate: string | null }) 
 /** Profile details design: photo, name, email, phone, gender, birthday, "Save changes". */
 export default function ProfileDetails() {
   const { me, setMe, handleAuthError } = useSession();
+  const { t } = useI18n();
   const [name, setName] = useState(me?.name ?? '');
   const [phone, setPhone] = useState(me?.phone ?? '');
   const [gender, setGender] = useState<Gender | null>(me?.gender ?? null);
@@ -79,10 +81,10 @@ export default function ProfileDetails() {
         }),
       );
       setPhone(p);
-      setMessage('Saved');
+      setMessage(t('profile.saved'));
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setError(err instanceof ApiError ? err.message : 'Could not save. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('profile.couldNotSave'));
     } finally {
       setBusy(false);
     }
@@ -92,7 +94,7 @@ export default function ProfileDetails() {
 
   return (
     <Screen>
-      <PageHeader title="Profile details" />
+      <PageHeader title={t('profile.title')} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ProfilePhoto />
         <Group>
@@ -103,17 +105,17 @@ export default function ProfileDetails() {
                 setName(v);
                 edit('name');
               }}
-              placeholder="Your name"
+              placeholder={t('profile.namePlaceholder')}
               placeholderTextColor={theme.placeholder}
               style={styles.input}
               autoComplete="name"
               maxLength={130}
-              accessibilityLabel="Name"
+              accessibilityLabel={t('profile.namePlaceholder')}
             />
           </Field>
           <Field>
             <Text style={[styles.input, styles.readOnly]} numberOfLines={1}>
-              {me.email ?? 'No email'}
+              {me.email ?? t('profile.noEmail')}
             </Text>
           </Field>
           <Field error={shown('phone')}>
@@ -123,18 +125,18 @@ export default function ProfileDetails() {
                 setPhone(v);
                 edit('phone');
               }}
-              placeholder="Phone (optional)"
+              placeholder={t('profile.phonePlaceholder')}
               placeholderTextColor={theme.placeholder}
               style={styles.input}
               keyboardType="phone-pad"
               autoComplete="tel"
               maxLength={20}
-              accessibilityLabel="Phone"
+              accessibilityLabel={t('profile.phonePlaceholder')}
             />
           </Field>
 
           <View style={styles.fieldRow}>
-            <Text style={styles.label}>Gender</Text>
+            <Text style={styles.label}>{t('profile.gender')}</Text>
             <View style={styles.segments} accessibilityRole="radiogroup">
               {GENDERS.map((g) => {
                 const on = gender === g.value;
@@ -150,7 +152,7 @@ export default function ProfileDetails() {
                     }}
                     style={[styles.segment, on && styles.segmentOn]}
                   >
-                    <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{g.label}</Text>
+                    <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{t(g.label)}</Text>
                   </Pressable>
                 );
               })}
@@ -169,12 +171,12 @@ export default function ProfileDetails() {
           </View>
 
           <Pressable accessibilityRole="button" disabled={!canSave} onPress={() => void save()} style={styles.saveRow}>
-            <Text style={[styles.save, !canSave && styles.saveOff]}>{busy ? 'Saving…' : message ?? 'Save changes'}</Text>
+            <Text style={[styles.save, !canSave && styles.saveOff]}>{busy ? t('profile.saving') : message ?? t('profile.save')}</Text>
           </Pressable>
         </Group>
         <ErrorBox message={error} />
         <Text style={styles.note}>
-          Your email is the one you sign in with. Shops never see your name, email, phone, gender or birthday.
+          {t('profile.note')}
         </Text>
       </ScrollView>
     </Screen>

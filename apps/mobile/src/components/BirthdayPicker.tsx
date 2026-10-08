@@ -6,16 +6,12 @@ import { Icon, type AppIcon } from './Icon';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { calendarNames, useI18n } from '../i18n';
 import { OLDEST_BIRTHDAY, todayYmd } from '../lib/dates';
 import { theme } from '../lib/theme';
 import { Text } from './Text';
 import { PrimaryButton } from './ui';
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const FIRST_YEAR = Number(OLDEST_BIRTHDAY.slice(0, 4));
 const YEAR_ROW = 52;
 
@@ -46,6 +42,8 @@ export function BirthdayPicker({
   onDone: (value: string) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { t, rtl } = useI18n();
+  const { months: MONTHS, weekdays: WEEKDAYS, weekdaysMin } = calendarNames();
   const { width } = useWindowDimensions();
   const today = parse(todayYmd());
 
@@ -85,34 +83,34 @@ export function BirthdayPicker({
 
   const heading = draft
     ? `${WEEKDAYS[new Date(draft.y, draft.m, draft.d).getDay()]}, ${draft.d} ${MONTHS[draft.m]} ${draft.y}`
-    : 'Pick your birthday';
+    : t('birthday.pick');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={() => ready() && onCancel()} accessibilityLabel="Close calendar" />
-      <View style={[styles.sheet, { width: sheetWidth, paddingBottom: insets.bottom + 16 }]}>
+      <Pressable style={styles.backdrop} onPress={() => ready() && onCancel()} accessibilityLabel={t('birthday.closeCalendar')} />
+      <View style={[styles.sheet, { width: sheetWidth, paddingBottom: insets.bottom + 16, direction: rtl ? 'rtl' : 'ltr' }]}>
         <View style={styles.grabber} />
-        <Text style={styles.caption}>Birthday</Text>
+        <Text style={styles.caption}>{t('birthday.label')}</Text>
         <Text style={[styles.heading, !draft && styles.headingEmpty]}>{heading}</Text>
 
         {/* month / year bar */}
         <View style={styles.bar}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Choose month and year"
+            accessibilityLabel={t('birthday.chooseMonthYear')}
             onPress={() => setView(view === 'days' ? 'years' : 'days')}
             style={styles.monthButton}
             hitSlop={6}
           >
             <Text style={styles.monthText}>
-              {view === 'years' ? 'Choose year' : view === 'months' ? `${shown.y}` : `${MONTHS[shown.m]} ${shown.y}`}
+              {view === 'years' ? t('birthday.chooseYear') : view === 'months' ? `${shown.y}` : `${MONTHS[shown.m]} ${shown.y}`}
             </Text>
             <Icon icon={view === 'days' ? ArrowDown01Icon : ArrowUp01Icon} size={16} color={theme.text} />
           </Pressable>
           {view === 'days' ? (
             <View style={styles.arrows}>
-              <Arrow icon={ArrowLeft01Icon} label="Previous month" disabled={!canPrev} onPress={() => move(-1)} />
-              <Arrow icon={ArrowRight01Icon} label="Next month" disabled={!canNext} onPress={() => move(1)} />
+              <Arrow icon={ArrowLeft01Icon} label={t('birthday.previousMonth')} disabled={!canPrev} onPress={() => move(-1)} />
+              <Arrow icon={ArrowRight01Icon} label={t('birthday.nextMonth')} disabled={!canNext} onPress={() => move(1)} />
             </View>
           ) : null}
         </View>
@@ -157,7 +155,7 @@ export function BirthdayPicker({
               <View style={styles.week}>
                 {WEEKDAYS.map((w) => (
                   <Text key={w} style={[styles.weekday, { width: cell }]}>
-                    {w.slice(0, 2)}
+                    {weekdaysMin[WEEKDAYS.indexOf(w)]}
                   </Text>
                 ))}
               </View>
@@ -205,11 +203,11 @@ export function BirthdayPicker({
               onPress={onCancel}
               style={({ pressed }) => [styles.cancel, pressed && { opacity: 0.7 }]}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </Pressable>
           </View>
           <View style={styles.footerButton}>
-            <PrimaryButton title="Done" disabled={!draft} onPress={() => draft && onDone(format(draft))} />
+            <PrimaryButton title={t('common.done')} disabled={!draft} onPress={() => draft && onDone(format(draft))} />
           </View>
         </View>
       </View>
@@ -237,7 +235,7 @@ function Arrow({
       style={({ pressed }) => [styles.arrow, pressed && { opacity: 0.6 }]}
       hitSlop={6}
     >
-      <Icon icon={icon} size={20} color={disabled ? theme.placeholder : theme.text} />
+      <Icon icon={icon} size={20} color={disabled ? theme.placeholder : theme.text} mirror />
     </Pressable>
   );
 }

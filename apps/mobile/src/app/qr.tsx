@@ -18,6 +18,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../components/Text';
 import { ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type NewQrCode, type QrCollectResult } from '../lib/api';
+import { t, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
@@ -38,6 +39,7 @@ type Phase =
  */
 export default function Qr() {
   const { handleAuthError } = useSession();
+  useI18n(); // re-render on a language switch (children read t directly)
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [offline, setOffline] = useState(false);
   // id of the QR on screen while it can still be used: cancelled if the customer leaves
@@ -55,7 +57,7 @@ export default function Qr() {
       setPhase({ kind: 'showing', qr, deadline });
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setPhase({ kind: 'error', message: err instanceof ApiError ? err.message : 'Could not create your QR code.' });
+      setPhase({ kind: 'error', message: err instanceof ApiError ? err.message : t('qr.couldNotCreate') });
     }
   }, [handleAuthError]);
 
@@ -110,10 +112,10 @@ export default function Qr() {
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>{phase.kind === 'done' ? 'Points added' : 'Collect points'}</Text>
+        <Text style={styles.title}>{phase.kind === 'done' ? t('qr.pointsAdded') : t('qr.collect')}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t('common.close')}
           onPress={() => router.back()}
           style={styles.close}
           hitSlop={8}
@@ -132,13 +134,15 @@ export default function Qr() {
         <Done result={phase.result} />
       ) : (
         <Ended
-          heading={phase.kind === 'error' ? 'Something went wrong' : phase.reason === 'expired' ? 'QR code expired' : 'QR code replaced'}
+          heading={
+            phase.kind === 'error' ? t('qr.errorTitle') : phase.reason === 'expired' ? t('qr.expiredTitle') : t('qr.replacedTitle')
+          }
           text={
             phase.kind === 'error'
               ? null
               : phase.reason === 'expired'
-                ? 'For your safety each code works for 5 minutes only. Get a new one when you are at the counter.'
-                : 'A newer QR code was opened, so this one stopped working.'
+                ? t('qr.expiredText')
+                : t('qr.replacedText')
           }
           error={phase.kind === 'error' ? phase.message : null}
           onRetry={() => void issue()}
@@ -164,26 +168,23 @@ function Showing({ qr, deadline, offline }: { qr: NewQrCode; deadline: number; o
       <View style={styles.qrCard}>
         <QRCode value={qr.code} size={size} color="#000" backgroundColor="#fff" ecl="M" />
         <Text style={styles.expires}>
-          {secondsLeft > 0 ? `Expires in ${countdown}` : 'Expired'}
+          {secondsLeft > 0 ? t('qr.expiresIn', { time: countdown }) : t('qr.expired')}
         </Text>
       </View>
 
-      <Text style={styles.lead}>Show this code at the counter</Text>
-      <Text style={styles.text}>
-        Works at any dvote coffee shop: the staff scan it and enter your bill, and your points appear here
-        straight away.
-      </Text>
+      <Text style={styles.lead}>{t('qr.showAtCounter')}</Text>
+      <Text style={styles.text}>{t('qr.worksAnywhere')}</Text>
 
       <View style={styles.waiting}>
         {offline ? (
           <>
             <Icon icon={WifiDisconnected01Icon} size={16} color={theme.muted} />
-            <Text style={styles.waitingText}>Reconnecting…</Text>
+            <Text style={styles.waitingText}>{t('qr.reconnecting')}</Text>
           </>
         ) : (
           <>
             <ActivityIndicator size="small" color={theme.muted} />
-            <Text style={styles.waitingText}>Waiting for the scan…</Text>
+            <Text style={styles.waitingText}>{t('qr.waiting')}</Text>
           </>
         )}
       </View>
@@ -205,26 +206,25 @@ function Done({ result }: { result: QrCollectResult | null }) {
         </Animated.View>
         {result ? (
           <>
-            <Text style={styles.points}>+{result.pointsAdded} points</Text>
+            <Text style={styles.points}>{t('common.plusPoints', { count: result.pointsAdded })}</Text>
             <Text style={styles.text}>
-              at {result.vendorName}
-              {result.branchName ? ` · ${result.branchName}` : ''}
+              {t('qr.at', { place: result.branchName ? `${result.vendorName} · ${result.branchName}` : result.vendorName })}
             </Text>
             <View style={styles.summary}>
-              <SummaryRow label="Bill" value={`${result.purchaseAmount} ${result.currency}`} />
+              <SummaryRow label={t('qr.bill')} value={`${result.purchaseAmount} ${result.currency}`} />
               <View style={styles.separator} />
-              <SummaryRow label="Your balance" value={`${result.cardBalance} points`} strong />
+              <SummaryRow label={t('qr.balance')} value={t('common.points', { count: result.cardBalance })} strong />
             </View>
           </>
         ) : (
-          <Text style={styles.points}>Points added</Text>
+          <Text style={styles.points}>{t('qr.pointsAdded')}</Text>
         )}
       </View>
       <View style={styles.footer}>
         {result ? (
-          <PrimaryButton title="View card" onPress={() => router.replace(`/card/${result.cardId}`)} />
+          <PrimaryButton title={t('qr.viewCard')} onPress={() => router.replace(`/card/${result.cardId}`)} />
         ) : null}
-        <PillButton title="Done" onPress={() => router.back()} />
+        <PillButton title={t('common.done')} onPress={() => router.back()} />
       </View>
     </View>
   );
@@ -261,7 +261,7 @@ function Ended({
         <ErrorBox message={error} />
       </View>
       <View style={styles.footer}>
-        <PrimaryButton title="Get a new QR code" onPress={onRetry} />
+        <PrimaryButton title={t('qr.newCode')} onPress={onRetry} />
       </View>
     </View>
   );

@@ -11,50 +11,37 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Text';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { Group, PageHeader, Row, Screen } from '../components/ui';
+import { useI18n, type TKey } from '../i18n';
 import { theme, squircle } from '../lib/theme';
 
 
-const STEPS: { icon: AppIcon; title: string; text: string }[] = [
-  {
-    icon: QrCodeIcon,
-    title: 'Show your QR',
-    text: 'Pay as usual at any dvote coffee shop and show your QR code at the counter.',
-  },
-  {
-    icon: SparklesIcon,
-    title: 'Earn points',
-    text: 'Points land on that shop’s card in seconds, based on how much you spent.',
-  },
-  {
-    icon: GiftIcon,
-    title: 'Enjoy rewards',
-    text: 'Swap points for free coffee, desserts and more, whenever you choose.',
-  },
+const STEPS: { icon: AppIcon; title: TKey; text: TKey }[] = [
+  { icon: QrCodeIcon, title: 'about.step1Title', text: 'about.step1Text' },
+  { icon: SparklesIcon, title: 'about.step2Title', text: 'about.step2Text' },
+  { icon: GiftIcon, title: 'about.step3Title', text: 'about.step3Text' },
 ];
 
-const PROMISES: { icon: AppIcon; text: string }[] = [
-  { icon: Wallet01Icon, text: 'All your coffee shop cards in one app, no paper stamps.' },
-  { icon: LockIcon, text: 'Shops never see your name, email or phone.' },
-  { icon: SecurityCheckIcon, text: 'Every QR works once and expires in minutes.' },
+const PROMISES: { icon: AppIcon; text: TKey }[] = [
+  { icon: Wallet01Icon, text: 'about.promise1' },
+  { icon: LockIcon, text: 'about.promise2' },
+  { icon: SecurityCheckIcon, text: 'about.promise3' },
 ];
 
 /** About Dvote: brand, how it works, what we promise, version. */
 export default function About() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const { t } = useI18n();
   return (
     <Screen>
-      <PageHeader title="About Dvote" />
+      <PageHeader title={t('about.title')} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <DvoteLogo height={64} color={theme.brand} />
-          <Text style={styles.tagline}>Every coffee counts.</Text>
-          <Text style={styles.lead}>
-            dvote turns the coffee you already buy into rewards at your favourite shops, and helps local coffee shops
-            keep their regulars coming back.
-          </Text>
+          <Text style={styles.tagline}>{t('about.tagline')}</Text>
+          <Text style={styles.lead}>{t('about.lead')}</Text>
         </View>
 
-        <Text style={styles.section}>How it works</Text>
+        <Text style={styles.section}>{t('about.how')}</Text>
         <View style={styles.steps}>
           {STEPS.map((s, i) => (
             <View key={s.title} style={styles.step}>
@@ -63,31 +50,32 @@ export default function About() {
                 <Text style={styles.stepNumber}>{i + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>{s.title}</Text>
-                <Text style={styles.stepText}>{s.text}</Text>
+                <Text style={styles.stepTitle}>{t(s.title)}</Text>
+                <Text style={styles.stepText}>{t(s.text)}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <Text style={styles.section}>Our promise</Text>
+        <Text style={styles.section}>{t('about.promise')}</Text>
         <Group style={styles.promises}>
           {PROMISES.map((p) => (
             <View key={p.text} style={styles.promise}>
               <Icon icon={p.icon} size={20} color={theme.brand} />
-              <Text style={styles.promiseText}>{p.text}</Text>
+              <Text style={styles.promiseText}>{t(p.text)}</Text>
             </View>
           ))}
         </Group>
 
         <Group style={{ marginTop: 24 }}>
-          <Row label="Terms and conditions" onPress={() => router.push('/info/terms')} />
-          <Row label="Own a coffee shop? Join dvote" onPress={() => router.push('/info/join')} />
+          <Row label={t('about.terms')} onPress={() => router.push('/info/terms')} />
+          <Row label={t('about.join')} onPress={() => router.push('/info/join')} />
         </Group>
 
         <Text style={styles.footer}>
-          Version {version}
-          {'\n'}Made with love for coffee lovers in Egypt
+          {t('about.version', { version })}
+          {'\n'}
+          {t('about.madeWith')}
         </Text>
       </ScrollView>
     </Screen>
