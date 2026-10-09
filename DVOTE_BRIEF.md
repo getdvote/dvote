@@ -42,7 +42,7 @@ cheesecake = 500 pts**, **coffee + cheesecake = 750 pts**.
 | **Customer app** (React Native/Expo, iOS + Android) | Customers | Sign in, see cards (points per shop), show collect QR, profile; later browse shops + redeem | **Mostly built** (`apps/mobile`) |
 | **Staff app** (React Native/Expo, separate app; web + phones) | Cashiers, branch managers, vendor admins | Sign in, scan customer QR, enter bill amount, see points granted; later confirm redemptions | **Built for collect** (`apps/staff`) |
 | **Vendor dashboard** (React web) | Vendor admins, branch managers | Branches, staff, point rule, rewards, reports | Not started |
-| **Admin dashboard** (React web, same app as vendor dashboard, role-based) | dvote platform admins | All vendors, onboarding, support, point corrections, fraud review | Not started (admin **APIs** for vendors exist) |
+| **Admin dashboard** (React web, `apps/dashboard`, port 5173) | dvote platform admins | Overview charts; vendors (create, edit, suspend, logo, branches, points rule, rewards incl. Arabic, menu & photos, staff, invite owner); customers (search, details, block) | **Built** (sign-in with authenticator code) |
 
 All four talk to **one NestJS API**. The apps never touch the database directly.
 
