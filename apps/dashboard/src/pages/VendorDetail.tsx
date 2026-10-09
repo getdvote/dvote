@@ -1,16 +1,29 @@
-import { ArrowLeftOutlined, CameraOutlined, DeleteOutlined, EditOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Avatar, Button, Card, Flex, Form, Input, Modal, Select, Skeleton, Tabs, Typography, Upload } from 'antd';
-import { useState } from 'react';
+import { ArrowLeft, Ban, Camera, CircleCheck, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ConfirmAction } from '../components/ConfirmAction';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { Field } from '../components/Field';
+import { initial } from '../components/PageHeader';
+import { StatusTag } from '../components/StatusTag';
 import { api, errorMessage, type Vendor } from '../lib/api';
-import { brand } from '../theme';
 import { BranchesTab } from './vendor/BranchesTab';
-import { ImagesTab } from './vendor/ImagesTab';
-import { RulesTab } from './vendor/RulesTab';
+import { IMAGE_ACCEPT, ImagesTab } from './vendor/ImagesTab';
 import { RewardsTab } from './vendor/RewardsTab';
+import { RulesTab } from './vendor/RulesTab';
 import { StaffTab } from './vendor/StaffTab';
-import { CURRENCIES, StatusTag } from './Vendors';
+import { CurrencySelect } from './Vendors';
+
+const TAB = 'flex-none px-3 text-[15px] after:bg-primary data-active:text-primary';
 
 /** One vendor: profile, logo, status, and its branches, points rule, rewards, images and staff. */
 export function VendorDetail() {
@@ -20,28 +33,49 @@ export function VendorDetail() {
 
   return (
     <>
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/vendors')} style={{ marginBottom: 12, paddingLeft: 0 }}>
-        All vendors
+      <Button variant="ghost" className="mb-3 -ml-2.5 text-muted-foreground" onClick={() => navigate('/vendors')}>
+        <ArrowLeft /> All vendors
       </Button>
-      {error ? <Alert type="error" showIcon message={errorMessage(error)} /> : null}
+      <ErrorAlert error={error} />
       {isLoading || !vendor ? (
-        error ? null : <Skeleton active avatar paragraph={{ rows: 6 }} />
+        error ? null : (
+          <div className="grid gap-5">
+            <Skeleton className="h-36 rounded-xl" />
+            <Skeleton className="h-80 rounded-xl" />
+          </div>
+        )
       ) : (
-        <Flex vertical gap={20}>
+        <div className="grid gap-5">
           <VendorHeader vendor={vendor} />
-          <Card styles={{ body: { paddingTop: 4 } }}>
-            <Tabs
-              size="large"
-              items={[
-                { key: 'branches', label: 'Branches', children: <BranchesTab vendorId={id} /> },
-                { key: 'rule', label: 'Points rule', children: <RulesTab vendor={vendor} /> },
-                { key: 'rewards', label: 'Rewards', children: <RewardsTab vendorId={id} /> },
-                { key: 'images', label: 'Menu & photos', children: <ImagesTab vendorId={id} /> },
-                { key: 'staff', label: 'Staff', children: <StaffTab vendorId={id} /> },
-              ]}
-            />
+          <Card>
+            <CardContent>
+              <Tabs defaultValue="branches">
+                <TabsList variant="line" className="mb-4 w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="branches" className={TAB}>Branches</TabsTrigger>
+                  <TabsTrigger value="rule" className={TAB}>Points rule</TabsTrigger>
+                  <TabsTrigger value="rewards" className={TAB}>Rewards</TabsTrigger>
+                  <TabsTrigger value="images" className={TAB}>Menu &amp; photos</TabsTrigger>
+                  <TabsTrigger value="staff" className={TAB}>Staff</TabsTrigger>
+                </TabsList>
+                <TabsContent value="branches">
+                  <BranchesTab vendorId={id} />
+                </TabsContent>
+                <TabsContent value="rule">
+                  <RulesTab vendor={vendor} />
+                </TabsContent>
+                <TabsContent value="rewards">
+                  <RewardsTab vendorId={id} />
+                </TabsContent>
+                <TabsContent value="images">
+                  <ImagesTab vendorId={id} />
+                </TabsContent>
+                <TabsContent value="staff">
+                  <StaffTab vendorId={id} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
           </Card>
-        </Flex>
+        </div>
       )}
     </>
   );
@@ -49,7 +83,7 @@ export function VendorDetail() {
 
 function VendorHeader({ vendor }: { vendor: Vendor }) {
   const qc = useQueryClient();
-  const { message, modal } = App.useApp();
+  const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const refresh = (v: Vendor) => {
     qc.setQueryData(['vendor', v.id], v);
@@ -60,111 +94,105 @@ function VendorHeader({ vendor }: { vendor: Vendor }) {
     mutationFn: (file: File) => api.uploadLogo(vendor.id, file),
     onSuccess: (v) => {
       refresh(v);
-      void message.success('Logo updated');
+      toast.success('Logo updated');
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
   const removeLogo = useMutation({
     mutationFn: () => api.removeLogo(vendor.id),
     onSuccess: (v) => {
       refresh(v);
-      void message.success('Logo removed');
+      toast.success('Logo removed');
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
   const setStatus = useMutation({
     mutationFn: (status: Vendor['status']) => api.updateVendor(vendor.id, { status }),
     onSuccess: (v) => {
       refresh(v);
-      void message.success(v.status === 'active' ? `${v.name} is active` : `${v.name} is suspended`);
+      toast.success(v.status === 'active' ? `${v.name} is active` : `${v.name} is suspended`);
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
-
-  const suspended = vendor.status === 'suspended';
 
   return (
     <Card>
-      <Flex gap={22} align="center" wrap>
-        <Flex vertical align="center" gap={6}>
-          <Upload
-            accept="image/png,image/jpeg,image/webp,image/heic"
-            showUploadList={false}
-            customRequest={({ file }) => logo.mutate(file as File)}
+      <CardContent className="flex flex-wrap items-center gap-6">
+        <div className="flex flex-col items-center gap-1.5">
+          <button
+            type="button"
+            className="relative rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            title="Upload logo"
+            aria-label="Upload logo"
+            disabled={logo.isPending}
+            onClick={() => fileInput.current?.click()}
           >
-            <div style={{ position: 'relative', cursor: 'pointer' }} title="Upload logo">
-              <Avatar size={88} src={vendor.logoUrl ?? undefined} style={{ background: brand.purpleSoft, color: brand.purple, fontSize: 32 }}>
-                {vendor.name.slice(0, 1).toUpperCase()}
-              </Avatar>
-              <Avatar
-                size={30}
-                icon={<CameraOutlined />}
-                style={{ position: 'absolute', right: -2, bottom: -2, background: '#fff', color: brand.ink, border: '2px solid #F4F4F8' }}
-              />
-            </div>
-          </Upload>
+            <Avatar className="size-22">
+              <AvatarImage src={vendor.logoUrl ?? undefined} alt="" />
+              <AvatarFallback className="bg-brand-soft text-3xl font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
+            </Avatar>
+            <span className="absolute -right-0.5 -bottom-0.5 flex size-8 items-center justify-center rounded-full border-2 border-background bg-card text-foreground shadow-sm">
+              {logo.isPending ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+            </span>
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) logo.mutate(file);
+              e.target.value = '';
+            }}
+          />
           {vendor.logoUrl ? (
-            <Button
-              size="small"
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-              loading={removeLogo.isPending}
-              onClick={() => removeLogo.mutate()}
-            >
-              Remove
+            <Button variant="link" size="sm" className="text-destructive" disabled={removeLogo.isPending} onClick={() => removeLogo.mutate()}>
+              <Trash2 /> Remove
             </Button>
           ) : null}
-        </Flex>
-
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <Flex align="center" gap={10} wrap>
-            <Typography.Title level={2} className="page-title">
-              {vendor.name}
-            </Typography.Title>
-            <StatusTag status={vendor.status} />
-          </Flex>
-          <Typography.Text type="secondary">
-            {vendor.contactEmail ?? 'No contact email'} · {vendor.currency} · {vendor.branchCount} branches · {vendor.staffCount} staff
-          </Typography.Text>
-          {logo.isPending ? <div style={{ color: brand.muted, marginTop: 4 }}>Uploading logo…</div> : null}
         </div>
 
-        <Flex gap={10}>
-          <Button icon={<EditOutlined />} onClick={() => setEditing(true)}>
-            Edit
+        <div className="min-w-56 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight">{vendor.name}</h1>
+            <StatusTag status={vendor.status} />
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            {vendor.contactEmail ?? 'No contact email'} · {vendor.currency} · {vendor.branchCount} branches · {vendor.staffCount} staff
+          </p>
+          {logo.isPending ? <p className="mt-1 text-sm text-muted-foreground">Uploading logo…</p> : null}
+        </div>
+
+        <div className="flex gap-2.5">
+          <Button variant="outline" size="lg" onClick={() => setEditing(true)}>
+            <Pencil /> Edit
           </Button>
-          {suspended ? (
-            <Button type="primary" icon={<CheckCircleOutlined />} loading={setStatus.isPending} onClick={() => setStatus.mutate('active')}>
-              Activate
+          {vendor.status === 'suspended' ? (
+            <Button size="lg" disabled={setStatus.isPending} onClick={() => setStatus.mutate('active')}>
+              {setStatus.isPending ? <Loader2 className="animate-spin" /> : <CircleCheck />} Activate
             </Button>
           ) : (
-            <Button
-              danger
-              icon={<StopOutlined />}
-              loading={setStatus.isPending}
-              onClick={() =>
-                modal.confirm({
-                  title: `Suspend ${vendor.name}?`,
-                  content:
-                    'Customers stop seeing it, its staff can no longer sign in, and no points can be collected there. Nothing is deleted; you can activate it again any time.',
-                  okText: 'Suspend',
-                  okButtonProps: { danger: true },
-                  onOk: () => setStatus.mutateAsync('suspended'),
-                })
+            <ConfirmAction
+              title={`Suspend ${vendor.name}?`}
+              description="Customers stop seeing it, its staff can no longer sign in, and no points can be collected there. Nothing is deleted; you can activate it again any time."
+              actionLabel="Suspend"
+              onConfirm={() => setStatus.mutateAsync('suspended')}
+              trigger={
+                <Button variant="destructive" size="lg">
+                  <Ban /> Suspend
+                </Button>
               }
-            >
-              Suspend
-            </Button>
+            />
           )}
-        </Flex>
-      </Flex>
-      <EditVendorModal vendor={vendor} open={editing} onClose={() => setEditing(false)} onSaved={refresh} />
+        </div>
+      </CardContent>
+      <EditVendorDialog vendor={vendor} open={editing} onClose={() => setEditing(false)} onSaved={refresh} />
     </Card>
   );
 }
 
-function EditVendorModal({
+function EditVendorDialog({
   vendor,
   open,
   onClose,
@@ -175,41 +203,67 @@ function EditVendorModal({
   onClose: () => void;
   onSaved: (v: Vendor) => void;
 }) {
-  const [form] = Form.useForm();
-  const { message } = App.useApp();
   const save = useMutation({
-    mutationFn: (v: { name: string; contactEmail?: string; currency: string }) =>
+    mutationFn: (v: { name: string; contactEmail: string | null; currency: string }) =>
       api.updateVendor(vendor.id, {
-        name: v.name.trim(),
-        contactEmail: v.contactEmail?.trim() || null,
+        name: v.name,
+        contactEmail: v.contactEmail,
         ...(v.currency !== vendor.currency ? { currency: v.currency } : {}),
       }),
     onSuccess: (v) => {
       onSaved(v);
-      void message.success('Saved');
+      toast.success('Saved');
       onClose();
     },
   });
   return (
-    <Modal title="Edit vendor" open={open} onCancel={onClose} okText="Save" confirmLoading={save.isPending} onOk={() => form.submit()} destroyOnHidden>
-      <Form
-        form={form}
-        layout="vertical"
-        requiredMark={false}
-        initialValues={{ name: vendor.name, contactEmail: vendor.contactEmail ?? '', currency: vendor.currency }}
-        onFinish={(v) => save.mutate(v)}
-      >
-        <Form.Item name="name" label="Brand name" rules={[{ required: true, whitespace: true, max: 120 }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="contactEmail" label="Contact email" rules={[{ type: 'email' }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="currency" label="Currency" extra="Can't change once the vendor has a points rule.">
-          <Select options={CURRENCIES.map((c) => ({ value: c, label: c }))} />
-        </Form.Item>
-        {save.error ? <Alert type="error" showIcon message={errorMessage(save.error)} /> : null}
-      </Form>
-    </Modal>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          onClose();
+          save.reset();
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit vendor</DialogTitle>
+        </DialogHeader>
+        <form
+          id="edit-vendor"
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            save.mutate({
+              name: String(f.get('name')).trim(),
+              contactEmail: String(f.get('contactEmail')).trim() || null,
+              currency: String(f.get('currency')),
+            });
+          }}
+        >
+          <Field label="Brand name" htmlFor="edit-name">
+            <Input id="edit-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={vendor.name} />
+          </Field>
+          <Field label="Contact email" htmlFor="edit-email">
+            <Input id="edit-email" name="contactEmail" type="email" defaultValue={vendor.contactEmail ?? ''} />
+          </Field>
+          <Field label="Currency" htmlFor="edit-currency" hint="Can't change once the vendor has a points rule.">
+            <CurrencySelect id="edit-currency" defaultValue={vendor.currency} />
+          </Field>
+          <ErrorAlert error={save.error} />
+        </form>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-vendor" disabled={save.isPending}>
+            {save.isPending ? <Loader2 className="animate-spin" /> : null}
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { App as AntApp, ConfigProvider } from 'antd';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from './lib/auth';
 import { configProblem } from './lib/config';
+import { ThemeProvider } from './lib/theme';
 import { router } from './router';
-import { theme } from './theme';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -15,12 +16,12 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConfigProvider theme={theme}>
-      <AntApp>
+    <ThemeProvider>
+      <TooltipProvider>
         {configProblem ? (
-          <div style={{ padding: 40, maxWidth: 560 }}>
-            <h2>Setup needed</h2>
-            <p>{configProblem}</p>
+          <div className="max-w-xl p-10">
+            <h2 className="text-xl font-semibold">Setup needed</h2>
+            <p className="mt-2 text-muted-foreground">{configProblem}</p>
           </div>
         ) : (
           <QueryClientProvider client={queryClient}>
@@ -29,7 +30,8 @@ createRoot(document.getElementById('root')!).render(
             </AuthProvider>
           </QueryClientProvider>
         )}
-      </AntApp>
-    </ConfigProvider>
+        <Toaster position="top-center" richColors />
+      </TooltipProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

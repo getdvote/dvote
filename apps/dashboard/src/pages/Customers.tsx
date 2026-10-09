@@ -1,12 +1,26 @@
-import { SearchOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Avatar, Button, Card, Descriptions, Drawer, Empty, Flex, Input, List, Segmented, Skeleton, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
-import { num, PageHeader } from '../components/PageHeader';
-import { api, errorMessage, type UserListItem, type UserStatus } from '../lib/api';
-import { brand } from '../theme';
-import { StatusTag } from './Vendors';
+import { Ban, CircleCheck, Loader2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmAction } from '../components/ConfirmAction';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { Pager, SearchInput, StatusFilter } from '../components/ListControls';
+import { initial, num, PageHeader } from '../components/PageHeader';
+import { StatusTag } from '../components/StatusTag';
+import { TableState } from '../components/TableState';
+import { api, errorMessage, type UserStatus } from '../lib/api';
+import { cn } from '@/lib/utils';
+
+const PAGE_SIZE = 20;
 
 /** Every customer: search, filter, open one to see cards and history, block / unblock. */
 export function Customers() {
@@ -27,27 +41,20 @@ export function Customers() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['users', search, status, page],
-    queryFn: () => api.users({ search: search || undefined, status: status === 'all' ? undefined : status, page, pageSize: 20 }),
+    queryFn: () => api.users({ search: search || undefined, status: status === 'all' ? undefined : status, page, pageSize: PAGE_SIZE }),
     placeholderData: (prev) => prev,
   });
 
   return (
     <>
       <PageHeader title="Customers" subtitle={data ? `${num(data.total)} customers` : 'Everyone using the dvote app'} />
-      <Card styles={{ body: { padding: 0 } }}>
-        <Flex gap={12} wrap style={{ padding: 16 }}>
-          <Input
-            allowClear
-            prefix={<SearchOutlined />}
-            placeholder="Search name, email or phone"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            style={{ maxWidth: 340 }}
-          />
-          <Segmented
+      <Card className="gap-0 py-0">
+        <div className="flex flex-wrap gap-3 p-4">
+          <SearchInput value={input} onChange={setInput} placeholder="Search name, email or phone" />
+          <StatusFilter
             value={status}
             onChange={(v) => {
-              setStatus(v as UserStatus | 'all');
+              setStatus(v);
               setPage(1);
             }}
             options={[
@@ -56,58 +63,61 @@ export function Customers() {
               { label: 'Blocked', value: 'blocked' },
             ]}
           />
-        </Flex>
-        {error ? <Alert type="error" showIcon message={errorMessage(error)} style={{ margin: '0 16px 16px' }} /> : null}
-        <Table<UserListItem>
-          rowKey="id"
-          loading={isLoading}
-          dataSource={data?.items ?? []}
-          rowClassName="clickable-row"
-          onRow={(u) => ({ onClick: () => setOpenId(u.id) })}
-          pagination={{
-            current: page,
-            pageSize: 20,
-            total: data?.total ?? 0,
-            onChange: setPage,
-            showSizeChanger: false,
-            hideOnSinglePage: true,
-          }}
-          columns={[
-            {
-              title: 'Customer',
-              key: 'name',
-              render: (_, u) => (
-                <Flex align="center" gap={12}>
-                  <Avatar src={u.avatarUrl ?? undefined} style={{ background: brand.purpleSoft, color: brand.purple }}>
-                    {(u.name ?? u.email ?? '?').slice(0, 1).toUpperCase()}
-                  </Avatar>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{u.name ?? 'No name'}</div>
-                    <div style={{ color: brand.muted, fontSize: 12 }}>{u.email ?? u.phone ?? '—'}</div>
+        </div>
+        <ErrorAlert error={error} className="mx-4 mb-4 w-auto" />
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="pl-4">Customer</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Cards</TableHead>
+              <TableHead className="text-right">Points</TableHead>
+              <TableHead>Last activity</TableHead>
+              <TableHead className="pr-4">Joined</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableState loading={isLoading} empty={!data?.items.length} colSpan={6} emptyText="No customers found" />
+            {data?.items.map((u) => (
+              <TableRow key={u.id} className="cursor-pointer" onClick={() => setOpenId(u.id)}>
+                <TableCell className="pl-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-9">
+                      <AvatarImage src={u.avatarUrl ?? undefined} alt="" />
+                      <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{initial(u.name ?? u.email)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold">{u.name ?? 'No name'}</div>
+                      <div className="text-xs text-muted-foreground">{u.email ?? u.phone ?? '—'}</div>
+                    </div>
                   </div>
-                </Flex>
-              ),
-            },
-            { title: 'Status', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
-            { title: 'Cards', dataIndex: 'cardsCount', align: 'right' },
-            { title: 'Points', dataIndex: 'pointsBalance', align: 'right', render: (p: number) => num(p) },
-            {
-              title: 'Last activity',
-              dataIndex: 'lastActivityAt',
-              render: (d: string | null) => (d ? dayjs(d).format('D MMM YYYY') : <span style={{ color: brand.muted }}>—</span>),
-            },
-            { title: 'Joined', dataIndex: 'createdAt', render: (d: string) => dayjs(d).format('D MMM YYYY') },
-          ]}
-        />
+                </TableCell>
+                <TableCell>
+                  <StatusTag status={u.status} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{u.cardsCount}</TableCell>
+                <TableCell className="text-right tabular-nums">{num(u.pointsBalance)}</TableCell>
+                <TableCell>{u.lastActivityAt ? dayjs(u.lastActivityAt).format('D MMM YYYY') : <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell className="pr-4">{dayjs(u.createdAt).format('D MMM YYYY')}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <Pager page={page} pageSize={PAGE_SIZE} total={data?.total ?? 0} onChange={setPage} />
       </Card>
-      <CustomerDrawer id={openId} onClose={() => setOpenId(null)} />
+      <CustomerSheet id={openId} onClose={() => setOpenId(null)} />
     </>
   );
 }
 
-function CustomerDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
+const EVENT: Record<string, { label: string; variant: 'success' | 'warning' | 'brand' }> = {
+  earn: { label: 'Earned', variant: 'success' },
+  redeem: { label: 'Redeemed', variant: 'warning' },
+  adjust: { label: 'Correction', variant: 'brand' },
+};
+
+function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
   const qc = useQueryClient();
-  const { message, modal } = App.useApp();
   const { data: u, isLoading } = useQuery({ queryKey: ['user', id], queryFn: () => api.user(id!), enabled: !!id });
 
   const setStatus = useMutation({
@@ -115,123 +125,146 @@ function CustomerDrawer({ id, onClose }: { id: string | null; onClose: () => voi
     onSuccess: (user) => {
       qc.setQueryData(['user', id], user);
       void qc.invalidateQueries({ queryKey: ['users'] });
-      void message.success(user.status === 'blocked' ? 'Customer blocked' : 'Customer unblocked');
+      toast.success(user.status === 'blocked' ? 'Customer blocked' : 'Customer unblocked');
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
 
   return (
-    <Drawer open={!!id} onClose={onClose} width={560} title="Customer" destroyOnHidden>
-      {isLoading || !u ? (
-        <Skeleton active avatar paragraph={{ rows: 8 }} />
-      ) : (
-        <Flex vertical gap={24}>
-          <Flex align="center" gap={16}>
-            <Avatar size={64} src={u.avatarUrl ?? undefined} style={{ background: brand.purpleSoft, color: brand.purple, fontSize: 24 }}>
-              {(u.name ?? u.email ?? '?').slice(0, 1).toUpperCase()}
-            </Avatar>
-            <div style={{ flex: 1 }}>
-              <Flex align="center" gap={8}>
-                <Typography.Title level={4} style={{ margin: 0 }}>
-                  {u.name ?? 'No name'}
-                </Typography.Title>
-                <StatusTag status={u.status} />
-              </Flex>
-              <Typography.Text type="secondary">{u.email ?? 'No email'}</Typography.Text>
+    <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-[560px]">
+        <SheetHeader>
+          <SheetTitle>Customer</SheetTitle>
+        </SheetHeader>
+        <div className="px-4 pb-6">
+          {isLoading || !u ? (
+            <div className="grid gap-4">
+              <div className="flex items-center gap-4">
+                <Skeleton className="size-16 rounded-full" />
+                <div className="grid flex-1 gap-2">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-56" />
+                </div>
+              </div>
+              <Skeleton className="h-32" />
+              <Skeleton className="h-40" />
             </div>
-            {u.status === 'active' ? (
-              <Button
-                danger
-                icon={<StopOutlined />}
-                loading={setStatus.isPending}
-                onClick={() =>
-                  modal.confirm({
-                    title: 'Block this customer?',
-                    content: 'They can no longer use the app or collect points. Their points are kept; you can unblock them any time.',
-                    okText: 'Block',
-                    okButtonProps: { danger: true },
-                    onOk: () => setStatus.mutateAsync('blocked'),
-                  })
-                }
-              >
-                Block
-              </Button>
-            ) : (
-              <Button icon={<CheckCircleOutlined />} loading={setStatus.isPending} onClick={() => setStatus.mutate('active')}>
-                Unblock
-              </Button>
-            )}
-          </Flex>
-
-          <Descriptions
-            column={2}
-            size="small"
-            items={[
-              { key: 'phone', label: 'Phone', children: u.phone ?? '—' },
-              { key: 'gender', label: 'Gender', children: u.gender ? u.gender[0].toUpperCase() + u.gender.slice(1) : '—' },
-              { key: 'birth', label: 'Birthday', children: u.birthDate ? dayjs(u.birthDate).format('D MMM YYYY') : '—' },
-              { key: 'joined', label: 'Joined', children: dayjs(u.createdAt).format('D MMM YYYY') },
-              { key: 'points', label: 'Points held', children: num(u.pointsBalance) },
-              { key: 'cards', label: 'Cards', children: u.cardsCount },
-            ]}
-          />
-
-          <div>
-            <Typography.Title level={5}>Cards</Typography.Title>
-            {u.cards.length === 0 ? (
-              <Empty description="No cards yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <List
-                dataSource={u.cards}
-                renderItem={(c) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={<Avatar src={c.vendorLogoUrl ?? undefined}>{c.vendorName.slice(0, 1)}</Avatar>}
-                      title={c.vendorName}
-                      description={`${num(c.lifetimePoints)} earned in total · last visit ${dayjs(c.lastActivityAt).format('D MMM')}`}
-                    />
-                    <Typography.Text strong>{num(c.balance)} pts</Typography.Text>
-                  </List.Item>
+          ) : (
+            <div className="grid gap-6">
+              <div className="flex items-center gap-4">
+                <Avatar className="size-16">
+                  <AvatarImage src={u.avatarUrl ?? undefined} alt="" />
+                  <AvatarFallback className="bg-brand-soft text-2xl font-semibold text-accent-foreground">{initial(u.name ?? u.email)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-semibold">{u.name ?? 'No name'}</h2>
+                    <StatusTag status={u.status} />
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">{u.email ?? 'No email'}</p>
+                </div>
+                {u.status === 'active' ? (
+                  <ConfirmAction
+                    title="Block this customer?"
+                    description="They can no longer use the app or collect points. Their points are kept; you can unblock them any time."
+                    actionLabel="Block"
+                    onConfirm={() => setStatus.mutateAsync('blocked')}
+                    trigger={
+                      <Button variant="destructive">
+                        <Ban /> Block
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <Button variant="outline" disabled={setStatus.isPending} onClick={() => setStatus.mutate('active')}>
+                    {setStatus.isPending ? <Loader2 className="animate-spin" /> : <CircleCheck />} Unblock
+                  </Button>
                 )}
-              />
-            )}
-          </div>
+              </div>
 
-          <div>
-            <Typography.Title level={5}>Recent activity</Typography.Title>
-            {u.events.length === 0 ? (
-              <Empty description="No activity yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <List
-                size="small"
-                dataSource={u.events}
-                renderItem={(e) => (
-                  <List.Item>
-                    <div>
-                      <div>
-                        <Tag color={e.type === 'earn' ? 'green' : e.type === 'redeem' ? 'orange' : 'purple'} bordered={false}>
-                          {e.type === 'earn' ? 'Earned' : e.type === 'redeem' ? 'Redeemed' : 'Correction'}
-                        </Tag>
-                        {e.vendorName}
-                        {e.branchName ? ` · ${e.branchName}` : ''}
-                      </div>
-                      <div style={{ color: brand.muted, fontSize: 12 }}>
-                        {[e.purchaseAmount ? `Bill ${e.purchaseAmount}` : null, e.rewardName, e.reason, dayjs(e.createdAt).format('D MMM YYYY, HH:mm')]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </div>
-                    </div>
-                    <Typography.Text strong style={{ color: e.delta > 0 ? brand.green : brand.ink }}>
-                      {e.delta > 0 ? '+' : ''}
-                      {num(e.delta)}
-                    </Typography.Text>
-                  </List.Item>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border p-4 text-sm">
+                <Detail label="Phone">{u.phone ?? '—'}</Detail>
+                <Detail label="Gender">{u.gender ? u.gender[0].toUpperCase() + u.gender.slice(1) : '—'}</Detail>
+                <Detail label="Birthday">{u.birthDate ? dayjs(u.birthDate).format('D MMM YYYY') : '—'}</Detail>
+                <Detail label="Joined">{dayjs(u.createdAt).format('D MMM YYYY')}</Detail>
+                <Detail label="Points held">{num(u.pointsBalance)}</Detail>
+                <Detail label="Cards">{u.cardsCount}</Detail>
+              </dl>
+
+              <section>
+                <h3 className="mb-2 font-semibold">Cards</h3>
+                {u.cards.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">No cards yet</p>
+                ) : (
+                  <ul className="divide-y">
+                    {u.cards.map((c) => (
+                      <li key={c.vendorName} className="flex items-center gap-3 py-3">
+                        <Avatar className="size-9">
+                          <AvatarImage src={c.vendorLogoUrl ?? undefined} alt="" />
+                          <AvatarFallback>{initial(c.vendorName)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium">{c.vendorName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {num(c.lifetimePoints)} earned in total · last visit {dayjs(c.lastActivityAt).format('D MMM')}
+                          </div>
+                        </div>
+                        <span className="font-semibold tabular-nums">{num(c.balance)} pts</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              />
-            )}
-          </div>
-        </Flex>
-      )}
-    </Drawer>
+              </section>
+
+              <Separator />
+
+              <section>
+                <h3 className="mb-2 font-semibold">Recent activity</h3>
+                {u.events.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">No activity yet</p>
+                ) : (
+                  <ul className="divide-y">
+                    {u.events.map((e, i) => {
+                      const t = EVENT[e.type] ?? EVENT.adjust;
+                      return (
+                        <li key={i} className="flex items-center gap-3 py-2.5">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 text-sm">
+                              <Badge variant={t.variant}>{t.label}</Badge>
+                              <span>
+                                {e.vendorName}
+                                {e.branchName ? ` · ${e.branchName}` : ''}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {[e.purchaseAmount ? `Bill ${e.purchaseAmount}` : null, e.rewardName, e.reason, dayjs(e.createdAt).format('D MMM YYYY, HH:mm')]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </div>
+                          </div>
+                          <span className={cn('font-semibold tabular-nums', e.delta > 0 && 'text-success')}>
+                            {e.delta > 0 ? '+' : ''}
+                            {num(e.delta)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function Detail({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium">{children}</dd>
+    </div>
   );
 }
