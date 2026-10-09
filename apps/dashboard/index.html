@@ -12,6 +12,15 @@
       rel="stylesheet"
     />
     <title>dvote admin</title>
+    <script>
+      // apply the saved theme before the first paint (see src/lib/theme.tsx)
+      try {
+        var t = localStorage.getItem('dvote-dashboard-theme');
+        if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

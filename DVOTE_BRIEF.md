@@ -115,7 +115,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 | Database | **Supabase Postgres 17** (cloud, since 2026-10-08). Local PostgreSQL 18 is used **only for automated tests** |
 | Auth | **Supabase Auth** (tokens verified by the API) |
 | Mobile | **React Native + Expo SDK 57 + Expo Router**, TypeScript. Two apps: customer (`apps/mobile`) and staff (`apps/staff`) |
-| Web dashboards (planned) | React + Vite + Ant Design + TanStack Query + Recharts, one app with vendor/admin routes |
+| Web dashboards (admin built) | React + Vite + Tailwind + shadcn/ui + TanStack Query + Recharts, one app with vendor/admin routes |
 | API contract (planned) | OpenAPI from NestJS → generated typed client `packages/api-client` (apps use hand-written types until then) |
 | Hosting v1 (planned) | One API container + the managed database. No microservices, queues or Redis |
 

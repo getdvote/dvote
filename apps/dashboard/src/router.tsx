@@ -1,4 +1,4 @@
-import { Flex, Spin } from 'antd';
+import { Loader2 } from 'lucide-react';
 import { createBrowserRouter, Outlet } from 'react-router';
 import { AdminLayout } from './layouts/AdminLayout';
 import { useAuth } from './lib/auth';
@@ -14,9 +14,9 @@ function RequireAdmin() {
   const { status } = useAuth();
   if (status === 'loading') {
     return (
-      <Flex align="center" justify="center" style={{ minHeight: '100vh' }}>
-        <Spin size="large" />
-      </Flex>
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
     );
   }
   if (status !== 'ready') return <Login />;
