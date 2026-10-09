@@ -4,11 +4,11 @@ import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import ArrowUp01Icon from '@hugeicons/core-free-icons/ArrowUp01Icon';
 import { Icon, type AppIcon } from './Icon';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { calendarNames, useI18n } from '../i18n';
 import { OLDEST_BIRTHDAY, todayYmd } from '../lib/dates';
 import { theme } from '../lib/theme';
+import { BottomSheet, SHEET_MAX_WIDTH } from './BottomSheet';
 import { Text } from './Text';
 import { PrimaryButton } from './ui';
 
@@ -41,8 +41,7 @@ export function BirthdayPicker({
   onCancel: () => void;
   onDone: (value: string) => void;
 }) {
-  const insets = useSafeAreaInsets();
-  const { t, rtl } = useI18n();
+  const { t } = useI18n();
   const { months: MONTHS, weekdays: WEEKDAYS, weekdaysMin } = calendarNames();
   const { width } = useWindowDimensions();
   const today = parse(todayYmd());
@@ -69,7 +68,7 @@ export function BirthdayPicker({
     setView(start ? 'days' : 'years');
   }, [visible, value]);
 
-  const sheetWidth = Math.min(width, 520);
+  const sheetWidth = Math.min(width, SHEET_MAX_WIDTH);
   const cell = Math.min(Math.floor((sheetWidth - 32) / 7), 52);
   const isFuture = (y: number, m: number, d = 1) =>
     y > today.y || (y === today.y && (m > today.m || (m === today.m && d > today.d)));
@@ -86,10 +85,8 @@ export function BirthdayPicker({
     : t('birthday.pick');
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={() => ready() && onCancel()} accessibilityLabel={t('birthday.closeCalendar')} />
-      <View style={[styles.sheet, { width: sheetWidth, paddingBottom: insets.bottom + 16, direction: rtl ? 'rtl' : 'ltr' }]}>
-        <View style={styles.grabber} />
+    <BottomSheet visible={visible} onClose={onCancel}>
+      <View style={styles.body}>
         <Text style={styles.caption}>{t('birthday.label')}</Text>
         <Text style={[styles.heading, !draft && styles.headingEmpty]}>{heading}</Text>
 
@@ -211,7 +208,7 @@ export function BirthdayPicker({
           </View>
         </View>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -282,18 +279,7 @@ function YearGrid({ selected, lastYear, onPick }: { selected: number; lastYear: 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)' },
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    alignSelf: 'center',
-    backgroundColor: theme.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: theme.separator, marginBottom: 14 },
+  body: { paddingHorizontal: theme.gutter },
   caption: { fontSize: 13, fontWeight: '600', color: theme.muted, textTransform: 'uppercase', letterSpacing: 0.6, paddingHorizontal: 4 },
   heading: { fontSize: 26, fontWeight: '700', color: theme.text, marginTop: 4, paddingHorizontal: 4 },
   headingEmpty: { color: theme.placeholder },
@@ -301,7 +287,7 @@ const styles = StyleSheet.create({
   monthButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
   monthText: { fontSize: 17, fontWeight: '600', color: theme.text },
   arrows: { flexDirection: 'row', gap: 8 },
-  arrow: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
+  arrow: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
   week: { flexDirection: 'row', marginBottom: 4 },
   weekday: { textAlign: 'center', fontSize: 13, fontWeight: '600', color: theme.muted },
   days: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -312,14 +298,14 @@ const styles = StyleSheet.create({
   dayTextOn: { color: theme.onPrimary, fontWeight: '700' },
   off: { color: theme.separator },
   monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 8 },
-  monthCell: { width: '31%', flexGrow: 1, height: 52, borderRadius: 26, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
+  monthCell: { width: '31%', flexGrow: 1, height: 52, borderRadius: 26, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
   yearRow: { height: YEAR_ROW, flexDirection: 'row', gap: 10, paddingVertical: 4 },
-  yearCell: { flex: 1, borderRadius: 22, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
+  yearCell: { flex: 1, borderRadius: 22, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
   chipOn: { backgroundColor: theme.primary },
   chipText: { fontSize: 16, fontWeight: '500', color: theme.text, fontVariant: ['tabular-nums'] },
   chipTextOn: { color: theme.onPrimary, fontWeight: '700' },
   footer: { flexDirection: 'row', gap: 12, marginTop: 16 },
   footerButton: { flex: 1 },
-  cancel: { height: 56, borderRadius: 28, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
+  cancel: { height: 56, borderRadius: 28, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
   cancelText: { fontSize: 17, fontWeight: '600', color: theme.text },
 });

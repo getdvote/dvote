@@ -53,6 +53,7 @@ export class CardsService {
             }
           : null,
         lastActivityAt: card.last_activity_at.toISOString(),
+        createdAt: card.created_at.toISOString(),
       };
     });
   }

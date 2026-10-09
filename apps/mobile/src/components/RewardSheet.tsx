@@ -93,5 +93,5 @@ const styles = StyleSheet.create({
   name: { fontSize: 24, fontWeight: '700', color: theme.text },
   description: { fontSize: 16, color: theme.muted, lineHeight: 22 },
   // The sheet is white, so the pill gets the light page grey (the darker "Soon" tag stays visible on it).
-  button: { backgroundColor: theme.background, marginTop: 14 },
+  button: { backgroundColor: theme.surface, marginTop: 14 },
 });

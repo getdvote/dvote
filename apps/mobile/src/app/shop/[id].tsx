@@ -39,6 +39,7 @@ import { useLiveRefresh } from '../../lib/live';
  *
  * The banner is the shop's uploaded banner photo (bannerUrl, set in the dashboards); without
  * one it is the shop's card design colours. The category (cafe, restaurant…) shows under the name.
+ * If the customer already has a card here, a "Your card" tile (balance) opens its details.
  */
 export default function Shop() {
   const params = useLocalSearchParams<{ id: string; name?: string; logoUrl?: string }>();
@@ -99,8 +100,23 @@ export default function Shop() {
           )}
           <Text style={styles.name}>{shopName}</Text>
           {shop?.category ? <Text style={styles.category}>{t(`categories.${shop.category}`)}</Text> : null}
-          {shop?.card ? <Text style={styles.balance}>{t('shop.youHave', { count: shop.card.balance })}</Text> : null}
         </View>
+
+        {shop?.card ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/card/[id]', params: { id: shop.card!.id } })}
+            style={({ pressed }) => [styles.myCard, pressed && { opacity: 0.7 }]}
+          >
+            {/* a small copy of the shop's loyalty card */}
+            <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.miniCard} />
+            <View style={styles.myCardText}>
+              <Text style={styles.myCardTitle}>{t('shop.yourCard')}</Text>
+              <Text style={styles.balance}>{t('shop.youHave', { count: shop.card.balance })}</Text>
+            </View>
+            <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror />
+          </Pressable>
+        ) : null}
 
         {/* Collect opens this shop's QR: it only works at this shop (other shops' staff get
             vendor_mismatch). The tab bar QR is the one that works anywhere. */}
@@ -108,7 +124,17 @@ export default function Shop() {
           <PrimaryButton
             title={t('shop.collect')}
             style={styles.action}
-            onPress={() => router.push({ pathname: '/qr', params: { vendorId: params.id, vendorName: shopName } })}
+            onPress={() =>
+              router.push({
+                pathname: '/qr',
+                params: {
+                  vendorId: params.id,
+                  vendorName: shopName,
+                  logoUrl: logoUrl ?? undefined,
+                  cardDesign: shop?.cardDesign != null ? String(shop.cardDesign) : undefined,
+                },
+              })
+            }
           />
         </View>
 
@@ -281,7 +307,8 @@ const BRANCH_PHOTOS = 3;
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
-  banner: { ...squircle, height: 160, borderRadius: theme.radius, overflow: 'hidden', backgroundColor: theme.fill },
+  // 2:1, the shape the API crops uploaded banners to (1600x800), so none of the photo is cut off.
+  banner: { ...squircle, aspectRatio: 2, borderRadius: theme.radius, overflow: 'hidden', backgroundColor: theme.fill },
   pattern: { position: 'absolute', right: -40, top: -20 },
   // The logo overlaps the bottom of the banner.
   hero: { alignItems: 'center', gap: 10, marginTop: -LOGO_SIZE / 2 },
@@ -301,7 +328,22 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   action: { flex: 1 },
   name: { fontSize: 24, fontWeight: '700', color: theme.text, textAlign: 'center' },
-  balance: { fontSize: 15, fontWeight: '600', color: theme.muted },
+  balance: { fontSize: 15, fontWeight: '500', color: theme.muted },
+  myCard: {
+    ...squircle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 20,
+    padding: 14,
+    paddingEnd: 16,
+    borderRadius: theme.radius,
+    backgroundColor: theme.surface,
+  },
+  // credit-card proportions, corners scaled down from the full card's
+  miniCard: { ...squircle, width: 56, height: 36, borderRadius: 8 },
+  myCardText: { flex: 1, gap: 2 },
+  myCardTitle: { fontSize: 17, fontWeight: '600', color: theme.text },
   category: { fontSize: 14, fontWeight: '500', color: theme.muted, marginTop: -2 },
   retry: { gap: 12, marginTop: 24 },
   rule: { flexDirection: 'row', gap: 14, paddingVertical: 16, alignItems: 'flex-start' },
@@ -322,5 +364,5 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, fontWeight: '600', color: theme.link, marginTop: 4 },
   photos: { flexDirection: 'row', gap: 8, paddingStart: 54 },
   photoSlot: { flex: 1 },
-  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: theme.fill },
+  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 16, backgroundColor: theme.fill },
 });

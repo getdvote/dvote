@@ -30,6 +30,8 @@ export interface Card {
   affordableRewards: number;
   nextReward: { id: string; name: string; nameAr: string | null; pointsCost: number; pointsNeeded: number } | null;
   lastActivityAt: string;
+  /** When the card was made: the first purchase at this shop. */
+  createdAt: string;
 }
 
 export interface CardEvent {

@@ -1,20 +1,25 @@
 import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
+import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { BottomSheet } from '../components/BottomSheet';
 import { Icon } from '../components/Icon';
 import { Text } from '../components/Text';
-import { ErrorBox, PageHeader, PrimaryButton, Screen } from '../components/ui';
+import { ErrorBox, Group, PageHeader, PrimaryButton, Row, Screen } from '../components/ui';
 import { api, ApiError, type Card } from '../lib/api';
 import { t as translate, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
 import { theme, vendorColors, squircle } from '../lib/theme';
 import { useLiveRefresh } from '../lib/live';
+import { showDate } from '../lib/dates';
 
 /**
- * My cards list (My profile → My cards): every card as a compact row, for a quick overview.
+ * My cards list (My profile → My cards): every card as a row (logo, shop, when it was added,
+ * balance), for a quick overview. Tapping a row opens a small sheet: the card's details
+ * (history) or the shop's page.
  * The My cards tab shows the same cards as full-size cards. Rows open the card's history.
  */
 export default function MyCards() {
@@ -23,6 +28,19 @@ export default function MyCards() {
   const [cards, setCards] = useState<Card[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Card | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // Where to go once the sheet has slid away (navigating under an open sheet would leave it on top).
+  const next = useRef<(() => void) | null>(null);
+
+  const pick = (card: Card) => {
+    setPicked(card);
+    setSheetOpen(true);
+  };
+  const go = (to: () => void) => {
+    next.current = to;
+    setSheetOpen(false);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -81,17 +99,59 @@ export default function MyCards() {
             card={item}
             first={index === 0}
             last={index === (cards?.length ?? 0) - 1}
-            onPress={() => router.push({ pathname: '/card/[id]', params: { id: item.id } })}
+            onPress={() => pick(item)}
           />
         )}
       />
+
+      <BottomSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onClosed={() => {
+          next.current?.();
+          next.current = null;
+          setPicked(null);
+        }}
+      >
+        {picked ? (
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <ShopLogo card={picked} size={56} />
+              <View style={styles.rowText}>
+                <Text style={styles.sheetName} numberOfLines={1}>
+                  {picked.vendor.name}
+                </Text>
+                <Text style={styles.added}>{t('common.points', { count: picked.balance })}</Text>
+              </View>
+            </View>
+            <Group>
+              <Row
+                icon={GiftCard02Icon}
+                label={t('cards.cardDetails')}
+                onPress={() => go(() => router.push({ pathname: '/card/[id]', params: { id: picked.id } }))}
+              />
+              <Row
+                icon={Store01Icon}
+                label={t('cards.shopDetails')}
+                onPress={() =>
+                  go(() =>
+                    router.push({
+                      pathname: '/shop/[id]',
+                      params: { id: picked.vendor.id, name: picked.vendor.name, logoUrl: picked.vendor.logoUrl ?? undefined },
+                    }),
+                  )
+                }
+              />
+            </Group>
+          </View>
+        ) : null}
+      </BottomSheet>
     </Screen>
   );
 }
 
-/** One card as a list row: logo, shop name, balance, chevron. Rows join into one white group. */
+/** One card as a list row: logo, shop name and added date, balance, chevron. Rows join into one white group. */
 function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; last: boolean; onPress: () => void }) {
-  const [color] = vendorColors(card.vendor.id, card.vendor.cardDesign);
   return (
     <Pressable
       accessibilityRole="button"
@@ -99,16 +159,13 @@ function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; l
       onPress={onPress}
       style={({ pressed }) => [styles.row, first && styles.rowFirst, last && styles.rowLast, pressed && styles.pressed]}
     >
-      {card.vendor.logoUrl ? (
-        <Image source={{ uri: card.vendor.logoUrl }} style={styles.logo} contentFit="contain" />
-      ) : (
-        <View style={[styles.logo, { backgroundColor: color }]}>
-          <Text style={styles.logoInitial}>{card.vendor.name.slice(0, 1).toUpperCase()}</Text>
-        </View>
-      )}
+      <ShopLogo card={card} size={48} />
       <View style={styles.rowText}>
         <Text style={styles.vendor} numberOfLines={1}>
           {card.vendor.name}
+        </Text>
+        <Text style={styles.added} numberOfLines={1}>
+          {translate('cards.addedOn', { date: showDate(new Date(card.createdAt)) })}
         </Text>
       </View>
       <Text style={styles.balance}>
@@ -121,16 +178,31 @@ function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; l
   );
 }
 
+/** The shop's logo filling a circle (like on its shop page); without one, its initial on the card colour. */
+function ShopLogo({ card, size }: { card: Card; size: number }) {
+  const box = { width: size, height: size, borderRadius: size / 2 };
+  if (card.vendor.logoUrl) {
+    return <Image source={{ uri: card.vendor.logoUrl }} style={[styles.logo, box]} contentFit="cover" />;
+  }
+  const [color] = vendorColors(card.vendor.id, card.vendor.cardDesign);
+  return (
+    <View style={[styles.logo, box, { backgroundColor: color }]}>
+      <Text style={[styles.logoInitial, { fontSize: size * 0.38 }]}>{card.vendor.name.slice(0, 1).toUpperCase()}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   list: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
   header: { gap: 12, paddingBottom: 10 },
   count: { fontSize: 15, color: theme.muted, marginLeft: 2 },
   row: {
-    minHeight: 72,
+    minHeight: 84,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: theme.surface,
   },
   rowFirst: { ...squircle, borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
@@ -138,15 +210,28 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   separator: {
     position: 'absolute',
-    left: 68,
+    left: 78, // lines up with the shop name
     right: 0,
     bottom: 0,
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.separator,
   },
-  logo: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  logoInitial: { fontSize: 17, fontWeight: '700', color: '#fff' },
-  rowText: { flex: 1, gap: 2 },
+  // Same look as the logo on the shop page: the photo fills the circle, with a 4 pt ring in
+  // the page colour.
+  logo: {
+    borderWidth: 4,
+    borderColor: theme.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: theme.surface,
+  },
+  logoInitial: { fontWeight: '700', color: '#fff' },
+  sheet: { paddingHorizontal: theme.gutter, gap: 16 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
+  sheetName: { fontSize: 20, fontWeight: '700', color: theme.text },
+  rowText: { flex: 1, gap: 4 },
+  added: { fontSize: 13, color: theme.muted },
   vendor: { fontSize: 17, fontWeight: '600', color: theme.text },
   balance: { fontSize: 17, fontWeight: '700', color: theme.text },
   pts: { fontSize: 13, fontWeight: '500', color: theme.muted },

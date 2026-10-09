@@ -181,7 +181,7 @@ function IssuedBy({ card }: { card: Card }) {
       style={({ pressed }) => [styles.box, styles.issuedBy, pressed && styles.pressed]}
     >
       {vendor.logoUrl ? (
-        <Image source={{ uri: vendor.logoUrl }} style={styles.logo} contentFit="contain" />
+        <Image source={{ uri: vendor.logoUrl }} style={styles.logo} contentFit="cover" />
       ) : (
         <View style={[styles.logo, { backgroundColor: color }]}>
           <Text style={styles.logoInitial}>{vendor.name.slice(0, 1).toUpperCase()}</Text>

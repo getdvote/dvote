@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   delta: { fontSize: 28, fontWeight: '700' },
   title: { fontSize: 16, color: theme.muted, textAlign: 'center' },
   // The sheet is white, so the details sit on the light page grey.
-  box: { ...squircle, backgroundColor: theme.background, borderRadius: theme.radius, paddingHorizontal: 16 },
+  box: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingVertical: 16 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator },
   label: { fontSize: 15, color: theme.muted },
