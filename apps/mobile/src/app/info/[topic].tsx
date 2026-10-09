@@ -1,4 +1,3 @@
-import File01Icon from '@hugeicons/core-free-icons/File01Icon';
 import CustomerService02Icon from '@hugeicons/core-free-icons/CustomerService02Icon';
 import Store01Icon from '@hugeicons/core-free-icons/Store01Icon';
 import { Icon, type AppIcon } from '../../components/Icon';
@@ -11,13 +10,12 @@ import { theme } from '../../lib/theme';
 
 
 /**
- * "More" menu pages that still need content or a backend (help centre, terms text,
- * vendor sign-up). One placeholder screen so the menu is complete. Send feedback is a
- * bottom sheet (components/FeedbackSheet).
+ * "More" menu pages that still need content or a backend (help centre, vendor sign-up).
+ * One placeholder screen so the menu is complete. Terms and conditions is its own page
+ * (app/terms.tsx, a web page); Send feedback is a bottom sheet (components/FeedbackSheet).
  */
 const TOPICS: Record<string, { title: TKey; icon: AppIcon; heading: TKey; text: TKey }> = {
   help: { title: 'info.helpTitle', icon: CustomerService02Icon, heading: 'info.helpHeading', text: 'info.helpText' },
-  terms: { title: 'info.termsTitle', icon: File01Icon, heading: 'info.termsHeading', text: 'info.termsText' },
   join: { title: 'info.joinTitle', icon: Store01Icon, heading: 'info.joinHeading', text: 'info.joinText' },
 };
 

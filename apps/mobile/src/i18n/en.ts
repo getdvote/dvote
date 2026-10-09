@@ -111,6 +111,9 @@ export const en = {
       'Show your QR code at a dvote coffee shop. Your card for that shop appears here with your first points.',
     couldNotLoad: 'Could not load your cards.',
     cardA11y: '{name}: {balance}',
+    addedOn: 'Added {date}',
+    cardDetails: 'Card details',
+    shopDetails: 'Shop details',
     ready: { one: '{count} reward ready to redeem', other: '{count} rewards ready to redeem' },
     stackA11y: '{count} cards. Show all',
     forYou: 'For you',
@@ -197,14 +200,16 @@ export const en = {
 
   profile: {
     title: 'Profile details',
+    name: 'Name',
+    email: 'Email',
+    phone: 'Phone (optional)',
     namePlaceholder: 'Your name',
     noEmail: 'No email',
-    phonePlaceholder: 'Phone (optional)',
+    phonePlaceholder: 'e.g. 01001234567',
     gender: 'Gender',
     male: 'Male',
     female: 'Female',
     save: 'Save changes',
-    saving: 'Saving…',
     saved: 'Saved',
     note: 'Your email is the one you sign in with. Shops never see your name, email, phone, gender or birthday.',
     nameEmpty: 'Enter your name.',
@@ -239,6 +244,7 @@ export const en = {
   settings: {
     title: 'Settings',
     language: 'Language',
+    notificationsTitle: 'Notifications',
     notifications: 'Enable notifications',
     note: 'Point notifications are coming soon.',
     logout: 'Logout',
@@ -247,10 +253,9 @@ export const en = {
     logoutText: 'You can log back in any time with the same account.',
     logoutAction: 'Log out',
     deleteTitle: 'Delete your account?',
-    deleteText: 'This permanently removes your dvote account and all your points at every shop. It cannot be undone.',
-    deleteAction: 'Delete',
-    notAvailableTitle: 'Not available yet',
-    notAvailableText: 'Deleting accounts from the app is coming soon. Your account has not been changed.',
+    deleteText:
+      "Your account will be deactivated straight away and permanently deleted after 90 days, with all your points at every shop. Changed your mind? Sign in again within 90 days to restore it, points and all.",
+    deleteAction: 'Delete my account',
   },
 
   about: {
@@ -286,8 +291,7 @@ export const en = {
     helpText:
       'Answers to common questions and a way to reach our team are coming soon. For points that did not appear, ask the shop staff to check their scan.',
     termsTitle: 'Terms and conditions',
-    termsHeading: 'Terms and conditions',
-    termsText: 'The full terms and privacy policy will be published here before launch.',
+    termsFailed: "Couldn't load the terms. Check your connection and try again.",
     joinTitle: 'Join as a vendor',
     joinHeading: 'Bring dvote to your coffee shop',
     joinText: 'Reward your regulars with points and free treats. Vendor sign-up is coming soon to the app.',
@@ -318,6 +322,7 @@ export const en = {
 
   shop: {
     fallbackName: 'Shop',
+    yourCard: 'Your card',
     youHave: { one: 'You have {count} point here', other: 'You have {count} points here' },
     logoA11y: '{name} logo. Open full screen',
     earnTitle: 'How you earn points',

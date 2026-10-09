@@ -57,7 +57,7 @@ export function CardStack({
         const top = progress.interpolate({ inputRange: [0, 1], outputRange: [collapsedTop, fromTop * STEP] });
         return (
           <Animated.View key={card.id} style={[styles.slot, { top, zIndex: n - i }]}>
-            <View style={[styles.shadowLayer, i === 0 ? shadows.soft : shadows.edge]} />
+            <View style={[styles.shadowLayer, i === 0 ? FRONT_SHADOW : shadows.edge]} />
             <LoyaltyCard card={card} onPress={expanded ? () => onOpenCard(card) : onExpand} />
           </Animated.View>
         );
@@ -66,10 +66,14 @@ export function CardStack({
   );
 }
 
+// The front card: the soft drop shadow below, plus the same top edge as the others.
+const FRONT_SHADOW = { boxShadow: `${shadows.edge.boxShadow}, ${shadows.soft.boxShadow}` };
+
 const styles = StyleSheet.create({
   slot: { position: 'absolute', left: 0, right: 0 },
-  // The front card gets the soft drop shadow; the ones behind only a faint edge where they
-  // overlap (a full shadow on each would add up to a grey haze around the stack). Drawn on a
+  // Every card casts a tight shadow onto the card behind it, so similar colours don't blend; only
+  // the front one also gets the soft drop shadow (on each card the shadows would add up to a
+  // grey haze around the stack). Drawn on a
   // layer behind the card, inset 2 pt: boxShadow uses plain round corners, which would peek
   // out as a thin light line around the card's smoother (squircle) corners.
   shadowLayer: { position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, borderRadius: 30 },

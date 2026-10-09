@@ -39,8 +39,11 @@ export const shadows = {
     boxShadow:
       '0px 1px 2px rgba(0, 0, 0, 0.04), 0px 4px 8px rgba(0, 0, 0, 0.04), 0px 12px 24px -4px rgba(0, 0, 0, 0.08), 0px 24px 48px -12px rgba(0, 0, 0, 0.12)',
   },
-  /** A faint edge where one card overlaps another (the cards behind in the stack). */
-  edge: { boxShadow: '0px -1px 6px rgba(0, 0, 0, 0.08)' },
+  /**
+   * The edge where one card overlaps another in the stack: a tight shadow cast upward, so two
+   * cards of similar colours still read as separate cards.
+   */
+  edge: { boxShadow: '0px -1px 1px rgba(0, 0, 0, 0.08), 0px -2px 6px rgba(0, 0, 0, 0.12)' },
 } as const;
 
 /**

@@ -17,6 +17,10 @@ async function bootstrap() {
     app.enableCors({ origin: origins.split(',').map((o) => o.trim()) });
   }
 
+  // Public pages shown inside the apps (e.g. /legal/terms.html in the customer app), served in
+  // every environment so they can be edited and redeployed without a new app release.
+  app.useStaticAssets(join(__dirname, '..', 'public'));
+
   if (config.get('NODE_ENV', { infer: true }) !== 'production') {
     setupSwagger(app);
     // Temporary sign-in test page (dev-public/login.html) until the real apps exist.

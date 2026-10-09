@@ -68,7 +68,7 @@ export default function About() {
         </Group>
 
         <Group style={{ marginTop: 24 }}>
-          <Row label={t('about.terms')} onPress={() => router.push('/info/terms')} />
+          <Row label={t('about.terms')} onPress={() => router.push('/terms')} />
           <Row label={t('about.join')} onPress={() => router.push('/info/join')} />
         </Group>
 

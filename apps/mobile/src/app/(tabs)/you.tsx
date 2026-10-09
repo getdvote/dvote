@@ -57,7 +57,7 @@ export default function You() {
         <Group>
           <Row icon={BubbleChatIcon} label={t('you.feedback')} onPress={() => setFeedbackOpen(true)} />
           <Row icon={CustomerService02Icon} label={t('you.help')} onPress={() => router.push('/info/help')} />
-          <Row icon={File01Icon} label={t('you.terms')} onPress={() => router.push('/info/terms')} />
+          <Row icon={File01Icon} label={t('you.terms')} onPress={() => router.push('/terms')} />
           <Row icon={InformationCircleIcon} label={t('you.about')} onPress={() => router.push('/about')} />
           <Row icon={Store01Icon} label={t('you.join')} onPress={() => router.push('/info/join')} />
         </Group>
