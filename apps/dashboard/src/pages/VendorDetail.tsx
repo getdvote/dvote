@@ -4,6 +4,7 @@ import { Alert, App, Avatar, Button, Card, Flex, Form, Input, Modal, Select, Ske
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { api, errorMessage, type Vendor } from '../lib/api';
+import { adminScope } from '../lib/scope';
 import { brand } from '../theme';
 import { BranchesTab } from './vendor/BranchesTab';
 import { ImagesTab } from './vendor/ImagesTab';
@@ -33,11 +34,11 @@ export function VendorDetail() {
             <Tabs
               size="large"
               items={[
-                { key: 'branches', label: 'Branches', children: <BranchesTab vendorId={id} /> },
-                { key: 'rule', label: 'Points rule', children: <RulesTab vendor={vendor} /> },
-                { key: 'rewards', label: 'Rewards', children: <RewardsTab vendorId={id} /> },
-                { key: 'images', label: 'Menu & photos', children: <ImagesTab vendorId={id} /> },
-                { key: 'staff', label: 'Staff', children: <StaffTab vendorId={id} /> },
+                { key: 'branches', label: 'Branches', children: <BranchesTab scope={scope(vendor)} /> },
+                { key: 'rule', label: 'Points rule', children: <RulesTab scope={scope(vendor)} /> },
+                { key: 'rewards', label: 'Rewards', children: <RewardsTab scope={scope(vendor)} /> },
+                { key: 'images', label: 'Menu & photos', children: <ImagesTab scope={scope(vendor)} /> },
+                { key: 'staff', label: 'Staff', children: <StaffTab scope={scope(vendor)} /> },
               ]}
             />
           </Card>
@@ -212,4 +213,8 @@ function EditVendorModal({
       </Form>
     </Modal>
   );
+}
+
+function scope(v: Vendor) {
+  return adminScope(v.id, v.currency);
 }

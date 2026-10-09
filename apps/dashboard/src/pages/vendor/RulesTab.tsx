@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Col, Empty, Flex, Form, InputNumber, Row, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { api, errorMessage, type PointRule, type Vendor } from '../../lib/api';
+import { errorMessage, type PointRule } from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 import { brand } from '../../theme';
 
 const amount = (v: string) => (v.endsWith('.00') ? v.slice(0, -3) : v);
@@ -14,28 +15,28 @@ function pointsFor(bill: number, r: { spendAmount: number; pointsPerSpend: numbe
 }
 
 /** The vendor's earning rule: the active one, publish a new version, history, stop earning. */
-export function RulesTab({ vendor }: { vendor: Vendor }) {
+export function RulesTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const draft = Form.useWatch([], form) as
     | { spendAmount?: number; pointsPerSpend?: number; minPurchase?: number; maxPointsPerPurchase?: number | null }
     | undefined;
-  const { data, isLoading, error } = useQuery({ queryKey: ['rules', vendor.id], queryFn: () => api.pointRules(vendor.id) });
+  const { data, isLoading, error } = useQuery({ queryKey: ['rules', scope.key], queryFn: () => scope.pointRules() });
   const active = data?.find((r) => r.isActive) ?? null;
 
   const done = (text: string) => {
-    void qc.invalidateQueries({ queryKey: ['rules', vendor.id] });
+    void qc.invalidateQueries({ queryKey: ['rules', scope.key] });
     void message.success(text);
   };
   const publish = useMutation({
     mutationFn: (v: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null }) =>
-      api.publishRule(vendor.id, { ...v, maxPointsPerPurchase: v.maxPointsPerPurchase || null }),
+      scope.publishRule({ ...v, maxPointsPerPurchase: v.maxPointsPerPurchase || null }),
     onSuccess: (r) => done(`Rule version ${r.version} is now active`),
     onError: (e) => void message.error(errorMessage(e)),
   });
   const stop = useMutation({
-    mutationFn: () => api.deactivateRule(vendor.id),
+    mutationFn: () => scope.deactivateRule(),
     onSuccess: () => done('Earning stopped'),
     onError: (e) => void message.error(errorMessage(e)),
   });
@@ -50,14 +51,14 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
             {active ? (
               <>
                 <Typography.Title level={2} style={{ margin: '6px 0 4px', color: brand.purple }}>
-                  Every {amount(active.spendAmount)} {vendor.currency} = {active.pointsPerSpend} point{active.pointsPerSpend === 1 ? '' : 's'}
+                  Every {amount(active.spendAmount)} {scope.currency} = {active.pointsPerSpend} point{active.pointsPerSpend === 1 ? '' : 's'}
                 </Typography.Title>
                 <Typography.Text type="secondary">
                   Version {active.version} · since {dayjs(active.createdAt).format('D MMM YYYY')}
-                  {Number(active.minPurchase) > 0 ? ` · bills from ${amount(active.minPurchase)} ${vendor.currency}` : ''}
+                  {Number(active.minPurchase) > 0 ? ` · bills from ${amount(active.minPurchase)} ${scope.currency}` : ''}
                   {active.maxPointsPerPurchase ? ` · max ${active.maxPointsPerPurchase} per purchase` : ''}
                 </Typography.Text>
-                <div style={{ marginTop: 18 }}>
+                <div style={{ marginTop: 18, display: scope.can.editVendor ? undefined : 'none' }}>
                   <Button
                     danger
                     loading={stop.isPending}
@@ -82,7 +83,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
             )}
           </Card>
         </Col>
-        <Col xs={24} lg={13}>
+        <Col xs={24} lg={13} style={{ display: scope.can.editVendor ? undefined : 'none' }}>
           <Card title={active ? 'Publish a new rule' : 'Set the points rule'}>
             <Form
               form={form}
@@ -93,7 +94,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
             >
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item name="spendAmount" label={`Every (${vendor.currency})`} rules={[{ required: true }]}>
+                  <Form.Item name="spendAmount" label={`Every (${scope.currency})`} rules={[{ required: true }]}>
                     <InputNumber min={0.01} max={99999999} precision={2} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
@@ -103,7 +104,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="minPurchase" label={`Minimum bill (${vendor.currency})`}>
+                  <Form.Item name="minPurchase" label={`Minimum bill (${scope.currency})`}>
                     <InputNumber min={0} precision={2} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
@@ -120,7 +121,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
                   message={[50, 95, 250]
                     .map(
                       (bill) =>
-                        `${bill} ${vendor.currency} → ${pointsFor(bill, {
+                        `${bill} ${scope.currency} → ${pointsFor(bill, {
                           spendAmount: draft.spendAmount!,
                           pointsPerSpend: draft.pointsPerSpend!,
                           minPurchase: draft.minPurchase,
@@ -152,8 +153,8 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
           locale={{ emptyText: <Empty description="No rules yet" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           columns={[
             { title: 'Version', dataIndex: 'version', render: (v: number, r) => <>v{v} {r.isActive ? <Tag color="purple">Active</Tag> : null}</> },
-            { title: 'Rule', key: 'rule', render: (_, r) => `${amount(r.spendAmount)} ${vendor.currency} = ${r.pointsPerSpend} pt` },
-            { title: 'Minimum bill', dataIndex: 'minPurchase', render: (m: string) => (Number(m) > 0 ? `${amount(m)} ${vendor.currency}` : '—') },
+            { title: 'Rule', key: 'rule', render: (_, r) => `${amount(r.spendAmount)} ${scope.currency} = ${r.pointsPerSpend} pt` },
+            { title: 'Minimum bill', dataIndex: 'minPurchase', render: (m: string) => (Number(m) > 0 ? `${amount(m)} ${scope.currency}` : '—') },
             { title: 'Max per purchase', dataIndex: 'maxPointsPerPurchase', render: (m: number | null) => m ?? '—' },
             { title: 'Published', dataIndex: 'createdAt', render: (d: string) => dayjs(d).format('D MMM YYYY, HH:mm') },
           ]}

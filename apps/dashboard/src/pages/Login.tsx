@@ -8,7 +8,7 @@ import { brand } from '../theme';
 
 const { Title, Text, Paragraph } = Typography;
 
-/** Sign-in for platform admins: password, then the authenticator-app code (or its first-time setup). */
+/** Sign-in for platform admins and vendor accounts: password, then the authenticator-app code (or its first-time setup). */
 export function Login() {
   const { status, notice } = useAuth();
   return (
@@ -16,7 +16,7 @@ export function Login() {
       <Flex vertical align="center" gap={28} style={{ width: '100%', maxWidth: 420 }}>
         <Flex vertical align="center" gap={6}>
           <DvoteLogo height={44} color={brand.purple} />
-          <Text type="secondary">Admin dashboard</Text>
+          <Text type="secondary">Dashboard</Text>
         </Flex>
         <Card style={{ width: '100%', boxShadow: '0 8px 30px rgba(17,17,20,0.06)' }}>
           {notice ? <Alert type="error" showIcon message={notice} style={{ marginBottom: 20 }} /> : null}
@@ -40,7 +40,7 @@ function PasswordStep() {
         Sign in
       </Title>
       <Paragraph type="secondary" style={{ marginTop: 6 }}>
-        Use your dvote admin email and password.
+        Shop owners and managers: use the email your invite was sent to.
       </Paragraph>
       <Form
         layout="vertical"

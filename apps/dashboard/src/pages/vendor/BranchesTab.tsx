@@ -1,23 +1,24 @@
 import { EnvironmentOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Col, Flex, Form, Input, InputNumber, Modal, Row, Table } from 'antd';
+import { Alert, App, Button, Col, Flex, Form, Input, InputNumber, Modal, Row, Table, type TableColumnsType } from 'antd';
 import { useState } from 'react';
-import { api, errorMessage, type Branch } from '../../lib/api';
+import { errorMessage, type Branch } from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 import { brand } from '../../theme';
 import { StatusTag } from '../Vendors';
 
 /** The vendor's shops: add, edit (address, map location), close / reopen. */
-export function BranchesTab({ vendorId }: { vendorId: string }) {
+export function BranchesTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const { message } = App.useApp();
   const [editing, setEditing] = useState<Branch | 'new' | null>(null);
-  const { data, isLoading, error } = useQuery({ queryKey: ['branches', vendorId], queryFn: () => api.branches(vendorId) });
+  const { data, isLoading, error } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
 
   const toggle = useMutation({
-    mutationFn: (b: Branch) => api.updateBranch(b.id, { status: b.status === 'active' ? 'closed' : 'active' }),
+    mutationFn: (b: Branch) => scope.updateBranch(b.id, { status: b.status === 'active' ? 'closed' : 'active' }),
     onSuccess: (b) => {
-      void qc.invalidateQueries({ queryKey: ['branches', vendorId] });
-      void qc.invalidateQueries({ queryKey: ['vendor', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
+      void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
       void message.success(b.status === 'active' ? `${b.name} reopened` : `${b.name} closed`);
     },
     onError: (e) => void message.error(errorMessage(e)),
@@ -27,9 +28,11 @@ export function BranchesTab({ vendorId }: { vendorId: string }) {
     <>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <span style={{ color: brand.muted }}>Customers see open branches on the shop page, with directions.</span>
+        {scope.can.editVendor ? (
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
           Add branch
         </Button>
+        ) : null}
       </Flex>
       {error ? <Alert type="error" showIcon message={errorMessage(error)} /> : null}
       <Table<Branch>
@@ -38,7 +41,7 @@ export function BranchesTab({ vendorId }: { vendorId: string }) {
         dataSource={data ?? []}
         pagination={false}
         locale={{ emptyText: 'No branches yet' }}
-        columns={[
+        columns={([
           { title: 'Branch', dataIndex: 'name', render: (n: string) => <strong>{n}</strong> },
           { title: 'Address', dataIndex: 'address', render: (a: string | null) => a ?? <span style={{ color: brand.muted }}>—</span> },
           {
@@ -69,14 +72,14 @@ export function BranchesTab({ vendorId }: { vendorId: string }) {
               </Flex>
             ),
           },
-        ]}
+        ] as TableColumnsType<Branch>).filter((c) => scope.can.editVendor || c.key !== 'actions')}
       />
-      <BranchModal vendorId={vendorId} branch={editing} onClose={() => setEditing(null)} />
+      <BranchModal scope={scope} branch={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function BranchModal({ vendorId, branch, onClose }: { vendorId: string; branch: Branch | 'new' | null; onClose: () => void }) {
+function BranchModal({ scope, branch, onClose }: { scope: VendorScope; branch: Branch | 'new' | null; onClose: () => void }) {
   const [form] = Form.useForm();
   const qc = useQueryClient();
   const { message } = App.useApp();
@@ -84,11 +87,11 @@ function BranchModal({ vendorId, branch, onClose }: { vendorId: string; branch: 
   const save = useMutation({
     mutationFn: (v: { name: string; address?: string; lat?: number | null; lng?: number | null }) => {
       const body = { name: v.name.trim(), address: v.address?.trim() || null, lat: v.lat ?? null, lng: v.lng ?? null };
-      return isNew ? api.createBranch(vendorId, body) : api.updateBranch((branch as Branch).id, body);
+      return isNew ? scope.createBranch(body) : scope.updateBranch((branch as Branch).id, body);
     },
     onSuccess: (b) => {
-      void qc.invalidateQueries({ queryKey: ['branches', vendorId] });
-      void qc.invalidateQueries({ queryKey: ['vendor', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
+      void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
       void message.success(isNew ? `${b.name} added` : 'Saved');
       onClose();
     },

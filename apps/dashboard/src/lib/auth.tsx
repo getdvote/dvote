@@ -1,11 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, ApiError, errorMessage, type AdminMe } from './api';
+import { api, ApiError, errorMessage, vendorApi, type AdminMe, type StaffMe } from './api';
 import { supabase } from './supabase';
 
 /**
  * Platform-admin sign-in: email + password, then a 6-digit code from an authenticator app
  * (Supabase MFA). The API only accepts two-factor tokens (aal2), unless the server runs
  * with ADMIN_MFA_REQUIRED=false (local development).
+ *
+ * The same screen signs in vendor accounts (vendor admins and branch managers, from
+ * /api/vendor/staff/me): they see only their own vendor. Plain staff use the staff app.
  *
  *   signedOut → (password) → mfaVerify (has an authenticator) ──code──┐
  *                          → mfaEnroll (none yet: scan a QR) ──code──┤→ ready
@@ -22,6 +25,8 @@ export interface Enrollment {
 interface AuthState {
   status: AuthStatus;
   admin: AdminMe | null;
+  /** Set when a vendor account (not a platform admin) is signed in. */
+  staff: StaffMe | null;
   /** Shown on the sign-in screen (e.g. "not a dvote admin"). */
   notice: string | null;
   signIn: (email: string, password: string) => Promise<void>;
@@ -36,13 +41,33 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [admin, setAdmin] = useState<AdminMe | null>(null);
+  const [staff, setStaff] = useState<StaffMe | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut().catch(() => undefined);
     setAdmin(null);
+    setStaff(null);
     setStatus('signedOut');
   }, []);
+
+  /** Not a platform admin: maybe a vendor account. */
+  const resolveVendor = useCallback(async () => {
+    try {
+      const me = await vendorApi.me();
+      if (me.role === 'staff') {
+        setNotice('Staff accounts use the dvote staff app. The dashboard is for vendor admins and branch managers.');
+        await signOut();
+        return;
+      }
+      setStaff(me);
+      setNotice(null);
+      setStatus('ready');
+    } catch (err) {
+      setNotice(err instanceof ApiError && err.code === 'not_staff' ? 'This account has no access to the dvote dashboard.' : errorMessage(err));
+      await signOut();
+    }
+  }, [signOut]);
 
   /** After a password (or a stored session): decide what's still needed. */
   const resolve = useCallback(async () => {
@@ -60,10 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('mfaEnroll');
         return;
       }
+      if (err instanceof ApiError && err.code === 'not_admin') {
+        await resolveVendor();
+        return;
+      }
       setNotice(errorMessage(err));
       await signOut();
     }
-  }, [signOut]);
+  }, [signOut, resolveVendor]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => (data.session ? resolve() : setStatus('signedOut')));
@@ -115,8 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ status, admin, notice, signIn, verifyCode, startEnroll, confirmEnroll, signOut }),
-    [status, admin, notice, signIn, verifyCode, startEnroll, confirmEnroll, signOut],
+    () => ({ status, admin, staff, notice, signIn, verifyCode, startEnroll, confirmEnroll, signOut }),
+    [status, admin, staff, notice, signIn, verifyCode, startEnroll, confirmEnroll, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

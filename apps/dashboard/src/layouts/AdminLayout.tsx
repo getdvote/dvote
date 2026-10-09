@@ -1,5 +1,5 @@
 import { DashboardOutlined, LogoutOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
-import { Avatar, Button, Flex, Layout, Menu, Typography } from 'antd';
+import { Avatar, Button, Flex, Layout, Menu, Typography, type MenuProps } from 'antd';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { DvoteLogo } from '../components/DvoteLogo';
@@ -8,18 +8,46 @@ import { brand } from '../theme';
 
 const { Sider, Content } = Layout;
 
-const NAV = [
+export interface NavItem {
+  key: string;
+  icon: ReactNode;
+  label: string;
+}
+
+const NAV: NavItem[] = [
   { key: '/', icon: <DashboardOutlined />, label: 'Overview' },
   { key: '/vendors', icon: <ShopOutlined />, label: 'Vendors' },
   { key: '/customers', icon: <TeamOutlined />, label: 'Customers' },
 ];
 
-/** White sidebar (logo, sections, signed-in admin) + grey canvas for the page. */
 export function AdminLayout({ children }: { children: ReactNode }) {
-  const { admin, signOut } = useAuth();
+  const { admin } = useAuth();
+  return (
+    <SideLayout nav={NAV} badge="ADMIN" person={{ name: admin?.name ?? '', email: admin?.email ?? '' }}>
+      {children}
+    </SideLayout>
+  );
+}
+
+/** White sidebar (logo, sections, signed-in person) + grey canvas for the page. */
+export function SideLayout({
+  nav,
+  badge,
+  top,
+  person,
+  children,
+}: {
+  nav: NavItem[];
+  badge: string;
+  /** Shown under the logo (e.g. the vendor's name). */
+  top?: ReactNode;
+  person: { name: string; email: string };
+  children: ReactNode;
+}) {
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const selected = NAV.filter((n) => (n.key === '/' ? pathname === '/' : pathname.startsWith(n.key))).map((n) => n.key);
+  const selected = nav.filter((n) => (n.key === '/' ? pathname === '/' : pathname.startsWith(n.key))).map((n) => n.key);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -38,24 +66,19 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 letterSpacing: 0.4,
               }}
             >
-              ADMIN
+              {badge}
             </span>
           </Flex>
-          <Menu
-            mode="inline"
-            selectedKeys={selected}
-            items={NAV}
-            onClick={(e) => navigate(e.key)}
-            style={{ border: 'none', flex: 1 }}
-          />
+          {top}
+          <Menu mode="inline" selectedKeys={selected} items={nav as MenuProps['items']} onClick={(e) => navigate(e.key)} style={{ border: 'none', flex: 1 }} />
           <Flex align="center" gap={10} style={{ padding: '12px 10px', borderTop: '1px solid #ECECF1' }}>
-            <Avatar style={{ background: brand.purple, flexShrink: 0 }}>{admin?.name.slice(0, 1).toUpperCase()}</Avatar>
+            <Avatar style={{ background: brand.purple, flexShrink: 0 }}>{person.name.slice(0, 1).toUpperCase()}</Avatar>
             <Flex vertical style={{ minWidth: 0, flex: 1 }}>
               <Typography.Text strong ellipsis>
-                {admin?.name}
+                {person.name}
               </Typography.Text>
               <Typography.Text type="secondary" ellipsis style={{ fontSize: 12 }}>
-                {admin?.email}
+                {person.email}
               </Typography.Text>
             </Flex>
             <Button type="text" icon={<LogoutOutlined />} title="Sign out" onClick={() => void signOut()} />

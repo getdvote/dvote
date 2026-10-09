@@ -1,7 +1,7 @@
 # apps/dashboard — dvote admin dashboard
 
 React 19 + TypeScript (Vite), Ant Design 6, TanStack Query, Recharts, React Router 7.
-Web only. The vendor dashboard will be added to this same app later (same screens, one vendor).
+Web only. Also the vendor dashboard: vendor admins and branch managers sign in on the same screen and see only their own vendor (the vendor comes from their token). Staff accounts are refused (staff app).
 
 ## Run
 

@@ -1,22 +1,23 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Col, Flex, Form, Input, InputNumber, Modal, Row, Table } from 'antd';
+import { Alert, App, Button, Col, Flex, Form, Input, InputNumber, Modal, Row, Table, type TableColumnsType } from 'antd';
 import { useState } from 'react';
-import { api, errorMessage, type Reward } from '../../lib/api';
+import { errorMessage, type Reward } from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 import { brand } from '../../theme';
 import { StatusTag } from '../Vendors';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts/order, archive / restore. */
-export function RewardsTab({ vendorId }: { vendorId: string }) {
+export function RewardsTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const { message } = App.useApp();
   const [editing, setEditing] = useState<Reward | 'new' | null>(null);
-  const { data, isLoading, error } = useQuery({ queryKey: ['rewards', vendorId], queryFn: () => api.rewards(vendorId) });
+  const { data, isLoading, error } = useQuery({ queryKey: ['rewards', scope.key], queryFn: () => scope.rewards() });
 
   const toggle = useMutation({
-    mutationFn: (r: Reward) => api.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
+    mutationFn: (r: Reward) => scope.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
     onSuccess: (r) => {
-      void qc.invalidateQueries({ queryKey: ['rewards', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
       void message.success(r.status === 'active' ? `${r.name} restored` : `${r.name} archived`);
     },
     onError: (e) => void message.error(errorMessage(e)),
@@ -26,9 +27,11 @@ export function RewardsTab({ vendorId }: { vendorId: string }) {
     <>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <span style={{ color: brand.muted }}>Archived rewards can't be redeemed. A new price applies to future redemptions only.</span>
+        {scope.can.editVendor ? (
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
           Add reward
         </Button>
+        ) : null}
       </Flex>
       {error ? <Alert type="error" showIcon message={errorMessage(error)} /> : null}
       <Table<Reward>
@@ -37,7 +40,7 @@ export function RewardsTab({ vendorId }: { vendorId: string }) {
         dataSource={data ?? []}
         pagination={false}
         locale={{ emptyText: 'No rewards yet' }}
-        columns={[
+        columns={([
           { title: '#', dataIndex: 'sortOrder', width: 56 },
           {
             title: 'Reward',
@@ -73,14 +76,14 @@ export function RewardsTab({ vendorId }: { vendorId: string }) {
               </Flex>
             ),
           },
-        ]}
+        ] as TableColumnsType<Reward>).filter((c) => scope.can.editVendor || c.key !== 'actions')}
       />
-      <RewardModal vendorId={vendorId} reward={editing} onClose={() => setEditing(null)} />
+      <RewardModal scope={scope} reward={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function RewardModal({ vendorId, reward, onClose }: { vendorId: string; reward: Reward | 'new' | null; onClose: () => void }) {
+function RewardModal({ scope, reward, onClose }: { scope: VendorScope; reward: Reward | 'new' | null; onClose: () => void }) {
   const [form] = Form.useForm();
   const qc = useQueryClient();
   const { message } = App.useApp();
@@ -95,10 +98,10 @@ function RewardModal({ vendorId, reward, onClose }: { vendorId: string; reward: 
         pointsCost: v.pointsCost,
         sortOrder: v.sortOrder ?? undefined,
       };
-      return isNew ? api.createReward(vendorId, body) : api.updateReward((reward as Reward).id, body);
+      return isNew ? scope.createReward(body) : scope.updateReward((reward as Reward).id, body);
     },
     onSuccess: (r) => {
-      void qc.invalidateQueries({ queryKey: ['rewards', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
       void message.success(isNew ? `${r.name} added` : 'Saved');
       onClose();
     },

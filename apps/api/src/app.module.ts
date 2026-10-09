@@ -15,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { BranchesModule } from './branches/branches.module';
 import { PointRulesModule } from './point-rules/point-rules.module';
 import { RewardsModule } from './rewards/rewards.module';
+import { ReportsModule } from './reports/vendor-summary';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { RewardsModule } from './rewards/rewards.module';
     BranchesModule,
     PointRulesModule,
     RewardsModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}
