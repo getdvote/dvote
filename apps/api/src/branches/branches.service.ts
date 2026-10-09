@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { branches } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBranchDto, UpdateBranchDto } from './dto/branch.dto';
+
+/** A map location is both lat and lng, or neither (400 location_incomplete). */
+function assertLocation(lat: unknown, lng: unknown) {
+  if ((lat === null) !== (lng === null)) throw new BadRequestException({ code: 'location_incomplete' });
+}
 
 /** A vendor's branches. Never deleted: status=closed hides them and blocks their staff. */
 @Injectable()
@@ -18,6 +23,7 @@ export class BranchesService {
 
   async create(vendorId: string, dto: CreateBranchDto): Promise<branches> {
     await this.assertVendor(vendorId);
+    assertLocation(dto.lat ?? null, dto.lng ?? null);
     return this.prisma.branches.create({
       data: {
         vendor_id: vendorId,
@@ -34,6 +40,7 @@ export class BranchesService {
   async update(id: string, dto: UpdateBranchDto, vendorId?: string): Promise<branches> {
     const branch = await this.prisma.branches.findUnique({ where: { id } });
     if (!branch || (vendorId && branch.vendor_id !== vendorId)) throw new NotFoundException({ code: 'branch_not_found' });
+    assertLocation(dto.lat === undefined ? branch.lat : dto.lat, dto.lng === undefined ? branch.lng : dto.lng);
     return this.prisma.branches.update({
       where: { id },
       data: {

@@ -15,13 +15,16 @@ import { DvoteLogo } from '../../components/DvoteLogo';
 import { FeedbackSheet } from '../../components/FeedbackSheet';
 import { Avatar, ErrorBox, Group, Row, Screen, SectionTitle } from '../../components/ui';
 import { useI18n } from '../../i18n';
+import { useLiveRefresh } from '../../lib/live';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 
 /** "My profile" (route: you): profile header + Account / More menus. Logout and Delete account are in Settings. */
 export default function You() {
-  const { me, meError, session } = useSession();
+  const { me, meError, session, refreshMe } = useSession();
   const { t } = useI18n();
+  // Name and photo stay in step with changes made elsewhere (another device, support).
+  useLiveRefresh(refreshMe);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const name = me?.name ?? t('you.member');

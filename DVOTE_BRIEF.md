@@ -177,6 +177,9 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 | Date | Decision |
 |---|---|
+| 2026-10-09 | **Two kinds of collect QR.** The main QR (tab bar) works at any shop. A shop QR (Collect on a shop page) works only at that shop: another shop's staff get "This QR is for another shop" and give no points. Replaces the 2026-10-08 "no shop QRs" rule. |
+| 2026-10-09 | **Reward photos** (one per reward, uploaded from either dashboard, stored at `<vendor>/rewards/`). **Branch locations are picked on a map** (search, Google Maps link, or click), never typed. Branch photos moved to the Branches page. |
+| 2026-10-09 | Customer app **refreshes itself** every 20 s on the visible screen (and when reopened), so dashboard edits show up without pulling down. |
 | 2026-10-08 | **Customer app in English and Arabic** (English default; switch in Settings; Arabic is fully right-to-left with an Arabic font; proper Arabic plurals). Shop data (names, rewards) stays as the shop typed it. |
 | 2026-10-08 | **Image storage:** Supabase Storage, folders by **id** (never names), random file names, public `vendors` bucket + private `avatars` bucket, uploads only through the API (WebP), deleting an image deletes its file. Menu pages + branch photos in `vendor_images` (migration 6). |
 | 2026-10-08 | Code review: `getdvote` GitHub account is the only code owner/reviewer; Karim and Mohamed open PRs from their own accounts. |

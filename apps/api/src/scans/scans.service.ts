@@ -45,13 +45,11 @@ export class ScansService {
       where: { id: qr.user_id },
       select: { status: true },
     });
-    // Collect QRs name no vendor (the scanning staff's vendor gets the points); only a
-    // redeem QR is tied to the vendor of its reward.
+    // A master collect QR names no vendor (the scanning staff's vendor gets the points);
+    // a shop collect QR and a redeem QR only work at their own vendor.
     const reason =
       this.stateProblem(qr) ??
-      (qr.purpose === 'redeem' && qr.vendor_id !== ctx.vendorId
-        ? 'vendor_mismatch'
-        : null) ??
+      (this.wrongVendor(qr, ctx) ? 'vendor_mismatch' : null) ??
       (user.status !== 'active' ? 'user_blocked' : null);
     return {
       purpose: qr.purpose,
@@ -80,6 +78,11 @@ export class ScansService {
     if (problem) throw new ConflictException({ code: problem });
     if (qr.purpose !== 'collect') {
       throw new BadRequestException({ code: 'wrong_qr_type' });
+    }
+
+    // A shop QR (made on that shop's page in the app) only works at that shop.
+    if (this.wrongVendor(qr, ctx)) {
+      throw new ForbiddenException({ code: 'vendor_mismatch' });
     }
 
     // Vendor and branch come only from the scanning staff member, never from the QR.
@@ -197,6 +200,11 @@ export class ScansService {
       }
       throw err;
     }
+  }
+
+  /** The QR names a vendor (shop QR or redeem) and it isn't the scanning staff's vendor. */
+  private wrongVendor(qr: qr_codes, ctx: StaffContext): boolean {
+    return qr.vendor_id !== null && qr.vendor_id !== ctx.vendorId;
   }
 
   private async findQr(code: string): Promise<qr_codes> {

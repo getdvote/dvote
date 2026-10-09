@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Gift, Loader2, Plus, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,7 @@ import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
 import { errorMessage, type Reward } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
+import { IMAGE_ACCEPT } from './ImagesTab';
 import { TabToolbar } from './TabToolbar';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts/order, archive / restore. */
@@ -45,6 +46,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-14 pl-4">#</TableHead>
+              <TableHead className="w-20">Photo</TableHead>
               <TableHead>Reward</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead>Status</TableHead>
@@ -52,10 +54,13 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={5} emptyText="No rewards yet" />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText="No rewards yet" />
             {data?.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="pl-4 text-muted-foreground tabular-nums">{r.sortOrder}</TableCell>
+                <TableCell>
+                  <RewardPhoto scope={scope} reward={r} />
+                </TableCell>
                 <TableCell className="whitespace-normal">
                   <span className="font-semibold">{r.name}</span>
                   {/* the page is LTR: a physical left margin, since ms-* on a dir="rtl" span lands on its right */}
@@ -94,6 +99,71 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
       </div>
       <RewardDialog scope={scope} reward={editing} onClose={() => setEditing(null)} />
     </>
+  );
+}
+
+/** The reward's photo in the app. Click to upload / replace; X removes it (the file is deleted). */
+function RewardPhoto({ scope, reward }: { scope: VendorScope; reward: Reward }) {
+  const qc = useQueryClient();
+  const input = useRef<HTMLInputElement>(null);
+  const done = (text: string) => {
+    void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
+    toast.success(text);
+  };
+  const upload = useMutation({
+    mutationFn: (f: File) => scope.uploadRewardImage(reward.id, f),
+    onSuccess: () => done(`Photo saved for ${reward.name}`),
+    onError: (e) => void toast.error(errorMessage(e)),
+  });
+  const remove = useMutation({
+    mutationFn: () => scope.removeRewardImage(reward.id),
+    onSuccess: () => done('Photo removed'),
+    onError: (e) => void toast.error(errorMessage(e)),
+  });
+  const busy = upload.isPending || remove.isPending;
+  const canEdit = scope.can.editVendor;
+
+  return (
+    <div className="group relative size-14">
+      <button
+        type="button"
+        disabled={!canEdit || busy}
+        title={canEdit ? (reward.imageUrl ? 'Replace photo' : 'Add photo') : undefined}
+        onClick={() => input.current?.click()}
+        className="flex size-14 items-center justify-center overflow-hidden rounded-lg border bg-muted text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 enabled:cursor-pointer enabled:hover:border-primary"
+      >
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : reward.imageUrl ? (
+          <img src={reward.imageUrl} alt="" className="size-full object-cover" />
+        ) : canEdit ? (
+          <Plus className="size-4" />
+        ) : (
+          <Gift className="size-4" />
+        )}
+      </button>
+      {canEdit && reward.imageUrl && !busy ? (
+        <button
+          type="button"
+          aria-label="Remove photo"
+          onClick={() => remove.mutate()}
+          className="absolute -top-1.5 -right-1.5 hidden size-5 items-center justify-center rounded-full border bg-card text-destructive shadow-sm group-hover:flex"
+        >
+          <X className="size-3" />
+        </button>
+      ) : null}
+      <input
+        ref={input}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) upload.mutate(f);
+          e.target.value = '';
+        }}
+      />
+    </div>
   );
 }
 

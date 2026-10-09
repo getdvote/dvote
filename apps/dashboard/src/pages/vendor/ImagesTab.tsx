@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmAction } from '../../components/ConfirmAction';
 import { ErrorAlert } from '../../components/ErrorAlert';
@@ -14,13 +13,9 @@ import type { VendorScope } from '../../lib/scope';
 
 export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 
-/** Menu pages (shown on the shop page in order) and photos per branch. */
+/** Menu pages, shown on the shop page in order. (Branch photos live on the Branches page.) */
 export function ImagesTab({ scope }: { scope: VendorScope }) {
   const { data: images, isLoading, error } = useQuery({ queryKey: ['images', scope.key], queryFn: () => scope.images() });
-  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
-  const [branchId, setBranchId] = useState<string | undefined>();
-  const openBranches = (branches ?? []).filter((b) => b.status === 'active');
-  const chosen = branchId ?? openBranches[0]?.id;
 
   return (
     <div className="grid gap-8">
@@ -34,30 +29,24 @@ export function ImagesTab({ scope }: { scope: VendorScope }) {
         images={(images ?? []).filter((i) => i.kind === 'menu')}
         loading={isLoading}
       />
+    </div>
+  );
+}
+
+/** One branch's photos (shown with directions on the shop page). Used on the Branches page. */
+export function BranchPhotos({ scope, branchId }: { scope: VendorScope; branchId: string }) {
+  const { data: images, isLoading, error } = useQuery({ queryKey: ['images', scope.key], queryFn: () => scope.images() });
+  const canEdit = scope.can.branchPhotos(branchId);
+  return (
+    <div className="grid gap-4">
+      <ErrorAlert error={error} />
       <Section
-        title="Branch photos"
-        titleExtra={
-          openBranches.length ? (
-            <Select value={chosen} onValueChange={setBranchId}>
-              <SelectTrigger className="min-w-56" aria-label="Branch">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {openBranches.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null
-        }
-        hint={chosen ? 'Up to 10 photos per branch.' : 'Add an open branch first.'}
+        hint={canEdit ? 'Up to 10 photos per branch.' : 'Only this branch\x27s manager or the vendor admin can change these.'}
         scope={scope}
         kind="branch_photo"
-        canEdit={!!chosen && scope.can.branchPhotos(chosen)}
-        branchId={chosen}
-        images={(images ?? []).filter((i) => i.kind === 'branch_photo' && i.branchId === chosen)}
+        canEdit={canEdit}
+        branchId={branchId}
+        images={(images ?? []).filter((i) => i.kind === 'branch_photo' && i.branchId === branchId)}
         loading={isLoading}
       />
     </div>
@@ -75,7 +64,7 @@ function Section({
   loading,
   canEdit,
 }: {
-  title: string;
+  title?: string;
   titleExtra?: React.ReactNode;
   hint: string;
   scope: VendorScope;
@@ -110,10 +99,12 @@ function Section({
 
   return (
     <section>
-      <div className="mb-1 flex flex-wrap items-center gap-3">
-        <h3 className="font-semibold">{title}</h3>
-        {titleExtra}
-      </div>
+      {title || titleExtra ? (
+        <div className="mb-1 flex flex-wrap items-center gap-3">
+          {title ? <h3 className="font-semibold">{title}</h3> : null}
+          {titleExtra}
+        </div>
+      ) : null}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{hint}</p>
         {canUpload && canEdit ? (

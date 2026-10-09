@@ -14,6 +14,7 @@ import { api, ApiError, type Card } from '../../lib/api';
 import { useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
+import { useLiveRefresh } from '../../lib/live';
 
 /**
  * My cards: one card per shop where the customer has points, as an Apple Wallet-style stack
@@ -51,11 +52,7 @@ export default function Cards() {
   }, [handleAuthError, t]);
 
   // Reload every time the tab is shown (points may have been added at the counter).
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useLiveRefresh(load);
 
   return (
     <Screen>

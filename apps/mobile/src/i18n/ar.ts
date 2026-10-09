@@ -362,7 +362,7 @@ export const ar: Dictionary = {
     newCode: 'احصل على رمز QR جديد',
     couldNotCreate: 'تعذّر إنشاء رمز QR الخاص بك.',
     collectingFrom: 'جمع النقاط من {vendor}',
-    atVendor: 'يمسحه الموظف في {vendor} ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
+    atVendor: 'هذا الرمز يعمل في {vendor} فقط: يمسحه الموظف ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
   },
 
   shop: {

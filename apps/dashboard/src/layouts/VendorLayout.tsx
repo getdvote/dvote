@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { Crown, Gift, Image, LayoutDashboard, Settings, Store, Users } from 'lucide-react';
+import { BookOpen, Crown, Gift, LayoutDashboard, Settings, Store, Users } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { initial } from '../components/PageHeader';
+import { WhatsAppSoon } from '../components/WhatsAppSoon';
 import { vendorApi, type StaffMe, type Vendor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { myVendorScope, type VendorScope } from '../lib/scope';
@@ -47,7 +48,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
     { to: '/branches', icon: Store, label: 'Branches' },
     { to: '/rule', icon: Crown, label: 'Points rule' },
     { to: '/rewards', icon: Gift, label: 'Rewards' },
-    { to: '/images', icon: Image, label: 'Menu & photos' },
+    { to: '/menu', icon: BookOpen, label: 'Menu' },
     { to: '/staff', icon: Users, label: 'Staff' },
     ...(isAdmin ? [{ to: '/profile', icon: Settings, label: 'Shop profile' }] : []),
   ];
@@ -56,6 +57,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
     <SideLayout
       nav={nav}
       badge="VENDOR"
+      headerExtra={<WhatsAppSoon />}
       person={{ name: me.name, email: me.email }}
       top={
         <div className="mt-5 flex items-center gap-3 rounded-lg bg-muted/60 p-2.5">

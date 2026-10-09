@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { RewardCards } from '../../components/RewardCards';
 import { ErrorBox, PageHeader, Screen } from '../../components/ui';
@@ -7,6 +7,7 @@ import { api, ApiError, type VendorPage } from '../../lib/api';
 import { useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { theme } from '../../lib/theme';
+import { useLiveRefresh } from '../../lib/live';
 
 /** Rewards shown per page; the next page loads when the list is scrolled near its end. */
 const PAGE_SIZE = 10;
@@ -35,9 +36,7 @@ export default function AllRewards() {
     }
   }, [vendorId, handleAuthError, t]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   const visible = shop ? shop.rewards.slice(0, pages * PAGE_SIZE) : [];
   const hasMore = shop ? visible.length < shop.rewards.length : false;

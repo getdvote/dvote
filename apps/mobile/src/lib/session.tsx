@@ -49,7 +49,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refreshMe = useCallback(async () => {
     try {
       setMeError(null);
-      setMe(await api.me());
+      const fresh = await api.me();
+      // The avatar comes as a new signed link each time; keep the old link while it is the
+      // same file, so the photo doesn't reload on every refresh.
+      const samePhoto = (a: string | null, b: string | null) => !!a && !!b && a.split('?')[0] === b.split('?')[0];
+      setMe((old) => (old && samePhoto(old.avatarUrl, fresh.avatarUrl) ? { ...fresh, avatarUrl: old.avatarUrl } : fresh));
     } catch (err) {
       setMeError(err instanceof ApiError ? err.message : t('errors.couldNotLoadProfile'));
       if (err instanceof ApiError && SIGN_OUT_CODES.has(err.code)) await signOut();

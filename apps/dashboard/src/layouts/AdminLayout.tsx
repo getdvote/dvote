@@ -51,11 +51,14 @@ export function SideLayout({
   nav,
   badge,
   top,
+  headerExtra,
   person,
   children,
 }: {
   nav: NavItem[];
   badge: string;
+  /** Extra buttons in the top bar, before the theme switch. */
+  headerExtra?: ReactNode;
   /** Shown under the logo (e.g. the vendor's logo and name). */
   top?: ReactNode;
   person: { name: string; email: string };
@@ -120,6 +123,7 @@ export function SideLayout({
         <header className="flex h-14 items-center gap-2 px-4 md:px-8">
           <SidebarTrigger />
           <div className="flex-1" />
+          {headerExtra}
           <ThemeToggle />
         </header>
         <main className="mx-auto w-full max-w-7xl px-4 pb-12 md:px-8">{children}</main>

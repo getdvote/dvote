@@ -4,7 +4,7 @@ import Location01Icon from '@hugeicons/core-free-icons/Location01Icon';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { DvoteLogo } from '../../components/DvoteLogo';
 import { Icon } from '../../components/Icon';
@@ -27,6 +27,7 @@ import { t as translate, useI18n } from '../../i18n';
 import { openInMaps } from '../../lib/maps';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
+import { useLiveRefresh } from '../../lib/live';
 
 /**
  * Shop page (opened from Card details → Issued by). Name and logo come in the route params,
@@ -55,9 +56,7 @@ export default function Shop() {
     }
   }, [params.id, handleAuthError, t]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   const shopName = shop?.name ?? (params.name || t('shop.fallbackName'));
   const logoUrl = shop?.logoUrl ?? params.logoUrl ?? null;
@@ -106,7 +105,7 @@ export default function Shop() {
           <PrimaryButton
             title={t('shop.collect')}
             style={styles.action}
-            onPress={() => router.push({ pathname: '/qr', params: { vendorName: shopName } })}
+            onPress={() => router.push({ pathname: '/qr', params: { vendorId: params.id, vendorName: shopName } })}
           />
         </View>
 
