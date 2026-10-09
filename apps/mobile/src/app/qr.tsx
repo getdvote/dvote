@@ -18,8 +18,8 @@ import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../components/Text';
 import { Avatar, ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
-import { api, ApiError, type NewQrCode, type QrCollectResult } from '../lib/api';
-import { t, useI18n } from '../i18n';
+import { api, ApiError, type NewQrCode, type QrCollectResult, type QrRedeemResult } from '../lib/api';
+import { localized, t, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
 import { shadows, squircle, theme, vendorColors } from '../lib/theme';
 
@@ -29,7 +29,7 @@ const QR_LIFETIME_MS = 5 * 60 * 1000;
 type Phase =
   | { kind: 'loading' }
   | { kind: 'showing'; qr: NewQrCode; deadline: number }
-  | { kind: 'done'; result: QrCollectResult | null }
+  | { kind: 'done'; result: QrCollectResult | null; redeemResult: QrRedeemResult | null }
   | { kind: 'ended'; reason: 'expired' | 'cancelled' }
   | { kind: 'error'; message: string };
 
@@ -48,12 +48,19 @@ type Phase =
  * QR code" button.
  */
 export default function Qr() {
-  const { vendorId, vendorName, logoUrl, cardDesign } = useLocalSearchParams<{
+  const { purpose, rewardId, rewardName, pointsCost, vendorId, vendorName, logoUrl, cardDesign } = useLocalSearchParams<{
+    /** 'redeem' (with rewardId): a reward QR from the reward sheet; otherwise a collect QR */
+    purpose?: 'collect' | 'redeem';
+    rewardId?: string;
+    rewardName?: string;
+    pointsCost?: string;
     vendorId?: string;
     vendorName?: string;
     logoUrl?: string;
     cardDesign?: string;
   }>();
+  const redeem: RedeemInfo | null =
+    purpose === 'redeem' && rewardId ? { rewardId, name: rewardName ?? '', pointsCost: Number(pointsCost) || 0 } : null;
   const shop: ShopInfo | null =
     vendorId && vendorName
       ? { id: vendorId, name: vendorName, logoUrl, cardDesign: cardDesign ? Number(cardDesign) : null }
@@ -69,7 +76,7 @@ export default function Qr() {
     setPhase({ kind: 'loading' });
     setOffline(false);
     try {
-      const qr = await api.newCollectQr(vendorId);
+      const qr = redeem ? await api.newRedeemQr(redeem.rewardId) : await api.newCollectQr(vendorId);
       // Count down from the server's expiry, unless the phone's clock is clearly off.
       const left = new Date(qr.expiresAt).getTime() - Date.now();
       const deadline = Date.now() + (left > 0 && left <= QR_LIFETIME_MS + 30_000 ? left : QR_LIFETIME_MS);
@@ -79,7 +86,8 @@ export default function Qr() {
       if (await handleAuthError(err)) return;
       setPhase({ kind: 'error', message: err instanceof ApiError ? err.message : t('qr.couldNotCreate') });
     }
-  }, [handleAuthError, vendorId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- redeem is rebuilt each render from rewardId
+  }, [handleAuthError, vendorId, rewardId, purpose]);
 
   useEffect(() => {
     void issue();
@@ -109,7 +117,7 @@ export default function Qr() {
         if (s.status === 'used') {
           activeId.current = null;
           Vibration.vibrate(80);
-          setPhase({ kind: 'done', result: s.result });
+          setPhase({ kind: 'done', result: s.result, redeemResult: s.redeemResult ?? null });
         } else if (s.status === 'expired' || s.status === 'cancelled') {
           activeId.current = null;
           setPhase({ kind: 'ended', reason: s.status });
@@ -133,7 +141,13 @@ export default function Qr() {
     <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1}>
-          {phase.kind === 'done' ? t('qr.pointsAdded') : t('qr.title')}
+          {phase.kind === 'done'
+            ? phase.redeemResult
+              ? t('qr.redeemed')
+              : t('qr.pointsAdded')
+            : redeem
+              ? t('qr.redeemTitle')
+              : t('qr.title')}
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -147,12 +161,17 @@ export default function Qr() {
       </View>
 
       {phase.kind === 'done' ? (
-        <Done result={phase.result} />
+        phase.redeemResult ? (
+          <RedeemDone result={phase.redeemResult} />
+        ) : (
+          <Done result={phase.result} />
+        )
       ) : (
         <IdCard
           phase={phase}
           offline={offline}
           shop={shop}
+          redeem={redeem}
           onExpired={() => {
             // the phone's countdown ran out before the next poll heard it from the server
             activeId.current = null;
@@ -163,6 +182,13 @@ export default function Qr() {
       )}
     </Screen>
   );
+}
+
+/** A redeem QR: which reward (from the reward sheet). */
+interface RedeemInfo {
+  rewardId: string;
+  name: string;
+  pointsCost: number;
 }
 
 interface ShopInfo {
@@ -180,12 +206,14 @@ function IdCard({
   phase,
   offline,
   shop,
+  redeem,
   onExpired,
   onRegenerate,
 }: {
   phase: Exclude<Phase, { kind: 'done' }>;
   offline: boolean;
   shop: ShopInfo | null;
+  redeem: RedeemInfo | null;
   onExpired: () => void;
   onRegenerate: () => void;
 }) {
@@ -200,12 +228,22 @@ function IdCard({
         {shop ? (
           <View style={styles.person}>
             <ShopLogo shop={shop} />
-            <View style={styles.shopText}>
-              <Text style={styles.caption}>{t('qr.collectingFrom')}</Text>
-              <Text style={styles.name} numberOfLines={1}>
-                {shop.name}
-              </Text>
-            </View>
+            {redeem ? (
+              <View style={styles.shopText}>
+                <Text style={styles.caption}>{t('qr.redeemingAt', { vendor: shop.name })}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {redeem.name}
+                </Text>
+                <Text style={styles.caption}>{t('rewards.required', { count: redeem.pointsCost })}</Text>
+              </View>
+            ) : (
+              <View style={styles.shopText}>
+                <Text style={styles.caption}>{t('qr.collectingFrom')}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {shop.name}
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.person}>
@@ -242,7 +280,13 @@ function IdCard({
       </View>
 
       {phase.kind === 'showing' || phase.kind === 'loading' ? (
-        <Text style={styles.help}>{shop ? t('qr.atVendor', { vendor: shop.name }) : t('qr.worksAnywhere')}</Text>
+        <Text style={styles.help}>
+          {redeem && shop
+            ? t('qr.redeemHelp', { vendor: shop.name })
+            : shop
+              ? t('qr.atVendor', { vendor: shop.name })
+              : t('qr.worksAnywhere')}
+        </Text>
       ) : null}
     </View>
   );
@@ -330,6 +374,39 @@ function Done({ result }: { result: QrCollectResult | null }) {
         {result ? (
           <PrimaryButton title={t('qr.viewCard')} onPress={() => router.replace(`/card/${result.cardId}`)} />
         ) : null}
+        <PillButton title={t('common.done')} onPress={() => router.back()} />
+      </View>
+    </View>
+  );
+}
+
+/** Staff confirmed the reward: what was given, the points used and what's left. */
+function RedeemDone({ result }: { result: QrRedeemResult }) {
+  const pop = useRef(new Animated.Value(0.6)).current;
+  useEffect(() => {
+    Animated.spring(pop, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }).start();
+  }, [pop]);
+  const reward = localized(result.rewardName, result.rewardNameAr);
+
+  return (
+    <View style={styles.body}>
+      <View style={styles.middle}>
+        <Animated.View style={[styles.check, { transform: [{ scale: pop }] }]}>
+          <Icon icon={Tick02Icon} size={48} color="#fff" strokeWidth={2.5} />
+        </Animated.View>
+        <Text style={styles.points}>{reward}</Text>
+        <Text style={styles.text}>{t('qr.enjoy', { reward })}</Text>
+        <Text style={styles.text}>
+          {t('qr.at', { place: result.branchName ? `${result.vendorName} · ${result.branchName}` : result.vendorName })}
+        </Text>
+        <View style={styles.summary}>
+          <SummaryRow label={t('qr.pointsUsed')} value={`−${t('common.points', { count: result.pointsRedeemed })}`} />
+          <View style={styles.separator} />
+          <SummaryRow label={t('qr.balance')} value={t('common.points', { count: result.cardBalance })} strong />
+        </View>
+      </View>
+      <View style={styles.footer}>
+        <PrimaryButton title={t('qr.viewCard')} onPress={() => router.replace(`/card/${result.cardId}`)} />
         <PillButton title={t('common.done')} onPress={() => router.back()} />
       </View>
     </View>

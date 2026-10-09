@@ -1,3 +1,4 @@
+import { AppRewardsController } from './app-rewards.controller';
 import { VendorRewardsController } from './vendor-rewards.controller';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
@@ -8,7 +9,7 @@ import { RewardsService } from './rewards.service';
 /** Reward catalogue (/api/admin/vendors/{id}/rewards, /api/admin/rewards/{id}); and /api/vendor/rewards for the vendor dashboard. */
 @Module({
   imports: [AuthModule, StorageModule],
-  controllers: [AdminRewardsController, VendorRewardsController],
+  controllers: [AdminRewardsController, VendorRewardsController, AppRewardsController],
   providers: [RewardsService],
   exports: [RewardsService],
 })

@@ -12,9 +12,10 @@ import {
 } from '@nestjs/swagger';
 import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffAuthGuard, type StaffContext } from '../auth/staff-auth.guard';
-import { CollectScanDto, PreviewScanDto } from './dto/scan.dto';
+import { CollectScanDto, PreviewScanDto, RedeemScanDto } from './dto/scan.dto';
 import {
   CollectResponseDto,
+  RedeemResponseDto,
   PreviewScanResponseDto,
 } from './dto/scan-response.dto';
 import { ScansService } from './scans.service';
@@ -65,5 +66,17 @@ export class ScansController {
     @Body() dto: CollectScanDto,
   ): Promise<CollectResponseDto> {
     return this.scans.collect(ctx, dto);
+  }
+
+  /** Confirm a redeem QR: give the reward and take its points from the customer's card. */
+  @Post('redeem')
+  @HttpCode(200)
+  @ApiOkResponse({ type: RedeemResponseDto })
+  @ApiNotFoundResponse({ description: 'qr_invalid' })
+  @ApiBadRequestResponse({ description: 'wrong_qr_type | branch_required | invalid_branch | validation errors' })
+  @ApiForbiddenResponse({ description: 'vendor_mismatch | forbidden_branch | user_blocked | not_staff | staff_disabled | vendor_suspended | branch_closed' })
+  @ApiConflictResponse({ description: 'qr_used | qr_expired | qr_cancelled | reward_unavailable | insufficient_points | idempotency_key_reused' })
+  redeem(@CurrentStaff() ctx: StaffContext, @Body() dto: RedeemScanDto): Promise<RedeemResponseDto> {
+    return this.scans.redeem(ctx, dto);
   }
 }

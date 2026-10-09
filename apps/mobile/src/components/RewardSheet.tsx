@@ -2,32 +2,46 @@ import CircleLock02Icon from '@hugeicons/core-free-icons/CircleLock02Icon';
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { localized, useI18n } from '../i18n';
-import type { VendorPage } from '../lib/api';
+import { api, type RewardHistory, type VendorPage } from '../lib/api';
+import { showDate, showTime } from '../lib/dates';
 import { squircle, theme } from '../lib/theme';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
 import { Text } from './Text';
-import { PillButton, SoonTag } from './ui';
+import { PillButton, PrimaryButton } from './ui';
 
 export type Reward = VendorPage['rewards'][number];
 
+/** The shop the reward belongs to (for the redeem QR's ticket). */
+export interface RewardShop {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  cardDesign: number | null;
+}
+
 /**
  * Reward details sheet (tap a reward): image, points required, name, description and the
- * action. With enough points: Redeem, dimmed with "Soon" (no redeem API yet). Otherwise:
- * a locked "Collect N points more to redeem". Without a photo (uploaded in the dashboards) a placeholder
+ * action. With enough points: Redeem, which opens a redeem QR for this reward (only this
+ * shop's staff can confirm it; then its points are taken). Otherwise: a locked "Collect N
+ * points more to redeem". Below: my history with this reward (how often, and when and where). Without a photo (uploaded in the dashboards) a placeholder
  * (gift on the dvote purple) shows until `imageUrl` is set.
  */
 export function RewardSheet({
   reward,
   balance,
+  shop,
   visible,
   onClose,
   onClosed,
 }: {
   reward: Reward | null;
   balance: number;
+  shop: RewardShop;
   visible: boolean;
   onClose: () => void;
   onClosed?: () => void;
@@ -61,13 +75,25 @@ export function RewardSheet({
             {description ? <Text style={styles.description}>{description}</Text> : null}
 
             {short <= 0 ? (
-              // Redeem isn't available yet (no redeem API)
-              <PillButton
+              <PrimaryButton
                 title={t('rewards.redeem')}
-                disabled
-                badge={<SoonTag />}
-                onPress={() => undefined}
-                style={styles.button}
+                style={styles.redeem}
+                onPress={() => {
+                  onClose();
+                  router.push({
+                    pathname: '/qr',
+                    params: {
+                      purpose: 'redeem',
+                      rewardId: reward.id,
+                      rewardName: localized(reward.name, reward.nameAr),
+                      pointsCost: String(reward.pointsCost),
+                      vendorId: shop.id,
+                      vendorName: shop.name,
+                      logoUrl: shop.logoUrl ?? undefined,
+                      cardDesign: shop.cardDesign != null ? String(shop.cardDesign) : undefined,
+                    },
+                  });
+                }}
               />
             ) : (
               <PillButton
@@ -78,10 +104,78 @@ export function RewardSheet({
                 style={styles.button}
               />
             )}
+
+            {visible ? <History rewardId={reward.id} /> : null}
           </View>
         </View>
       ) : null}
     </BottomSheet>
+  );
+}
+
+/** Shown at most; older ones are summed up as "…and N earlier times". */
+const HISTORY_ROWS = 3;
+
+/**
+ * My history with this reward: how many times I redeemed it (and the points that took), then
+ * the latest times with day, time and branch. Loaded each time the sheet opens, so a reward
+ * just redeemed at the counter is already listed.
+ */
+function History({ rewardId }: { rewardId: string }) {
+  const { t } = useI18n();
+  const [history, setHistory] = useState<RewardHistory | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    setHistory(null);
+    setFailed(false);
+    api
+      .rewardHistory(rewardId)
+      .then((h) => live && setHistory(h))
+      .catch(() => live && setFailed(true));
+    return () => {
+      live = false;
+    };
+  }, [rewardId]);
+
+  if (failed) return null; // the rest of the sheet still works
+  return (
+    <View style={styles.history}>
+      <Text style={styles.historyTitle}>{t('rewards.yourHistory')}</Text>
+      {!history ? (
+        <ActivityIndicator color={theme.muted} style={styles.historyLoading} />
+      ) : history.count === 0 ? (
+        <Text style={styles.historyEmpty}>{t('rewards.neverRedeemed')}</Text>
+      ) : (
+        <View style={styles.historyCard}>
+          <View style={styles.historyHead}>
+            <Icon icon={GiftIcon} size={18} color={theme.brand} />
+            <Text style={styles.historyCount}>{t('rewards.redeemedTimes', { count: history.count })}</Text>
+            <Text style={styles.historySpent}>
+              {t('rewards.pointsSpent', { points: t('common.points', { count: history.pointsSpent }) })}
+            </Text>
+          </View>
+          {history.items.slice(0, HISTORY_ROWS).map((h) => {
+            const at = new Date(h.at);
+            return (
+              <View key={h.id} style={styles.historyRow}>
+                <View style={styles.historyWhen}>
+                  <Text style={styles.historyDate}>{showDate(at)}</Text>
+                  <Text style={styles.historyMeta} numberOfLines={1}>
+                    {showTime(at)} · {h.branchName}
+                  </Text>
+                </View>
+                <Text style={styles.historyPoints}>−{h.pointsCost.toLocaleString('en-US')}</Text>
+              </View>
+            );
+          })}
+          {history.count > HISTORY_ROWS ? (
+            <Text style={styles.historyMore}>{t('rewards.earlier', { count: history.count - HISTORY_ROWS })}</Text>
+          ) : null}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -94,4 +188,26 @@ const styles = StyleSheet.create({
   description: { fontSize: 16, color: theme.muted, lineHeight: 22 },
   // The sheet is white, so the pill gets the light page grey (the darker "Soon" tag stays visible on it).
   button: { backgroundColor: theme.surface, marginTop: 14 },
+  redeem: { marginTop: 14 },
+  history: { marginTop: 18, gap: 8 },
+  historyTitle: { fontSize: 13, fontWeight: '600', color: theme.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  historyLoading: { alignSelf: 'flex-start', marginVertical: 6 },
+  historyEmpty: { fontSize: 15, color: theme.muted },
+  historyCard: { backgroundColor: '#fff', ...squircle, borderRadius: theme.radius, paddingHorizontal: 14, paddingVertical: 6 },
+  historyHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  historyCount: { flex: 1, fontSize: 16, fontWeight: '700', color: theme.text },
+  historySpent: { fontSize: 14, color: theme.muted },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 9,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5EA',
+  },
+  historyWhen: { flex: 1, gap: 2 },
+  historyDate: { fontSize: 15, fontWeight: '600', color: theme.text },
+  historyMeta: { fontSize: 13, color: theme.muted },
+  historyPoints: { fontSize: 15, fontWeight: '600', color: theme.text, fontVariant: ['tabular-nums'] },
+  historyMore: { fontSize: 13, color: theme.muted, paddingVertical: 8 },
 });

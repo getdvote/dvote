@@ -60,7 +60,7 @@ export default function AllRewards() {
       >
         <ErrorBox message={error} />
         {!shop && !error ? <ActivityIndicator color={theme.text} style={{ marginTop: 40 }} /> : null}
-        {shop ? <RewardCards rewards={visible} balance={shop.card?.balance ?? 0} layout="column" /> : null}
+        {shop ? <RewardCards rewards={visible} balance={shop.card?.balance ?? 0} shop={shop} layout="column" /> : null}
         {hasMore ? <ActivityIndicator color={theme.text} style={{ marginTop: 16 }} /> : null}
       </ScrollView>
     </Screen>

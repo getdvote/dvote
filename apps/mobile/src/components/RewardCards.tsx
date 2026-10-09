@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { localized, useI18n } from '../i18n';
 import { squircle, theme } from '../lib/theme';
 import { Icon } from './Icon';
-import { RewardSheet, type Reward } from './RewardSheet';
+import { RewardSheet, type Reward, type RewardShop } from './RewardSheet';
 import { Text } from './Text';
 import { EmptySection } from './ui';
 
@@ -23,10 +23,13 @@ export const CAROUSEL_LIMIT = 5;
 export function RewardCards({
   rewards,
   balance,
+  shop,
   layout,
 }: {
   rewards: Reward[];
   balance: number;
+  /** The shop the rewards belong to (Redeem opens a QR for it). */
+  shop: RewardShop;
   layout: 'row' | 'column';
 }) {
   const { t } = useI18n();
@@ -67,6 +70,7 @@ export function RewardCards({
       <RewardSheet
         reward={shown}
         balance={balance}
+        shop={shop}
         visible={open !== null}
         onClose={() => setOpen(null)}
         onClosed={() => setShown(null)}
