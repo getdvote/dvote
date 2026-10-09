@@ -191,6 +191,7 @@ export const ar: Dictionary = {
     title: 'استكشف',
     subtitle: 'كل المقاهي على dvote',
     search: 'ابحث عن مقهى',
+    allShops: 'كل المتاجر',
     clearSearch: 'مسح البحث',
     rewards: {
       zero: 'لا توجد مكافآت',

@@ -165,6 +165,7 @@ export const en = {
     subtitle: 'Every coffee shop on dvote',
     search: 'Search coffee shops',
     clearSearch: 'Clear search',
+    allShops: 'All shops',
     rewards: { one: '{count} reward', other: '{count} rewards' },
     branches: { one: '{count} branch', other: '{count} branches' },
     noRule: 'Points rule coming soon',

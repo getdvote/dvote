@@ -114,6 +114,8 @@ export default function Explore() {
               ) : null}
             </View>
             <ErrorBox message={error} />
+            {/* not while searching: then the list is only the matches */}
+            {shops && shops.length > 0 && !search.trim() ? <Text style={styles.listTitle}>{t('explore.allShops')}</Text> : null}
           </View>
         }
         ListEmptyComponent={
@@ -235,6 +237,8 @@ const styles = StyleSheet.create({
   header: { paddingTop: 12, paddingBottom: 16, gap: 6 },
   title: { fontSize: 34, fontWeight: '700', color: theme.text },
   subtitle: { fontSize: 15, color: theme.muted },
+  // same look as the app's section titles (SectionTitle)
+  listTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 18, marginLeft: 2 },
   search: {
     ...squircle,
     marginTop: 12,
