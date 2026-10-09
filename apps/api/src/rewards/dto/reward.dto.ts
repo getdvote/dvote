@@ -76,6 +76,9 @@ export class RewardResponseDto {
   @ApiProperty({ type: String, nullable: true })
   descriptionAr: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'Public link to the reward photo' })
+  imageUrl: string | null;
+
   @ApiProperty({ example: 300 })
   pointsCost: number;
 
@@ -96,6 +99,7 @@ export class RewardResponseDto {
       nameAr: r.name_ar,
       description: r.description,
       descriptionAr: r.description_ar,
+      imageUrl: r.image_url,
       pointsCost: r.points_cost,
       status: r.status,
       sortOrder: r.sort_order,

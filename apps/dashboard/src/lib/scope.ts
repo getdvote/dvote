@@ -29,6 +29,8 @@ export interface VendorScope {
   rewards: () => Promise<Reward[]>;
   createReward: (body: Partial<Reward>) => Promise<Reward>;
   updateReward: (id: string, body: Partial<Reward>) => Promise<Reward>;
+  uploadRewardImage: (id: string, f: File) => Promise<Reward>;
+  removeRewardImage: (id: string) => Promise<Reward>;
   images: () => Promise<VendorImage[]>;
   uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) => Promise<VendorImage>;
   deleteImage: (id: string) => Promise<void>;
@@ -51,6 +53,8 @@ export function adminScope(vendorId: string, currency: string): VendorScope {
     rewards: () => api.rewards(vendorId),
     createReward: (b) => api.createReward(vendorId, b),
     updateReward: api.updateReward,
+    uploadRewardImage: api.uploadRewardImage,
+    removeRewardImage: api.removeRewardImage,
     images: () => api.images(vendorId),
     uploadImage: (f, kind, branchId) => api.uploadImage(vendorId, f, kind, branchId),
     deleteImage: (id) => api.deleteImage(vendorId, id),
@@ -82,6 +86,8 @@ export function myVendorScope(me: StaffMe): VendorScope {
     rewards: vendorApi.rewards,
     createReward: vendorApi.createReward,
     updateReward: vendorApi.updateReward,
+    uploadRewardImage: vendorApi.uploadRewardImage,
+    removeRewardImage: vendorApi.removeRewardImage,
     images: vendorApi.images,
     uploadImage: vendorApi.uploadImage,
     deleteImage: vendorApi.deleteImage,

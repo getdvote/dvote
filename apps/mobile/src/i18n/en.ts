@@ -300,7 +300,7 @@ export const en = {
     newCode: 'Get a new QR code',
     couldNotCreate: 'Could not create your QR code.',
     collectingFrom: 'Collecting points from {vendor}',
-    atVendor: 'The staff at {vendor} scan it and enter your bill, and your points appear here straight away.',
+    atVendor: 'This code works only at {vendor}: their staff scan it and enter your bill, and your points appear here straight away.',
   },
 
   shop: {

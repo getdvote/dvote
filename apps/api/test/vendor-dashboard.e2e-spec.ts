@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import sharp from 'sharp';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -9,6 +10,8 @@ import { configureApp } from './../src/app.setup';
 import { SUPABASE_JWKS } from './../src/auth/supabase-jwt.verifier';
 import type { staff_role } from './../src/generated/prisma/client.js';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { BUCKETS, StorageService } from './../src/storage/storage.service';
+import { FakeStorage } from './helpers/fake-storage';
 import { createTestSigner, type TestSigner } from './helpers/test-auth';
 
 const run = randomUUID().slice(0, 8);
@@ -20,8 +23,9 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
   let signer: TestSigner;
   const tokens: Record<string, string> = {};
   let rewardB = '';
+  const storage = new FakeStorage();
 
-  const as = (who: string, method: 'get' | 'post' | 'patch' | 'delete', path: string) =>
+  const as = (who: string, method: 'get' | 'post' | 'patch' | 'put' | 'delete', path: string) =>
     request(app.getHttpServer())[method](path).set('Authorization', `Bearer ${tokens[who]}`);
 
   async function seedStaff(key: string, vendorId: string, branchId: string | null, role: staff_role) {
@@ -34,7 +38,11 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
 
   beforeAll(async () => {
     signer = await createTestSigner();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).overrideProvider(SUPABASE_JWKS).useValue(signer.jwks).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).overrideProvider(SUPABASE_JWKS)
+      .useValue(signer.jwks)
+      .overrideProvider(StorageService)
+      .useValue(storage)
+      .compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
@@ -71,6 +79,11 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
 
     const created = await as('adminA', 'post', '/api/vendor/branches').send({ name: 'A3' }).expect(201);
     expect(created.body.vendorId).toBe(ids.vendorA);
+    // A map location is both coordinates or none.
+    expect((await as('adminA', 'post', '/api/vendor/branches').send({ name: 'Half', lat: 31.2 }).expect(400)).body.code).toBe('location_incomplete');
+    await as('adminA', 'post', '/api/vendor/branches').send({ name: 'Far', lat: 95, lng: 10 }).expect(400);
+    await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ lat: 31.2, lng: 29.9 }).expect(200);
+    expect((await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ lng: null }).expect(400)).body.code).toBe('location_incomplete');
 
     expect((await as('adminA', 'patch', `/api/vendor/branches/${ids.branchB1}`).send({ name: 'hacked' }).expect(404)).body.code).toBe('branch_not_found');
     expect((await prisma.branches.findUniqueOrThrow({ where: { id: ids.branchB1 } })).name).toBe('B1');
@@ -112,5 +125,32 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
     const m = (await as('managerA1', 'get', '/api/vendor/summary').expect(200)).body;
     expect(m.branches.map((b: { name: string }) => b.name)).toEqual(['A1']);
     await as('staffA1', 'get', '/api/vendor/summary').expect(403);
+  });
+
+  it('reward photo: upload, replace (old file deleted), remove; never on another vendor’s reward', async () => {
+    const png = await sharp({ create: { width: 900, height: 600, channels: 3, background: '#6155F5' } }).png().toBuffer();
+    const put = (who: string, id: string) => as(who, 'put', `/api/vendor/rewards/${id}/image`).attach('file', png, 'cake.png');
+    const reward = (await as('adminA', 'post', '/api/vendor/rewards').send({ name: 'Cake', pointsCost: 500 }).expect(201)).body as {
+      id: string;
+      imageUrl: string | null;
+    };
+    expect(reward.imageUrl).toBeNull();
+
+    const first = (await put('adminA', reward.id).expect(200)).body as { imageUrl: string };
+    const firstPath = (await prisma.rewards.findUniqueOrThrow({ where: { id: reward.id } })).image_path!;
+    expect(firstPath.startsWith(`${ids.vendorA}/rewards/`)).toBe(true);
+    expect(first.imageUrl).toContain(firstPath);
+    expect(storage.has(BUCKETS.vendors, firstPath)).toBe(true);
+
+    await put('adminA', reward.id).expect(200);
+    expect(storage.has(BUCKETS.vendors, firstPath)).toBe(false);
+    expect(storage.list(BUCKETS.vendors, `${ids.vendorA}/rewards/`)).toHaveLength(1);
+
+    await put('managerA1', reward.id).expect(403);
+    expect((await put('adminA', rewardB).expect(404)).body.code).toBe('reward_not_found');
+
+    const removed = (await as('adminA', 'delete', `/api/vendor/rewards/${reward.id}/image`).expect(200)).body as { imageUrl: string | null };
+    expect(removed.imageUrl).toBeNull();
+    expect(storage.list(BUCKETS.vendors, `${ids.vendorA}/rewards/`)).toHaveLength(0);
   });
 });

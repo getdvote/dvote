@@ -78,6 +78,7 @@ export interface Reward {
   nameAr: string | null;
   description: string | null;
   descriptionAr: string | null;
+  imageUrl: string | null;
   pointsCost: number;
   status: RewardStatus;
   sortOrder: number;
@@ -195,6 +196,7 @@ const MESSAGES: Record<string, string> = {
   too_many_images: 'Limit reached: delete an image first.',
   unsupported_image: 'Use a JPG, PNG, WebP or HEIC image.',
   file_too_large: 'The image must be under 10 MB.',
+  location_incomplete: 'Pick a place on the map, or clear both coordinates.',
   not_staff: 'This account has no access to the dvote dashboard.',
   staff_disabled: 'This account is disabled. Ask your vendor admin.',
   vendor_suspended: 'This shop is suspended on dvote. Contact dvote support.',
@@ -274,6 +276,8 @@ export const api = {
   rewards: (vendorId: string) => call<Reward[]>('GET', `/api/admin/vendors/${vendorId}/rewards`),
   createReward: (vendorId: string, body: Partial<Reward>) => call<Reward>('POST', `/api/admin/vendors/${vendorId}/rewards`, body),
   updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/admin/rewards/${id}`, body),
+  uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/admin/rewards/${id}/image`, file(f)),
+  removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/admin/rewards/${id}/image`),
 
   images: (vendorId: string) => call<VendorImage[]>('GET', `/api/admin/vendors/${vendorId}/images`),
   uploadImage: (vendorId: string, f: File, kind: VendorImage['kind'], branchId?: string) =>
@@ -314,6 +318,8 @@ export const vendorApi = {
   rewards: () => call<Reward[]>('GET', '/api/vendor/rewards'),
   createReward: (body: Partial<Reward>) => call<Reward>('POST', '/api/vendor/rewards', body),
   updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
+  uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/vendor/rewards/${id}/image`, file(f)),
+  removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/vendor/rewards/${id}/image`),
 
   images: () => call<VendorImage[]>('GET', '/api/vendor/images'),
   uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) =>

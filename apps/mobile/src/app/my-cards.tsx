@@ -1,7 +1,7 @@
 import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
 import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Icon } from '../components/Icon';
@@ -12,6 +12,7 @@ import { api, ApiError, type Card } from '../lib/api';
 import { t as translate, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
 import { theme, vendorColors, squircle } from '../lib/theme';
+import { useLiveRefresh } from '../lib/live';
 
 /**
  * My cards list (My profile → My cards): every card as a compact row, for a quick overview.
@@ -35,11 +36,7 @@ export default function MyCards() {
   }, [handleAuthError, t]);
 
   // Reload when the page is shown again (e.g. back from a card after points were added).
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useLiveRefresh(load);
 
   return (
     <Screen>

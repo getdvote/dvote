@@ -16,7 +16,7 @@ export type Reward = VendorPage['rewards'][number];
 /**
  * Reward details sheet (tap a reward): image, points required, name, description and the
  * action. With enough points: Redeem, dimmed with "Soon" (no redeem API yet). Otherwise:
- * a locked "Collect N points more to redeem". Rewards have no image yet, so a placeholder
+ * a locked "Collect N points more to redeem". Without a photo (uploaded in the dashboards) a placeholder
  * (gift on the dvote purple) shows until `imageUrl` is set.
  */
 export function RewardSheet({

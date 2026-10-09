@@ -4,7 +4,7 @@ import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import Clock01Icon from '@hugeicons/core-free-icons/Clock01Icon';
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Icon } from '../../components/Icon';
@@ -17,6 +17,7 @@ import { localized, t as translate, useI18n } from '../../i18n';
 import { showDate } from '../../lib/dates';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
+import { useLiveRefresh } from '../../lib/live';
 
 /**
  * Card details: the card, the shop that issued it (opens the shop page), the shop's first
@@ -48,11 +49,7 @@ export default function CardDetails() {
   }, [id, handleAuthError, t]);
 
   // Reload when shown again (points may have been added at the counter).
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useLiveRefresh(load);
 
   const loading = !card && !error;
 

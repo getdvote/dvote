@@ -138,6 +138,7 @@ CREATE TABLE rewards (
     name_ar        varchar(120),               -- Arabic (optional; the app falls back to name)
     description_ar varchar(500),               -- Arabic (optional)
     image_url    varchar(500),
+    image_path   varchar(300),                -- uploaded photo in Storage bucket "vendors" (<vendorId>/rewards/…)
     points_cost  int           NOT NULL CHECK (points_cost > 0),
     status       reward_status NOT NULL DEFAULT 'active',
     sort_order   int           NOT NULL DEFAULT 0,

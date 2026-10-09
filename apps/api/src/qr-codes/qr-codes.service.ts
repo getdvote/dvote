@@ -16,13 +16,21 @@ export class QrCodesService {
 
   /**
    * Issues a one-time collect QR (valid 5 minutes). Any other active collect QR of this
-   * customer is cancelled, so only the newest one on screen works. It names no vendor: the
-   * scanning staff member's vendor and branch decide where the points go.
+   * customer is cancelled, so only the newest one on screen works. The master QR names no
+   * vendor (the scanning staff's vendor gets the points); a shop QR (vendorId) only works at
+   * that vendor. Unknown or suspended vendor: 404 vendor_not_found.
    */
   async create(
     userId: string,
     dto: CreateQrCodeDto,
   ): Promise<CreateQrCodeResponseDto> {
+    if (dto.vendorId) {
+      const vendor = await this.prisma.vendors.findFirst({
+        where: { id: dto.vendorId, status: 'active' },
+        select: { id: true },
+      });
+      if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
+    }
     const { code, tokenHash } = newQrCode();
     const qr = await this.prisma.$transaction(async (tx) => {
       await tx.qr_codes.updateMany({
@@ -33,7 +41,7 @@ export class QrCodesService {
         data: {
           user_id: userId,
           purpose: dto.purpose,
-          vendor_id: null,
+          vendor_id: dto.vendorId ?? null,
           token_hash: tokenHash,
         },
       });

@@ -9,7 +9,6 @@ import { configureApp } from './../src/app.setup';
 import { SUPABASE_JWKS } from './../src/auth/supabase-jwt.verifier';
 import type { staff_role } from './../src/generated/prisma/client.js';
 import { PrismaService } from './../src/prisma/prisma.service';
-import { newQrCode } from './../src/qr-codes/qr-code.token';
 import { createTestSigner, type TestSigner } from './helpers/test-auth';
 
 const run = randomUUID().slice(0, 8);
@@ -467,34 +466,33 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
       expect(await cardOf('karim', ids.vendorA)).toBeDefined();
     });
 
-    it('the customer app cannot choose a vendor for a collect QR → 400', async () => {
+    it('a shop QR (made on a vendor page) works only at that vendor', async () => {
       const res = await as('karim', 'post', '/api/app/qr-codes')
         .send({ purpose: 'collect', vendorId: ids.vendorA })
-        .expect(400);
-      expect(res.body.message).toEqual(
-        expect.arrayContaining([expect.stringContaining('vendorId')]),
-      );
-    });
+        .expect(201);
+      expect(res.body.vendorId).toBe(ids.vendorA);
+      const code = res.body.code as string;
 
-    it('a collect QR stored with a vendor (old rows) still goes to the scanning vendor', async () => {
-      const { code, tokenHash } = newQrCode();
-      const karim = await prisma.users.findFirstOrThrow({
-        where: { auth_user_id: customerSubs[0] },
-      });
-      await prisma.qr_codes.create({
-        data: {
-          user_id: karim.id,
-          purpose: 'collect',
-          vendor_id: ids.vendorA,
-          token_hash: tokenHash,
-        },
-      });
+      // Another vendor's staff: told it's the wrong shop, nothing written, QR still usable.
       const preview = await as('staffB1', 'post', '/api/vendor/scans/preview')
         .send({ code })
         .expect(200);
-      expect(preview.body).toMatchObject({ usable: true, reason: null });
-      const res = await collect('staffB1', { code, amount: 20 }).expect(200);
-      expect(res.body).toMatchObject({ branchName: 'B1' });
+      expect(preview.body).toMatchObject({ usable: false, reason: 'vendor_mismatch' });
+      const before = await prisma.point_events.count({ where: { vendor_id: ids.vendorB } });
+      const wrong = await collect('staffB1', { code, amount: 20 }).expect(403);
+      expect(wrong.body.code).toBe('vendor_mismatch');
+      expect(await prisma.point_events.count({ where: { vendor_id: ids.vendorB } })).toBe(before);
+
+      // The right vendor's staff: points go to that vendor.
+      const ok = await collect('staffA1', { code, amount: 20 }).expect(200);
+      expect(ok.body).toMatchObject({ branchName: 'A1' });
+    });
+
+    it('a shop QR for an unknown vendor → 404 vendor_not_found', async () => {
+      const res = await as('karim', 'post', '/api/app/qr-codes')
+        .send({ purpose: 'collect', vendorId: randomUUID() })
+        .expect(404);
+      expect(res.body.code).toBe('vendor_not_found');
     });
 
     it('vendor admin must choose a branch of their vendor', async () => {

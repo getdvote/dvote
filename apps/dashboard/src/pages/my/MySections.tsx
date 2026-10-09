@@ -53,8 +53,8 @@ export function MyImages() {
   const scope = useMyScope();
   return (
     <Section
-      title="Menu & photos"
-      subtitle={scope.can.editVendor ? 'Shown on your shop page in the dvote app.' : 'You can manage the photos of your branch.'}
+      title="Menu"
+      subtitle={scope.can.editVendor ? 'Menu pages shown on your shop page in the dvote app. Branch photos are on the Branches page.' : 'Your menu as customers see it. Branch photos are on the Branches page.'}
     >
       <ImagesTab scope={scope} />
     </Section>
