@@ -4,14 +4,41 @@
     {
       "name": "customer-app-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "apps/mobile", "run", "web", "--", "--clear"],
+      "runtimeArgs": [
+        "--prefix",
+        "apps/mobile",
+        "run",
+        "web",
+        "--",
+        "--clear"
+      ],
       "port": 8082
     },
     {
       "name": "customer-app-android",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "apps/mobile", "run", "start", "--", "--android", "--web", "--clear"],
+      "runtimeArgs": [
+        "--prefix",
+        "apps/mobile",
+        "run",
+        "start",
+        "--",
+        "--android",
+        "--web",
+        "--clear"
+      ],
       "port": 8082
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "apps/dashboard",
+        "run",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }
