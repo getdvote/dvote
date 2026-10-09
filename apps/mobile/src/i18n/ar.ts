@@ -171,6 +171,13 @@ export const ar: Dictionary = {
     redeemed: 'مكافأة مستبدلة',
     correction: 'تصحيح من dvote',
     bill: 'فاتورة {amount} {currency}',
+    details: 'تفاصيل النشاط',
+    when: 'التاريخ والوقت',
+    billAmount: 'قيمة الفاتورة',
+    branch: 'الفرع',
+    am: 'ص',
+    pm: 'م',
+    detailsA11y: 'يعرض التفاصيل',
   },
 
   maps: {

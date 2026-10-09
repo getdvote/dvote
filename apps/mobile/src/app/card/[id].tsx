@@ -1,5 +1,3 @@
-import Add01Icon from '@hugeicons/core-free-icons/Add01Icon';
-import ArrowDataTransferVerticalIcon from '@hugeicons/core-free-icons/ArrowDataTransferVerticalIcon';
 import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import Clock01Icon from '@hugeicons/core-free-icons/Clock01Icon';
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
@@ -7,6 +5,7 @@ import { Image } from 'expo-image';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { EventSheet, eventColors, eventIcon, eventTitle } from '../../components/EventSheet';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { CAROUSEL_LIMIT, RewardCards } from '../../components/RewardCards';
@@ -39,6 +38,9 @@ export default function CardDetails() {
   const [moreError, setMoreError] = useState<string | null>(null);
   // how many events are shown, so a reload on focus keeps the pages already opened
   const shown = useRef(HISTORY_PAGE);
+  // the history entry in the details sheet; `openEvent` drops on close, `sheetEvent` after the slide-out
+  const [openEvent, setOpenEvent] = useState<CardEvent | null>(null);
+  const [sheetEvent, setSheetEvent] = useState<CardEvent | null>(null);
   const [rewards, setRewards] = useState<VendorPage['rewards'] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,6 +139,10 @@ export default function CardDetails() {
                     currency={card.vendor.currency}
                     first={i === 0}
                     last={i === events.length - 1}
+                    onPress={() => {
+                      setSheetEvent(e);
+                      setOpenEvent(e);
+                    }}
                   />
                 ))}
                 {hasMore ? (
@@ -150,6 +156,13 @@ export default function CardDetails() {
           </>
         ) : null}
       </ScrollView>
+      <EventSheet
+        event={sheetEvent}
+        currency={card?.vendor.currency ?? ''}
+        visible={openEvent !== null}
+        onClose={() => setOpenEvent(null)}
+        onClosed={() => setSheetEvent(null)}
+      />
     </Screen>
   );
 }
@@ -246,14 +259,23 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
   );
 }
 
-function EventRow({ event, currency, first, last }: { event: CardEvent; currency: string; first: boolean; last: boolean }) {
+/** One history entry; tap it for the details sheet. */
+function EventRow({
+  event,
+  currency,
+  first,
+  last,
+  onPress,
+}: {
+  event: CardEvent;
+  currency: string;
+  first: boolean;
+  last: boolean;
+  onPress: () => void;
+}) {
   const positive = event.delta > 0;
-  const title =
-    event.type === 'earn'
-      ? translate('card.earned')
-      : event.type === 'redeem'
-        ? (localized(event.rewardName, event.rewardNameAr) ?? translate('card.redeemed'))
-        : translate('card.correction');
+  const colors = eventColors(event);
+  const title = eventTitle(event);
   const detail = [
     event.purchaseAmount ? translate('card.bill', { amount: event.purchaseAmount.replace(/\.00$/, ''), currency }) : null,
     event.branchName,
@@ -262,13 +284,21 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
     .filter(Boolean)
     .join(' · ');
   return (
-    <View style={[styles.row, first && styles.rowFirst, last && styles.rowLast, !last && styles.rowBorder]}>
-      <View style={[styles.icon, { backgroundColor: positive ? '#E6F7EC' : '#FFF1E6' }]}>
-        <Icon
-          icon={event.type === 'earn' ? Add01Icon : event.type === 'redeem' ? GiftIcon : ArrowDataTransferVerticalIcon}
-          size={18}
-          color={positive ? theme.success : '#E8820C'}
-        />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${positive ? '+' : ''}${event.delta}. ${detail}`}
+      accessibilityHint={translate('card.detailsA11y')}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        first && styles.rowFirst,
+        last && styles.rowLast,
+        !last && styles.rowBorder,
+        pressed && styles.rowPressed,
+      ]}
+    >
+      <View style={[styles.icon, { backgroundColor: colors.bg }]}>
+        <Icon icon={eventIcon(event)} size={18} color={colors.fg} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -280,7 +310,8 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
         {positive ? '+' : ''}
         {event.delta}
       </Text>
-    </View>
+      <Icon icon={ArrowRight01Icon} size={16} color={theme.placeholder} mirror />
+    </Pressable>
   );
 }
 
@@ -318,8 +349,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 20,
   },
+  rowPressed: { backgroundColor: theme.fill },
   rowFirst: { ...squircle, borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
   rowLast: { ...squircle, borderBottomLeftRadius: theme.radius, borderBottomRightRadius: theme.radius },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator },

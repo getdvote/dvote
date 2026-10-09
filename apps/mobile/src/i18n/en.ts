@@ -137,6 +137,13 @@ export const en = {
     redeemed: 'Reward redeemed',
     correction: 'Correction by dvote',
     bill: 'Bill {amount} {currency}',
+    details: 'Activity details',
+    when: 'Date & time',
+    billAmount: 'Bill amount',
+    branch: 'Branch',
+    am: 'AM',
+    pm: 'PM',
+    detailsA11y: 'Shows the details',
   },
 
   maps: {
