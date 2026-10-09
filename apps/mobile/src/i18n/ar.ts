@@ -337,11 +337,10 @@ export const ar: Dictionary = {
   },
 
   qr: {
-    collect: 'اجمع النقاط',
+    title: 'هوية dvote',
+    regenerate: 'أعد إنشاء رمز QR',
     pointsAdded: 'تمت إضافة النقاط',
     expiresIn: 'تنتهي صلاحيته خلال {time}',
-    expired: 'انتهت الصلاحية',
-    showAtCounter: 'اعرض هذا الرمز عند الكاشير',
     worksAnywhere:
       'يعمل في أي مقهى في dvote: يمسحه الموظف ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
     reconnecting: 'جارٍ إعادة الاتصال…',
@@ -355,9 +354,7 @@ export const ar: Dictionary = {
     replacedTitle: 'تم استبدال رمز QR',
     replacedText: 'تم فتح رمز QR أحدث، لذلك توقف هذا الرمز عن العمل.',
     errorTitle: 'حدث خطأ ما',
-    newCode: 'احصل على رمز QR جديد',
     couldNotCreate: 'تعذّر إنشاء رمز QR الخاص بك.',
-    collectingFrom: 'جمع النقاط من {vendor}',
     atVendor: 'يمسحه الموظف في {vendor} ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
   },
 

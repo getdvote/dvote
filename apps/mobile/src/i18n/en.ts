@@ -289,11 +289,10 @@ export const en = {
   },
 
   qr: {
-    collect: 'Collect points',
+    title: 'Dvote ID',
+    regenerate: 'Regenerate my QR code',
     pointsAdded: 'Points added',
     expiresIn: 'Expires in {time}',
-    expired: 'Expired',
-    showAtCounter: 'Show this code at the counter',
     worksAnywhere:
       'Works at any dvote coffee shop: the staff scan it and enter your bill, and your points appear here straight away.',
     reconnecting: 'Reconnecting…',
@@ -307,9 +306,7 @@ export const en = {
     replacedTitle: 'QR code replaced',
     replacedText: 'A newer QR code was opened, so this one stopped working.',
     errorTitle: 'Something went wrong',
-    newCode: 'Get a new QR code',
     couldNotCreate: 'Could not create your QR code.',
-    collectingFrom: 'Collecting points from {vendor}',
     atVendor: 'The staff at {vendor} scan it and enter your bill, and your points appear here straight away.',
   },
 

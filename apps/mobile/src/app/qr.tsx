@@ -16,11 +16,11 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../components/Text';
-import { ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
+import { Avatar, ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type NewQrCode, type QrCollectResult } from '../lib/api';
 import { t, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
-import { theme } from '../lib/theme';
+import { squircle, theme } from '../lib/theme';
 
 const POLL_MS = 2000;
 const QR_LIFETIME_MS = 5 * 60 * 1000;
@@ -36,7 +36,11 @@ type Phase =
  * Collect QR (tab bar QR button, or Collect on a shop page). Gets a one-time code from the
  * API, shows it, and checks every 2 s whether the staff used it; then shows "+N points" and
  * the new balance. The code names no shop: the staff member who scans it decides the shop and
- * branch. Opened from a shop page (`vendorName` param), the sheet is headed with that shop.
+ * branch. Opened from a shop page (`vendorName` param), the help text names that shop.
+ *
+ * Laid out like a ticket ("Dvote ID"): the customer's photo and name, a perforated tear line,
+ * then their code, in the middle of the page. When the code expires (or the clock runs out on the phone first), was replaced,
+ * or couldn't be made, the code gives way to a "Regenerate my QR code" button.
  */
 export default function Qr() {
   const { vendorName } = useLocalSearchParams<{ vendorName?: string }>();
@@ -114,49 +118,97 @@ export default function Qr() {
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={2}>
-          {phase.kind === 'done'
-            ? t('qr.pointsAdded')
-            : vendorName
-              ? t('qr.collectingFrom', { vendor: vendorName })
-              : t('qr.collect')}
+        <Text style={styles.title} numberOfLines={1}>
+          {phase.kind === 'done' ? t('qr.pointsAdded') : t('qr.title')}
         </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
           onPress={() => router.back()}
-          style={styles.close}
+          style={({ pressed }) => [styles.close, pressed && { opacity: 0.6 }]}
           hitSlop={8}
         >
           <Icon icon={Cancel01Icon} size={22} color={theme.text} />
         </Pressable>
       </View>
 
-      {phase.kind === 'loading' ? (
-        <View style={styles.middle}>
-          <ActivityIndicator color={theme.text} />
-        </View>
-      ) : phase.kind === 'showing' ? (
-        <Showing qr={phase.qr} deadline={phase.deadline} offline={offline} vendorName={vendorName} />
-      ) : phase.kind === 'done' ? (
+      {phase.kind === 'done' ? (
         <Done result={phase.result} />
       ) : (
-        <Ended
-          heading={
-            phase.kind === 'error' ? t('qr.errorTitle') : phase.reason === 'expired' ? t('qr.expiredTitle') : t('qr.replacedTitle')
-          }
-          text={
-            phase.kind === 'error'
-              ? null
-              : phase.reason === 'expired'
-                ? t('qr.expiredText')
-                : t('qr.replacedText')
-          }
-          error={phase.kind === 'error' ? phase.message : null}
-          onRetry={() => void issue()}
+        <IdCard
+          phase={phase}
+          offline={offline}
+          vendorName={vendorName}
+          onExpired={() => {
+            // the phone's countdown ran out before the next poll heard it from the server
+            activeId.current = null;
+            setPhase({ kind: 'ended', reason: 'expired' });
+          }}
+          onRegenerate={() => void issue()}
         />
       )}
     </Screen>
+  );
+}
+
+/** The customer's photo and name above their code (or what to do when there's no code). */
+function IdCard({
+  phase,
+  offline,
+  vendorName,
+  onExpired,
+  onRegenerate,
+}: {
+  phase: Exclude<Phase, { kind: 'done' }>;
+  offline: boolean;
+  vendorName?: string;
+  onExpired: () => void;
+  onRegenerate: () => void;
+}) {
+  const { me } = useSession();
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(width - theme.gutter * 2, 380);
+  const qrSize = cardWidth - CARD_PADDING * 2 - 24;
+
+  return (
+    <View style={styles.page}>
+      <View style={[styles.card, { width: cardWidth }]}>
+        <View style={styles.person}>
+          <Avatar name={me?.name ?? null} url={me?.avatarUrl ?? null} size={72} />
+          <Text style={styles.name} numberOfLines={1}>
+            {me?.name ?? t('you.member')}
+          </Text>
+        </View>
+
+        <TearLine width={cardWidth} />
+
+        {phase.kind === 'loading' ? (
+          <View style={[styles.qrArea, { height: qrSize }]}>
+            <ActivityIndicator color={theme.text} />
+          </View>
+        ) : phase.kind === 'showing' ? (
+          <Showing qr={phase.qr} deadline={phase.deadline} offline={offline} size={qrSize} onExpired={onExpired} />
+        ) : (
+          <Regenerate
+            minHeight={qrSize}
+            heading={
+              phase.kind === 'error'
+                ? t('qr.errorTitle')
+                : phase.reason === 'expired'
+                  ? t('qr.expiredTitle')
+                  : t('qr.replacedTitle')
+            }
+            text={phase.kind === 'error' ? null : phase.reason === 'expired' ? t('qr.expiredText') : t('qr.replacedText')}
+            error={phase.kind === 'error' ? phase.message : null}
+            onPress={onRegenerate}
+          />
+        )}
+      </View>
+
+      {phase.kind === 'showing' || phase.kind === 'loading' ? (
+        <Text style={styles.help}>{vendorName ? t('qr.atVendor', { vendor: vendorName }) : t('qr.worksAnywhere')}</Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -164,15 +216,15 @@ function Showing({
   qr,
   deadline,
   offline,
-  vendorName,
+  size,
+  onExpired,
 }: {
   qr: NewQrCode;
   deadline: number;
   offline: boolean;
-  vendorName?: string;
+  size: number;
+  onExpired: () => void;
 }) {
-  const { width } = useWindowDimensions();
-  const size = Math.min(width - theme.gutter * 2 - 56, 280);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -181,18 +233,18 @@ function Showing({
   const secondsLeft = Math.max(0, Math.ceil((deadline - now) / 1000));
   const countdown = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
+  const expiredRef = useRef(onExpired);
+  expiredRef.current = onExpired;
+  useEffect(() => {
+    if (secondsLeft === 0) expiredRef.current();
+  }, [secondsLeft]);
+
   return (
-    <View style={styles.body}>
-      <View style={styles.qrCard}>
+    <View style={styles.qrBlock}>
+      <View style={[styles.qrArea, { height: size }]}>
         <QRCode value={qr.code} size={size} color="#000" backgroundColor="#fff" ecl="M" />
-        <Text style={styles.expires}>
-          {secondsLeft > 0 ? t('qr.expiresIn', { time: countdown }) : t('qr.expired')}
-        </Text>
       </View>
-
-      <Text style={styles.lead}>{t('qr.showAtCounter')}</Text>
-      <Text style={styles.text}>{vendorName ? t('qr.atVendor', { vendor: vendorName }) : t('qr.worksAnywhere')}</Text>
-
+      <Text style={styles.expires}>{t('qr.expiresIn', { time: countdown })}</Text>
       <View style={styles.waiting}>
         {offline ? (
           <>
@@ -257,72 +309,105 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
   );
 }
 
-function Ended({
-  heading,
-  text,
-  error,
-  onRetry,
-}: {
-  heading: string;
-  text: string | null;
-  error: string | null;
-  onRetry: () => void;
-}) {
+/** The ticket's perforation: a dashed line with a half-circle notch cut into each side. */
+function TearLine({ width }: { width: number }) {
+  // the dashes stop a little short of the notches
+  const inner = width - CARD_PADDING * 2 - (NOTCH - 8);
+  const dashes = Math.floor((inner + DASH_GAP) / (DASH + DASH_GAP));
   return (
-    <View style={styles.body}>
-      <View style={styles.middle}>
-        <View style={styles.icon}>
-          <Icon icon={QrCodeIcon} size={40} color={theme.text} />
-        </View>
-        <Text style={styles.lead}>{heading}</Text>
-        {text ? <Text style={styles.text}>{text}</Text> : null}
-        <ErrorBox message={error} />
+    <View style={styles.tear}>
+      <View style={[styles.notch, { left: -CARD_PADDING - NOTCH / 2 }]} />
+      <View style={styles.dashes}>
+        {Array.from({ length: dashes }, (_, i) => (
+          <View key={i} style={styles.dash} />
+        ))}
       </View>
-      <View style={styles.footer}>
-        <PrimaryButton title={t('qr.newCode')} onPress={onRetry} />
-      </View>
+      <View style={[styles.notch, { right: -CARD_PADDING - NOTCH / 2 }]} />
     </View>
   );
 }
 
+/** In place of the code: why there isn't one, and a button for a new one. */
+function Regenerate({
+  minHeight,
+  heading,
+  text,
+  error,
+  onPress,
+}: {
+  minHeight: number;
+  heading: string;
+  text: string | null;
+  error: string | null;
+  onPress: () => void;
+}) {
+  return (
+    <View style={[styles.regenerate, { minHeight }]}>
+      <View style={styles.icon}>
+        <Icon icon={QrCodeIcon} size={36} color={theme.text} />
+      </View>
+      <Text style={styles.lead}>{heading}</Text>
+      {text ? <Text style={styles.text}>{text}</Text> : null}
+      <ErrorBox message={error} />
+      <PrimaryButton title={t('qr.regenerate')} onPress={onPress} style={styles.regenerateButton} />
+    </View>
+  );
+}
+
+const CARD_PADDING = 20;
+const NOTCH = 28;
+const DASH = 8;
+const DASH_GAP = 6;
+
 const styles = StyleSheet.create({
+  // Title centred; room above it and on both sides so it never runs under the close button.
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.gutter,
-    paddingTop: 8,
-    paddingBottom: 12,
+    minHeight: 40,
+    marginTop: 20,
+    marginBottom: 12,
+    marginHorizontal: theme.gutter,
   },
-  // Clear of the close button on both sides, so a long shop name wraps instead of hiding under it.
-  title: { fontSize: 17, fontWeight: '600', color: theme.text, textAlign: 'center', marginHorizontal: 44 },
+  title: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center', marginHorizontal: 56 },
   close: {
     position: 'absolute',
-    right: theme.gutter,
-    top: 2,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // the card sits in the middle of the page
+  page: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.gutter, paddingBottom: 24 },
+  card: {
+    ...squircle,
+    backgroundColor: theme.surface,
+    borderRadius: 28,
+    padding: CARD_PADDING,
+    alignItems: 'center',
+  },
+  person: { alignItems: 'center', gap: 10, paddingTop: 4 },
+  name: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center' },
+  tear: { alignSelf: 'stretch', height: NOTCH, justifyContent: 'center', marginVertical: 8 },
+  // page-coloured circles over the card's edges look like bites taken out of it
+  notch: { position: 'absolute', top: 0, width: NOTCH, height: NOTCH, borderRadius: NOTCH / 2, backgroundColor: theme.background },
+  dashes: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: NOTCH / 2 - 4 },
+  dash: { width: DASH, height: 2, borderRadius: 1, backgroundColor: theme.separator },
+  qrBlock: { alignItems: 'center', gap: 12 },
+  qrArea: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  expires: { fontSize: 15, fontWeight: '600', color: theme.muted, fontVariant: ['tabular-nums'] },
+  waiting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  waitingText: { fontSize: 14, color: theme.muted },
+  help: { fontSize: 15, color: theme.secondary, textAlign: 'center', lineHeight: 21, marginTop: 20, paddingHorizontal: 8 },
+  regenerate: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  regenerateButton: { alignSelf: 'stretch', marginTop: 12 },
+  // Done
   body: { flex: 1, paddingHorizontal: theme.gutter, paddingTop: 12 },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16 },
-  qrCard: {
-    alignSelf: 'center',
-    backgroundColor: theme.surface,
-    borderRadius: theme.radius,
-    padding: 28,
-    paddingBottom: 18,
-    alignItems: 'center',
-    gap: 14,
-  },
-  expires: { fontSize: 15, fontWeight: '600', color: theme.muted, fontVariant: ['tabular-nums'] },
-  lead: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center', marginTop: 24 },
-  text: { fontSize: 15, color: theme.secondary, textAlign: 'center', lineHeight: 21, marginTop: 6 },
-  waiting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
-  waitingText: { fontSize: 15, color: theme.muted },
+  lead: { fontSize: 20, fontWeight: '700', color: theme.text, textAlign: 'center', marginTop: 8 },
+  text: { fontSize: 15, color: theme.secondary, textAlign: 'center', lineHeight: 21 },
   check: {
     width: 96,
     height: 96,
@@ -346,10 +431,10 @@ const styles = StyleSheet.create({
   summaryStrong: { fontWeight: '700' },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },
   icon: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: theme.surface,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
