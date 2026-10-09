@@ -217,6 +217,8 @@ export const ar: Dictionary = {
       many: '{count} نقطة',
       other: '{count} نقطة',
     },
+    yourCard: 'بطاقتك',
+    category: 'الفئة',
     shopA11y: '{name}. افتح المتجر',
     emptyTitle: 'لا توجد مقاهٍ بعد',
     emptyText: 'ستظهر مقاهي dvote هنا عند انضمامها.',

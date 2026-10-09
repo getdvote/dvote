@@ -169,6 +169,8 @@ export const en = {
     branches: { one: '{count} branch', other: '{count} branches' },
     noRule: 'Points rule coming soon',
     myPoints: { one: '{count} point', other: '{count} points' },
+    yourCard: 'Your card',
+    category: 'Category',
     shopA11y: '{name}. Open shop',
     emptyTitle: 'No coffee shops yet',
     emptyText: 'dvote coffee shops will show here as they join.',

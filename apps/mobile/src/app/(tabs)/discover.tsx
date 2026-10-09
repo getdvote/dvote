@@ -1,16 +1,20 @@
-import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import CancelCircleIcon from '@hugeicons/core-free-icons/CancelCircleIcon';
+import CheckmarkCircle02Icon from '@hugeicons/core-free-icons/CheckmarkCircle02Icon';
 import Coins01Icon from '@hugeicons/core-free-icons/Coins01Icon';
+import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import Location01Icon from '@hugeicons/core-free-icons/Location01Icon';
 import MapsSearchIcon from '@hugeicons/core-free-icons/MapsSearchIcon';
 import Search01Icon from '@hugeicons/core-free-icons/Search01Icon';
+import Tag01Icon from '@hugeicons/core-free-icons/Tag01Icon';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
-import { Icon } from '../../components/Icon';
+import { DvoteLogo } from '../../components/DvoteLogo';
+import { Icon, type AppIcon } from '../../components/Icon';
 import { Text, TextInput } from '../../components/Text';
-import { ErrorBox, Screen } from '../../components/ui';
+import { ErrorBox, Screen, SoonTag } from '../../components/ui';
 import { useI18n } from '../../i18n';
 import { api, ApiError, type VendorListItem } from '../../lib/api';
 import { useSession } from '../../lib/session';
@@ -20,9 +24,10 @@ import { squircle, TAB_BAR_SPACE, theme, vendorColors } from '../../lib/theme';
 const amount = (v: string) => (v.endsWith('.00') ? v.slice(0, -3) : v);
 
 /**
- * Explore (tab): every coffee shop on dvote, A–Z, with how points are earned there, how many
- * rewards and branches it has, and the customer's points if they already have its card.
- * A row opens the shop page. The search box filters by name (on the server).
+ * Explore (tab): every coffee shop on dvote, A–Z, each as a card: banner, logo, name, how
+ * points are earned, where it is, and its category (soon), rewards and branches. Shops the
+ * customer already has a card at are tagged "Your card" with their points. A card opens the
+ * shop page. The search box filters by name (on the server).
  */
 export default function Explore() {
   const { handleAuthError } = useSession();
@@ -70,7 +75,7 @@ export default function Explore() {
         keyExtractor={(s) => s.id}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -126,46 +131,61 @@ export default function Explore() {
             </View>
           )
         }
-        renderItem={({ item }) => <ShopRow shop={item} />}
+        renderItem={({ item }) => <ShopCard shop={item} />}
       />
     </Screen>
   );
 }
 
-function ShopRow({ shop }: { shop: VendorListItem }) {
+/**
+ * One shop as a card. Vendors have no cover image or category in the API yet: the banner uses
+ * the shop's colour with the dvote petals (like its loyalty card and shop page), and the
+ * category shows "Soon".
+ */
+function ShopCard({ shop }: { shop: VendorListItem }) {
   const { t } = useI18n();
-  const [color] = vendorColors(shop.id);
-  const meta = [t('explore.rewards', { count: shop.rewardsCount }), t('explore.branches', { count: shop.branchesCount })].join(
-    ' · ',
-  );
+  const colors = vendorColors(shop.id);
+  const mine = shop.myBalance !== null;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t('explore.shopA11y', { name: shop.name })}
+      accessibilityLabel={[
+        t('explore.shopA11y', { name: shop.name }),
+        mine ? `${t('explore.yourCard')}, ${t('explore.myPoints', { count: shop.myBalance ?? 0 })}` : null,
+      ]
+        .filter(Boolean)
+        .join('. ')}
       onPress={() =>
         router.push({ pathname: '/shop/[id]', params: { id: shop.id, name: shop.name, logoUrl: shop.logoUrl ?? '' } })
       }
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      {shop.logoUrl ? (
-        <Image source={{ uri: shop.logoUrl }} style={styles.logo} contentFit="cover" />
-      ) : (
-        <View style={[styles.logo, { backgroundColor: color }]}>
-          <Text style={styles.logoInitial}>{shop.name.slice(0, 1).toUpperCase()}</Text>
+      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
+        <View style={styles.pattern} pointerEvents="none">
+          <DvoteLogo height={180} wordmark={false} color="rgba(255,255,255,0.10)" />
         </View>
-      )}
+        {mine ? (
+          <View style={styles.mine}>
+            <Icon icon={CheckmarkCircle02Icon} size={14} color={theme.success} />
+            <Text style={styles.mineText}>
+              {t('explore.yourCard')} · {t('explore.myPoints', { count: shop.myBalance ?? 0 })}
+            </Text>
+          </View>
+        ) : null}
+      </LinearGradient>
 
-      <View style={styles.rowText}>
-        <View style={styles.nameLine}>
-          <Text style={styles.name} numberOfLines={1}>
-            {shop.name}
-          </Text>
-          {shop.myBalance !== null ? (
-            <View style={styles.balance}>
-              <Text style={styles.balanceText}>{t('explore.myPoints', { count: shop.myBalance })}</Text>
-            </View>
-          ) : null}
-        </View>
+      <View style={styles.body}>
+        {shop.logoUrl ? (
+          <Image source={{ uri: shop.logoUrl }} style={styles.logo} contentFit="cover" />
+        ) : (
+          <View style={[styles.logo, { backgroundColor: colors[0] }]}>
+            <Text style={styles.logoInitial}>{shop.name.slice(0, 1).toUpperCase()}</Text>
+          </View>
+        )}
+
+        <Text style={styles.name} numberOfLines={1}>
+          {shop.name}
+        </Text>
 
         <View style={styles.infoLine}>
           <Icon icon={Coins01Icon} size={15} color={theme.muted} />
@@ -187,15 +207,28 @@ function ShopRow({ shop }: { shop: VendorListItem }) {
             </Text>
           </View>
         ) : null}
-        <Text style={styles.meta}>{meta}</Text>
-      </View>
 
-      <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror />
+        <View style={styles.stats}>
+          <Stat icon={Tag01Icon} label={t('explore.category')} soon />
+          <Stat icon={GiftIcon} label={t('explore.rewards', { count: shop.rewardsCount })} />
+          <Stat icon={Location01Icon} label={t('explore.branches', { count: shop.branchesCount })} />
+        </View>
+      </View>
     </Pressable>
   );
 }
 
-const LOGO = 56;
+function Stat({ icon, label, soon }: { icon: AppIcon; label: string; soon?: boolean }) {
+  return (
+    <View style={styles.stat}>
+      <Icon icon={icon} size={14} color={theme.secondary} />
+      <Text style={styles.statText}>{label}</Text>
+      {soon ? <SoonTag /> : null}
+    </View>
+  );
+}
+
+const LOGO = 64;
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: theme.gutter, paddingBottom: TAB_BAR_SPACE },
@@ -214,34 +247,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   searchInput: { flex: 1, height: '100%', fontSize: 16, color: theme.text },
-  row: {
-    ...squircle,
-    backgroundColor: theme.surface,
-    borderRadius: theme.radius,
-    padding: 14,
+  card: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius, overflow: 'hidden' },
+  pressed: { opacity: 0.7 },
+  banner: { height: 110, overflow: 'hidden' },
+  pattern: { position: 'absolute', right: -30, top: -20 },
+  mine: {
+    position: 'absolute',
+    top: 12,
+    end: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  pressed: { opacity: 0.7 },
+  mineText: { fontSize: 12, fontWeight: '700', color: theme.text },
+  // The logo overlaps the bottom of the banner.
+  body: { paddingHorizontal: 16, paddingBottom: 16, gap: 6, marginTop: -LOGO / 2 },
   logo: {
     width: LOGO,
     height: LOGO,
     borderRadius: LOGO / 2,
+    borderWidth: 3,
+    borderColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    backgroundColor: theme.fill,
+    backgroundColor: theme.surface,
+    marginBottom: 4,
   },
   logoInitial: { fontSize: 22, fontWeight: '700', color: '#fff' },
-  rowText: { flex: 1, gap: 4 },
-  nameLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { flexShrink: 1, fontSize: 17, fontWeight: '700', color: theme.text },
-  balance: { backgroundColor: '#E6F7EC', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  balanceText: { fontSize: 12, fontWeight: '700', color: theme.success },
+  name: { fontSize: 19, fontWeight: '700', color: theme.text },
   infoLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   info: { flexShrink: 1, fontSize: 14, color: theme.secondary },
-  meta: { fontSize: 13, color: theme.muted, marginTop: 2 },
+  stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  stat: {
+    ...squircle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.background,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  statText: { fontSize: 12, fontWeight: '600', color: theme.secondary },
   empty: { alignItems: 'center', gap: 12, paddingTop: 48, paddingHorizontal: 24 },
   emptyIcon: {
     width: 72,

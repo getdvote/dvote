@@ -53,7 +53,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 24,
     padding: 20,
-    justifyContent: 'space-between',
     overflow: 'hidden',
   },
   pattern: { position: 'absolute', right: -40, top: -10 },
@@ -62,6 +61,8 @@ const styles = StyleSheet.create({
   logoFallback: { backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   logoInitial: { fontSize: 18, fontWeight: '800' },
   vendor: { flex: 1, fontSize: 17, fontWeight: '700' },
-  balance: { fontSize: 34, fontWeight: '800', letterSpacing: 0.5 },
+  // Sits in the card's upper part so it stays visible when the open stack overlaps the
+  // bottom of every card but the front one (CardStack's STEP).
+  balance: { fontSize: 34, fontWeight: '800', letterSpacing: 0.5, marginTop: 36 },
   pts: { fontSize: 17, fontWeight: '600' },
 });
