@@ -142,6 +142,7 @@ export const en = {
     google: 'Google Maps',
   },
   rewards: {
+    viewAll: 'View all',
     none: 'No rewards yet',
     noneText: "This shop's rewards will show here.",
     enough: 'You have enough points',
