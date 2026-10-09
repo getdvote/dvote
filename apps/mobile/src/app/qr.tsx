@@ -3,7 +3,7 @@ import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
 import Tick02Icon from '@hugeicons/core-free-icons/Tick02Icon';
 import WifiDisconnected01Icon from '@hugeicons/core-free-icons/WifiDisconnected01Icon';
 import { Icon } from '../components/Icon';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -33,11 +33,13 @@ type Phase =
   | { kind: 'error'; message: string };
 
 /**
- * Collect QR (tab bar QR button). Gets a one-time code from the API, shows it, and checks
- * every 2 s whether the staff used it; then shows "+N points" and the new balance.
- * The code names no shop: the staff member who scans it decides the shop and branch.
+ * Collect QR (tab bar QR button, or Collect on a shop page). Gets a one-time code from the
+ * API, shows it, and checks every 2 s whether the staff used it; then shows "+N points" and
+ * the new balance. The code names no shop: the staff member who scans it decides the shop and
+ * branch. Opened from a shop page (`vendorName` param), the sheet is headed with that shop.
  */
 export default function Qr() {
+  const { vendorName } = useLocalSearchParams<{ vendorName?: string }>();
   const { handleAuthError } = useSession();
   useI18n(); // re-render on a language switch (children read t directly)
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
@@ -112,7 +114,13 @@ export default function Qr() {
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>{phase.kind === 'done' ? t('qr.pointsAdded') : t('qr.collect')}</Text>
+        <Text style={styles.title} numberOfLines={2}>
+          {phase.kind === 'done'
+            ? t('qr.pointsAdded')
+            : vendorName
+              ? t('qr.collectingFrom', { vendor: vendorName })
+              : t('qr.collect')}
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
@@ -129,7 +137,7 @@ export default function Qr() {
           <ActivityIndicator color={theme.text} />
         </View>
       ) : phase.kind === 'showing' ? (
-        <Showing qr={phase.qr} deadline={phase.deadline} offline={offline} />
+        <Showing qr={phase.qr} deadline={phase.deadline} offline={offline} vendorName={vendorName} />
       ) : phase.kind === 'done' ? (
         <Done result={phase.result} />
       ) : (
@@ -152,7 +160,17 @@ export default function Qr() {
   );
 }
 
-function Showing({ qr, deadline, offline }: { qr: NewQrCode; deadline: number; offline: boolean }) {
+function Showing({
+  qr,
+  deadline,
+  offline,
+  vendorName,
+}: {
+  qr: NewQrCode;
+  deadline: number;
+  offline: boolean;
+  vendorName?: string;
+}) {
   const { width } = useWindowDimensions();
   const size = Math.min(width - theme.gutter * 2 - 56, 280);
   const [now, setNow] = useState(Date.now());
@@ -173,7 +191,7 @@ function Showing({ qr, deadline, offline }: { qr: NewQrCode; deadline: number; o
       </View>
 
       <Text style={styles.lead}>{t('qr.showAtCounter')}</Text>
-      <Text style={styles.text}>{t('qr.worksAnywhere')}</Text>
+      <Text style={styles.text}>{vendorName ? t('qr.atVendor', { vendor: vendorName }) : t('qr.worksAnywhere')}</Text>
 
       <View style={styles.waiting}>
         {offline ? (
@@ -276,7 +294,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  title: { fontSize: 17, fontWeight: '600', color: theme.text },
+  // Clear of the close button on both sides, so a long shop name wraps instead of hiding under it.
+  title: { fontSize: 17, fontWeight: '600', color: theme.text, textAlign: 'center', marginHorizontal: 44 },
   close: {
     position: 'absolute',
     right: theme.gutter,

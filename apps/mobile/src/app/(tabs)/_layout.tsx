@@ -9,6 +9,7 @@ import { Redirect, router, Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n, type TKey } from '../../i18n';
+import { haptics } from '../../lib/haptics';
 import { useSession } from '../../lib/session';
 import { theme, squircle } from '../../lib/theme';
 
@@ -47,7 +48,10 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                 accessibilityState={{ selected: focused }}
                 onPress={() => {
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                  if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+                  if (!focused && !event.defaultPrevented) {
+                    haptics.tab();
+                    navigation.navigate(route.name);
+                  }
                 }}
                 style={[styles.tab, focused && styles.tabOn]}
               >
@@ -59,7 +63,10 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('common.showMyQr')}
-          onPress={() => router.push('/qr')}
+          onPress={() => {
+            haptics.qr();
+            router.push('/qr');
+          }}
           style={styles.qr}
         >
           <Icon icon={QrCodeIcon} size={24} color={theme.text} />

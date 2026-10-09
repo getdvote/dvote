@@ -167,6 +167,10 @@ export const ar: Dictionary = {
     bill: 'فاتورة {amount} {currency}',
   },
 
+  maps: {
+    apple: 'خرائط Apple',
+    google: 'خرائط Google',
+  },
   rewards: {
     none: 'لا توجد مكافآت بعد',
     noneText: 'مكافآت هذا المتجر ستظهر هنا.',
@@ -179,6 +183,10 @@ export const ar: Dictionary = {
       many: 'متبقٍ {count} نقطة',
       other: 'متبقٍ {count} نقطة',
     },
+    details: 'تفاصيل المكافأة',
+    required: { one: '{count} نقطة مطلوبة', other: '{count} نقطة مطلوبة' },
+    redeem: 'استبدل',
+    collectMore: { one: 'اجمع {count} نقطة إضافية للاستبدال', other: 'اجمع {count} نقطة إضافية للاستبدال' },
   },
 
   explore: {
@@ -348,6 +356,8 @@ export const ar: Dictionary = {
     errorTitle: 'حدث خطأ ما',
     newCode: 'احصل على رمز QR جديد',
     couldNotCreate: 'تعذّر إنشاء رمز QR الخاص بك.',
+    collectingFrom: 'جمع النقاط من {vendor}',
+    atVendor: 'يمسحه الموظف في {vendor} ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
   },
 
   shop: {
@@ -388,6 +398,7 @@ export const ar: Dictionary = {
     menuSoon: 'القائمة قريبًا',
     menuSoonText: 'صفحات قائمة هذا المتجر ستظهر هنا.',
     menuPageA11y: 'صفحة القائمة {n} من {total}. افتحها بملء الشاشة',
+    collect: 'اجمع',
   },
 
   feedback: {
