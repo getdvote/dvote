@@ -11,14 +11,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
-import { DvoteLogo } from '../../components/DvoteLogo';
 import { Icon, type AppIcon } from '../../components/Icon';
 import { Text, TextInput } from '../../components/Text';
-import { ErrorBox, Screen, SoonTag } from '../../components/ui';
+import { ErrorBox, Screen } from '../../components/ui';
 import { useI18n } from '../../i18n';
 import { api, ApiError, type VendorListItem } from '../../lib/api';
 import { useSession } from '../../lib/session';
-import { squircle, TAB_BAR_SPACE, theme, vendorColors } from '../../lib/theme';
+import { cardDesign, squircle, TAB_BAR_SPACE, theme } from '../../lib/theme';
+import { CardPattern } from '../../components/LoyaltyCard';
 import { useLiveRefresh } from '../../lib/live';
 
 /** "10.00" → "10" */
@@ -137,13 +137,14 @@ export default function Explore() {
 }
 
 /**
- * One shop as a card. Vendors have no cover image or category in the API yet: the banner uses
- * the shop's colour with the dvote petals (like its loyalty card and shop page), and the
- * category shows "Soon".
+ * One shop as a card. The banner is the shop's banner photo, or (none uploaded) its loyalty-card
+ * design: the colours and pattern the vendor chose in the dashboard. The category chip shows
+ * what kind of place it is (hidden until the vendor sets one).
  */
 function ShopCard({ shop }: { shop: VendorListItem }) {
   const { t } = useI18n();
-  const colors = vendorColors(shop.id);
+  const design = cardDesign(shop.id, shop.cardDesign);
+  const colors = design.colors;
   const mine = shop.myBalance !== null;
   return (
     <Pressable
@@ -160,9 +161,11 @@ function ShopCard({ shop }: { shop: VendorListItem }) {
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
-        <View style={styles.pattern} pointerEvents="none">
-          <DvoteLogo height={180} wordmark={false} color="rgba(255,255,255,0.10)" />
-        </View>
+        {shop.bannerUrl ? (
+          <Image source={{ uri: shop.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+        ) : (
+          <CardPattern kind={design.pattern} tint={design.ink === '#FFFFFF' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'} />
+        )}
         {mine ? (
           <View style={styles.mine}>
             <Icon icon={CheckmarkCircle02Icon} size={14} color={theme.success} />
@@ -208,7 +211,7 @@ function ShopCard({ shop }: { shop: VendorListItem }) {
         ) : null}
 
         <View style={styles.stats}>
-          <Stat icon={Tag01Icon} label={t('explore.category')} soon />
+          {shop.category ? <Stat icon={Tag01Icon} label={t(`categories.${shop.category}`)} /> : null}
           <Stat icon={GiftIcon} label={t('explore.rewards', { count: shop.rewardsCount })} />
           <Stat icon={Location01Icon} label={t('explore.branches', { count: shop.branchesCount })} />
         </View>
@@ -217,12 +220,11 @@ function ShopCard({ shop }: { shop: VendorListItem }) {
   );
 }
 
-function Stat({ icon, label, soon }: { icon: AppIcon; label: string; soon?: boolean }) {
+function Stat({ icon, label }: { icon: AppIcon; label: string }) {
   return (
     <View style={styles.stat}>
       <Icon icon={icon} size={14} color={theme.secondary} />
       <Text style={styles.statText}>{label}</Text>
-      {soon ? <SoonTag /> : null}
     </View>
   );
 }
@@ -251,7 +253,6 @@ const styles = StyleSheet.create({
   card: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius, overflow: 'hidden' },
   pressed: { opacity: 0.7 },
   banner: { height: 110, overflow: 'hidden' },
-  pattern: { position: 'absolute', right: -30, top: -20 },
   mine: {
     position: 'absolute',
     top: 12,

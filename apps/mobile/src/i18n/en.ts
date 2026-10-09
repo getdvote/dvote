@@ -356,6 +356,14 @@ export const en = {
   },
 
   /** API error codes → message (lib/api friendlyMessage). Unknown codes fall back to the server text. */
+  categories: {
+    cafe: 'Café',
+    cafe_restaurant: 'Café & restaurant',
+    restaurant: 'Restaurant',
+    bakery: 'Bakery',
+    desserts: 'Desserts',
+    juice_bar: 'Juice bar',
+  },
   errors: {
     network: "Can't reach dvote right now. Check your connection and try again.",
     user_blocked: 'Your account is blocked. Please contact dvote support.',

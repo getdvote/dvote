@@ -22,14 +22,17 @@ import { IMAGE_ACCEPT, ImagesTab } from './vendor/ImagesTab';
 import { RewardsTab } from './vendor/RewardsTab';
 import { RulesTab } from './vendor/RulesTab';
 import { StaffTab } from './vendor/StaffTab';
+import { BrandingPanel } from '../components/BrandingPanel';
+import { categoryLabel } from '../lib/cardDesigns';
 import { CurrencySelect } from './Vendors';
 
 const TAB = 'flex-none px-3 text-[15px] after:bg-primary data-active:text-primary';
 
-/** One vendor: profile, logo, status, and its branches, points rule, rewards, images and staff. */
+/** One vendor: profile, logo, status, and its branches, points rule, rewards, menu, staff and branding. */
 export function VendorDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: vendor, isLoading, error } = useQuery({ queryKey: ['vendor', id], queryFn: () => api.vendor(id) });
 
   return (
@@ -57,6 +60,7 @@ export function VendorDetail() {
                   <TabsTrigger value="rewards" className={TAB}>Rewards</TabsTrigger>
                   <TabsTrigger value="images" className={TAB}>Menu</TabsTrigger>
                   <TabsTrigger value="staff" className={TAB}>Staff</TabsTrigger>
+                  <TabsTrigger value="branding" className={TAB}>Branding</TabsTrigger>
                 </TabsList>
                 <TabsContent value="branches">
                   <BranchesTab scope={adminScope(vendor.id, vendor.currency)} />
@@ -72,6 +76,19 @@ export function VendorDetail() {
                 </TabsContent>
                 <TabsContent value="staff">
                   <StaffTab scope={adminScope(vendor.id, vendor.currency)} />
+                </TabsContent>
+                <TabsContent value="branding">
+                  <BrandingPanel
+                    vendor={vendor}
+                    canEdit
+                    save={(body) => api.updateVendor(vendor.id, body)}
+                    uploadBanner={(f) => api.uploadBanner(vendor.id, f)}
+                    removeBanner={() => api.removeBanner(vendor.id)}
+                    onSaved={(v) => {
+                      qc.setQueryData(['vendor', v.id], v);
+                      void qc.invalidateQueries({ queryKey: ['vendors'] });
+                    }}
+                  />
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -160,7 +177,7 @@ function VendorHeader({ vendor }: { vendor: Vendor }) {
             <StatusTag status={vendor.status} />
           </div>
           <p className="mt-1 text-muted-foreground">
-            {vendor.contactEmail ?? 'No contact email'} · {vendor.currency} · {vendor.branchCount} branches · {vendor.staffCount} staff
+            {categoryLabel(vendor.category) ?? 'No category'} · {vendor.contactEmail ?? 'No contact email'} · {vendor.currency} · {vendor.branchCount} branches · {vendor.staffCount} staff
           </p>
           {logo.isPending ? <p className="mt-1 text-sm text-muted-foreground">Uploading logo…</p> : null}
         </div>

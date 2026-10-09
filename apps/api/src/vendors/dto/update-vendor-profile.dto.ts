@@ -9,4 +9,6 @@ export class UpdateVendorProfileDto extends PickType(UpdateVendorDto, [
   'name',
   'logoUrl',
   'contactEmail',
+  'category',
+  'cardDesign',
 ] as const) {}

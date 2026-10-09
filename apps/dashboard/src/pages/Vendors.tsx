@@ -17,7 +17,8 @@ import { Pager, SearchInput, StatusFilter } from '../components/ListControls';
 import { initial, PageHeader } from '../components/PageHeader';
 import { StatusTag } from '../components/StatusTag';
 import { TableState } from '../components/TableState';
-import { api, type Vendor, type VendorStatus } from '../lib/api';
+import { api, type Vendor, type VendorCategory, type VendorStatus } from '../lib/api';
+import { categoryLabel, VENDOR_CATEGORIES } from '../lib/cardDesigns';
 
 export const CURRENCIES = ['EGP', 'SAR', 'AED', 'USD', 'EUR'];
 const PAGE_SIZE = 20;
@@ -74,6 +75,7 @@ export function Vendors() {
           <TableHeader>
             <TableRow>
               <TableHead className="pl-4">Vendor</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Branches</TableHead>
               <TableHead className="text-right">Staff</TableHead>
@@ -82,7 +84,7 @@ export function Vendors() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={rows.length === 0} colSpan={6} emptyText="No vendors found" />
+            <TableState loading={isLoading} empty={rows.length === 0} colSpan={7} emptyText="No vendors found" />
             {rows.map((v) => (
               <TableRow key={v.id} className="cursor-pointer" onClick={() => navigate(`/vendors/${v.id}`)}>
                 <TableCell className="pl-4">
@@ -97,6 +99,7 @@ export function Vendors() {
                     </div>
                   </div>
                 </TableCell>
+                <TableCell>{categoryLabel(v.category) ?? <span className="text-muted-foreground">—</span>}</TableCell>
                 <TableCell>
                   <StatusTag status={v.status} />
                 </TableCell>
@@ -136,7 +139,7 @@ export function CurrencySelect({ id, defaultValue }: { id: string; defaultValue:
 function CreateVendorDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (v: Vendor) => void }) {
   const qc = useQueryClient();
   const create = useMutation({
-    mutationFn: (v: { name: string; contactEmail?: string; currency: string }) => api.createVendor(v),
+    mutationFn: (v: { name: string; contactEmail?: string; currency: string; category?: VendorCategory }) => api.createVendor(v),
     onSuccess: (v) => {
       void qc.invalidateQueries({ queryKey: ['vendors'] });
       toast.success(`${v.name} created`);
@@ -169,6 +172,7 @@ function CreateVendorDialog({ open, onClose, onCreated }: { open: boolean; onClo
               name: String(f.get('name')).trim(),
               contactEmail: String(f.get('contactEmail')).trim() || undefined,
               currency: String(f.get('currency')),
+              category: (String(f.get('category') ?? '') || undefined) as VendorCategory | undefined,
             });
           }}
         >
@@ -180,6 +184,20 @@ function CreateVendorDialog({ open, onClose, onCreated }: { open: boolean; onClo
           </Field>
           <Field label="Currency" htmlFor="vendor-currency" hint="Locked once the vendor has a points rule.">
             <CurrencySelect id="vendor-currency" defaultValue="EGP" />
+          </Field>
+          <Field label="Category" htmlFor="vendor-category" hint="Card design and banner are set later, on the vendor's Branding tab.">
+            <Select name="category">
+              <SelectTrigger id="vendor-category" className="w-full">
+                <SelectValue placeholder="Choose (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {VENDOR_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <ErrorAlert error={create.error} />
         </form>

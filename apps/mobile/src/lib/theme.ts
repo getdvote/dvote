@@ -89,26 +89,46 @@ export function fontFamily(weight: string | number | undefined, arabic = false):
 export const TAB_BAR_SPACE = 120;
 
 /**
- * Card colours. Vendors have no brand colour in the API yet, so each vendor gets a stable
- * pair from this palette (same vendor → same colour on every phone).
+ * The 10 loyalty-card designs a vendor picks from in the dashboards (vendors.card_design 1-10).
+ * Keep in step with apps/dashboard/src/lib/cardDesigns.ts (same order, colours and patterns).
  */
-const PALETTE: [string, string][] = [
-  ['#1C1C1E', '#3A3A3C'],
-  ['#2E9E6B', '#4BC08A'],
-  ['#2F6BDE', '#4F8BF2'],
-  ['#F2B33D', '#F7CF6B'],
-  ['#6155F5', '#8A80FF'],
-  ['#E0533D', '#F27A60'],
-  ['#0E8C99', '#2DB3BF'],
-];
-
-export function vendorColors(vendorId: string): [string, string] {
-  let h = 0;
-  for (const ch of vendorId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return PALETTE[h % PALETTE.length];
+export type CardPattern = 'petals' | 'circles' | 'stripes' | 'dots';
+export interface CardDesign {
+  id: number;
+  name: string;
+  colors: [string, string];
+  /** Text colour on the card. */
+  ink: string;
+  pattern: CardPattern;
 }
 
-/** Dark text on the light (yellow) card, white elsewhere. */
+export const CARD_DESIGNS: CardDesign[] = [
+  { id: 1, name: 'Midnight', colors: ['#1C1C1E', '#3A3A3C'], ink: '#FFFFFF', pattern: 'petals' },
+  { id: 2, name: 'Mint', colors: ['#2E9E6B', '#4BC08A'], ink: '#FFFFFF', pattern: 'circles' },
+  { id: 3, name: 'Ocean', colors: ['#2F6BDE', '#4F8BF2'], ink: '#FFFFFF', pattern: 'stripes' },
+  { id: 4, name: 'Honey', colors: ['#F2B33D', '#F7CF6B'], ink: '#1C1C1E', pattern: 'dots' },
+  { id: 5, name: 'Violet', colors: ['#6155F5', '#8A80FF'], ink: '#FFFFFF', pattern: 'petals' },
+  { id: 6, name: 'Coral', colors: ['#E0533D', '#F27A60'], ink: '#FFFFFF', pattern: 'circles' },
+  { id: 7, name: 'Teal', colors: ['#0E8C99', '#2DB3BF'], ink: '#FFFFFF', pattern: 'stripes' },
+  { id: 8, name: 'Espresso', colors: ['#3E2723', '#795548'], ink: '#FFFFFF', pattern: 'dots' },
+  { id: 9, name: 'Berry', colors: ['#AD1457', '#EC407A'], ink: '#FFFFFF', pattern: 'circles' },
+  { id: 10, name: 'Latte', colors: ['#E9DCC9', '#F7F1E8'], ink: '#3E2723', pattern: 'petals' },
+];
+
+/** The vendor's chosen design, or (none chosen) a stable one from its id: same on every phone. */
+export function cardDesign(vendorId: string, chosen?: number | null): CardDesign {
+  if (chosen && chosen >= 1 && chosen <= CARD_DESIGNS.length) return CARD_DESIGNS[chosen - 1];
+  let h = 0;
+  for (const ch of vendorId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return CARD_DESIGNS[h % CARD_DESIGNS.length];
+}
+
+/** The card gradient of a vendor (shop banners, headers and dots use the same colours). */
+export function vendorColors(vendorId: string, chosen?: number | null): [string, string] {
+  return cardDesign(vendorId, chosen).colors;
+}
+
+/** Text colour on a card with these colours. */
 export function onCardColor([from]: [string, string]): string {
-  return from === '#F2B33D' ? '#1C1C1E' : '#FFFFFF';
+  return CARD_DESIGNS.find((d) => d.colors[0] === from)?.ink ?? '#FFFFFF';
 }

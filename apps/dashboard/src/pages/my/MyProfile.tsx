@@ -4,8 +4,9 @@ import { useRef } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { BrandingPanel } from '../../components/BrandingPanel';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
 import { initial, PageHeader } from '../../components/PageHeader';
@@ -13,7 +14,7 @@ import { useMyVendor } from '../../layouts/VendorLayout';
 import { errorMessage, vendorApi, type Vendor } from '../../lib/api';
 import { IMAGE_ACCEPT } from '../vendor/ImagesTab';
 
-/** Vendor admin: my shop's name, contact email and logo (status and currency stay with dvote). */
+/** Vendor admin: my shop's name, contact email, logo, and branding (category, banner, card design). Status and currency stay with dvote. */
 export function MyProfile() {
   const vendor = useMyVendor();
   const qc = useQueryClient();
@@ -102,6 +103,21 @@ export function MyProfile() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle>Branding</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BrandingPanel
+            vendor={vendor}
+            canEdit
+            save={vendorApi.updateProfile}
+            uploadBanner={vendorApi.uploadBanner}
+            removeBanner={vendorApi.removeBanner}
+            onSaved={(v) => qc.setQueryData(['vendor', 'me'], v)}
+          />
         </CardContent>
       </Card>
     </>

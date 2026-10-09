@@ -3,12 +3,17 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// The API uses Supabase's transaction pooler (port 6543). The Prisma CLI (migrate deploy,
+// db pull) needs a session connection (it takes advisory locks), so it uses the session
+// pooler (port 5432) of the same project. Short-lived, so it doesn't hold pooler slots.
+const url = process.env["DATABASE_URL"]?.replace(".pooler.supabase.com:6543/", ".pooler.supabase.com:5432/");
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url,
   },
 });

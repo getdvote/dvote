@@ -2,13 +2,18 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsIn,
+  IsInt,
   IsISO4217CurrencyCode,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
+import { CARD_DESIGN_COUNT, VENDOR_CATEGORIES, type VendorCategory } from '../vendor-branding';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -50,4 +55,16 @@ export class CreateVendorDto {
   )
   @IsISO4217CurrencyCode()
   currency?: string;
+
+  @ApiPropertyOptional({ enum: VENDOR_CATEGORIES, description: 'What kind of place it is' })
+  @IsOptional()
+  @IsIn(VENDOR_CATEGORIES)
+  category?: VendorCategory;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: CARD_DESIGN_COUNT, description: 'Loyalty-card design 1-10' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(CARD_DESIGN_COUNT)
+  cardDesign?: number;
 }

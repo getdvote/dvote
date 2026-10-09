@@ -3,15 +3,20 @@ import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
+  IsIn,
+  IsInt,
   IsISO4217CurrencyCode,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
+  Max,
   MaxLength,
+  Min,
   ValidateIf,
 } from 'class-validator';
 import { vendor_status } from '../../generated/prisma/enums.js';
+import { CARD_DESIGN_COUNT, VENDOR_CATEGORIES, type VendorCategory } from '../vendor-branding';
 
 /**
  * Only sent fields change. logoUrl / contactEmail accept null to clear them;
@@ -63,4 +68,26 @@ export class UpdateVendorDto {
   @ValidateIf((o: UpdateVendorDto) => o.status !== undefined)
   @IsEnum(vendor_status)
   status?: vendor_status;
+
+  @ApiPropertyOptional({
+    enum: VENDOR_CATEGORIES,
+    nullable: true,
+    description: 'What kind of place it is; null clears it',
+  })
+  @IsOptional()
+  @IsIn(VENDOR_CATEGORIES)
+  category?: VendorCategory | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 1,
+    maximum: CARD_DESIGN_COUNT,
+    nullable: true,
+    description: 'Loyalty-card design 1-10 for this vendor’s cards; null = automatic',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(CARD_DESIGN_COUNT)
+  cardDesign?: number | null;
 }

@@ -19,6 +19,15 @@ export class VendorListItemDto {
   @ApiProperty({ type: String, nullable: true })
   logoUrl: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'Shop-page banner' })
+  bannerUrl: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'cafe | cafe_restaurant | restaurant | bakery | desserts | juice_bar' })
+  category: string | null;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Loyalty-card design 1-10; null = automatic' })
+  cardDesign: number | null;
+
   @ApiProperty({ example: 'EGP' })
   currency: string;
 

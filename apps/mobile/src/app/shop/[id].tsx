@@ -35,11 +35,11 @@ import { useLiveRefresh } from '../../lib/live';
  * the rewards (with what the customer can already afford), the menu pages and the branches
  * (address, photos, directions).
  *
- * Vendors have no cover image field yet, so the banner uses the shop's colour (same as its
- * card); pass `coverUrl` once the API has one and the photo is shown instead.
+ * The banner is the shop's uploaded banner photo (bannerUrl, set in the dashboards); without
+ * one it is the shop's card design colours. The category (cafe, restaurant…) shows under the name.
  */
 export default function Shop() {
-  const params = useLocalSearchParams<{ id: string; name?: string; logoUrl?: string; coverUrl?: string }>();
+  const params = useLocalSearchParams<{ id: string; name?: string; logoUrl?: string }>();
   const { handleAuthError } = useSession();
   const { t } = useI18n();
   const [shop, setShop] = useState<VendorPage | null>(null);
@@ -60,7 +60,7 @@ export default function Shop() {
 
   const shopName = shop?.name ?? (params.name || t('shop.fallbackName'));
   const logoUrl = shop?.logoUrl ?? params.logoUrl ?? null;
-  const colors = vendorColors(params.id ?? '');
+  const colors = vendorColors(params.id ?? '', shop?.cardDesign);
   const open = (images: string[], index = 0) => setViewer({ images, index });
 
   return (
@@ -68,8 +68,8 @@ export default function Shop() {
       <PageHeader title={shopName} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.banner}>
-          {params.coverUrl ? (
-            <Image source={{ uri: params.coverUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          {shop?.bannerUrl ? (
+            <Image source={{ uri: shop.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
           ) : (
             <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill}>
               {/* faint dvote petals, like the cards */}
@@ -96,11 +96,12 @@ export default function Shop() {
             </View>
           )}
           <Text style={styles.name}>{shopName}</Text>
+          {shop?.category ? <Text style={styles.category}>{t(`categories.${shop.category}`)}</Text> : null}
           {shop?.card ? <Text style={styles.balance}>{t('shop.youHave', { count: shop.card.balance })}</Text> : null}
         </View>
 
-        {/* Collect opens the normal collect QR, headed with this shop's name: a collect QR
-            names no shop (the scanning staff decide it), so it isn't locked to this one. */}
+        {/* Collect opens this shop's QR: it only works at this shop (other shops' staff get
+            vendor_mismatch). The tab bar QR is the one that works anywhere. */}
         <View style={styles.actions}>
           <PrimaryButton
             title={t('shop.collect')}
@@ -282,6 +283,7 @@ const styles = StyleSheet.create({
   action: { flex: 1 },
   name: { fontSize: 24, fontWeight: '700', color: theme.text, textAlign: 'center' },
   balance: { fontSize: 15, fontWeight: '600', color: theme.muted },
+  category: { fontSize: 14, fontWeight: '500', color: theme.muted, marginTop: -2 },
   retry: { gap: 12, marginTop: 24 },
   rule: { flexDirection: 'row', gap: 14, paddingVertical: 16, alignItems: 'flex-start' },
   ruleIcon: {

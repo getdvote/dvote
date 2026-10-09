@@ -43,6 +43,9 @@ export class VendorPageService {
         id: v.id,
         name: v.name,
         logoUrl: v.logo_url,
+        bannerUrl: v.banner_url,
+        category: v.category,
+        cardDesign: v.card_design,
         currency: v.currency,
         rule: rule ? { spendAmount: money(rule.spend_amount), pointsPerSpend: rule.points_per_spend } : null,
         rewardsCount: v._count.rewards,
@@ -80,6 +83,9 @@ export class VendorPageService {
       id: vendor.id,
       name: vendor.name,
       logoUrl: vendor.logo_url,
+      bannerUrl: vendor.banner_url,
+      category: vendor.category,
+      cardDesign: vendor.card_design,
       currency: vendor.currency,
       rule: rule
         ? {

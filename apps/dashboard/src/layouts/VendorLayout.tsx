@@ -29,6 +29,9 @@ export function useMyVendor(): Vendor {
   return (
     data ?? {
       ...me.vendor,
+      bannerUrl: null,
+      category: null,
+      cardDesign: null,
       contactEmail: null,
       status: 'active',
       branchCount: 0,

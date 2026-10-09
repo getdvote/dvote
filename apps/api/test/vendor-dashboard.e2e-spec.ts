@@ -127,6 +127,38 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
     await as('staffA1', 'get', '/api/vendor/summary').expect(403);
   });
 
+  it('branding: category + card design (validated), banner upload / replace / remove', async () => {
+    const p = (await as('adminA', 'patch', '/api/vendor/profile').send({ category: 'cafe_restaurant', cardDesign: 7 }).expect(200)).body;
+    expect(p).toMatchObject({ category: 'cafe_restaurant', cardDesign: 7, bannerUrl: null });
+    await as('adminA', 'patch', '/api/vendor/profile').send({ category: 'pizza' }).expect(400);
+    await as('adminA', 'patch', '/api/vendor/profile').send({ cardDesign: 11 }).expect(400);
+    await as('adminA', 'patch', '/api/vendor/profile').send({ cardDesign: 0 }).expect(400);
+    await as('managerA1', 'patch', '/api/vendor/profile').send({ cardDesign: 2 }).expect(403);
+    expect((await as('adminA', 'patch', '/api/vendor/profile').send({ category: null, cardDesign: null }).expect(200)).body).toMatchObject({
+      category: null,
+      cardDesign: null,
+    });
+
+    const png = await sharp({ create: { width: 2000, height: 600, channels: 3, background: '#2E9E6B' } }).png().toBuffer();
+    const putBanner = () => as('adminA', 'put', '/api/vendor/profile/banner').attach('file', png, 'banner.png');
+    const first = (await putBanner().expect(200)).body as { bannerUrl: string };
+    const firstPath = (await prisma.vendors.findUniqueOrThrow({ where: { id: ids.vendorA } })).banner_path!;
+    expect(firstPath.startsWith(`${ids.vendorA}/banner/`)).toBe(true);
+    expect(first.bannerUrl).toContain(firstPath);
+    const { width, height } = await sharp(storage.get(BUCKETS.vendors, firstPath)!.data).metadata();
+    expect([width, height]).toEqual([1600, 800]); // wide 2:1 banner
+
+    await putBanner().expect(200);
+    expect(storage.has(BUCKETS.vendors, firstPath)).toBe(false);
+    expect(storage.list(BUCKETS.vendors, `${ids.vendorA}/banner/`)).toHaveLength(1);
+    // tiny file: the 403 is sent before the body is read, and a big upload would hit ECONNRESET
+    const tiny = await sharp({ create: { width: 4, height: 2, channels: 3, background: '#000' } }).png().toBuffer();
+    await as('managerA1', 'put', '/api/vendor/profile/banner').attach('file', tiny, 'b.png').expect(403);
+
+    expect((await as('adminA', 'delete', '/api/vendor/profile/banner').expect(200)).body.bannerUrl).toBeNull();
+    expect(storage.list(BUCKETS.vendors, `${ids.vendorA}/banner/`)).toHaveLength(0);
+  });
+
   it('reward photo: upload, replace (old file deleted), remove; never on another vendor’s reward', async () => {
     const png = await sharp({ create: { width: 900, height: 600, channels: 3, background: '#6155F5' } }).png().toBuffer();
     const put = (who: string, id: string) => as(who, 'put', `/api/vendor/rewards/${id}/image`).attach('file', png, 'cake.png');

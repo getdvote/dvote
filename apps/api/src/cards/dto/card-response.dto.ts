@@ -13,6 +13,9 @@ export class CardVendorDto {
 
   @ApiProperty({ example: 'EGP' })
   currency: string;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Loyalty-card design 1-10 chosen by the vendor; null = automatic' })
+  cardDesign: number | null;
 }
 
 export class NextRewardDto {

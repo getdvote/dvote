@@ -14,7 +14,7 @@ export class CardsService {
       where: { user_id: userId },
       include: {
         vendors: {
-          select: { id: true, name: true, logo_url: true, currency: true },
+          select: { id: true, name: true, logo_url: true, currency: true, card_design: true },
         },
       },
       orderBy: { last_activity_at: 'desc' },
@@ -37,6 +37,7 @@ export class CardsService {
           name: card.vendors.name,
           logoUrl: card.vendors.logo_url,
           currency: card.vendors.currency,
+          cardDesign: card.vendors.card_design,
         },
         balance: card.balance,
         lifetimePoints: card.lifetime_points,

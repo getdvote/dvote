@@ -167,7 +167,7 @@ export default function CardDetails() {
 /** The shop that issued the card; opens the shop page. */
 function IssuedBy({ card }: { card: Card }) {
   const { vendor } = card;
-  const [color] = vendorColors(vendor.id);
+  const [color] = vendorColors(vendor.id, vendor.cardDesign);
   return (
     <Pressable
       accessibilityRole="button"
