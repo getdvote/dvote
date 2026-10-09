@@ -38,7 +38,7 @@ export default function You() {
         </View>
 
         <View style={styles.profile}>
-          <Avatar name={me?.name ?? null} url={me?.avatarUrl ?? null} size={84} />
+          <Avatar name={me?.name ?? null} url={me?.avatarUrl ?? null} size={120} />
           <Text style={styles.name} numberOfLines={1}>
             {name}
           </Text>

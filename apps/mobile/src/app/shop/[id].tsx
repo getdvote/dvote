@@ -108,7 +108,14 @@ export default function Shop() {
           <PrimaryButton
             title={t('shop.collect')}
             style={styles.action}
-            onPress={() => router.push({ pathname: '/qr', params: { vendorId: params.id, vendorName: shopName } })}
+            onPress={() => router.push({ pathname: '/qr', params: {
+                  vendorId: params.id,
+                  vendorName: shopName,
+                  logoUrl: logoUrl ?? undefined,
+                  cardDesign: shop?.cardDesign != null ? String(shop.cardDesign) : undefined,
+                },
+              })
+            }
           />
         </View>
 
@@ -281,7 +288,8 @@ const BRANCH_PHOTOS = 3;
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
-  banner: { ...squircle, height: 160, borderRadius: theme.radius, overflow: 'hidden', backgroundColor: theme.fill },
+  // 2:1, the shape the API crops uploaded banners to (1600x800), so none of the photo is cut off.
+  banner: { ...squircle, aspectRatio: 2, borderRadius: theme.radius, overflow: 'hidden', backgroundColor: theme.fill },
   pattern: { position: 'absolute', right: -40, top: -20 },
   // The logo overlaps the bottom of the banner.
   hero: { alignItems: 'center', gap: 10, marginTop: -LOGO_SIZE / 2 },
@@ -322,5 +330,5 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, fontWeight: '600', color: theme.link, marginTop: 4 },
   photos: { flexDirection: 'row', gap: 8, paddingStart: 54 },
   photoSlot: { flex: 1 },
-  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: theme.fill },
+  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 16, backgroundColor: theme.fill },
 });

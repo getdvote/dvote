@@ -279,7 +279,6 @@ export const ar: Dictionary = {
     chooseMonthYear: 'اختر الشهر والسنة',
     previousMonth: 'الشهر السابق',
     nextMonth: 'الشهر التالي',
-    closeCalendar: 'إغلاق التقويم',
     realDate: 'اختر تاريخًا صحيحًا.',
     future: 'لا يمكن أن يكون تاريخ ميلادك في المستقبل.',
     tooOld: 'اختر تاريخًا بعد عام 1900.',
@@ -323,6 +322,12 @@ export const ar: Dictionary = {
     madeWith: 'صُنع بحب لعشاق القهوة في مصر',
   },
 
+  notifications: {
+    title: 'الإشعارات',
+    emptyTitle: 'لا توجد إشعارات بعد',
+    emptyText: 'ستظهر هنا التحديثات عن نقاطك ومكافآتك وعروض مقاهيك.',
+  },
+
   info: {
     helpTitle: 'المساعدة',
     helpHeading: 'المساعدة في الطريق',
@@ -338,6 +343,7 @@ export const ar: Dictionary = {
 
   qr: {
     title: 'هوية dvote',
+    collectingFrom: 'تجميع النقاط من',
     regenerate: 'أعد إنشاء رمز QR',
     pointsAdded: 'تمت إضافة النقاط',
     expiresIn: 'تنتهي صلاحيته خلال {time}',
@@ -414,7 +420,6 @@ export const ar: Dictionary = {
     send: 'إرسال',
     thanks: 'شكرًا على ملاحظاتك',
     thanksText: 'نقرأ كل رسالة لنجعل dvote أفضل.',
-    closeA11y: 'إغلاق الملاحظات',
     failed: 'تعذّر إرسال ملاحظاتك. حاول مرة أخرى.',
   },
 

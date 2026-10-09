@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   card: {
     ...squircle,
     height: 200,
-    borderRadius: 24,
+    borderRadius: 32,
     padding: 20,
     overflow: 'hidden',
   },

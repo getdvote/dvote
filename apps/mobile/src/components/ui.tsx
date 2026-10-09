@@ -286,9 +286,9 @@ export function Avatar({ name, url, size = 80 }: { name: string | null; url: str
     .join('');
   const box = { width: size, height: size, borderRadius: size / 2 };
   return url ? (
-    <Image source={{ uri: url }} style={[box, styles.avatarBorder]} contentFit="cover" accessibilityLabel={name ?? t('common.profilePicture')} />
+    <Image source={{ uri: url }} style={[box, styles.avatarRing]} contentFit="cover" accessibilityLabel={name ?? t('common.profilePicture')} />
   ) : (
-    <View style={[box, styles.avatarFallback]}>
+    <View style={[box, styles.avatarRing, styles.avatarFallback]}>
       <Text style={[styles.avatarInitials, { fontSize: size * 0.36 }]}>{initials || '?'}</Text>
     </View>
   );
@@ -390,9 +390,10 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: theme.text, textAlign: 'center' },
   emptyText: { fontSize: 14, color: theme.muted, textAlign: 'center', lineHeight: 20 },
-  error: { ...squircle, backgroundColor: theme.dangerSoft, borderRadius: 14, padding: 12 },
+  error: { ...squircle, backgroundColor: theme.dangerSoft, borderRadius: 20, padding: 12 },
   errorText: { color: theme.danger, fontSize: 15, textAlign: 'center' },
-  avatarBorder: { borderWidth: 3, borderColor: theme.surface },
+  // Same as the shop logo: a 4 pt ring in the page colour.
+  avatarRing: { borderWidth: 4, borderColor: theme.background },
   avatarFallback: { backgroundColor: theme.brand, alignItems: 'center', justifyContent: 'center' },
   avatarInitials: { color: '#fff', fontWeight: '700' },
 });

@@ -231,7 +231,6 @@ export const en = {
     chooseMonthYear: 'Choose month and year',
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
-    closeCalendar: 'Close calendar',
     realDate: 'Choose a real date.',
     future: "Your birthday can't be in the future.",
     tooOld: 'Choose a date after 1900.',
@@ -275,6 +274,12 @@ export const en = {
     madeWith: 'Made with love for coffee lovers in Egypt',
   },
 
+  notifications: {
+    title: 'Notifications',
+    emptyTitle: 'No notifications yet',
+    emptyText: 'Updates about your points, rewards and offers from your coffee shops will show here.',
+  },
+
   info: {
     helpTitle: 'Get help',
     helpHeading: 'Help is on the way',
@@ -290,6 +295,7 @@ export const en = {
 
   qr: {
     title: 'Dvote ID',
+    collectingFrom: 'Collecting points from',
     regenerate: 'Regenerate my QR code',
     pointsAdded: 'Points added',
     expiresIn: 'Expires in {time}',
@@ -352,7 +358,6 @@ export const en = {
     send: 'Send',
     thanks: 'Thanks for your feedback',
     thanksText: 'We read every message to make dvote better.',
-    closeA11y: 'Close feedback',
     failed: 'Could not send your feedback. Please try again.',
   },
 

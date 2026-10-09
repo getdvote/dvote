@@ -10,7 +10,7 @@ import { Icon } from './Icon';
 import { Text } from './Text';
 import { Avatar, ErrorBox } from './ui';
 
-const SIZE = 104;
+const SIZE = 120;
 
 /**
  * Profile photo on Profile details: tap to pick a new one from the phone (square crop),

@@ -15,7 +15,7 @@ export const theme = {
   dangerSoft: '#FDECEC',
   success: '#34C759',
   brand: '#6155F5', // dvote purple (About)
-  radius: 24,
+  radius: 32,
   rowHeight: 52,
   gutter: 16,
 } as const;
@@ -28,6 +28,20 @@ export const theme = {
  * icon buttons), which stay round.
  */
 export const squircle = { borderCurve: 'continuous' } as const;
+
+/**
+ * Soft, layered shadows (several faint layers instead of one dark one, the modern "smooth"
+ * look). Spread next to a style: `{ ...shadows.soft }`. Uses React Native's `boxShadow`.
+ */
+export const shadows = {
+  /** Lifted cards: the front loyalty card, the QR ticket. */
+  soft: {
+    boxShadow:
+      '0px 1px 2px rgba(0, 0, 0, 0.04), 0px 4px 8px rgba(0, 0, 0, 0.04), 0px 12px 24px -4px rgba(0, 0, 0, 0.08), 0px 24px 48px -12px rgba(0, 0, 0, 0.12)',
+  },
+  /** A faint edge where one card overlaps another (the cards behind in the stack). */
+  edge: { boxShadow: '0px -1px 6px rgba(0, 0, 0, 0.08)' },
+} as const;
 
 /**
  * App font: Inter (Google Fonts, via @expo-google-fonts/inter, loaded in app/_layout).
