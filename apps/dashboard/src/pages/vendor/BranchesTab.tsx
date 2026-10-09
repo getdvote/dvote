@@ -125,11 +125,13 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
   const isNew = branch === 'new';
   const current = branch && branch !== 'new' ? branch : null;
   const [location, setLocation] = useState<LatLng | null>(null);
-  // Start from the branch's saved location each time the dialog opens.
+  const [address, setAddress] = useState('');
+  // Start from the branch's saved location and address each time the dialog opens.
   const [openedFor, setOpenedFor] = useState<Branch | 'new' | null>(null);
   if (branch !== openedFor) {
     setOpenedFor(branch);
     setLocation(current && current.lat !== null && current.lng !== null ? { lat: current.lat, lng: current.lng } : null);
+    setAddress(current?.address ?? '');
   }
   const save = useMutation({
     mutationFn: (body: { name: string; address: string | null; lat: number | null; lng: number | null }) =>
@@ -173,11 +175,12 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
             <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="e.g. Joy Corner Smouha" autoFocus />
           </Field>
           <Field label="Address" htmlFor="branch-address">
-            <Textarea id="branch-address" name="address" rows={2} maxLength={500} defaultValue={current?.address ?? ''} placeholder="Street, area, city" />
+            <Textarea id="branch-address" name="address" rows={2} maxLength={500} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, area, city" />
           </Field>
           <div className="grid gap-2">
             <span className="text-sm font-medium">Location on the map</span>
-            <LocationPicker value={location} onChange={setLocation} />
+            {/* The map only fills an empty address; it never overwrites what's typed. */}
+            <LocationPicker value={location} onChange={setLocation} onAddress={(line) => setAddress((a) => (a.trim() ? a : line))} />
           </div>
           <ErrorAlert error={save.error} />
         </form>

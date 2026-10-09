@@ -1,7 +1,7 @@
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Crosshair, Link2, Loader2, MapPin, Search, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,20 @@ export function coordsFromText(text: string): LatLng | null {
   return null;
 }
 
+/**
+ * The first line of the address at a point (e.g. "12 Fouad Street"), from OpenStreetMap's
+ * reverse lookup. Falls back to the place's name, then to the first part of its full address.
+ */
+export async function addressLineAt(p: LatLng): Promise<string | null> {
+  const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${p.lat}&lon=${p.lng}`, {
+    headers: { 'Accept-Language': 'en' },
+  });
+  if (!res.ok) return null;
+  const r = (await res.json()) as { name?: string; display_name?: string; address?: Record<string, string> };
+  const street = [r.address?.house_number, r.address?.road].filter(Boolean).join(' ');
+  return street || r.name || r.display_name?.split(',')[0]?.trim() || null;
+}
+
 // A CSS pin (Leaflet's default marker images don't survive bundling).
 const pin = L.divIcon({
   className: '',
@@ -53,21 +67,40 @@ const pin = L.divIcon({
 /**
  * Pick a branch's location: search a place, paste a Google Maps link, use this device's
  * location, or click / drag the pin on the map. Latitude and longitude are filled from the
- * chosen place, never typed. `value` null = no location.
+ * chosen place, never typed. `value` null = no location. `onAddress` gets the first line of
+ * the address at each newly chosen point.
  */
-export function LocationPicker({ value, onChange }: { value: LatLng | null; onChange: (v: LatLng | null) => void }) {
+export function LocationPicker({
+  value,
+  onChange,
+  onAddress,
+}: {
+  value: LatLng | null;
+  onChange: (v: LatLng | null) => void;
+  onAddress?: (line: string) => void;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ name: string; at: LatLng }[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [link, setLink] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<LatLng | null>(null);
+  // Only the latest pick may fill the address (an older lookup can answer last).
+  const lookup = useRef(0);
 
   const choose = (p: LatLng) => {
     const v = { lat: round(p.lat), lng: round(p.lng) };
     onChange(v);
     setFlyTo(v);
     setProblem(null);
+    if (onAddress) {
+      const id = ++lookup.current;
+      addressLineAt(v)
+        .then((line) => {
+          if (line && id === lookup.current) onAddress(line);
+        })
+        .catch(() => {}); // The address is a convenience; the pin is already set.
+    }
   };
 
   async function search() {
