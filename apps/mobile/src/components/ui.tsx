@@ -77,8 +77,22 @@ export function Group({ children, style }: { children: ReactNode; style?: StyleP
   );
 }
 
-export function SectionTitle({ title }: { title: string }) {
-  return <Text style={styles.sectionTitle}>{title}</Text>;
+/** Grey section heading, optionally with a link on the other side ("View all"). */
+export function SectionTitle({ title, action }: { title: string; action?: { label: string; onPress: () => void } }) {
+  if (!action) return <Text style={styles.sectionTitle}>{title}</Text>;
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>{title}</Text>
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={action.onPress}
+        style={({ pressed }) => pressed && styles.rowPressed}
+      >
+        <Text style={styles.sectionAction}>{action.label}</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 /** A row: optional icon, label, optional value, chevron when it navigates. */
@@ -303,6 +317,15 @@ const styles = StyleSheet.create({
   group: { ...squircle, backgroundColor: theme.surface, borderRadius: theme.radius, paddingHorizontal: 16 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 24, marginBottom: 10, marginLeft: 2 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  sectionTitleInRow: { marginTop: 0, marginBottom: 0 },
+  sectionAction: { fontSize: 15, fontWeight: '600', color: theme.link },
   row: { minHeight: theme.rowHeight, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowPressed: { opacity: 0.6 },
   rowIcon: { width: 22, alignItems: 'center' },

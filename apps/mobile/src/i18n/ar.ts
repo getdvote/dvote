@@ -176,6 +176,7 @@ export const ar: Dictionary = {
     google: 'خرائط Google',
   },
   rewards: {
+    viewAll: 'عرض الكل',
     none: 'لا توجد مكافآت بعد',
     noneText: 'مكافآت هذا المتجر ستظهر هنا.',
     enough: 'لديك نقاط كافية',
