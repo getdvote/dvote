@@ -1,12 +1,58 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '../generated/prisma/client.js';
 import { fromMinor, toMinor, type DecimalLike } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUCKETS, StorageService } from '../storage/storage.service';
 import { MAX_BRANCH_PHOTOS } from '../vendor-images/vendor-images.service';
-import { VendorListItemDto } from './dto/vendor-list-item.dto';
+import { NearbyVendorsResponseDto, VendorListItemDto } from './dto/vendor-list-item.dto';
 import { VendorPageResponseDto } from './dto/vendor-page-response.dto';
 
 const money = (v: DecimalLike) => fromMinor(toMinor(v));
+
+/** What the Explore / nearby cards need per shop (my card there included). */
+const listInclude = (userId: string) =>
+  ({
+    point_rules: { where: { is_active: true }, take: 1 },
+    branches: { where: { status: 'active' }, orderBy: { name: 'asc' }, select: { address: true } },
+    cards: { where: { user_id: userId }, take: 1, select: { balance: true } },
+    _count: { select: { rewards: { where: { status: 'active' } } } },
+  }) satisfies Prisma.vendorsInclude;
+type ListVendor = Prisma.vendorsGetPayload<{ include: ReturnType<typeof listInclude> }>;
+
+function toListItem(v: ListVendor): VendorListItemDto {
+  const [rule] = v.point_rules;
+  return {
+    id: v.id,
+    name: v.name,
+    logoUrl: v.logo_url,
+    bannerUrl: v.banner_url,
+    category: v.category,
+    cardDesign: v.card_design,
+    currency: v.currency,
+    rule: rule ? { spendAmount: money(rule.spend_amount), pointsPerSpend: rule.points_per_spend } : null,
+    rewardsCount: v._count.rewards,
+    branchesCount: v.branches.length,
+    firstAddress: v.branches.find((b) => b.address)?.address ?? null,
+    myBalance: v.cards[0]?.balance ?? null,
+  };
+}
+
+/** Category names people type, in English and Arabic → the stored codes (partial words count). */
+const CATEGORY_WORDS: Record<string, string[]> = {
+  cafe: ['cafe', 'café', 'coffee', 'coffee shop', 'مقهى', 'كافيه', 'قهوة'],
+  cafe_restaurant: ['cafe & restaurant', 'café & restaurant', 'cafe restaurant', 'مقهى ومطعم'],
+  restaurant: ['restaurant', 'food', 'مطعم'],
+  bakery: ['bakery', 'bread', 'مخبز', 'مخبوزات'],
+  desserts: ['desserts', 'dessert', 'sweets', 'cake', 'حلويات', 'حلو'],
+  juice_bar: ['juice bar', 'juice', 'juices', 'عصير', 'عصائر', 'محل عصائر'],
+};
+function categoriesMatching(term: string): string[] {
+  const t = term.toLowerCase();
+  if (t.length < 3) return []; // "a" or "ca" would match nearly every category
+  return Object.entries(CATEGORY_WORDS)
+    .filter(([code, words]) => code.replace('_', ' ').includes(t) || words.some((w) => w.includes(t) || t.includes(w)))
+    .map(([code]) => code);
+}
 
 /**
  * The customer app's shop page: the active rule, active rewards, menu pages and open
@@ -22,39 +68,75 @@ export class VendorPageService {
 
   /**
    * Explore: every active shop, A–Z, with a short summary (rule, how many rewards and
-   * branches, where it is) and the customer's points there. Optionally filtered by name.
+   * branches, where it is) and the customer's points there. `search` matches any of: the shop
+   * name, its category (English or Arabic, e.g. "bakery" / "مخبز"), an open branch's name,
+   * city or address, or an active reward's name (English or Arabic).
    */
   async list(userId: string, search?: string): Promise<VendorListItemDto[]> {
+    const term = search?.trim();
+    const contains = { contains: term ?? '', mode: 'insensitive' as const };
     const vendors = await this.prisma.vendors.findMany({
       where: {
         status: 'active',
-        ...(search?.trim() ? { name: { contains: search.trim(), mode: 'insensitive' } } : {}),
+        ...(term
+          ? {
+              OR: [
+                { name: contains },
+                { category: { in: categoriesMatching(term) } },
+                { branches: { some: { status: 'active', OR: [{ name: contains }, { city: contains }, { address: contains }] } } },
+                { rewards: { some: { status: 'active', OR: [{ name: contains }, { name_ar: contains }] } } },
+              ],
+            }
+          : {}),
       },
       orderBy: { name: 'asc' },
-      include: {
-        point_rules: { where: { is_active: true }, take: 1 },
-        branches: { where: { status: 'active' }, orderBy: { name: 'asc' }, select: { address: true } },
-        cards: { where: { user_id: userId }, take: 1, select: { balance: true } },
-        _count: { select: { rewards: { where: { status: 'active' } } } },
-      },
+      include: listInclude(userId),
     });
-    return vendors.map((v) => {
-      const [rule] = v.point_rules;
-      return {
-        id: v.id,
-        name: v.name,
-        logoUrl: v.logo_url,
-        bannerUrl: v.banner_url,
-        category: v.category,
-        cardDesign: v.card_design,
-        currency: v.currency,
-        rule: rule ? { spendAmount: money(rule.spend_amount), pointsPerSpend: rule.points_per_spend } : null,
-        rewardsCount: v._count.rewards,
-        branchesCount: v.branches.length,
-        firstAddress: v.branches.find((b) => b.address)?.address ?? null,
-        myBalance: v.cards[0]?.balance ?? null,
-      };
+    return vendors.map(toListItem);
+  }
+
+  /**
+   * "Near you": active shops with an open branch that has a map location, nearest first.
+   * Distance = to that shop's closest open branch (great-circle, km). Uses the position sent
+   * now (lat/lng) or else the customer's last saved one; none known → located: false.
+   */
+  async nearby(userId: string, at: { lat?: number; lng?: number }, limit = 10): Promise<NearbyVendorsResponseDto> {
+    let lat = at.lat;
+    let lng = at.lng;
+    if (lat === undefined || lng === undefined) {
+      const me = await this.prisma.users.findUniqueOrThrow({ where: { id: userId }, select: { last_lat: true, last_lng: true } });
+      if (me.last_lat === null || me.last_lng === null) return { located: false, items: [] };
+      lat = Number(me.last_lat);
+      lng = Number(me.last_lng);
+    }
+
+    const nearest = await this.prisma.$queryRaw<{ vendor_id: string; branch_name: string; km: number }[]>`
+      SELECT vendor_id, branch_name, km FROM (
+        SELECT DISTINCT ON (b.vendor_id) b.vendor_id, b.name AS branch_name,
+               6371 * 2 * asin(sqrt(
+                 power(sin(radians((b.lat::float8 - ${lat}::float8) / 2)), 2) +
+                 cos(radians(${lat}::float8)) * cos(radians(b.lat::float8)) *
+                 power(sin(radians((b.lng::float8 - ${lng}::float8) / 2)), 2)
+               )) AS km
+        FROM branches b JOIN vendors v ON v.id = b.vendor_id
+        WHERE v.status = 'active' AND b.status = 'active' AND b.lat IS NOT NULL AND b.lng IS NOT NULL
+        ORDER BY b.vendor_id, km
+      ) n
+      ORDER BY km, vendor_id
+      LIMIT ${limit}`;
+    if (!nearest.length) return { located: true, items: [] };
+
+    const vendors = await this.prisma.vendors.findMany({
+      where: { id: { in: nearest.map((n) => n.vendor_id) } },
+      include: listInclude(userId),
     });
+    const byId = new Map(vendors.map((v) => [v.id, toListItem(v)]));
+    return {
+      located: true,
+      items: nearest
+        .filter((n) => byId.has(n.vendor_id))
+        .map((n) => ({ ...byId.get(n.vendor_id)!, distanceKm: Math.round(Number(n.km) * 10) / 10, nearestBranch: n.branch_name })),
+    };
   }
 
   async get(vendorId: string, userId: string): Promise<VendorPageResponseDto> {

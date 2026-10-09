@@ -33,6 +33,14 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "dvote uses your location while the app is open to show the coffee shops nearest to you.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
+        }
       ]
     ],
     "scheme": "dvote",

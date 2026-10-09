@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Patch,
   Put,
   UploadedFile,
@@ -11,6 +12,7 @@ import {
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -20,6 +22,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
 import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
@@ -59,6 +62,17 @@ export class UsersController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UserResponseDto> {
     return this.users.present(await this.users.setAvatar(user, file.buffer));
+  }
+
+  /**
+   * Where I am now (the app sends it each time it opens, if the customer allowed location).
+   * Only the latest position is kept; it is used to list the shops near me.
+   */
+  @Put('me/location')
+  @HttpCode(204)
+  @ApiNoContentResponse()
+  async setLocation(@CurrentUser() user: users, @Body() dto: UpdateLocationDto): Promise<void> {
+    await this.users.setLocation(user.id, dto.lat, dto.lng);
   }
 
   /** Remove my profile photo: the file is deleted from storage. */

@@ -171,6 +171,9 @@ CREATE TABLE users (
     email       varchar(255),                 -- a provider may not share it; not unique
     avatar_url  varchar(500),                 -- sign-in provider photo (Google/Facebook)
     avatar_path varchar(300),                 -- uploaded photo in private Storage bucket "avatars"
+    last_lat    decimal(9,6) CHECK (last_lat BETWEEN -90 AND 90),     -- last known location (app open, with permission): nearby shops
+    last_lng    decimal(9,6) CHECK (last_lng BETWEEN -180 AND 180),
+    last_location_at timestamptz,
     phone       varchar(20),                  -- optional, not used for login
     gender      user_gender,                  -- optional (profile)
     birth_date  date,                         -- optional (profile); plain date, no time zone

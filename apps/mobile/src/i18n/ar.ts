@@ -139,6 +139,15 @@ export const ar: Dictionary = {
     forYou: 'لك',
     forYouEmpty: 'العروض قريبًا',
     forYouEmptyText: 'ستظهر هنا اختيارات وعروض من المقاهي التي تحبها.',
+    nearYou: 'بالقرب منك',
+    locationOffTitle: 'اكتشف المقاهي القريبة منك',
+    locationOffText: 'اسمح بالوصول إلى موقعك ليعرض لك dvote أقرب المتاجر إليك.',
+    turnOnLocation: 'تفعيل الموقع',
+    noneNearbyTitle: 'لا توجد متاجر قريبة بعد',
+    noneNearbyText: 'ستظهر هنا المقاهي على dvote، الأقرب أولًا.',
+    km: '{km} كم',
+    meters: '{m} م',
+    seeAllShops: 'عرض كل المتاجر',
   },
 
   card: {
@@ -205,7 +214,7 @@ export const ar: Dictionary = {
   explore: {
     title: 'استكشف',
     subtitle: 'كل المقاهي على dvote',
-    search: 'ابحث عن مقهى',
+    search: 'متجر، فئة، منطقة أو مكافأة',
     allShops: 'كل المتاجر',
     clearSearch: 'مسح البحث',
     rewards: {

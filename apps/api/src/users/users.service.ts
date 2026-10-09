@@ -88,6 +88,14 @@ export class UsersService {
   }
 
   /** Removes the photo: the uploaded file is deleted from Storage and the provider photo is cleared too. */
+  /** Remember where the customer is now (6 decimals ≈ 10 cm), for "near you" shops. */
+  async setLocation(userId: string, lat: number, lng: number): Promise<void> {
+    await this.prisma.users.update({
+      where: { id: userId },
+      data: { last_lat: lat.toFixed(6), last_lng: lng.toFixed(6), last_location_at: new Date() },
+    });
+  }
+
   async removeAvatar(user: users): Promise<users> {
     if (user.avatar_path) {
       await this.storage.remove(BUCKETS.avatars, [user.avatar_path]);
