@@ -51,3 +51,20 @@ export class VendorListItemDto {
   @ApiProperty({ type: Number, nullable: true, example: 95, description: 'My points here (null = no card yet)' })
   myBalance: number | null;
 }
+
+/** A shop near the customer: the Explore card plus how far its closest open branch is. */
+export class NearbyVendorDto extends VendorListItemDto {
+  @ApiProperty({ example: 1.4, description: 'Km to the closest open branch (straight line)' })
+  distanceKm: number;
+
+  @ApiProperty({ example: 'Joy Corner Smouha', description: 'That closest branch' })
+  nearestBranch: string;
+}
+
+export class NearbyVendorsResponseDto {
+  @ApiProperty({ description: 'false = no location known yet (none sent, none saved)' })
+  located: boolean;
+
+  @ApiProperty({ type: [NearbyVendorDto], description: 'Nearest first' })
+  items: NearbyVendorDto[];
+}

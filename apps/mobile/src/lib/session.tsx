@@ -9,8 +9,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { AppState } from 'react-native';
 import { api, ApiError, SIGN_OUT_CODES, type Me } from './api';
 import { startLive } from './live';
+import { refreshMyLocation, resetLocation } from './location';
 import { supabase } from './supabase';
 
 interface SessionState {
@@ -79,6 +81,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // a token refresh doesn't reconnect: the socket was authorised when it opened).
   const userId = session?.user.id ?? null;
   useEffect(() => (userId ? startLive() : undefined), [userId]);
+
+  // Where the customer is, for "Near you": asked once when the session opens, then refreshed
+  // when the app comes back to the foreground (at most every 10 minutes).
+  useEffect(() => {
+    if (!userId) return;
+    void refreshMyLocation({ ask: true, force: true });
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && void refreshMyLocation());
+    return () => {
+      sub.remove();
+      resetLocation();
+    };
+  }, [userId]);
 
   const handleAuthError = useCallback(
     async (err: unknown) => {

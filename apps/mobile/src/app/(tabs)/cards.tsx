@@ -1,7 +1,6 @@
 import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
 import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
 import Notification01Icon from '@hugeicons/core-free-icons/Notification01Icon';
-import SparklesIcon from '@hugeicons/core-free-icons/SparklesIcon';
 import { CardStack } from '../../components/CardStack';
 import { Icon } from '../../components/Icon';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
@@ -10,7 +9,8 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, V
 import { Text } from '../../components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
-import { EmptySection, ErrorBox, PrimaryButton, Screen } from '../../components/ui';
+import { NearYou } from '../../components/NearYou';
+import { ErrorBox, PrimaryButton, Screen } from '../../components/ui';
 import { api, ApiError, type Card } from '../../lib/api';
 import { useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
@@ -104,12 +104,8 @@ export default function Cards() {
           <CardStack cards={cards} expanded={expanded} onExpand={() => setExpanded(true)} onOpenCard={openCard} />
         )}
 
-        {cards !== null && !expanded ? (
-          <View style={styles.forYou}>
-            <Text style={styles.forYouTitle}>{t('cards.forYou')}</Text>
-            <EmptySection icon={SparklesIcon} title={t('cards.forYouEmpty')} text={t('cards.forYouEmptyText')} />
-          </View>
-        ) : null}
+        {/* Shops near the customer, nearest first (replaces the "Offers coming soon" placeholder). */}
+        {cards !== null && !expanded ? <NearYou /> : null}
       </ScrollView>
 
       {expanded ? (
@@ -157,8 +153,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  forYou: { marginTop: 32, gap: 12 },
-  forYouTitle: { fontSize: 24, fontWeight: '700', color: theme.text },
   count: { fontSize: 15, color: theme.muted, marginBottom: 6 },
   empty: { alignItems: 'center', gap: 12, marginTop: 40, paddingHorizontal: 8 },
   emptyIcon: {

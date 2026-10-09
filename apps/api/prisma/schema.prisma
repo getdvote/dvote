@@ -172,22 +172,25 @@ model user_identities {
 }
 
 model users {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String?           @db.VarChar(120)
-  email           String?           @db.VarChar(255)
-  avatar_url      String?           @db.VarChar(500)
-  phone           String?           @db.VarChar(20)
-  auth_user_id    String?           @unique @db.Uuid
-  status          user_status       @default(active)
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
-  gender          user_gender?
-  birth_date      DateTime?         @db.Date
-  avatar_path     String?           @db.VarChar(300)
-  cards           cards[]
-  fraud_flags     fraud_flags[]
-  qr_codes        qr_codes[]
-  user_identities user_identities[]
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String?           @db.VarChar(120)
+  email            String?           @db.VarChar(255)
+  avatar_url       String?           @db.VarChar(500)
+  phone            String?           @db.VarChar(20)
+  auth_user_id     String?           @unique @db.Uuid
+  status           user_status       @default(active)
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime          @default(now()) @db.Timestamptz(6)
+  gender           user_gender?
+  birth_date       DateTime?         @db.Date
+  avatar_path      String?           @db.VarChar(300)
+  last_lat         Decimal?          @db.Decimal(9, 6)
+  last_lng         Decimal?          @db.Decimal(9, 6)
+  last_location_at DateTime?         @db.Timestamptz(6)
+  cards            cards[]
+  fraud_flags      fraud_flags[]
+  qr_codes         qr_codes[]
+  user_identities  user_identities[]
 }
 
 model vendors {

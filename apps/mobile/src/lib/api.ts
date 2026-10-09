@@ -138,6 +138,10 @@ export const api = {
   /** First call after sign-up creates the customer profile. */
   me: () => call<Me>('GET', '/api/app/users/me'),
   /** null clears gender / birthDate; leaving a field out keeps it. */
+  /** Where I am now (sent when the app opens, with permission): used for shops near me. */
+  setLocation: (lat: number, lng: number) => call<void>('PUT', '/api/app/users/me/location', { lat, lng }),
+  /** Shops near my last sent location, nearest first. */
+  nearbyVendors: (limit = 5) => call<NearbyVendors>('GET', `/api/app/vendors/nearby?limit=${limit}`),
   updateMe: (body: { name?: string; phone?: string; gender?: Gender | null; birthDate?: string | null }) =>
     call<Me>('PATCH', '/api/app/users/me', body),
   cards: () => call<Card[]>('GET', '/api/app/cards'),
@@ -191,6 +195,12 @@ async function photoForm(photo: PickedPhoto): Promise<FormData> {
 }
 
 /** One shop in the Explore list. */
+/** Shops near me: located=false until the app has sent a location once. */
+export interface NearbyVendors {
+  located: boolean;
+  items: (VendorListItem & { distanceKm: number; nearestBranch: string })[];
+}
+
 /** What kind of place a shop is (set in the dashboards). */
 export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
 

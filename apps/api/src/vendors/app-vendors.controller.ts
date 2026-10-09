@@ -11,8 +11,8 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
-import { ListAppVendorsQueryDto } from './dto/list-app-vendors-query.dto';
-import { VendorListItemDto } from './dto/vendor-list-item.dto';
+import { ListAppVendorsQueryDto, NearbyVendorsQueryDto } from './dto/list-app-vendors-query.dto';
+import { NearbyVendorsResponseDto, VendorListItemDto } from './dto/vendor-list-item.dto';
 import { VendorPageResponseDto } from './dto/vendor-page-response.dto';
 import { VendorPageService } from './vendor-page.service';
 
@@ -35,6 +35,13 @@ export class AppVendorsController {
     @Query() query: ListAppVendorsQueryDto,
   ): Promise<VendorListItemDto[]> {
     return this.page.list(user.id, query.search);
+  }
+
+  /** Shops near me, nearest first (to each shop's closest open branch). Declared before :id. */
+  @Get('nearby')
+  @ApiOkResponse({ type: NearbyVendorsResponseDto })
+  nearby(@CurrentUser() user: users, @Query() q: NearbyVendorsQueryDto): Promise<NearbyVendorsResponseDto> {
+    return this.page.nearby(user.id, { lat: q.lat, lng: q.lng }, q.limit ?? 10);
   }
 
   /** Shop page: point rule, rewards, menu pages, branches (with photos) and my card there. */

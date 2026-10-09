@@ -119,6 +119,15 @@ export const en = {
     forYou: 'For you',
     forYouEmpty: 'Offers coming soon',
     forYouEmptyText: 'Picks and offers from coffee shops you love will show here.',
+    nearYou: 'Near you',
+    locationOffTitle: 'See coffee shops near you',
+    locationOffText: 'Allow location and dvote shows the shops closest to where you are.',
+    turnOnLocation: 'Turn on location',
+    noneNearbyTitle: 'No shops nearby yet',
+    noneNearbyText: 'Coffee shops on dvote will show here, nearest first.',
+    km: '{km} km',
+    meters: '{m} m',
+    seeAllShops: 'See all shops',
   },
 
   card: {
@@ -171,7 +180,7 @@ export const en = {
   explore: {
     title: 'Explore',
     subtitle: 'Every coffee shop on dvote',
-    search: 'Search coffee shops',
+    search: 'Shop, category, area or reward',
     clearSearch: 'Clear search',
     allShops: 'All shops',
     rewards: { one: '{count} reward', other: '{count} rewards' },
