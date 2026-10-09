@@ -10,7 +10,8 @@ import { theme } from '../lib/theme';
 const QR_PREFIX = 'dvote:q1:';
 
 /**
- * Scan the customer's QR (camera on phones and in the browser). The server checks it
+ * Scan the customer's QR (camera on phones and in the browser). The server checks it: a collect
+ * QR goes on to the bill amount, a redeem QR to the reward confirmation.
  * (preview) before we ask for the bill amount. "Type the code" is a fallback for a
  * camera that can't focus, and for testing on a computer.
  */
@@ -42,11 +43,14 @@ export default function Scan() {
       setChecking(true);
       try {
         const preview = await api.preview(code);
-        if (!preview.usable || preview.purpose !== 'collect') {
-          throw new ApiError(409, preview.reason ?? 'wrong_qr_type', '');
-        }
+        if (!preview.usable) throw new ApiError(409, preview.reason ?? 'wrong_qr_type', '');
         setScannedCode(code);
-        router.replace('/amount');
+        if (preview.purpose === 'redeem' && preview.redeem) {
+          // A reward: confirm who gets what, no bill to type.
+          router.replace({ pathname: '/redeem', params: { preview: JSON.stringify(preview.redeem) } });
+        } else {
+          router.replace('/amount');
+        }
       } catch (err) {
         if (await handleAuthError(err)) return;
         setError(
@@ -70,7 +74,7 @@ export default function Scan() {
     <Screen>
       <View style={styles.top}>
         <Text style={styles.title}>Scan the customer's QR</Text>
-        <Text style={styles.hint}>Ask the customer to open "Collect points" in the dvote app.</Text>
+        <Text style={styles.hint}>Ask the customer to show their QR in the dvote app: to collect points, or for a reward.</Text>
       </View>
 
       {manual ? (

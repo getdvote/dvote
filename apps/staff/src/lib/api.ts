@@ -28,6 +28,32 @@ export interface ScanPreview {
   usable: boolean;
   reason: string | null;
   expiresAt: string;
+  /** A usable redeem QR: what to confirm (the reward and who is redeeming it). */
+  redeem?: RedeemPreview | null;
+}
+
+export interface RedeemPreview {
+  rewardId: string;
+  rewardName: string;
+  rewardNameAr: string | null;
+  rewardDescription: string | null;
+  rewardImageUrl: string | null;
+  pointsCost: number;
+  customerName: string | null;
+  /** Customer points at this shop now, and after this reward. */
+  balance: number;
+  balanceAfter: number;
+}
+
+export interface RedeemResult {
+  redemptionId: string;
+  pointEventId: string;
+  rewardName: string;
+  pointsRedeemed: number;
+  cardBalance: number;
+  branchId: string;
+  branchName: string;
+  at: string;
 }
 
 export interface CollectResult {
@@ -90,6 +116,9 @@ export const api = {
     branchId?: string;
     idempotencyKey: string;
   }) => call<CollectResult>('POST', '/api/vendor/scans/collect', body),
+  /** Give the reward: its points are taken from the customer's card. */
+  redeem: (body: { code: string; branchId?: string; idempotencyKey: string }) =>
+    call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
 };
 
 /** What staff see for each error code. */
@@ -99,7 +128,10 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     qr_used: 'This QR was already used. Ask the customer to show a new one.',
     qr_expired: 'This QR has expired. Ask the customer to show a new one.',
     qr_cancelled: 'The customer opened a newer QR. Please scan the new one.',
-    wrong_qr_type: 'This QR is not for collecting points.',
+    wrong_qr_type: "This QR can't be used for this. Ask the customer to show the right one.",
+    reward_unavailable: 'This reward is no longer available.',
+    insufficient_points: "The customer doesn't have enough points for this reward.",
+    idempotency_key_reused: 'Something went wrong. Please scan the QR again.',
     // In Arabic for the counter staff (the staff app is otherwise English for now).
     vendor_mismatch: 'هذا الرمز خاص بمتجر آخر. اطلب من العميل فتح صفحة متجرك في تطبيق dvote، أو استخدام رمزه الرئيسي.',
     user_blocked: "This customer's account is blocked.",

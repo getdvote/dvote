@@ -50,6 +50,28 @@ export interface NewQrCode {
   id: string;
   code: string;
   expiresAt: string;
+  /** Redeem QRs: the reward it is for. */
+  reward?: { id: string; name: string; nameAr: string | null; pointsCost: number; imageUrl: string | null; vendorName: string } | null;
+}
+
+/** How often and when I redeemed one reward. */
+export interface RewardHistory {
+  count: number;
+  pointsSpent: number;
+  items: { id: string; at: string; branchName: string; pointsCost: number; rewardName: string }[];
+}
+
+/** Staff confirmed a redeem QR: the reward was given and its points taken. */
+export interface QrRedeemResult {
+  rewardName: string;
+  rewardNameAr: string | null;
+  pointsRedeemed: number;
+  vendorId: string;
+  vendorName: string;
+  branchName: string;
+  cardId: string;
+  cardBalance: number;
+  at: string;
 }
 
 /** What the staff did with the QR: points added and the card balance afterwards. */
@@ -70,6 +92,8 @@ export interface QrCodeStatus {
   status: 'active' | 'used' | 'expired' | 'cancelled';
   expiresAt: string;
   result: QrCollectResult | null;
+  /** Redeem QRs, once staff confirmed. */
+  redeemResult?: QrRedeemResult | null;
 }
 
 /** An error from the API with its stable `code` (e.g. user_blocked). */
@@ -124,6 +148,10 @@ export const api = {
   /** No vendorId: master QR (any shop). vendorId: shop QR, only that shop can scan it. */
   newCollectQr: (vendorId?: string) =>
     call<NewQrCode>('POST', '/api/app/qr-codes', vendorId ? { purpose: 'collect', vendorId } : { purpose: 'collect' }),
+  /** My own redemptions of one reward (newest first). */
+  rewardHistory: (rewardId: string) => call<RewardHistory>('GET', `/api/app/rewards/${rewardId}/history`),
+  /** A one-time QR to get a reward; only the reward's shop can confirm it. */
+  newRedeemQr: (rewardId: string) => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'redeem', rewardId }),
   qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
   cancelQr: (id: string) => call<QrCodeStatus>('POST', `/api/app/qr-codes/${id}/cancel`),
   /** Upload or replace my profile photo (the API shrinks it; the old one is deleted). */

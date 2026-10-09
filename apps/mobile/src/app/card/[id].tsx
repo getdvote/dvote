@@ -249,7 +249,7 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
               ) : null}
             </View>
           ) : null}
-          <RewardCards rewards={rewards} balance={card.balance} layout="row" />
+          <RewardCards rewards={rewards} balance={card.balance} shop={card.vendor} layout="row" />
         </>
       )}
     </View>

@@ -166,7 +166,7 @@ export default function Shop() {
                   : undefined
               }
             />
-            <RewardCards rewards={shop.rewards} balance={shop.card?.balance ?? 0} layout="row" />
+            <RewardCards rewards={shop.rewards} balance={shop.card?.balance ?? 0} shop={shop} layout="row" />
 
             <SectionTitle title={t('shop.menu')} />
             <MenuGallery images={shop.menu.map((m) => m.url)} />
