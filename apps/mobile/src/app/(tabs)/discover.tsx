@@ -228,7 +228,7 @@ function Stat({ icon, label, soon }: { icon: AppIcon; label: string; soon?: bool
   );
 }
 
-const LOGO = 64;
+const LOGO = 80;
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: theme.gutter, paddingBottom: TAB_BAR_SPACE },
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surface,
     marginBottom: 4,
   },
-  logoInitial: { fontSize: 22, fontWeight: '700', color: '#fff' },
+  logoInitial: { fontSize: 30, fontWeight: '700', color: '#fff' },
   name: { fontSize: 19, fontWeight: '700', color: theme.text },
   infoLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   info: { flexShrink: 1, fontSize: 14, color: theme.secondary },
