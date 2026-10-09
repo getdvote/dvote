@@ -114,6 +114,10 @@ export const en = {
     toNext: { one: '{count} pt to {reward}', other: '{count} pts to {reward}' },
     ready: { one: '{count} reward ready to redeem', other: '{count} rewards ready to redeem' },
     lifetime: { one: 'Lifetime {count} pt', other: 'Lifetime {count} pts' },
+    stackA11y: '{count} cards. Show all',
+    forYou: 'For you',
+    forYouEmpty: 'Offers coming soon',
+    forYouEmptyText: 'Picks and offers from coffee shops you love will show here.',
   },
 
   card: {
