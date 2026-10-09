@@ -9,6 +9,8 @@ import sharp from 'sharp';
 export const IMAGE_PRESETS = {
   /** Profile photo: square, cropped to fill. */
   avatar: { width: 512, height: 512, fit: 'cover' },
+  /** Shop-page banner: wide (2:1), cropped to fill. */
+  banner: { width: 1600, height: 800, fit: 'cover' },
   /** Shop logo: fits in a square, never cropped. */
   logo: { width: 512, height: 512, fit: 'inside' },
   /** Menu page: big enough to read the prices. */

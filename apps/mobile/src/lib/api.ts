@@ -24,7 +24,7 @@ export type Gender = 'male' | 'female';
 
 export interface Card {
   id: string;
-  vendor: { id: string; name: string; logoUrl: string | null; currency: string };
+  vendor: { id: string; name: string; logoUrl: string | null; currency: string; cardDesign: number | null };
   balance: number;
   lifetimePoints: number;
   affordableRewards: number;
@@ -161,10 +161,16 @@ async function photoForm(photo: PickedPhoto): Promise<FormData> {
 }
 
 /** One shop in the Explore list. */
+/** What kind of place a shop is (set in the dashboards). */
+export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
+
 export interface VendorListItem {
   id: string;
   name: string;
   logoUrl: string | null;
+  bannerUrl: string | null;
+  category: VendorCategory | null;
+  cardDesign: number | null;
   currency: string;
   /** null = the shop has no point rule yet */
   rule: { spendAmount: string; pointsPerSpend: number } | null;
@@ -185,6 +191,9 @@ export interface VendorPage {
   id: string;
   name: string;
   logoUrl: string | null;
+  bannerUrl: string | null;
+  category: VendorCategory | null;
+  cardDesign: number | null;
   currency: string;
   /** null = the shop has no point rule yet */
   rule: { spendAmount: string; pointsPerSpend: number; minPurchase: string; maxPointsPerPurchase: number | null } | null;

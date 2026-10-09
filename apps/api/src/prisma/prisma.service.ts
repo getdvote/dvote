@@ -17,6 +17,10 @@ export class PrismaService
         // must be UTC or every Prisma-written time is shifted by the server's timezone
         // (e.g. Africa/Cairo = 3 h) while DB defaults like now() are not.
         options: '-c TimeZone=UTC',
+        // Small pool: Supabase limits pooler clients (15 in session mode on the Free plan), and
+        // several developers' APIs may share one project. Use the transaction pooler (6543).
+        max: 5,
+        idleTimeoutMillis: 30_000,
       }),
     });
   }

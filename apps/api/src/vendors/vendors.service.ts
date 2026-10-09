@@ -60,6 +60,8 @@ export class VendorsService {
         logo_url: dto.logoUrl,
         contact_email: dto.contactEmail,
         currency: dto.currency,
+        category: dto.category,
+        card_design: dto.cardDesign,
       },
       include: withCounts,
     });
@@ -90,6 +92,8 @@ export class VendorsService {
         contact_email: dto.contactEmail,
         currency: dto.currency,
         status: dto.status,
+        category: dto.category,
+        card_design: dto.cardDesign,
       },
       include: withCounts,
     });
@@ -99,41 +103,56 @@ export class VendorsService {
     return updated;
   }
 
-  /**
-   * Uploads (or replaces) the vendor's logo into the public "vendors" bucket and points
-   * logo_url at it. New file first, then the row, then the old file is deleted.
-   */
-  async setLogo(id: string, file: Buffer): Promise<VendorWithCounts> {
+  /** Uploads (or replaces) the logo: <vendorId>/logo/<uuid>.webp in the public "vendors" bucket. */
+  setLogo(id: string, file: Buffer): Promise<VendorWithCounts> {
+    return this.setImage(id, file, 'logo');
+  }
+
+  /** Removes the logo: an uploaded file is deleted from Storage; logo_url is cleared. */
+  removeLogo(id: string): Promise<VendorWithCounts> {
+    return this.removeImage(id, 'logo');
+  }
+
+  /** Uploads (or replaces) the shop-page banner: <vendorId>/banner/<uuid>.webp. */
+  setBanner(id: string, file: Buffer): Promise<VendorWithCounts> {
+    return this.setImage(id, file, 'banner');
+  }
+
+  /** Removes the banner (file deleted, banner_url cleared). */
+  removeBanner(id: string): Promise<VendorWithCounts> {
+    return this.removeImage(id, 'banner');
+  }
+
+  /** New file first, then the row, then the old file is deleted. */
+  private async setImage(id: string, file: Buffer, kind: 'logo' | 'banner'): Promise<VendorWithCounts> {
     const vendor = await this.get(id);
-    const webp = await toWebp(file, 'logo');
-    const path = `${id}/logo/${newImageName()}`;
+    const webp = await toWebp(file, kind);
+    const path = `${id}/${kind}/${newImageName()}`;
     await this.storage.upload(BUCKETS.vendors, path, webp, IMAGE_CONTENT_TYPE);
+    const url = this.storage.publicUrl(BUCKETS.vendors, path);
     let updated: VendorWithCounts;
     try {
       updated = await this.prisma.vendors.update({
         where: { id },
-        data: { logo_path: path, logo_url: this.storage.publicUrl(BUCKETS.vendors, path) },
+        data: kind === 'logo' ? { logo_path: path, logo_url: url } : { banner_path: path, banner_url: url },
         include: withCounts,
       });
     } catch (err) {
       await this.storage.removeQuietly(BUCKETS.vendors, [path]);
       throw err;
     }
-    if (vendor.logo_path) {
-      await this.storage.removeQuietly(BUCKETS.vendors, [vendor.logo_path]);
-    }
+    const old = kind === 'logo' ? vendor.logo_path : vendor.banner_path;
+    if (old) await this.storage.removeQuietly(BUCKETS.vendors, [old]);
     return updated;
   }
 
-  /** Removes the logo: an uploaded file is deleted from Storage; logo_url is cleared. */
-  async removeLogo(id: string): Promise<VendorWithCounts> {
+  private async removeImage(id: string, kind: 'logo' | 'banner'): Promise<VendorWithCounts> {
     const vendor = await this.get(id);
-    if (vendor.logo_path) {
-      await this.storage.remove(BUCKETS.vendors, [vendor.logo_path]);
-    }
+    const old = kind === 'logo' ? vendor.logo_path : vendor.banner_path;
+    if (old) await this.storage.remove(BUCKETS.vendors, [old]);
     return this.prisma.vendors.update({
       where: { id },
-      data: { logo_path: null, logo_url: null },
+      data: kind === 'logo' ? { logo_path: null, logo_url: null } : { banner_path: null, banner_url: null },
       include: withCounts,
     });
   }

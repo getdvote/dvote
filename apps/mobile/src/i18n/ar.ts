@@ -417,6 +417,14 @@ export const ar: Dictionary = {
     failed: 'تعذّر إرسال ملاحظاتك. حاول مرة أخرى.',
   },
 
+  categories: {
+    cafe: 'مقهى',
+    cafe_restaurant: 'مقهى ومطعم',
+    restaurant: 'مطعم',
+    bakery: 'مخبز',
+    desserts: 'حلويات',
+    juice_bar: 'محل عصائر',
+  },
   errors: {
     network: 'لا يمكن الوصول إلى dvote الآن. تحقق من اتصالك وحاول مرة أخرى.',
     user_blocked: 'تم حظر حسابك. تواصل مع دعم dvote.',

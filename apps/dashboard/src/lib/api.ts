@@ -35,10 +35,17 @@ export interface Overview {
   topVendors: { id: string; name: string; logoUrl: string | null; pointsEarned: number; collects: number }[];
 }
 
+export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
+
 export interface Vendor {
   id: string;
   name: string;
   logoUrl: string | null;
+  /** Shop-page banner in the app. */
+  bannerUrl: string | null;
+  category: VendorCategory | null;
+  /** Loyalty-card design 1-10; null = automatic. */
+  cardDesign: number | null;
   contactEmail: string | null;
   currency: string;
   status: VendorStatus;
@@ -46,6 +53,12 @@ export interface Vendor {
   staffCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** What a vendor (or a platform admin for it) can set for its look in the app. */
+export interface VendorBranding {
+  category: VendorCategory | null;
+  cardDesign: number | null;
 }
 
 export interface Branch {
@@ -253,12 +266,14 @@ export const api = {
 
   vendors: (q: { search?: string; status?: VendorStatus } = {}) => call<Vendor[]>('GET', `/api/admin/vendors${qs(q)}`),
   vendor: (id: string) => call<Vendor>('GET', `/api/admin/vendors/${id}`),
-  createVendor: (body: { name: string; contactEmail?: string; currency?: string }) =>
+  createVendor: (body: { name: string; contactEmail?: string; currency?: string; category?: VendorCategory }) =>
     call<Vendor>('POST', '/api/admin/vendors', body),
-  updateVendor: (id: string, body: Partial<{ name: string; contactEmail: string | null; currency: string; status: VendorStatus }>) =>
+  updateVendor: (id: string, body: Partial<{ name: string; contactEmail: string | null; currency: string; status: VendorStatus } & VendorBranding>) =>
     call<Vendor>('PATCH', `/api/admin/vendors/${id}`, body),
   uploadLogo: (id: string, f: File) => call<Vendor>('PUT', `/api/admin/vendors/${id}/logo`, file(f)),
   removeLogo: (id: string) => call<Vendor>('DELETE', `/api/admin/vendors/${id}/logo`),
+  uploadBanner: (id: string, f: File) => call<Vendor>('PUT', `/api/admin/vendors/${id}/banner`, file(f)),
+  removeBanner: (id: string) => call<Vendor>('DELETE', `/api/admin/vendors/${id}/banner`),
   inviteVendorAdmin: (id: string, body: { name: string; email: string }) =>
     call<Staff & { invited: boolean }>('POST', `/api/admin/vendors/${id}/admins`, body),
 
@@ -302,9 +317,12 @@ export const vendorApi = {
   summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
 
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
-  updateProfile: (body: { name?: string; contactEmail?: string | null }) => call<Vendor>('PATCH', '/api/vendor/profile', body),
+  updateProfile: (body: { name?: string; contactEmail?: string | null } & Partial<VendorBranding>) =>
+    call<Vendor>('PATCH', '/api/vendor/profile', body),
   uploadLogo: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/logo', file(f)),
   removeLogo: () => call<Vendor>('DELETE', '/api/vendor/profile/logo'),
+  uploadBanner: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/banner', file(f)),
+  removeBanner: () => call<Vendor>('DELETE', '/api/vendor/profile/banner'),
 
   branches: () => call<Branch[]>('GET', '/api/vendor/branches'),
   createBranch: (body: Partial<Branch>) => call<Branch>('POST', '/api/vendor/branches', body),

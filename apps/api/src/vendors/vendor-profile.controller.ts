@@ -81,4 +81,24 @@ export class VendorProfileController {
   async removeLogo(@CurrentStaff() ctx: StaffContext): Promise<VendorResponseDto> {
     return VendorResponseDto.from(await this.vendors.removeLogo(ctx.vendorId));
   }
+
+  /** vendor_admin only: upload or replace the shop-page banner (previous file deleted). */
+  @Put('banner')
+  @StaffRoles('vendor_admin')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: VendorResponseDto })
+  async setBanner(
+    @CurrentStaff() ctx: StaffContext,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.setBanner(ctx.vendorId, file.buffer));
+  }
+
+  /** vendor_admin only: remove the banner; the file is deleted from storage. */
+  @Delete('banner')
+  @StaffRoles('vendor_admin')
+  @ApiOkResponse({ type: VendorResponseDto })
+  async removeBanner(@CurrentStaff() ctx: StaffContext): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.removeBanner(ctx.vendorId));
+  }
 }

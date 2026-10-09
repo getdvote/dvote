@@ -65,6 +65,11 @@ CREATE TABLE vendors (
     name           varchar(120)  NOT NULL,
     logo_url       varchar(500),
     logo_path      varchar(300),                 -- uploaded logo in Storage bucket "vendors" (NULL = none / external URL)
+    banner_url     varchar(500),                 -- shop-page banner (public link)
+    banner_path    varchar(300),                 -- uploaded banner in Storage bucket "vendors" (<vendorId>/banner/…)
+    category       varchar(40)   CONSTRAINT vendors_category_ck CHECK (
+                       category IN ('cafe', 'cafe_restaurant', 'restaurant', 'bakery', 'desserts', 'juice_bar')),  -- NULL = not set
+    card_design    smallint      CONSTRAINT vendors_card_design_ck CHECK (card_design BETWEEN 1 AND 10),     -- loyalty-card design; NULL = automatic
     contact_email  varchar(255),
     currency       char(3)       NOT NULL DEFAULT 'EGP',    -- receipt totals are in this currency
     status         vendor_status NOT NULL DEFAULT 'active',

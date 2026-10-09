@@ -111,6 +111,28 @@ export class AdminVendorsController {
     return VendorResponseDto.from(await this.vendors.removeLogo(id));
   }
 
+  /** Upload or replace the shop-page banner (wide image; the previous file is deleted). */
+  @Put(':id/banner')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: VendorResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async setBanner(
+    @Param('id', ParseUuidPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.setBanner(id, file.buffer));
+  }
+
+  /** Remove the banner; the file is deleted from storage. */
+  @Delete(':id/banner')
+  @ApiOkResponse({ type: VendorResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async removeBanner(
+    @Param('id', ParseUuidPipe) id: string,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.removeBanner(id));
+  }
+
   /** Invite a vendor_admin (e.g. the owner) by email; they then manage their own staff. */
   @Post(':id/admins')
   @ApiCreatedResponse({ type: CreateStaffResponseDto })

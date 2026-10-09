@@ -91,7 +91,7 @@ export default function MyCards() {
 
 /** One card as a list row: logo, shop name, balance, chevron. Rows join into one white group. */
 function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; last: boolean; onPress: () => void }) {
-  const [color] = vendorColors(card.vendor.id);
+  const [color] = vendorColors(card.vendor.id, card.vendor.cardDesign);
   return (
     <Pressable
       accessibilityRole="button"
