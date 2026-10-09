@@ -389,6 +389,7 @@ export const ar: Dictionary = {
     noBranches: 'لا توجد فروع بعد',
     noBranchesText: 'فروع هذا المتجر ستظهر هنا.',
     addressSoon: 'العنوان قريبًا',
+    hours: 'مفتوح من {from} إلى {to}',
     directions: 'الاتجاهات',
     directionsA11y: '{name}. الاتجاهات',
     photoA11y: 'صورة {n} من {name}. افتحها بملء الشاشة',

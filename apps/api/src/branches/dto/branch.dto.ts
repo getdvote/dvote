@@ -1,8 +1,12 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import type { branches } from '../../generated/prisma/client.js';
 import { branch_status } from '../../generated/prisma/enums.js';
+import { CITY_KEYS, type CityKey } from '../cities';
+
+/** "HH:MM", 24-hour. */
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export class CreateBranchDto {
   @ApiProperty({ maxLength: 120, example: 'Joy Corner Smouha' })
@@ -16,6 +20,11 @@ export class CreateBranchDto {
   @IsString()
   @MaxLength(500)
   address?: string | null;
+
+  @ApiPropertyOptional({ enum: CITY_KEYS, enumName: 'City', nullable: true, example: 'alexandria' })
+  @IsOptional()
+  @IsIn(CITY_KEYS)
+  city?: CityKey | null;
 
   @ApiPropertyOptional({ example: 31.2156, nullable: true, description: 'Map location (for "Get directions")' })
   @IsOptional()
@@ -38,9 +47,23 @@ export class CreateBranchDto {
   @IsString()
   @MaxLength(64)
   timezone?: string;
+
+  @ApiPropertyOptional({
+    example: '09:00',
+    nullable: true,
+    description: 'Opening time, "HH:MM" 24-hour, the same every day (branch timezone). Set with closesAt, or both null.',
+  })
+  @IsOptional()
+  @Matches(CLOCK, { message: 'opensAt must be HH:MM' })
+  opensAt?: string | null;
+
+  @ApiPropertyOptional({ example: '23:00', nullable: true, description: 'Closing time; earlier than opensAt = open past midnight.' })
+  @IsOptional()
+  @Matches(CLOCK, { message: 'closesAt must be HH:MM' })
+  closesAt?: string | null;
 }
 
-/** Only sent fields change; address/lat/lng accept null to clear. status=closed hides the branch (never deleted). */
+/** Only sent fields change; address/city/lat/lng/opensAt/closesAt accept null to clear. status=closed hides the branch (never deleted). */
 export class UpdateBranchDto extends PartialType(CreateBranchDto) {
   @ApiPropertyOptional({ enum: branch_status, enumName: 'BranchStatus' })
   @IsOptional()
@@ -61,6 +84,9 @@ export class BranchResponseDto {
   @ApiProperty({ type: String, nullable: true })
   address: string | null;
 
+  @ApiProperty({ enum: CITY_KEYS, enumName: 'City', nullable: true })
+  city: string | null;
+
   @ApiProperty({ type: Number, nullable: true })
   lat: number | null;
 
@@ -69,6 +95,12 @@ export class BranchResponseDto {
 
   @ApiProperty({ example: 'Africa/Cairo' })
   timezone: string;
+
+  @ApiProperty({ type: String, nullable: true, example: '09:00' })
+  opensAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '23:00' })
+  closesAt: string | null;
 
   @ApiProperty({ enum: branch_status, enumName: 'BranchStatus' })
   status: branch_status;
@@ -82,9 +114,12 @@ export class BranchResponseDto {
       vendorId: b.vendor_id,
       name: b.name,
       address: b.address,
+      city: b.city,
       lat: b.lat === null ? null : Number(b.lat),
       lng: b.lng === null ? null : Number(b.lng),
       timezone: b.timezone,
+      opensAt: b.opens_at,
+      closesAt: b.closes_at,
       status: b.status,
       createdAt: b.created_at.toISOString(),
     };

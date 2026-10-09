@@ -327,6 +327,7 @@ export const en = {
     noBranches: 'No branches yet',
     noBranchesText: "This shop's branches will show here.",
     addressSoon: 'Address coming soon',
+    hours: 'Open {from} – {to}',
     directions: 'Get directions',
     directionsA11y: '{name}. Get directions',
     photoA11y: '{name} photo {n}. Open full screen',

@@ -1,3 +1,4 @@
+import type { CityKey } from './cities';
 import { config } from './config';
 import { supabase } from './supabase';
 
@@ -66,9 +67,14 @@ export interface Branch {
   vendorId: string;
   name: string;
   address: string | null;
+  /** City key (lib/cities.ts) */
+  city: CityKey | null;
   lat: number | null;
   lng: number | null;
   timezone: string;
+  /** "HH:MM", the same every day; both null = not set. closesAt < opensAt = past midnight. */
+  opensAt: string | null;
+  closesAt: string | null;
   status: BranchStatus;
   createdAt: string;
 }
@@ -210,6 +216,8 @@ const MESSAGES: Record<string, string> = {
   unsupported_image: 'Use a JPG, PNG, WebP or HEIC image.',
   file_too_large: 'The image must be under 10 MB.',
   location_incomplete: 'Pick a place on the map, or clear both coordinates.',
+  hours_incomplete: 'Set both the opening and closing time, or leave both empty.',
+  hours_invalid: 'Opening and closing time can\'t be the same.',
   not_staff: 'This account has no access to the dvote dashboard.',
   staff_disabled: 'This account is disabled. Ask your vendor admin.',
   vendor_suspended: 'This shop is suspended on dvote. Contact dvote support.',

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Trash2, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Trash2, Upload, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,14 @@ import type { VendorScope } from '../../lib/scope';
 
 export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 
+/** Same limits as the API (vendor-images.service.ts). */
+const MAX_MENU_IMAGES = 20;
+export const MAX_BRANCH_PHOTOS = 3;
+
+/** Branch photos sit three to a row (as in the app). */
+const BRANCH_GRID = 'grid grid-cols-3 gap-3';
+const BRANCH_TILE = 'aspect-[4/3] w-full';
+
 /** Menu pages, shown on the shop page in order. (Branch photos live on the Branches page.) */
 export function ImagesTab({ scope }: { scope: VendorScope }) {
   const { data: images, isLoading, error } = useQuery({ queryKey: ['images', scope.key], queryFn: () => scope.images() });
@@ -22,9 +30,10 @@ export function ImagesTab({ scope }: { scope: VendorScope }) {
       <ErrorAlert error={error} />
       <Section
         title="Menu pages"
-        hint="Up to 20 pages, shown in this order. Portrait photos of the printed menu work best."
+        hint={`Up to ${MAX_MENU_IMAGES} pages, shown in this order. Portrait photos of the printed menu work best.`}
         scope={scope}
         kind="menu"
+        max={MAX_MENU_IMAGES}
         canEdit={scope.can.editVendor}
         images={(images ?? []).filter((i) => i.kind === 'menu')}
         loading={isLoading}
@@ -41,9 +50,10 @@ export function BranchPhotos({ scope, branchId }: { scope: VendorScope; branchId
     <div className="grid gap-4">
       <ErrorAlert error={error} />
       <Section
-        hint={canEdit ? 'Up to 10 photos per branch.' : 'Only this branch\x27s manager or the vendor admin can change these.'}
+        hint={canEdit ? `Up to ${MAX_BRANCH_PHOTOS} photos per branch.` : 'Only this branch\x27s manager or the vendor admin can change these.'}
         scope={scope}
         kind="branch_photo"
+        max={MAX_BRANCH_PHOTOS}
         canEdit={canEdit}
         branchId={branchId}
         images={(images ?? []).filter((i) => i.kind === 'branch_photo' && i.branchId === branchId)}
@@ -53,12 +63,79 @@ export function BranchPhotos({ scope, branchId }: { scope: VendorScope; branchId
   );
 }
 
+/**
+ * Photos for a branch that doesn't exist yet: picked and previewed here, uploaded by the
+ * caller once the branch is created.
+ */
+export function StagedBranchPhotos({ files, onChange }: { files: File[]; onChange: (files: File[]) => void }) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
+  const room = MAX_BRANCH_PHOTOS - files.length;
+
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Up to {MAX_BRANCH_PHOTOS} photos. They upload when you add the branch.</p>
+        <Button type="button" variant="outline" disabled={room <= 0} onClick={() => fileInput.current?.click()}>
+          <Upload /> Upload
+        </Button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept={IMAGE_ACCEPT}
+          multiple
+          hidden
+          onChange={(e) => {
+            const picked = Array.from(e.target.files ?? []);
+            if (picked.length > room) toast.error(`Only ${MAX_BRANCH_PHOTOS} allowed: keeping the first ${room}.`);
+            onChange([...files, ...picked.slice(0, room)]);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {files.length === 0 ? (
+        <Empty className="border border-dashed py-10">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ImageIcon />
+            </EmptyMedia>
+            <EmptyDescription>No photos yet</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className={BRANCH_GRID}>
+          {urls.map((url, i) => (
+            <div key={url} className="relative">
+              <img src={url} alt="" className={`${BRANCH_TILE} rounded-xl bg-muted object-cover`} />
+              <div className="absolute inset-x-2 bottom-2 flex items-center justify-between">
+                <span className="rounded-full bg-black/60 px-2 py-px text-xs text-white">{i + 1}</span>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="outline"
+                  className="bg-card"
+                  aria-label="Remove photo"
+                  onClick={() => onChange(files.filter((_, j) => j !== i))}
+                >
+                  <X />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Section({
   title,
   titleExtra,
   hint,
   scope,
   kind,
+  max,
   branchId,
   images,
   loading,
@@ -69,6 +146,7 @@ function Section({
   hint: string;
   scope: VendorScope;
   kind: VendorImage['kind'];
+  max: number;
   branchId?: string;
   images: VendorImage[];
   loading: boolean;
@@ -95,7 +173,9 @@ function Section({
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const canUpload = kind === 'menu' || !!branchId;
-  const size = kind === 'menu' ? 'h-52 w-37' : 'h-36 w-50';
+  const room = max - images.length;
+  const size = kind === 'menu' ? 'h-52 w-37' : BRANCH_TILE;
+  const grid = kind === 'menu' ? 'flex flex-wrap gap-3.5' : BRANCH_GRID;
 
   return (
     <section>
@@ -109,7 +189,13 @@ function Section({
         <p className="text-sm text-muted-foreground">{hint}</p>
         {canUpload && canEdit ? (
           <>
-            <Button variant="outline" disabled={upload.isPending} onClick={() => fileInput.current?.click()}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={upload.isPending || loading || room <= 0}
+              title={room <= 0 ? `Limit of ${max} reached: delete one to upload another` : undefined}
+              onClick={() => fileInput.current?.click()}
+            >
               {upload.isPending ? <Loader2 className="animate-spin" /> : <Upload />} Upload
             </Button>
             <input
@@ -119,7 +205,9 @@ function Section({
               multiple
               hidden
               onChange={(e) => {
-                for (const file of Array.from(e.target.files ?? [])) upload.mutate(file);
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > room) toast.error(`Only ${max} allowed: uploading the first ${room}.`);
+                for (const file of files.slice(0, room)) upload.mutate(file);
                 e.target.value = '';
               }}
             />
@@ -127,7 +215,7 @@ function Section({
         ) : null}
       </div>
       {!canUpload ? null : loading ? (
-        <div className="flex flex-wrap gap-3.5">
+        <div className={grid}>
           {Array.from({ length: 3 }, (_, i) => (
             <Skeleton key={i} className={`${size} rounded-xl`} />
           ))}
@@ -142,7 +230,7 @@ function Section({
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="flex flex-wrap gap-3.5">
+        <div className={grid}>
           {images.map((img, i) => (
             <div key={img.id} className="group relative">
               <button
@@ -162,7 +250,7 @@ function Section({
                   actionLabel="Delete"
                   onConfirm={() => remove.mutateAsync(img.id)}
                   trigger={
-                    <Button size="icon-sm" variant="outline" className="pointer-events-auto bg-card text-destructive hover:text-destructive" aria-label="Delete image">
+                    <Button type="button" size="icon-sm" variant="outline" className="pointer-events-auto bg-card text-destructive hover:text-destructive" aria-label="Delete image">
                       <Trash2 />
                     </Button>
                   }

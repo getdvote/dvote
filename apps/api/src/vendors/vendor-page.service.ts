@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { fromMinor, toMinor, type DecimalLike } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUCKETS, StorageService } from '../storage/storage.service';
+import { MAX_BRANCH_PHOTOS } from '../vendor-images/vendor-images.service';
 import { VendorListItemDto } from './dto/vendor-list-item.dto';
 import { VendorPageResponseDto } from './dto/vendor-page-response.dto';
 
@@ -109,10 +110,14 @@ export class VendorPageService {
         id: b.id,
         name: b.name,
         address: b.address,
+        city: b.city,
         lat: b.lat === null ? null : Number(b.lat),
         lng: b.lng === null ? null : Number(b.lng),
+        opensAt: b.opens_at,
+        closesAt: b.closes_at,
         photos: vendor.vendor_images
           .filter((i) => i.kind === 'branch_photo' && i.branch_id === b.id)
+          .slice(0, MAX_BRANCH_PHOTOS) // branches from before the limit may have more
           .map(image),
       })),
       card: card

@@ -1,10 +1,11 @@
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Crosshair, Link2, Loader2, MapPin, Search, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cityFromNames, type CityKey } from '../lib/cities';
 
 export interface LatLng {
   lat: number;
@@ -42,6 +43,32 @@ export function coordsFromText(text: string): LatLng | null {
   return null;
 }
 
+export interface PlaceAddress {
+  /** First line, e.g. "12 Fouad Street" */
+  line: string | null;
+  /** One of our cities, when the place is in one */
+  city: CityKey | null;
+}
+
+/**
+ * The address at a point, from OpenStreetMap's reverse lookup. The first line falls back to the
+ * place's name, then to the first part of its full address.
+ */
+export async function addressAt(p: LatLng): Promise<PlaceAddress | null> {
+  const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${p.lat}&lon=${p.lng}`, {
+    headers: { 'Accept-Language': 'en' },
+  });
+  if (!res.ok) return null;
+  const r = (await res.json()) as { name?: string; display_name?: string; address?: Record<string, string> };
+  const a = r.address ?? {};
+  const street = [a.house_number, a.road].filter(Boolean).join(' ');
+  return {
+    line: street || r.name || r.display_name?.split(',')[0]?.trim() || null,
+    // Most specific first: "New Cairo" before "Cairo Governorate".
+    city: cityFromNames([a.city, a.town, a.municipality, a.suburb, a.village, a.city_district, a.county, a.state_district, a.state]),
+  };
+}
+
 // A CSS pin (Leaflet's default marker images don't survive bundling).
 const pin = L.divIcon({
   className: '',
@@ -53,21 +80,40 @@ const pin = L.divIcon({
 /**
  * Pick a branch's location: search a place, paste a Google Maps link, use this device's
  * location, or click / drag the pin on the map. Latitude and longitude are filled from the
- * chosen place, never typed. `value` null = no location.
+ * chosen place, never typed. `value` null = no location. `onAddress` gets the address (first
+ * line and city) at each newly chosen point.
  */
-export function LocationPicker({ value, onChange }: { value: LatLng | null; onChange: (v: LatLng | null) => void }) {
+export function LocationPicker({
+  value,
+  onChange,
+  onAddress,
+}: {
+  value: LatLng | null;
+  onChange: (v: LatLng | null) => void;
+  onAddress?: (address: PlaceAddress) => void;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ name: string; at: LatLng }[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [link, setLink] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<LatLng | null>(null);
+  // Only the latest pick may fill the address (an older lookup can answer last).
+  const lookup = useRef(0);
 
   const choose = (p: LatLng) => {
     const v = { lat: round(p.lat), lng: round(p.lng) };
     onChange(v);
     setFlyTo(v);
     setProblem(null);
+    if (onAddress) {
+      const id = ++lookup.current;
+      addressAt(v)
+        .then((address) => {
+          if (address && id === lookup.current) onAddress(address);
+        })
+        .catch(() => {}); // The address is a convenience; the pin is already set.
+    }
   };
 
   async function search() {

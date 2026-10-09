@@ -23,7 +23,9 @@ import {
   SectionTitle,
 } from '../../components/ui';
 import { api, ApiError, type VendorPage } from '../../lib/api';
-import { t as translate, useI18n } from '../../i18n';
+import { cityName } from '../../lib/cities';
+import { showClock } from '../../lib/dates';
+import { getLanguage, t as translate, useI18n } from '../../i18n';
 import { openInMaps } from '../../lib/maps';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
@@ -202,9 +204,16 @@ function EarnRule({ shop }: { shop: VendorPage }) {
 }
 
 /** Opens the branch in a maps app: iOS asks Apple Maps or Google Maps, Android opens Google Maps. */
+/** "15 Al Koumi Street, Alexandria" / "15 Al Koumi Street، الإسكندرية"; null when neither is set. */
+function placeLine(b: VendorPage['branches'][number], language = getLanguage()) {
+  const parts = [b.address, cityName(b.city, language)].filter(Boolean);
+  return parts.length ? parts.join(language === 'ar' ? '، ' : ', ') : null;
+}
+
 function directions(b: VendorPage['branches'][number]) {
   if ((b.lat === null || b.lng === null) && !b.address) return;
-  openInMaps({ name: b.name, lat: b.lat, lng: b.lng, address: b.address });
+  // Maps apps search best in English when there are no coordinates.
+  openInMaps({ name: b.name, lat: b.lat, lng: b.lng, address: placeLine(b, 'en') });
 }
 
 function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (images: string[], index: number) => void }) {
@@ -215,7 +224,7 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
     <Group>
       {shop.branches.map((b) => {
         const canNavigate = (b.lat !== null && b.lng !== null) || !!b.address;
-        const photos = b.photos.map((p) => p.url);
+        const photos = b.photos.slice(0, BRANCH_PHOTOS).map((p) => p.url);
         return (
           <View key={b.id} style={styles.branch}>
             <Pressable
@@ -231,25 +240,33 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
               <View style={{ flex: 1 }}>
                 <Text style={styles.rewardName}>{b.name}</Text>
                 <Text style={styles.rewardText} numberOfLines={2}>
-                  {b.address ?? translate('shop.addressSoon')}
+                  {placeLine(b) ?? translate('shop.addressSoon')}
                 </Text>
+                {b.opensAt && b.closesAt ? (
+                  <Text style={styles.rewardText}>{translate('shop.hours', { from: showClock(b.opensAt), to: showClock(b.closesAt) })}</Text>
+                ) : null}
                 {canNavigate ? <Text style={styles.link}>{translate('shop.directions')}</Text> : null}
               </View>
               {canNavigate ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror /> : null}
             </Pressable>
             {photos.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photos}>
+              <View style={styles.photos}>
                 {photos.map((url, i) => (
                   <Pressable
                     key={url}
                     accessibilityRole="imagebutton"
                     accessibilityLabel={translate('shop.photoA11y', { name: b.name, n: i + 1 })}
                     onPress={() => onOpenPhotos(photos, i)}
+                    style={styles.photoSlot}
                   >
                     <Image source={{ uri: url }} style={styles.photo} contentFit="cover" />
                   </Pressable>
                 ))}
-              </ScrollView>
+                {/* Empty slots keep one or two photos at a third of the row each. */}
+                {Array.from({ length: BRANCH_PHOTOS - photos.length }, (_, i) => (
+                  <View key={`empty-${i}`} style={styles.photoSlot} />
+                ))}
+              </View>
             ) : null}
           </View>
         );
@@ -259,6 +276,8 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
 }
 
 const LOGO_SIZE = 120;
+/** A branch has at most 3 photos (the API's limit); they share one row. */
+const BRANCH_PHOTOS = 3;
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
@@ -298,9 +317,10 @@ const styles = StyleSheet.create({
   ruleNote: { fontSize: 14, color: theme.muted, lineHeight: 20 },
   rewardName: { fontSize: 17, fontWeight: '600', color: theme.text },
   rewardText: { fontSize: 14, color: theme.muted, marginTop: 2 },
-  branch: { paddingVertical: 14, gap: 12 },
+  branch: { paddingVertical: 22, gap: 12 },
   branchRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   link: { fontSize: 14, fontWeight: '600', color: theme.link, marginTop: 4 },
-  photos: { gap: 8, paddingLeft: 54 },
-  photo: { width: 96, height: 72, borderRadius: 10, backgroundColor: theme.fill },
+  photos: { flexDirection: 'row', gap: 8, paddingStart: 54 },
+  photoSlot: { flex: 1 },
+  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: theme.fill },
 });

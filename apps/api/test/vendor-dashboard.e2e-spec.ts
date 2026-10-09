@@ -84,6 +84,18 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
     await as('adminA', 'post', '/api/vendor/branches').send({ name: 'Far', lat: 95, lng: 10 }).expect(400);
     await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ lat: 31.2, lng: 29.9 }).expect(200);
     expect((await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ lng: null }).expect(400)).body.code).toBe('location_incomplete');
+    // Opening hours: optional, both times or none, "HH:MM", may run past midnight.
+    expect(created.body).toMatchObject({ opensAt: null, closesAt: null });
+    const late = await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ opensAt: '18:00', closesAt: '02:00' }).expect(200);
+    expect(late.body).toMatchObject({ opensAt: '18:00', closesAt: '02:00' });
+    expect((await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ closesAt: null }).expect(400)).body.code).toBe('hours_incomplete');
+    expect((await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ closesAt: '18:00' }).expect(400)).body.code).toBe('hours_invalid');
+    await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ opensAt: '9:00', closesAt: '23:00' }).expect(400);
+    await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ opensAt: null, closesAt: null }).expect(200);
+    // City: one of the listed Egyptian cities, or null.
+    expect((await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ city: 'alexandria' }).expect(200)).body.city).toBe('alexandria');
+    await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ city: 'atlantis' }).expect(400);
+    expect((await as('adminA', 'patch', `/api/vendor/branches/${created.body.id}`).send({ city: null }).expect(200)).body.city).toBeNull();
 
     expect((await as('adminA', 'patch', `/api/vendor/branches/${ids.branchB1}`).send({ name: 'hacked' }).expect(404)).body.code).toBe('branch_not_found');
     expect((await prisma.branches.findUniqueOrThrow({ where: { id: ids.branchB1 } })).name).toBe('B1');

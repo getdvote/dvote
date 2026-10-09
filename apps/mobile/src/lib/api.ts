@@ -212,8 +212,13 @@ export interface VendorPage {
     id: string;
     name: string;
     address: string | null;
+    /** City key: show with cityName() (lib/cities.ts) */
+    city: string | null;
     lat: number | null;
     lng: number | null;
+    /** "HH:MM", the same every day (branch-local); both null = not set. closesAt < opensAt = past midnight */
+    opensAt: string | null;
+    closesAt: string | null;
     photos: VendorPageImage[];
   }[];
   /** My card at this shop; null before my first purchase there */

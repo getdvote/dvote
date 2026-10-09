@@ -1,21 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Images, Loader2, MapPin, Plus } from 'lucide-react';
+import { Images, Loader2, MapPin, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
-import { LocationPicker, type LatLng } from '../../components/LocationPicker';
+import { LocationPicker, type LatLng, type PlaceAddress } from '../../components/LocationPicker';
 import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
 import { errorMessage, type Branch } from '../../lib/api';
+import { CITIES_AZ, cityName, type CityKey } from '../../lib/cities';
 import type { VendorScope } from '../../lib/scope';
-import { BranchPhotos } from './ImagesTab';
+import { BranchPhotos, StagedBranchPhotos } from './ImagesTab';
 import { TabToolbar } from './TabToolbar';
+
+const NO_CITY = 'none';
 
 /** The vendor's shops: add, edit (address, location picked on a map), photos, close / reopen. */
 export function BranchesTab({ scope }: { scope: VendorScope }) {
@@ -62,8 +66,17 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
             <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText="No branches yet" />
             {data?.map((b) => (
               <TableRow key={b.id}>
-                <TableCell className="pl-4 font-semibold">{b.name}</TableCell>
-                <TableCell className="max-w-xs whitespace-normal">{b.address ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell className="pl-4">
+                  <div className="font-semibold">{b.name}</div>
+                  {b.opensAt && b.closesAt ? (
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      {b.opensAt}–{b.closesAt}
+                    </div>
+                  ) : null}
+                </TableCell>
+                <TableCell className="max-w-xs whitespace-normal">
+                  {b.address || b.city ? [b.address, cityName(b.city)].filter(Boolean).join(', ') : <span className="text-muted-foreground">—</span>}
+                </TableCell>
                 <TableCell>
                   {b.lat !== null && b.lng !== null ? (
                     <a
@@ -125,19 +138,44 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
   const isNew = branch === 'new';
   const current = branch && branch !== 'new' ? branch : null;
   const [location, setLocation] = useState<LatLng | null>(null);
-  // Start from the branch's saved location each time the dialog opens.
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState<CityKey | null>(null);
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [opensAt, setOpensAt] = useState('');
+  const [closesAt, setClosesAt] = useState('');
+  // Start from the branch's saved location and address each time the dialog opens.
   const [openedFor, setOpenedFor] = useState<Branch | 'new' | null>(null);
   if (branch !== openedFor) {
     setOpenedFor(branch);
     setLocation(current && current.lat !== null && current.lng !== null ? { lat: current.lat, lng: current.lng } : null);
+    setAddress(current?.address ?? '');
+    setCity(current?.city ?? null);
+    setNewPhotos([]);
+    setOpensAt(current?.opensAt ?? '');
+    setClosesAt(current?.closesAt ?? '');
   }
+  // The map only fills empty fields; it never overwrites what's typed or picked.
+  const fillAddress = (found: PlaceAddress) => {
+    if (found.line) setAddress((a) => (a.trim() ? a : found.line!));
+    if (found.city) setCity((c) => c ?? found.city);
+  };
   const save = useMutation({
-    mutationFn: (body: { name: string; address: string | null; lat: number | null; lng: number | null }) =>
-      isNew ? scope.createBranch(body) : scope.updateBranch(current!.id, body),
-    onSuccess: (b) => {
+    mutationFn: async (body: Pick<Branch, 'name' | 'address' | 'city' | 'lat' | 'lng' | 'opensAt' | 'closesAt'>) => {
+      if (!isNew) return { branch: await scope.updateBranch(current!.id, body), failed: 0 };
+      // A new branch's photos can only upload once it exists.
+      const branch = await scope.createBranch(body);
+      let failed = 0;
+      for (const file of newPhotos) {
+        await scope.uploadImage(file, 'branch_photo', branch.id).catch(() => failed++);
+      }
+      return { branch, failed };
+    },
+    onSuccess: ({ branch, failed }) => {
       void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
       void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
-      toast.success(isNew ? `${b.name} added` : 'Saved');
+      void qc.invalidateQueries({ queryKey: ['images', scope.key] });
+      toast.success(isNew ? `${branch.name} added` : 'Saved');
+      if (failed) toast.error(`${failed} photo${failed > 1 ? 's' : ''} didn't upload. Add ${failed > 1 ? 'them' : 'it'} from the branch's Photos.`);
       onClose();
     },
   });
@@ -164,20 +202,82 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
             save.mutate({
               name: String(f.get('name')).trim(),
               address: String(f.get('address')).trim() || null,
+              city,
               lat: location?.lat ?? null,
               lng: location?.lng ?? null,
+              opensAt: opensAt || null,
+              closesAt: closesAt || null,
             });
           }}
         >
           <Field label="Branch name" htmlFor="branch-name">
             <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="e.g. Joy Corner Smouha" autoFocus />
           </Field>
-          <Field label="Address" htmlFor="branch-address">
-            <Textarea id="branch-address" name="address" rows={2} maxLength={500} defaultValue={current?.address ?? ''} placeholder="Street, area, city" />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
+            <Field label="Address" htmlFor="branch-address">
+              <Textarea
+                id="branch-address"
+                name="address"
+                rows={2}
+                maxLength={500}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Street and area, e.g. 14 Victor Emmanuel St, Smouha"
+              />
+            </Field>
+            <Field label="City" htmlFor="branch-city">
+              <Select value={city ?? NO_CITY} onValueChange={(v) => setCity(v === NO_CITY ? null : (v as CityKey))}>
+                <SelectTrigger id="branch-city" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value={NO_CITY}>Not set</SelectItem>
+                  {CITIES_AZ.map((c) => (
+                    <SelectItem key={c.key} value={c.key}>
+                      {c.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">
+                Opening hours <span className="font-normal text-muted-foreground">(optional)</span>
+              </span>
+              {opensAt || closesAt ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setOpensAt('');
+                    setClosesAt('');
+                  }}
+                >
+                  <X /> Clear hours
+                </Button>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* One time filled makes the other required: both or neither. */}
+              <Field label={<span className="font-normal text-muted-foreground">Opens</span>} htmlFor="branch-opens">
+                <Input id="branch-opens" type="time" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} required={!!closesAt} />
+              </Field>
+              <Field label={<span className="font-normal text-muted-foreground">Closes</span>} htmlFor="branch-closes">
+                <Input id="branch-closes" type="time" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} required={!!opensAt} />
+              </Field>
+            </div>
+            <p className="text-xs text-muted-foreground">The same every day. A closing time before the opening time means open past midnight.</p>
+          </div>
           <div className="grid gap-2">
             <span className="text-sm font-medium">Location on the map</span>
-            <LocationPicker value={location} onChange={setLocation} />
+            <LocationPicker value={location} onChange={setLocation} onAddress={fillAddress} />
+          </div>
+          <div className="grid gap-2">
+            <span className="text-sm font-medium">Photos</span>
+            {current ? <BranchPhotos scope={scope} branchId={current.id} /> : <StagedBranchPhotos files={newPhotos} onChange={setNewPhotos} />}
           </div>
           <ErrorAlert error={save.error} />
         </form>
