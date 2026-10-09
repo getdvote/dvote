@@ -307,7 +307,7 @@ export const en = {
     replacedText: 'A newer QR code was opened, so this one stopped working.',
     errorTitle: 'Something went wrong',
     couldNotCreate: 'Could not create your QR code.',
-    atVendor: 'The staff at {vendor} scan it and enter your bill, and your points appear here straight away.',
+    atVendor: 'This code works only at {vendor}: their staff scan it and enter your bill, and your points appear here straight away.',
   },
 
   shop: {

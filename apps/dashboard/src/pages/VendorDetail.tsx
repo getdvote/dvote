@@ -55,7 +55,7 @@ export function VendorDetail() {
                   <TabsTrigger value="branches" className={TAB}>Branches</TabsTrigger>
                   <TabsTrigger value="rule" className={TAB}>Points rule</TabsTrigger>
                   <TabsTrigger value="rewards" className={TAB}>Rewards</TabsTrigger>
-                  <TabsTrigger value="images" className={TAB}>Menu &amp; photos</TabsTrigger>
+                  <TabsTrigger value="images" className={TAB}>Menu</TabsTrigger>
                   <TabsTrigger value="staff" className={TAB}>Staff</TabsTrigger>
                 </TabsList>
                 <TabsContent value="branches">

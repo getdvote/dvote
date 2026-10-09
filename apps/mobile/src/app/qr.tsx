@@ -35,15 +35,18 @@ type Phase =
 /**
  * Collect QR (tab bar QR button, or Collect on a shop page). Gets a one-time code from the
  * API, shows it, and checks every 2 s whether the staff used it; then shows "+N points" and
- * the new balance. The code names no shop: the staff member who scans it decides the shop and
- * branch. Opened from a shop page (`vendorName` param), the help text names that shop.
+ * the new balance. From the tab bar it is the master QR: it names no shop, and the staff
+ * member who scans it decides the shop and branch. From a shop page (`vendorId` + `vendorName`)
+ * it is that shop's QR: any other shop's staff get vendor_mismatch and give no points; the
+ * help text names that shop.
  *
  * Laid out like a ticket ("Dvote ID"): the customer's photo and name, a perforated tear line,
- * then their code, in the middle of the page. When the code expires (or the clock runs out on the phone first), was replaced,
- * or couldn't be made, the code gives way to a "Regenerate my QR code" button.
+ * then their code, in the middle of the page. When the code expires (or the clock runs out on
+ * the phone first), was replaced, or couldn't be made, the code gives way to a "Regenerate my
+ * QR code" button.
  */
 export default function Qr() {
-  const { vendorName } = useLocalSearchParams<{ vendorName?: string }>();
+  const { vendorId, vendorName } = useLocalSearchParams<{ vendorId?: string; vendorName?: string }>();
   const { handleAuthError } = useSession();
   useI18n(); // re-render on a language switch (children read t directly)
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
@@ -55,7 +58,7 @@ export default function Qr() {
     setPhase({ kind: 'loading' });
     setOffline(false);
     try {
-      const qr = await api.newCollectQr();
+      const qr = await api.newCollectQr(vendorId);
       // Count down from the server's expiry, unless the phone's clock is clearly off.
       const left = new Date(qr.expiresAt).getTime() - Date.now();
       const deadline = Date.now() + (left > 0 && left <= QR_LIFETIME_MS + 30_000 ? left : QR_LIFETIME_MS);
@@ -65,7 +68,7 @@ export default function Qr() {
       if (await handleAuthError(err)) return;
       setPhase({ kind: 'error', message: err instanceof ApiError ? err.message : t('qr.couldNotCreate') });
     }
-  }, [handleAuthError]);
+  }, [handleAuthError, vendorId]);
 
   useEffect(() => {
     void issue();

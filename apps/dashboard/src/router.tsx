@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { createBrowserRouter, Route, Routes } from 'react-router';
+import { createBrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AdminLayout } from './layouts/AdminLayout';
 import { VendorLayout } from './layouts/VendorLayout';
 import { useAuth } from './lib/auth';
@@ -8,7 +8,6 @@ import { Login } from './pages/Login';
 import { MyHome } from './pages/my/MyHome';
 import { MyProfile } from './pages/my/MyProfile';
 import { MyBranches, MyImages, MyRewards, MyRule, MyStaff } from './pages/my/MySections';
-import { NotFound } from './pages/NotFound';
 import { Overview } from './pages/Overview';
 import { VendorDetail } from './pages/VendorDetail';
 import { Vendors } from './pages/Vendors';
@@ -37,7 +36,7 @@ function Shell() {
           <Route path="/vendors" element={<Vendors />} />
           <Route path="/vendors/:id" element={<VendorDetail />} />
           <Route path="/customers" element={<Customers />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>
     );
@@ -51,10 +50,10 @@ function Shell() {
           <Route path="/branches" element={<MyBranches />} />
           <Route path="/rule" element={<MyRule />} />
           <Route path="/rewards" element={<MyRewards />} />
-          <Route path="/images" element={<MyImages />} />
+          <Route path="/menu" element={<MyImages />} />
           <Route path="/staff" element={<MyStaff />} />
           {staff.role === 'vendor_admin' ? <Route path="/profile" element={<MyProfile />} /> : null}
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </VendorLayout>
     );

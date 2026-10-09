@@ -119,7 +119,9 @@ export const api = {
   cardEvents: (cardId: string, limit: number, before?: string) =>
     call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=${limit}${before ? `&before=${before}` : ''}`),
   /** Collect QR: works at any shop (the staff who scan it decide the shop). Cancels my older one. */
-  newCollectQr: () => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'collect' }),
+  /** No vendorId: master QR (any shop). vendorId: shop QR, only that shop can scan it. */
+  newCollectQr: (vendorId?: string) =>
+    call<NewQrCode>('POST', '/api/app/qr-codes', vendorId ? { purpose: 'collect', vendorId } : { purpose: 'collect' }),
   qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
   cancelQr: (id: string) => call<QrCodeStatus>('POST', `/api/app/qr-codes/${id}/cancel`),
   /** Upload or replace my profile photo (the API shrinks it; the old one is deleted). */

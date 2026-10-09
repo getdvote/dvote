@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { rewards } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
+import { IMAGE_CONTENT_TYPE, newImageName, toWebp } from '../storage/images';
+import { BUCKETS, StorageService } from '../storage/storage.service';
 import { CreateRewardDto, UpdateRewardDto } from './dto/reward.dto';
 
 /** Empty text → null (an optional field left blank in a form). */
@@ -9,7 +11,10 @@ const blankToNull = (v: string | null | undefined) => (v === undefined ? undefin
 /** A vendor's reward catalogue. Rewards are archived, never deleted. */
 @Injectable()
 export class RewardsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   /** Active first, then archived; each in display order. */
   async list(vendorId: string): Promise<rewards[]> {
@@ -38,8 +43,7 @@ export class RewardsService {
 
   /** vendorId (vendor dashboard): the reward must belong to that vendor, else reward_not_found. */
   async update(id: string, dto: UpdateRewardDto, vendorId?: string): Promise<rewards> {
-    const reward = await this.prisma.rewards.findUnique({ where: { id } });
-    if (!reward || (vendorId && reward.vendor_id !== vendorId)) throw new NotFoundException({ code: 'reward_not_found' });
+    await this.get(id, vendorId);
     return this.prisma.rewards.update({
       where: { id },
       data: {
@@ -52,6 +56,43 @@ export class RewardsService {
         status: dto.status,
       },
     });
+  }
+
+  /**
+   * Upload or replace the reward's photo (bucket "vendors", <vendorId>/rewards/<uuid>.webp).
+   * New file first, then the row, then the old file is deleted.
+   */
+  async setImage(id: string, file: Buffer, vendorId?: string): Promise<rewards> {
+    const reward = await this.get(id, vendorId);
+    const webp = await toWebp(file, 'reward');
+    const path = `${reward.vendor_id}/rewards/${newImageName()}`;
+    await this.storage.upload(BUCKETS.vendors, path, webp, IMAGE_CONTENT_TYPE);
+    let updated: rewards;
+    try {
+      updated = await this.prisma.rewards.update({
+        where: { id },
+        data: { image_path: path, image_url: this.storage.publicUrl(BUCKETS.vendors, path) },
+      });
+    } catch (err) {
+      await this.storage.removeQuietly(BUCKETS.vendors, [path]);
+      throw err;
+    }
+    if (reward.image_path) await this.storage.removeQuietly(BUCKETS.vendors, [reward.image_path]);
+    return updated;
+  }
+
+  /** Remove the photo: the file is deleted from Storage, then the link is cleared. */
+  async removeImage(id: string, vendorId?: string): Promise<rewards> {
+    const reward = await this.get(id, vendorId);
+    if (reward.image_path) await this.storage.remove(BUCKETS.vendors, [reward.image_path]);
+    return this.prisma.rewards.update({ where: { id }, data: { image_path: null, image_url: null } });
+  }
+
+  /** vendorId set: the reward must belong to that vendor (other vendors' rewards: not found). */
+  private async get(id: string, vendorId?: string): Promise<rewards> {
+    const reward = await this.prisma.rewards.findUnique({ where: { id } });
+    if (!reward || (vendorId && reward.vendor_id !== vendorId)) throw new NotFoundException({ code: 'reward_not_found' });
+    return reward;
   }
 
   private async assertVendor(vendorId: string) {

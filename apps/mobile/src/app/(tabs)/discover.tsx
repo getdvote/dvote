@@ -8,7 +8,7 @@ import Search01Icon from '@hugeicons/core-free-icons/Search01Icon';
 import Tag01Icon from '@hugeicons/core-free-icons/Tag01Icon';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { DvoteLogo } from '../../components/DvoteLogo';
@@ -19,6 +19,7 @@ import { useI18n } from '../../i18n';
 import { api, ApiError, type VendorListItem } from '../../lib/api';
 import { useSession } from '../../lib/session';
 import { squircle, TAB_BAR_SPACE, theme, vendorColors } from '../../lib/theme';
+import { useLiveRefresh } from '../../lib/live';
 
 /** "10.00" → "10" */
 const amount = (v: string) => (v.endsWith('.00') ? v.slice(0, -3) : v);
@@ -62,11 +63,7 @@ export default function Explore() {
   }, [search, load]);
 
   // Fresh balances when coming back to the tab (points may have been added).
-  useFocusEffect(
-    useCallback(() => {
-      void load(current.current);
-    }, [load]),
-  );
+  useLiveRefresh(useCallback(() => load(current.current), [load]));
 
   return (
     <Screen>

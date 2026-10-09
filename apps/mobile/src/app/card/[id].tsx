@@ -2,7 +2,7 @@ import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import Clock01Icon from '@hugeicons/core-free-icons/Clock01Icon';
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { EventSheet, eventColors, eventIcon, eventTitle } from '../../components/EventSheet';
@@ -16,6 +16,7 @@ import { localized, t as translate, useI18n } from '../../i18n';
 import { showDate } from '../../lib/dates';
 import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
+import { useLiveRefresh } from '../../lib/live';
 
 /**
  * Card details: the card, the shop that issued it (opens the shop page), the shop's first
@@ -36,7 +37,7 @@ export default function CardDetails() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
-  // how many events are shown, so a reload on focus keeps the pages already opened
+  // how many events are shown, so a live reload keeps the pages already opened
   const shown = useRef(HISTORY_PAGE);
   // the history entry in the details sheet; `openEvent` drops on close, `sheetEvent` after the slide-out
   const [openEvent, setOpenEvent] = useState<CardEvent | null>(null);
@@ -84,11 +85,7 @@ export default function CardDetails() {
   };
 
   // Reload when shown again (points may have been added at the counter).
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useLiveRefresh(load);
 
   const loading = !card && !error;
 
