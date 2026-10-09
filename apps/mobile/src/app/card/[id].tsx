@@ -5,13 +5,13 @@ import Clock01Icon from '@hugeicons/core-free-icons/Clock01Icon';
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { CAROUSEL_LIMIT, RewardCards } from '../../components/RewardCards';
 import { Text } from '../../components/Text';
-import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
+import { EmptySection, ErrorBox, PageHeader, PillButton, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent, type VendorPage } from '../../lib/api';
 import { localized, t as translate, useI18n } from '../../i18n';
 import { showDate } from '../../lib/dates';
@@ -21,13 +21,24 @@ import { theme, vendorColors, squircle } from '../../lib/theme';
 /**
  * Card details: the card, the shop that issued it (opens the shop page), the shop's first
  * rewards as a horizontal carousel with "View all" (from GET /api/app/vendors/{id}) and the history. The title is fixed ("Card details") so it doesn't change while data loads.
+ *
+ * History shows HISTORY_PAGE events; "More" loads the next HISTORY_PAGE older ones.
  */
+const HISTORY_PAGE = 5;
+/** The API's max `limit`. */
+const HISTORY_MAX = 100;
+
 export default function CardDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { handleAuthError } = useSession();
   const { t } = useI18n();
   const [card, setCard] = useState<Card | null>(null);
   const [events, setEvents] = useState<CardEvent[] | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  // how many events are shown, so a reload on focus keeps the pages already opened
+  const shown = useRef(HISTORY_PAGE);
   const [rewards, setRewards] = useState<VendorPage['rewards'] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,10 +46,14 @@ export default function CardDetails() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [cards, history] = await Promise.all([api.cards(), api.cardEvents(id)]);
+      // ask for one extra event: if it comes back there is more to load
+      const count = Math.min(shown.current, HISTORY_MAX - 1);
+      const [cards, history] = await Promise.all([api.cards(), api.cardEvents(id, count + 1)]);
       const found = cards.find((c) => c.id === id) ?? null;
       setCard(found);
-      setEvents(history);
+      setEvents(history.slice(0, count));
+      setHasMore(history.length > count);
+      setMoreError(null);
       // every reward of the shop (the card itself only knows the next one)
       if (found) setRewards((await api.vendor(found.vendor.id)).rewards);
     } catch (err) {
@@ -46,6 +61,25 @@ export default function CardDetails() {
       setError(err instanceof ApiError ? err.message : t('card.couldNotLoad'));
     }
   }, [id, handleAuthError, t]);
+
+  const loadMore = async () => {
+    if (!events?.length || loadingMore) return;
+    setLoadingMore(true);
+    setMoreError(null);
+    try {
+      const page = await api.cardEvents(id, HISTORY_PAGE + 1, events[events.length - 1].id);
+      const next = [...events, ...page.slice(0, HISTORY_PAGE)];
+      shown.current = next.length;
+      setEvents(next);
+      setHasMore(page.length > HISTORY_PAGE);
+    } catch (err) {
+      if (!(await handleAuthError(err))) {
+        setMoreError(err instanceof ApiError ? err.message : t('card.couldNotLoadMore'));
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Reload when shown again (points may have been added at the counter).
   useFocusEffect(
@@ -105,6 +139,12 @@ export default function CardDetails() {
                     last={i === events.length - 1}
                   />
                 ))}
+                {hasMore ? (
+                  <View style={styles.more}>
+                    <ErrorBox message={moreError} />
+                    <PillButton title={t('card.more')} loading={loadingMore} onPress={() => void loadMore()} />
+                  </View>
+                ) : null}
               </View>
             )}
           </>
@@ -287,4 +327,5 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16, fontWeight: '500', color: theme.text },
   rowDetail: { fontSize: 13, color: theme.muted, marginTop: 2 },
   delta: { fontSize: 17, fontWeight: '700' },
+  more: { gap: 12, marginTop: 16 },
 });

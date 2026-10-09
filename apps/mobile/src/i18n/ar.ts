@@ -162,6 +162,8 @@ export const ar: Dictionary = {
     rewards: 'المكافآت',
     allRewards: 'كل المكافآت',
     history: 'السجل',
+    more: 'المزيد',
+    couldNotLoadMore: 'تعذّر تحميل المزيد من السجل.',
     noActivity: 'لا يوجد نشاط بعد',
     noActivityText: 'النقاط التي تجمعها والمكافآت التي تستبدلها في هذا المتجر ستظهر هنا.',
     couldNotLoad: 'تعذّر تحميل هذه البطاقة.',

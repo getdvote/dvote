@@ -61,6 +61,7 @@ export class CardsService {
     userId: string,
     cardId: string,
     limit = 50,
+    before?: string,
   ): Promise<CardEventResponseDto[]> {
     const card = await this.prisma.cards.findFirst({
       where: { id: cardId, user_id: userId },
@@ -74,7 +75,10 @@ export class CardsService {
         branches: { select: { name: true } },
         rewards: { select: { name: true, name_ar: true } },
       },
-      orderBy: { created_at: 'desc' },
+      // id breaks ties so pages never skip or repeat events with the same timestamp
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      // an unknown or other card's `before` id just returns an empty page
+      ...(before ? { cursor: { id: before }, skip: 1 } : {}),
       take: limit,
     });
     return events.map((e) => ({

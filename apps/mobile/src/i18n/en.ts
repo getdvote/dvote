@@ -128,6 +128,8 @@ export const en = {
     rewards: 'Rewards',
     allRewards: 'All rewards',
     history: 'History',
+    more: 'More',
+    couldNotLoadMore: 'Could not load more history.',
     noActivity: 'No activity yet',
     noActivityText: 'Points you earn and rewards you redeem at this shop will show here.',
     couldNotLoad: 'Could not load this card.',

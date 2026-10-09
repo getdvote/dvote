@@ -115,7 +115,9 @@ export const api = {
   updateMe: (body: { name?: string; phone?: string; gender?: Gender | null; birthDate?: string | null }) =>
     call<Me>('PATCH', '/api/app/users/me', body),
   cards: () => call<Card[]>('GET', '/api/app/cards'),
-  cardEvents: (cardId: string) => call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=100`),
+  /** A card's history, newest first. `before`: the last event id already shown (next page). */
+  cardEvents: (cardId: string, limit: number, before?: string) =>
+    call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=${limit}${before ? `&before=${before}` : ''}`),
   /** Collect QR: works at any shop (the staff who scan it decide the shop). Cancels my older one. */
   newCollectQr: () => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'collect' }),
   qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
