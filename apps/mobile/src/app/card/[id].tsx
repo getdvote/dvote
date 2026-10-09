@@ -1,17 +1,16 @@
-import Add01Icon from '@hugeicons/core-free-icons/Add01Icon';
-import ArrowDataTransferVerticalIcon from '@hugeicons/core-free-icons/ArrowDataTransferVerticalIcon';
 import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import Clock01Icon from '@hugeicons/core-free-icons/Clock01Icon';
 import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { EventSheet, eventColors, eventIcon, eventTitle } from '../../components/EventSheet';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { CAROUSEL_LIMIT, RewardCards } from '../../components/RewardCards';
 import { Text } from '../../components/Text';
-import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
+import { EmptySection, ErrorBox, PageHeader, PillButton, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent, type VendorPage } from '../../lib/api';
 import { localized, t as translate, useI18n } from '../../i18n';
 import { showDate } from '../../lib/dates';
@@ -22,13 +21,27 @@ import { useLiveRefresh } from '../../lib/live';
 /**
  * Card details: the card, the shop that issued it (opens the shop page), the shop's first
  * rewards as a horizontal carousel with "View all" (from GET /api/app/vendors/{id}) and the history. The title is fixed ("Card details") so it doesn't change while data loads.
+ *
+ * History shows HISTORY_PAGE events; "More" loads the next HISTORY_PAGE older ones.
  */
+const HISTORY_PAGE = 5;
+/** The API's max `limit`. */
+const HISTORY_MAX = 100;
+
 export default function CardDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { handleAuthError } = useSession();
   const { t } = useI18n();
   const [card, setCard] = useState<Card | null>(null);
   const [events, setEvents] = useState<CardEvent[] | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  // how many events are shown, so a live reload keeps the pages already opened
+  const shown = useRef(HISTORY_PAGE);
+  // the history entry in the details sheet; `openEvent` drops on close, `sheetEvent` after the slide-out
+  const [openEvent, setOpenEvent] = useState<CardEvent | null>(null);
+  const [sheetEvent, setSheetEvent] = useState<CardEvent | null>(null);
   const [rewards, setRewards] = useState<VendorPage['rewards'] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,10 +49,14 @@ export default function CardDetails() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [cards, history] = await Promise.all([api.cards(), api.cardEvents(id)]);
+      // ask for one extra event: if it comes back there is more to load
+      const count = Math.min(shown.current, HISTORY_MAX - 1);
+      const [cards, history] = await Promise.all([api.cards(), api.cardEvents(id, count + 1)]);
       const found = cards.find((c) => c.id === id) ?? null;
       setCard(found);
-      setEvents(history);
+      setEvents(history.slice(0, count));
+      setHasMore(history.length > count);
+      setMoreError(null);
       // every reward of the shop (the card itself only knows the next one)
       if (found) setRewards((await api.vendor(found.vendor.id)).rewards);
     } catch (err) {
@@ -47,6 +64,25 @@ export default function CardDetails() {
       setError(err instanceof ApiError ? err.message : t('card.couldNotLoad'));
     }
   }, [id, handleAuthError, t]);
+
+  const loadMore = async () => {
+    if (!events?.length || loadingMore) return;
+    setLoadingMore(true);
+    setMoreError(null);
+    try {
+      const page = await api.cardEvents(id, HISTORY_PAGE + 1, events[events.length - 1].id);
+      const next = [...events, ...page.slice(0, HISTORY_PAGE)];
+      shown.current = next.length;
+      setEvents(next);
+      setHasMore(page.length > HISTORY_PAGE);
+    } catch (err) {
+      if (!(await handleAuthError(err))) {
+        setMoreError(err instanceof ApiError ? err.message : t('card.couldNotLoadMore'));
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Reload when shown again (points may have been added at the counter).
   useLiveRefresh(load);
@@ -100,13 +136,30 @@ export default function CardDetails() {
                     currency={card.vendor.currency}
                     first={i === 0}
                     last={i === events.length - 1}
+                    onPress={() => {
+                      setSheetEvent(e);
+                      setOpenEvent(e);
+                    }}
                   />
                 ))}
+                {hasMore ? (
+                  <View style={styles.more}>
+                    <ErrorBox message={moreError} />
+                    <PillButton title={t('card.more')} loading={loadingMore} onPress={() => void loadMore()} />
+                  </View>
+                ) : null}
               </View>
             )}
           </>
         ) : null}
       </ScrollView>
+      <EventSheet
+        event={sheetEvent}
+        currency={card?.vendor.currency ?? ''}
+        visible={openEvent !== null}
+        onClose={() => setOpenEvent(null)}
+        onClosed={() => setSheetEvent(null)}
+      />
     </Screen>
   );
 }
@@ -203,14 +256,23 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
   );
 }
 
-function EventRow({ event, currency, first, last }: { event: CardEvent; currency: string; first: boolean; last: boolean }) {
+/** One history entry; tap it for the details sheet. */
+function EventRow({
+  event,
+  currency,
+  first,
+  last,
+  onPress,
+}: {
+  event: CardEvent;
+  currency: string;
+  first: boolean;
+  last: boolean;
+  onPress: () => void;
+}) {
   const positive = event.delta > 0;
-  const title =
-    event.type === 'earn'
-      ? translate('card.earned')
-      : event.type === 'redeem'
-        ? (localized(event.rewardName, event.rewardNameAr) ?? translate('card.redeemed'))
-        : translate('card.correction');
+  const colors = eventColors(event);
+  const title = eventTitle(event);
   const detail = [
     event.purchaseAmount ? translate('card.bill', { amount: event.purchaseAmount.replace(/\.00$/, ''), currency }) : null,
     event.branchName,
@@ -219,13 +281,21 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
     .filter(Boolean)
     .join(' · ');
   return (
-    <View style={[styles.row, first && styles.rowFirst, last && styles.rowLast, !last && styles.rowBorder]}>
-      <View style={[styles.icon, { backgroundColor: positive ? '#E6F7EC' : '#FFF1E6' }]}>
-        <Icon
-          icon={event.type === 'earn' ? Add01Icon : event.type === 'redeem' ? GiftIcon : ArrowDataTransferVerticalIcon}
-          size={18}
-          color={positive ? theme.success : '#E8820C'}
-        />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${positive ? '+' : ''}${event.delta}. ${detail}`}
+      accessibilityHint={translate('card.detailsA11y')}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        first && styles.rowFirst,
+        last && styles.rowLast,
+        !last && styles.rowBorder,
+        pressed && styles.rowPressed,
+      ]}
+    >
+      <View style={[styles.icon, { backgroundColor: colors.bg }]}>
+        <Icon icon={eventIcon(event)} size={18} color={colors.fg} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -237,7 +307,8 @@ function EventRow({ event, currency, first, last }: { event: CardEvent; currency
         {positive ? '+' : ''}
         {event.delta}
       </Text>
-    </View>
+      <Icon icon={ArrowRight01Icon} size={16} color={theme.placeholder} mirror />
+    </Pressable>
   );
 }
 
@@ -275,8 +346,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 20,
   },
+  rowPressed: { backgroundColor: theme.fill },
   rowFirst: { ...squircle, borderTopLeftRadius: theme.radius, borderTopRightRadius: theme.radius },
   rowLast: { ...squircle, borderBottomLeftRadius: theme.radius, borderBottomRightRadius: theme.radius },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator },
@@ -284,4 +356,5 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16, fontWeight: '500', color: theme.text },
   rowDetail: { fontSize: 13, color: theme.muted, marginTop: 2 },
   delta: { fontSize: 17, fontWeight: '700' },
+  more: { gap: 12, marginTop: 16 },
 });

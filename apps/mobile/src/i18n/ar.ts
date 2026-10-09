@@ -124,14 +124,6 @@ export const ar: Dictionary = {
     emptyListText: 'اعرض رمز QR في أي مقهى في dvote. ستظهر بطاقتك لهذا المقهى هنا مع أول نقاطك.',
     couldNotLoad: 'تعذّر تحميل بطاقاتك.',
     cardA11y: '{name}: {balance}',
-    toNext: {
-      zero: '{count} نقطة على {reward}',
-      one: 'نقطة واحدة على {reward}',
-      two: 'نقطتان على {reward}',
-      few: '{count} نقاط على {reward}',
-      many: '{count} نقطة على {reward}',
-      other: '{count} نقطة على {reward}',
-    },
     ready: {
       zero: 'لا توجد مكافآت جاهزة',
       one: 'مكافأة واحدة جاهزة للاستبدال',
@@ -139,14 +131,6 @@ export const ar: Dictionary = {
       few: '{count} مكافآت جاهزة للاستبدال',
       many: '{count} مكافأة جاهزة للاستبدال',
       other: '{count} مكافأة جاهزة للاستبدال',
-    },
-    lifetime: {
-      zero: 'إجمالي ما جمعته: {count} نقطة',
-      one: 'إجمالي ما جمعته: نقطة واحدة',
-      two: 'إجمالي ما جمعته: نقطتان',
-      few: 'إجمالي ما جمعته: {count} نقاط',
-      many: 'إجمالي ما جمعته: {count} نقطة',
-      other: 'إجمالي ما جمعته: {count} نقطة',
     },
     stackA11y: '{count} بطاقات. اعرضها كلها',
     forYou: 'لك',
@@ -162,6 +146,8 @@ export const ar: Dictionary = {
     rewards: 'المكافآت',
     allRewards: 'كل المكافآت',
     history: 'السجل',
+    more: 'المزيد',
+    couldNotLoadMore: 'تعذّر تحميل المزيد من السجل.',
     noActivity: 'لا يوجد نشاط بعد',
     noActivityText: 'النقاط التي تجمعها والمكافآت التي تستبدلها في هذا المتجر ستظهر هنا.',
     couldNotLoad: 'تعذّر تحميل هذه البطاقة.',
@@ -169,6 +155,13 @@ export const ar: Dictionary = {
     redeemed: 'مكافأة مستبدلة',
     correction: 'تصحيح من dvote',
     bill: 'فاتورة {amount} {currency}',
+    details: 'تفاصيل النشاط',
+    when: 'التاريخ والوقت',
+    billAmount: 'قيمة الفاتورة',
+    branch: 'الفرع',
+    am: 'ص',
+    pm: 'م',
+    detailsA11y: 'يعرض التفاصيل',
   },
 
   maps: {
@@ -198,6 +191,7 @@ export const ar: Dictionary = {
     title: 'استكشف',
     subtitle: 'كل المقاهي على dvote',
     search: 'ابحث عن مقهى',
+    allShops: 'كل المتاجر',
     clearSearch: 'مسح البحث',
     rewards: {
       zero: 'لا توجد مكافآت',
@@ -224,6 +218,8 @@ export const ar: Dictionary = {
       many: '{count} نقطة',
       other: '{count} نقطة',
     },
+    yourCard: 'بطاقتك',
+    category: 'الفئة',
     shopA11y: '{name}. افتح المتجر',
     emptyTitle: 'لا توجد مقاهٍ بعد',
     emptyText: 'ستظهر مقاهي dvote هنا عند انضمامها.',
@@ -341,11 +337,10 @@ export const ar: Dictionary = {
   },
 
   qr: {
-    collect: 'اجمع النقاط',
+    title: 'هوية dvote',
+    regenerate: 'أعد إنشاء رمز QR',
     pointsAdded: 'تمت إضافة النقاط',
     expiresIn: 'تنتهي صلاحيته خلال {time}',
-    expired: 'انتهت الصلاحية',
-    showAtCounter: 'اعرض هذا الرمز عند الكاشير',
     worksAnywhere:
       'يعمل في أي مقهى في dvote: يمسحه الموظف ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
     reconnecting: 'جارٍ إعادة الاتصال…',
@@ -359,9 +354,7 @@ export const ar: Dictionary = {
     replacedTitle: 'تم استبدال رمز QR',
     replacedText: 'تم فتح رمز QR أحدث، لذلك توقف هذا الرمز عن العمل.',
     errorTitle: 'حدث خطأ ما',
-    newCode: 'احصل على رمز QR جديد',
     couldNotCreate: 'تعذّر إنشاء رمز QR الخاص بك.',
-    collectingFrom: 'جمع النقاط من {vendor}',
     atVendor: 'هذا الرمز يعمل في {vendor} فقط: يمسحه الموظف ويُدخل قيمة فاتورتك، وتظهر نقاطك هنا فورًا.',
   },
 

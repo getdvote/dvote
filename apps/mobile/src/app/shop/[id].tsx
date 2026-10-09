@@ -88,7 +88,7 @@ export default function Shop() {
               onPress={() => open([logoUrl])}
               style={({ pressed }) => pressed && { opacity: 0.85 }}
             >
-              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="cover" />
             </Pressable>
           ) : (
             <View style={[styles.logo, { backgroundColor: colors[0] }]}>
@@ -257,7 +257,7 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
   );
 }
 
-const LOGO_SIZE = 88;
+const LOGO_SIZE = 120;
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
     width: LOGO_SIZE,
     height: LOGO_SIZE,
     borderRadius: LOGO_SIZE / 2,
+    // a thin ring in the page colour separates the logo from the banner
     borderWidth: 4,
     borderColor: theme.background,
     alignItems: 'center',
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: theme.surface,
   },
-  logoInitial: { fontSize: 32, fontWeight: '700', color: '#fff' },
+  logoInitial: { fontSize: 44, fontWeight: '700', color: '#fff' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   action: { flex: 1 },
   name: { fontSize: 24, fontWeight: '700', color: theme.text, textAlign: 'center' },

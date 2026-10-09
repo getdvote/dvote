@@ -31,10 +31,10 @@ export const en = {
     backToLogin: 'Back to log in',
     showMyQr: 'Show my QR code',
     somethingWrong: 'Something went wrong. Please try again.',
-    /** "95 pts" */
-    pts: { one: '{count} pt', other: '{count} pts' },
+    /** "95 points" */
+    pts: { one: '{count} point', other: '{count} points' },
     /** the unit alone, after a big number */
-    ptsUnit: { one: 'pt', other: 'pts' },
+    ptsUnit: { one: 'point', other: 'points' },
     /** "9 points" */
     points: { one: '{count} point', other: '{count} points' },
     /** "+9 points" */
@@ -111,9 +111,7 @@ export const en = {
       'Show your QR code at a dvote coffee shop. Your card for that shop appears here with your first points.',
     couldNotLoad: 'Could not load your cards.',
     cardA11y: '{name}: {balance}',
-    toNext: { one: '{count} pt to {reward}', other: '{count} pts to {reward}' },
     ready: { one: '{count} reward ready to redeem', other: '{count} rewards ready to redeem' },
-    lifetime: { one: 'Lifetime {count} pt', other: 'Lifetime {count} pts' },
     stackA11y: '{count} cards. Show all',
     forYou: 'For you',
     forYouEmpty: 'Offers coming soon',
@@ -128,6 +126,8 @@ export const en = {
     rewards: 'Rewards',
     allRewards: 'All rewards',
     history: 'History',
+    more: 'More',
+    couldNotLoadMore: 'Could not load more history.',
     noActivity: 'No activity yet',
     noActivityText: 'Points you earn and rewards you redeem at this shop will show here.',
     couldNotLoad: 'Could not load this card.',
@@ -135,6 +135,13 @@ export const en = {
     redeemed: 'Reward redeemed',
     correction: 'Correction by dvote',
     bill: 'Bill {amount} {currency}',
+    details: 'Activity details',
+    when: 'Date & time',
+    billAmount: 'Bill amount',
+    branch: 'Branch',
+    am: 'AM',
+    pm: 'PM',
+    detailsA11y: 'Shows the details',
   },
 
   maps: {
@@ -146,7 +153,7 @@ export const en = {
     none: 'No rewards yet',
     noneText: "This shop's rewards will show here.",
     enough: 'You have enough points',
-    toGo: { one: '{count} pt to go', other: '{count} pts to go' },
+    toGo: { one: '{count} point to go', other: '{count} points to go' },
     details: 'Reward details',
     required: { one: '{count} point required', other: '{count} points required' },
     redeem: 'Redeem',
@@ -158,10 +165,13 @@ export const en = {
     subtitle: 'Every coffee shop on dvote',
     search: 'Search coffee shops',
     clearSearch: 'Clear search',
+    allShops: 'All shops',
     rewards: { one: '{count} reward', other: '{count} rewards' },
     branches: { one: '{count} branch', other: '{count} branches' },
     noRule: 'Points rule coming soon',
-    myPoints: { one: '{count} pt', other: '{count} pts' },
+    myPoints: { one: '{count} point', other: '{count} points' },
+    yourCard: 'Your card',
+    category: 'Category',
     shopA11y: '{name}. Open shop',
     emptyTitle: 'No coffee shops yet',
     emptyText: 'dvote coffee shops will show here as they join.',
@@ -279,11 +289,10 @@ export const en = {
   },
 
   qr: {
-    collect: 'Collect points',
+    title: 'Dvote ID',
+    regenerate: 'Regenerate my QR code',
     pointsAdded: 'Points added',
     expiresIn: 'Expires in {time}',
-    expired: 'Expired',
-    showAtCounter: 'Show this code at the counter',
     worksAnywhere:
       'Works at any dvote coffee shop: the staff scan it and enter your bill, and your points appear here straight away.',
     reconnecting: 'Reconnecting…',
@@ -297,15 +306,13 @@ export const en = {
     replacedTitle: 'QR code replaced',
     replacedText: 'A newer QR code was opened, so this one stopped working.',
     errorTitle: 'Something went wrong',
-    newCode: 'Get a new QR code',
     couldNotCreate: 'Could not create your QR code.',
-    collectingFrom: 'Collecting points from {vendor}',
     atVendor: 'This code works only at {vendor}: their staff scan it and enter your bill, and your points appear here straight away.',
   },
 
   shop: {
     fallbackName: 'Shop',
-    youHave: { one: 'You have {count} pt here', other: 'You have {count} pts here' },
+    youHave: { one: 'You have {count} point here', other: 'You have {count} points here' },
     logoA11y: '{name} logo. Open full screen',
     earnTitle: 'How you earn points',
     rewards: 'Rewards',

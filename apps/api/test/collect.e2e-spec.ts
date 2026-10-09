@@ -308,6 +308,26 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
       await ledgerMatches(card!.id);
     });
 
+    it('pages the history with limit and before', async () => {
+      const card = await cardOf('karim', ids.vendorA);
+      const url = `/api/app/cards/${card!.id}/events`;
+      const first = await as('karim', 'get', `${url}?limit=1`).expect(200);
+      expect(first.body).toEqual([expect.objectContaining({ delta: 25 })]);
+      const second = await as(
+        'karim',
+        'get',
+        `${url}?limit=1&before=${first.body[0].id}`,
+      ).expect(200);
+      expect(second.body).toEqual([expect.objectContaining({ delta: 9 })]);
+      const end = await as(
+        'karim',
+        'get',
+        `${url}?limit=1&before=${second.body[0].id}`,
+      ).expect(200);
+      expect(end.body).toEqual([]);
+      await as('karim', 'get', `${url}?before=nope`).expect(400);
+    });
+
     it('a new rule version applies only to later purchases', async () => {
       await prisma.$transaction([
         prisma.point_rules.update({

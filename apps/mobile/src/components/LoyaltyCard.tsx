@@ -2,20 +2,15 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { localized, t } from '../i18n';
+import { t } from '../i18n';
 import type { Card } from '../lib/api';
 import { onCardColor, vendorColors, squircle } from '../lib/theme';
 import { DvoteLogo } from './DvoteLogo';
 
-/**
- * One vendor card (cards design): the vendor's colour, logo, points balance and progress
- * to the next reward.
- */
+/** One vendor card (cards design): the vendor's colour, logo and points balance. */
 export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => void }) {
   const colors = vendorColors(card.vendor.id);
   const ink = onCardColor(colors);
-  const next = card.nextReward;
-  const progress = next ? Math.min(1, card.balance / next.pointsCost) : 1;
 
   return (
     <Pressable
@@ -43,29 +38,13 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
           </Text>
         </View>
 
-        <View>
-          <Text style={[styles.balance, { color: ink }]}>
-            {card.balance.toLocaleString()}
-            <Text style={styles.pts}> {t('common.ptsUnit', { count: card.balance })}</Text>
-          </Text>
-          <View style={[styles.track, { backgroundColor: ink === '#FFFFFF' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.12)' }]}>
-            <View style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: ink }]} />
-          </View>
-          <Text style={[styles.caption, { color: ink }]} numberOfLines={1}>
-            {rewardCaption(card)}
-          </Text>
-        </View>
+        <Text style={[styles.balance, { color: ink }]}>
+          {card.balance.toLocaleString()}
+          <Text style={styles.pts}> {t('common.ptsUnit', { count: card.balance })}</Text>
+        </Text>
       </LinearGradient>
     </Pressable>
   );
-}
-
-/** Progress line shown under a card's balance (also used by the My cards list). */
-export function rewardCaption(card: Card): string {
-  const next = card.nextReward;
-  if (next) return t('cards.toNext', { count: next.pointsNeeded, reward: localized(next.name, next.nameAr) });
-  if (card.affordableRewards > 0) return t('cards.ready', { count: card.affordableRewards });
-  return t('cards.lifetime', { count: card.lifetimePoints });
 }
 
 const styles = StyleSheet.create({
@@ -74,7 +53,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 24,
     padding: 20,
-    justifyContent: 'space-between',
     overflow: 'hidden',
   },
   pattern: { position: 'absolute', right: -40, top: -10 },
@@ -83,9 +61,8 @@ const styles = StyleSheet.create({
   logoFallback: { backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   logoInitial: { fontSize: 18, fontWeight: '800' },
   vendor: { flex: 1, fontSize: 17, fontWeight: '700' },
-  balance: { fontSize: 34, fontWeight: '800', letterSpacing: 0.5 },
+  // Sits in the card's upper part so it stays visible when the open stack overlaps the
+  // bottom of every card but the front one (CardStack's STEP).
+  balance: { fontSize: 34, fontWeight: '800', letterSpacing: 0.5, marginTop: 36 },
   pts: { fontSize: 17, fontWeight: '600' },
-  track: { ...squircle, height: 6, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
-  fill: { ...squircle, height: '100%', borderRadius: 3 },
-  caption: { fontSize: 13, fontWeight: '600', marginTop: 8, opacity: 0.95 },
 });
