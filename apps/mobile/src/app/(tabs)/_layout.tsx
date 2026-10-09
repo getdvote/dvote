@@ -21,8 +21,11 @@ const ICONS: Record<string, { icon: AppIcon; label: TKey }> = {
 };
 
 /** Floating pill with 3 tabs + a separate round QR button (side-menu design). */
-function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+function FloatingTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  // A screen can hide the bar (My cards does while its card stack is open).
+  const style = descriptors[state.routes[state.index].key]?.options.tabBarStyle;
+  if ((StyleSheet.flatten(style) as { display?: string } | undefined)?.display === 'none') return null;
   const { t, rtl } = useI18n();
   return (
     <View

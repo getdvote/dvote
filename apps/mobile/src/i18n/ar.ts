@@ -148,6 +148,10 @@ export const ar: Dictionary = {
       many: 'إجمالي ما جمعته: {count} نقطة',
       other: 'إجمالي ما جمعته: {count} نقطة',
     },
+    stackA11y: '{count} بطاقات. اعرضها كلها',
+    forYou: 'لك',
+    forYouEmpty: 'العروض قريبًا',
+    forYouEmptyText: 'ستظهر هنا اختيارات وعروض من المقاهي التي تحبها.',
   },
 
   card: {
