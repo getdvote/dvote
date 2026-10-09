@@ -9,6 +9,7 @@ import {
 import { Prisma, type qr_codes } from '../generated/prisma/client.js';
 import type { StaffContext } from '../auth/staff-auth.guard';
 import { fromMinor, pointsFor, toMinor } from '../points/points';
+import { LiveService } from '../live/live.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { tokenHashOf } from '../qr-codes/qr-code.token';
 import { CollectScanDto } from './dto/scan.dto';
@@ -33,7 +34,10 @@ type EventWithNames = Prisma.point_eventsGetPayload<{
  */
 @Injectable()
 export class ScansService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly live: LiveService,
+  ) {}
 
   /** What the scanned QR is and whether this staff member can use it. Changes nothing. */
   async preview(
@@ -41,16 +45,24 @@ export class ScansService {
     code: string,
   ): Promise<PreviewScanResponseDto> {
     const qr = await this.findQr(code);
-    const user = await this.prisma.users.findUniqueOrThrow({
-      where: { id: qr.user_id },
-      select: { status: true },
-    });
+    const [user, rule] = await Promise.all([
+      this.prisma.users.findUniqueOrThrow({
+        where: { id: qr.user_id },
+        select: { status: true },
+      }),
+      this.prisma.point_rules.findFirst({
+        where: { vendor_id: ctx.vendorId, is_active: true },
+        select: { id: true },
+      }),
+    ]);
     // A master collect QR names no vendor (the scanning staff's vendor gets the points);
-    // a shop collect QR and a redeem QR only work at their own vendor.
+    // a shop collect QR and a redeem QR only work at their own vendor. A vendor without a
+    // points rule can't give points: say so before the staff type the bill.
     const reason =
       this.stateProblem(qr) ??
       (this.wrongVendor(qr, ctx) ? 'vendor_mismatch' : null) ??
-      (user.status !== 'active' ? 'user_blocked' : null);
+      (user.status !== 'active' ? 'user_blocked' : null) ??
+      (qr.purpose === 'collect' && !rule ? 'no_active_rule' : null);
     return {
       purpose: qr.purpose,
       usable: reason === null,
@@ -182,6 +194,7 @@ export class ScansService {
         });
         return created;
       });
+      this.live.cardsChanged(user.id); // the customer's cards update at once
       return toResponse(event);
     } catch (err) {
       if (

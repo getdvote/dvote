@@ -16,7 +16,7 @@ import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
  * by Supabase before it issues a token: keep "Confirm email" on). Never anonymous or phone.
  * Apple is postponed (needs the paid Apple Developer Program); add 'apple' here when enabled.
  */
-const CUSTOMER_PROVIDERS = new Set(['google', 'facebook', 'email']);
+export const CUSTOMER_PROVIDERS = new Set(['google', 'facebook', 'email']);
 
 export interface CustomerRequest extends Request {
   user: users;

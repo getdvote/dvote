@@ -376,6 +376,7 @@ export const en = {
     qr_not_found: 'This QR code was not found. Get a new one.',
     feedback_not_configured: "Feedback isn't available yet. Please try again later.",
     vendor_not_found: 'This shop is not on dvote right now.',
+    no_active_rule: "This shop hasn't set its points rule yet, so points can't be calculated here. Ask the shop to set it up with dvote.",
     unsupported_image: 'Choose a JPG, PNG or HEIC photo.',
     file_too_large: 'That photo is too big. Choose one under 10 MB.',
     storage_not_configured: "Photos can't be saved right now. Please try again later.",

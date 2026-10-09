@@ -543,10 +543,16 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
       expect(res.body.code).toBe('forbidden_branch');
     });
 
-    it('a vendor without a point rule → 409 no_active_rule', async () => {
+    it('a vendor without a point rule → 409 no_active_rule (told at preview, before the bill)', async () => {
       const { code } = await qr('karim');
+      const preview = await as('staffN1', 'post', '/api/vendor/scans/preview').send({ code }).expect(200);
+      expect(preview.body).toMatchObject({ usable: false, reason: 'no_active_rule' });
       const res = await collect('staffN1', { code, amount: 20 }).expect(409);
       expect(res.body.code).toBe('no_active_rule');
+
+      // The customer can't even open a shop QR for a shop without a rule.
+      const shopQr = await as('karim', 'post', '/api/app/qr-codes').send({ purpose: 'collect', vendorId: ids.vendorNoRule }).expect(409);
+      expect(shopQr.body.code).toBe('no_active_rule');
     });
   });
 

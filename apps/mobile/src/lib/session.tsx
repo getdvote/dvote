@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { api, ApiError, SIGN_OUT_CODES, type Me } from './api';
+import { startLive } from './live';
 import { supabase } from './supabase';
 
 interface SessionState {
@@ -73,6 +74,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
     return () => data.subscription.unsubscribe();
   }, [refreshMe]);
+
+  // Live updates from the dashboards while signed in (one connection per signed-in customer;
+  // a token refresh doesn't reconnect: the socket was authorised when it opened).
+  const userId = session?.user.id ?? null;
+  useEffect(() => (userId ? startLive() : undefined), [userId]);
 
   const handleAuthError = useCallback(
     async (err: unknown) => {
