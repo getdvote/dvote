@@ -69,7 +69,7 @@ export class VendorImagesController {
     branchId: { type: 'string', format: 'uuid', description: 'branch_photo only' },
   })
   @ApiCreatedResponse({ type: VendorImageResponseDto })
-  @ApiConflictResponse({ description: 'too_many_images (20 menu pages, 10 photos per branch)' })
+  @ApiConflictResponse({ description: 'too_many_images (20 menu pages, 3 photos per branch)' })
   create(
     @CurrentStaff() ctx: StaffContext,
     @Body() dto: CreateVendorImageDto,

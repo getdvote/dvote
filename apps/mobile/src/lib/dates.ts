@@ -28,11 +28,16 @@ export const showYmd = (s: string) => {
 export const showDate = (date: Date) =>
   `${date.getDate()} ${calendarNames().monthsShort[date.getMonth()]} ${date.getFullYear()}`;
 
+const twelveHour = (h: number, m: number) =>
+  `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? t('card.am') : t('card.pm')}`;
+
 /** A moment's time of day, e.g. "3:05 PM" / "3:05 م" (the phone's time zone). */
-export const showTime = (date: Date) => {
-  const h = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${h % 12 || 12}:${minutes} ${h < 12 ? t('card.am') : t('card.pm')}`;
+export const showTime = (date: Date) => twelveHour(date.getHours(), date.getMinutes());
+
+/** A wall-clock "HH:MM" (e.g. a branch's opening time) as "9:00 AM" / "9:00 ص". */
+export const showClock = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return twelveHour(h, m);
 };
 
 /** Same rules as the API. Returns what's wrong, or null when the birthday is fine. */

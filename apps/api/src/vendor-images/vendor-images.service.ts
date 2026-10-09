@@ -16,7 +16,7 @@ import { VendorImageResponseDto } from './dto/vendor-image-response.dto';
 
 /** Most images a vendor can have: menu pages per vendor, photos per branch. */
 export const MAX_MENU_IMAGES = 20;
-export const MAX_BRANCH_PHOTOS = 10;
+export const MAX_BRANCH_PHOTOS = 3;
 
 /**
  * Menu pages and branch photos in the public "vendors" bucket:

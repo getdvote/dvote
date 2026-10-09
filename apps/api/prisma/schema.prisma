@@ -20,6 +20,9 @@ model branches {
   status        branch_status   @default(active)
   created_at    DateTime        @default(now()) @db.Timestamptz(6)
   updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  opens_at      String?         @db.VarChar(5)
+  closes_at     String?         @db.VarChar(5)
+  city          String?         @db.VarChar(40)
   vendors       vendors         @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   fraud_flags   fraud_flags[]
   point_events  point_events[]

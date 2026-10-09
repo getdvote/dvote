@@ -81,14 +81,23 @@ CREATE TABLE branches (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id   uuid          NOT NULL REFERENCES vendors (id),
     name        varchar(120)  NOT NULL,
-    address     varchar(500),
+    address     varchar(500),                -- street line; the city is separate
+    city        varchar(40),                 -- key from the API's list of Egyptian cities (src/branches/cities.ts)
     lat         decimal(9,6)  CHECK (lat BETWEEN -90 AND 90),
     lng         decimal(9,6)  CHECK (lng BETWEEN -180 AND 180),
     timezone    varchar(64)   NOT NULL DEFAULT 'Africa/Cairo',
+    opens_at    varchar(5),                -- "HH:MM", the same every day, branch-local time
+    closes_at   varchar(5),                -- earlier than opens_at = open past midnight
     status      branch_status NOT NULL DEFAULT 'active',
     created_at  timestamptz   NOT NULL DEFAULT now(),
     updated_at  timestamptz   NOT NULL DEFAULT now(),
-    UNIQUE (id, vendor_id)          -- lets other tables prove "this branch belongs to this vendor"
+    UNIQUE (id, vendor_id),         -- lets other tables prove "this branch belongs to this vendor"
+    CONSTRAINT branches_hours_ck CHECK (
+        (opens_at IS NULL AND closes_at IS NULL)
+        OR (opens_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+            AND closes_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+            AND opens_at <> closes_at)
+    )
 );
 CREATE INDEX branches_vendor_idx ON branches (vendor_id);
 

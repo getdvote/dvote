@@ -8,6 +8,12 @@ function assertLocation(lat: unknown, lng: unknown) {
   if ((lat === null) !== (lng === null)) throw new BadRequestException({ code: 'location_incomplete' });
 }
 
+/** Opening hours are both times or neither (400 hours_incomplete), and not the same time (400 hours_invalid). */
+function assertHours(opens: string | null, closes: string | null) {
+  if ((opens === null) !== (closes === null)) throw new BadRequestException({ code: 'hours_incomplete' });
+  if (opens !== null && opens === closes) throw new BadRequestException({ code: 'hours_invalid' });
+}
+
 /** A vendor's branches. Never deleted: status=closed hides them and blocks their staff. */
 @Injectable()
 export class BranchesService {
@@ -24,14 +30,18 @@ export class BranchesService {
   async create(vendorId: string, dto: CreateBranchDto): Promise<branches> {
     await this.assertVendor(vendorId);
     assertLocation(dto.lat ?? null, dto.lng ?? null);
+    assertHours(dto.opensAt ?? null, dto.closesAt ?? null);
     return this.prisma.branches.create({
       data: {
         vendor_id: vendorId,
         name: dto.name.trim(),
         address: dto.address?.trim() || null,
+        city: dto.city ?? null,
         lat: dto.lat ?? null,
         lng: dto.lng ?? null,
         timezone: dto.timezone ?? undefined,
+        opens_at: dto.opensAt ?? null,
+        closes_at: dto.closesAt ?? null,
       },
     });
   }
@@ -41,14 +51,21 @@ export class BranchesService {
     const branch = await this.prisma.branches.findUnique({ where: { id } });
     if (!branch || (vendorId && branch.vendor_id !== vendorId)) throw new NotFoundException({ code: 'branch_not_found' });
     assertLocation(dto.lat === undefined ? branch.lat : dto.lat, dto.lng === undefined ? branch.lng : dto.lng);
+    assertHours(
+      dto.opensAt === undefined ? branch.opens_at : dto.opensAt,
+      dto.closesAt === undefined ? branch.closes_at : dto.closesAt,
+    );
     return this.prisma.branches.update({
       where: { id },
       data: {
         name: dto.name?.trim(),
         address: dto.address === undefined ? undefined : dto.address?.trim() || null,
+        city: dto.city,
         lat: dto.lat,
         lng: dto.lng,
         timezone: dto.timezone,
+        opens_at: dto.opensAt,
+        closes_at: dto.closesAt,
         status: dto.status,
       },
     });

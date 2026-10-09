@@ -65,11 +65,20 @@ export class VendorPageBranchDto {
   @ApiProperty({ type: String, nullable: true, example: '14 Victor Emmanuel St, Smouha, Alexandria' })
   address: string | null;
 
+  @ApiProperty({ type: String, nullable: true, example: 'alexandria', description: 'City key (the apps hold the names)' })
+  city: string | null;
+
   @ApiProperty({ type: Number, nullable: true, example: 31.2156 })
   lat: number | null;
 
   @ApiProperty({ type: Number, nullable: true, example: 29.9553 })
   lng: number | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '09:00', description: 'Opening time "HH:MM" (branch-local, every day); null = not set' })
+  opensAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '23:00', description: 'Earlier than opensAt = open past midnight' })
+  closesAt: string | null;
 
   @ApiProperty({ type: [VendorPageImageDto] })
   photos: VendorPageImageDto[];

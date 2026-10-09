@@ -1,0 +1,61 @@
+import { getLanguage, type Language } from '../i18n';
+
+/**
+ * Names of the cities a branch can be in (the API sends the key).
+ * Keep identical to apps/api/src/branches/cities.ts and apps/dashboard/src/lib/cities.ts.
+ */
+const CITIES: Record<string, { en: string; ar: string }> = {
+  cairo: { en: 'Cairo', ar: 'القاهرة' },
+  new_cairo: { en: 'New Cairo', ar: 'القاهرة الجديدة' },
+  helwan: { en: 'Helwan', ar: 'حلوان' },
+  new_capital: { en: 'New Administrative Capital', ar: 'العاصمة الإدارية الجديدة' },
+  madinaty: { en: 'Madinaty', ar: 'مدينتي' },
+  shorouk: { en: 'El Shorouk', ar: 'الشروق' },
+  obour: { en: 'El Obour', ar: 'العبور' },
+  giza: { en: 'Giza', ar: 'الجيزة' },
+  october_6: { en: '6th of October', ar: 'السادس من أكتوبر' },
+  sheikh_zayed: { en: 'Sheikh Zayed', ar: 'الشيخ زايد' },
+  alexandria: { en: 'Alexandria', ar: 'الإسكندرية' },
+  borg_el_arab: { en: 'Borg El Arab', ar: 'برج العرب' },
+  kafr_el_dawwar: { en: 'Kafr El Dawwar', ar: 'كفر الدوار' },
+  north_coast: { en: 'North Coast', ar: 'الساحل الشمالي' },
+  el_alamein: { en: 'El Alamein', ar: 'العلمين' },
+  marsa_matruh: { en: 'Marsa Matruh', ar: 'مرسى مطروح' },
+  siwa: { en: 'Siwa', ar: 'سيوة' },
+  shubra_el_kheima: { en: 'Shubra El Kheima', ar: 'شبرا الخيمة' },
+  banha: { en: 'Banha', ar: 'بنها' },
+  tanta: { en: 'Tanta', ar: 'طنطا' },
+  mahalla: { en: 'El Mahalla El Kubra', ar: 'المحلة الكبرى' },
+  mansoura: { en: 'Mansoura', ar: 'المنصورة' },
+  zagazig: { en: 'Zagazig', ar: 'الزقازيق' },
+  tenth_of_ramadan: { en: '10th of Ramadan', ar: 'العاشر من رمضان' },
+  damanhur: { en: 'Damanhur', ar: 'دمنهور' },
+  kafr_el_sheikh: { en: 'Kafr El Sheikh', ar: 'كفر الشيخ' },
+  desouk: { en: 'Desouk', ar: 'دسوق' },
+  damietta: { en: 'Damietta', ar: 'دمياط' },
+  shibin_el_kom: { en: 'Shibin El Kom', ar: 'شبين الكوم' },
+  port_said: { en: 'Port Said', ar: 'بورسعيد' },
+  ismailia: { en: 'Ismailia', ar: 'الإسماعيلية' },
+  suez: { en: 'Suez', ar: 'السويس' },
+  ain_sokhna: { en: 'Ain Sokhna', ar: 'العين السخنة' },
+  faiyum: { en: 'Faiyum', ar: 'الفيوم' },
+  beni_suef: { en: 'Beni Suef', ar: 'بني سويف' },
+  minya: { en: 'Minya', ar: 'المنيا' },
+  asyut: { en: 'Asyut', ar: 'أسيوط' },
+  sohag: { en: 'Sohag', ar: 'سوهاج' },
+  qena: { en: 'Qena', ar: 'قنا' },
+  luxor: { en: 'Luxor', ar: 'الأقصر' },
+  aswan: { en: 'Aswan', ar: 'أسوان' },
+  hurghada: { en: 'Hurghada', ar: 'الغردقة' },
+  el_gouna: { en: 'El Gouna', ar: 'الجونة' },
+  safaga: { en: 'Safaga', ar: 'سفاجا' },
+  marsa_alam: { en: 'Marsa Alam', ar: 'مرسى علم' },
+  sharm_el_sheikh: { en: 'Sharm El Sheikh', ar: 'شرم الشيخ' },
+  dahab: { en: 'Dahab', ar: 'دهب' },
+  el_tor: { en: 'El Tor', ar: 'الطور' },
+  arish: { en: 'El Arish', ar: 'العريش' },
+  kharga: { en: 'Kharga', ar: 'الخارجة' },
+};
+
+/** The city's name in the app's language; null for no city (or one this app version doesn't know). */
+export const cityName = (key: string | null, language: Language = getLanguage()) => (key ? (CITIES[key]?.[language] ?? null) : null);
