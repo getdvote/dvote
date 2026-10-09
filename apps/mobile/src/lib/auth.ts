@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t, type TKey } from '../i18n';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
@@ -19,7 +20,7 @@ export async function signInWithProvider(provider: 'google' | 'facebook'): Promi
     provider,
     options: { redirectTo, skipBrowserRedirect: true },
   });
-  if (error || !data.url) throw new Error(error?.message ?? 'Could not start sign-in.');
+  if (error || !data.url) throw new Error(error?.message ?? t('auth.couldNotStart'));
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (result.type !== 'success') return false;
   await completeSignInFromUrl(result.url);
@@ -101,13 +102,14 @@ function parseUrlParams(url: string): Record<string, string> {
   return out;
 }
 
+/** Supabase's English auth errors, in the app language. */
 function friendlyAuthError(message: string): string {
-  const map: Record<string, string> = {
-    'Invalid login credentials': 'Wrong email or password.',
-    'Email not confirmed': 'Please confirm your email first: open the link we sent you.',
-    'User already registered': 'This email already has an account. Log in instead.',
-    'Password should be at least 6 characters.': 'Use at least 6 characters for your password.',
+  const map: Record<string, TKey> = {
+    'Invalid login credentials': 'auth.wrongPassword',
+    'Email not confirmed': 'auth.notConfirmed',
+    'User already registered': 'auth.alreadyRegistered',
+    'Password should be at least 6 characters.': 'auth.shortPassword',
   };
-  if (/rate limit/i.test(message)) return 'Too many emails were sent. Please try again in a little while.';
-  return map[message] ?? message;
+  if (/rate limit/i.test(message)) return t('auth.rateLimited');
+  return map[message] ? t(map[message]) : message;
 }

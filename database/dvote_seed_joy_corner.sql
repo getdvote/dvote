@@ -22,13 +22,16 @@ VALUES ('44444444-0000-0000-0000-000000000001', '11111111-0000-0000-0000-0000000
 ON CONFLICT (id) DO NOTHING;
 
 -- Reward catalogue
-INSERT INTO rewards (id, vendor_id, name, description, points_cost, sort_order) VALUES
+INSERT INTO rewards (id, vendor_id, name, description, name_ar, description_ar, points_cost, sort_order) VALUES
   ('33333333-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001',
-   'Free coffee', 'Any coffee, any size', 300, 1),
+   'Free coffee', 'Any coffee, any size',
+   'قهوة مجانية', 'أي قهوة، أي حجم', 300, 1),
   ('33333333-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001',
-   'Free cheesecake', 'One slice of cheesecake', 500, 2),
+   'Free cheesecake', 'One slice of cheesecake',
+   'تشيز كيك مجاني', 'شريحة واحدة من التشيز كيك', 500, 2),
   ('33333333-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000001',
-   'Free coffee + cheesecake', 'Any coffee and one slice of cheesecake', 750, 3)
+   'Free coffee + cheesecake', 'Any coffee and one slice of cheesecake',
+   'قهوة + تشيز كيك مجانًا', 'أي قهوة وشريحة واحدة من التشيز كيك', 750, 3)
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;

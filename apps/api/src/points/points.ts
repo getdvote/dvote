@@ -4,7 +4,7 @@
  */
 
 /** Anything that prints as a decimal number: number, string, or Prisma.Decimal. */
-type DecimalLike = number | string | { toFixed(dp: number): string };
+export type DecimalLike = number | string | { toFixed(dp: number): string };
 
 /**
  * Converts an amount with at most 2 decimals to minor units: 95.5 → 9550.

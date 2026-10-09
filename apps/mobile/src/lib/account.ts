@@ -1,32 +1,14 @@
-import { Alert } from 'react-native';
-
-/** Asks before signing out. */
-export function confirmLogout(signOut: () => Promise<void>) {
-  Alert.alert('Log out?', 'You can log back in any time with the same account.', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Log out', style: 'destructive', onPress: () => void signOut() },
-  ]);
-}
+import { router } from 'expo-router';
 
 /**
- * Account deletion. The backend endpoint (DELETE /api/app/users/me) doesn't exist yet,
- * so after the warning we say so instead of pretending.
+ * Signs out, then closes every open screen (Settings sits on top of the tabs) and shows the
+ * welcome screen. Settings asks first, in its own confirmation sheet.
+ *
+ * Deleting an account isn't here: the backend (DELETE /api/app/users/me, with a 90-day restore
+ * window) doesn't exist yet, so Settings shows the confirmation with the button marked Soon.
  */
-export function confirmDeleteAccount() {
-  Alert.alert(
-    'Delete your account?',
-    'This permanently removes your dvote account and all your points at every shop. It cannot be undone.',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert(
-            'Not available yet',
-            'Deleting accounts from the app is coming soon. Your account has not been changed.',
-          ),
-      },
-    ],
-  );
+export async function logOut(signOut: () => Promise<void>) {
+  await signOut();
+  if (router.canDismiss()) router.dismissAll();
+  router.replace('/welcome');
 }

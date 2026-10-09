@@ -16,6 +16,9 @@
     "mobile:install": "npm --prefix apps/mobile install",
     "mobile:start": "npm --prefix apps/mobile run start",
     "mobile:start:clear": "npm --prefix apps/mobile run start -- --clear",
-    "staff:start:clear": "npm --prefix apps/staff run start -- --clear"
+    "staff:start:clear": "npm --prefix apps/staff run start -- --clear",
+    "storage:setup": "npm --prefix apps/api run storage:setup",
+    "dashboard:install": "npm --prefix apps/dashboard install",
+    "dashboard:dev": "npm --prefix apps/dashboard run dev"
   }
 }

@@ -1,23 +1,37 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
+import MapsSearchIcon from '@hugeicons/core-free-icons/MapsSearchIcon';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import User02Icon from '@hugeicons/core-free-icons/User02Icon';
+import { Icon, type AppIcon } from '../../components/Icon';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router, Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n, type TKey } from '../../i18n';
+import { haptics } from '../../lib/haptics';
 import { useSession } from '../../lib/session';
-import { theme } from '../../lib/theme';
+import { theme, squircle } from '../../lib/theme';
 
-const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap; label: string }> = {
-  cards: { on: 'card', off: 'card-outline', label: 'Cards' },
-  discover: { on: 'earth', off: 'earth-outline', label: 'Discover' },
-  you: { on: 'person', off: 'person-outline', label: 'You' },
+// Untitled UI icons are outline-only: the selected tab is shown by colour and its grey pill.
+const ICONS: Record<string, { icon: AppIcon; label: TKey }> = {
+  cards: { icon: GiftCard02Icon, label: 'tabs.cards' },
+  discover: { icon: MapsSearchIcon, label: 'tabs.explore' },
+  you: { icon: User02Icon, label: 'tabs.profile' },
 };
 
 /** Floating pill with 3 tabs + a separate round QR button (side-menu design). */
-function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+function FloatingTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  // A screen can hide the bar (My cards does while its card stack is open).
+  const style = descriptors[state.routes[state.index].key]?.options.tabBarStyle;
+  if ((StyleSheet.flatten(style) as { display?: string } | undefined)?.display === 'none') return null;
+  const { t, rtl } = useI18n();
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12), direction: rtl ? 'rtl' : 'ltr' }]}
+    >
       <LinearGradient
         pointerEvents="none"
         colors={['rgba(242,242,247,0)', 'rgba(242,242,247,0.95)']}
@@ -33,26 +47,32 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               <Pressable
                 key={route.key}
                 accessibilityRole="tab"
-                accessibilityLabel={icon.label}
+                accessibilityLabel={t(icon.label)}
                 accessibilityState={{ selected: focused }}
                 onPress={() => {
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                  if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+                  if (!focused && !event.defaultPrevented) {
+                    haptics.tab();
+                    navigation.navigate(route.name);
+                  }
                 }}
                 style={[styles.tab, focused && styles.tabOn]}
               >
-                <Ionicons name={focused ? icon.on : icon.off} size={23} color={focused ? theme.link : theme.text} />
+                <Icon icon={icon.icon} size={24} color={focused ? theme.link : theme.text} />
               </Pressable>
             );
           })}
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Show my QR code"
-          onPress={() => router.push('/qr')}
+          accessibilityLabel={t('common.showMyQr')}
+          onPress={() => {
+            haptics.qr();
+            router.push('/qr');
+          }}
           style={styles.qr}
         >
-          <Ionicons name="qr-code-outline" size={24} color={theme.text} />
+          <Icon icon={QrCodeIcon} size={24} color={theme.text} />
         </Pressable>
       </View>
     </View>
@@ -83,6 +103,7 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 28, alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pill: {
+    ...squircle,
     flexDirection: 'row',
     backgroundColor: theme.surface,
     borderRadius: 32,

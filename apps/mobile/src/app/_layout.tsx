@@ -1,8 +1,24 @@
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/inter';
+import {
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+  IBMPlexSansArabic_700Bold,
+} from '@expo-google-fonts/ibm-plex-sans-arabic';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { I18nProvider } from '../i18n';
 import { configProblem } from '../lib/config';
 import { SessionProvider } from '../lib/session';
 import { theme } from '../lib/theme';
@@ -14,22 +30,42 @@ WebBrowser.maybeCompleteAuthSession();
 export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
+  // Inter, the app font, and IBM Plex Sans Arabic for Arabic (see lib/theme). Bundled with the
+  // app, so this is quick and offline.
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
+    IBMPlexSansArabic_700Bold,
+  });
+  // Keep the splash screen until the font is ready, so text never flashes in another font.
+  // If loading fails, carry on with the system font rather than a blank app.
+  if (!fontsLoaded && !fontError) return null;
+
   if (configProblem) return <SetupNeeded message={configProblem} />;
   return (
     <SafeAreaProvider>
-      <SessionProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.background },
-          }}
-        >
-          {/* index first: explicitly listed screens come first in the stack */}
-          <Stack.Screen name="index" />
-          <Stack.Screen name="qr" options={{ presentation: 'modal' }} />
-        </Stack>
-      </SessionProvider>
+      {/* the saved language (English by default) loads first, so screens never flash in the wrong one */}
+      <I18nProvider>
+        <SessionProvider>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.background },
+            }}
+          >
+            {/* index first: explicitly listed screens come first in the stack */}
+            <Stack.Screen name="index" />
+            <Stack.Screen name="qr" options={{ presentation: 'modal' }} />
+          </Stack>
+        </SessionProvider>
+      </I18nProvider>
     </SafeAreaProvider>
   );
 }

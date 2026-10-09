@@ -7,7 +7,7 @@
 --  A database built from this file already matches every Prisma migration; mark them
 --  applied (from apps/api):  npx prisma migrate resolve --applied <name>
 --  for 0_init, 1_users_auth_user_id, 2_staff_users_auth_user_id, 3_points_rewards_qr,
---  4_platform_admins_auth_user_id.
+--  4_platform_admins_auth_user_id, 5_users_gender_birth_date, 6_storage_images, 7_rewards_arabic.
 -- =====================================================================
 BEGIN;
 
@@ -27,6 +27,7 @@ CREATE TYPE qr_status           AS ENUM ('active', 'used', 'expired', 'cancelled
 CREATE TYPE point_event_type    AS ENUM ('earn', 'redeem', 'adjust');
 CREATE TYPE fraud_flag_type     AS ENUM ('too_many_collects', 'large_purchase', 'branch_spike', 'staff_spike');
 CREATE TYPE fraud_flag_status   AS ENUM ('open', 'dismissed', 'confirmed');
+CREATE TYPE vendor_image_kind   AS ENUM ('menu', 'branch_photo');
 
 -- ---------------------------------------------------------------------
 -- 2. HELPER: keep updated_at current on every UPDATE
@@ -63,6 +64,12 @@ CREATE TABLE vendors (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name           varchar(120)  NOT NULL,
     logo_url       varchar(500),
+    logo_path      varchar(300),                 -- uploaded logo in Storage bucket "vendors" (NULL = none / external URL)
+    banner_url     varchar(500),                 -- shop-page banner (public link)
+    banner_path    varchar(300),                 -- uploaded banner in Storage bucket "vendors" (<vendorId>/banner/…)
+    category       varchar(40)   CONSTRAINT vendors_category_ck CHECK (
+                       category IN ('cafe', 'cafe_restaurant', 'restaurant', 'bakery', 'desserts', 'juice_bar')),  -- NULL = not set
+    card_design    smallint      CONSTRAINT vendors_card_design_ck CHECK (card_design BETWEEN 1 AND 10),     -- loyalty-card design; NULL = automatic
     contact_email  varchar(255),
     currency       char(3)       NOT NULL DEFAULT 'EGP',    -- receipt totals are in this currency
     status         vendor_status NOT NULL DEFAULT 'active',
@@ -74,14 +81,23 @@ CREATE TABLE branches (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id   uuid          NOT NULL REFERENCES vendors (id),
     name        varchar(120)  NOT NULL,
-    address     varchar(500),
+    address     varchar(500),                -- street line; the city is separate
+    city        varchar(40),                 -- key from the API's list of Egyptian cities (src/branches/cities.ts)
     lat         decimal(9,6)  CHECK (lat BETWEEN -90 AND 90),
     lng         decimal(9,6)  CHECK (lng BETWEEN -180 AND 180),
     timezone    varchar(64)   NOT NULL DEFAULT 'Africa/Cairo',
+    opens_at    varchar(5),                -- "HH:MM", the same every day, branch-local time
+    closes_at   varchar(5),                -- earlier than opens_at = open past midnight
     status      branch_status NOT NULL DEFAULT 'active',
     created_at  timestamptz   NOT NULL DEFAULT now(),
     updated_at  timestamptz   NOT NULL DEFAULT now(),
-    UNIQUE (id, vendor_id)          -- lets other tables prove "this branch belongs to this vendor"
+    UNIQUE (id, vendor_id),         -- lets other tables prove "this branch belongs to this vendor"
+    CONSTRAINT branches_hours_ck CHECK (
+        (opens_at IS NULL AND closes_at IS NULL)
+        OR (opens_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+            AND closes_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+            AND opens_at <> closes_at)
+    )
 );
 CREATE INDEX branches_vendor_idx ON branches (vendor_id);
 
@@ -133,7 +149,10 @@ CREATE TABLE rewards (
     vendor_id    uuid          NOT NULL REFERENCES vendors (id),
     name         varchar(120)  NOT NULL,
     description  varchar(500),
+    name_ar        varchar(120),               -- Arabic (optional; the app falls back to name)
+    description_ar varchar(500),               -- Arabic (optional)
     image_url    varchar(500),
+    image_path   varchar(300),                -- uploaded photo in Storage bucket "vendors" (<vendorId>/rewards/…)
     points_cost  int           NOT NULL CHECK (points_cost > 0),
     status       reward_status NOT NULL DEFAULT 'active',
     sort_order   int           NOT NULL DEFAULT 0,
@@ -150,7 +169,8 @@ CREATE TABLE users (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name        varchar(120),
     email       varchar(255),                 -- a provider may not share it; not unique
-    avatar_url  varchar(500),
+    avatar_url  varchar(500),                 -- sign-in provider photo (Google/Facebook)
+    avatar_path varchar(300),                 -- uploaded photo in private Storage bucket "avatars"
     phone       varchar(20),                  -- optional, not used for login
     gender      user_gender,                  -- optional (profile)
     birth_date  date,                         -- optional (profile); plain date, no time zone
@@ -283,6 +303,26 @@ CREATE INDEX redemptions_card_idx ON redemptions (card_id);
 CREATE INDEX redemptions_branch_time_idx ON redemptions (branch_id, created_at);
 
 -- ---------------------------------------------------------------------
+-- 6b. VENDOR IMAGES (files in Supabase Storage bucket "vendors"; rows hard-deleted with their file)
+-- ---------------------------------------------------------------------
+CREATE TABLE vendor_images (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id     uuid              NOT NULL REFERENCES vendors (id),
+    branch_id     uuid,                                 -- branch photos only
+    kind          vendor_image_kind NOT NULL,
+    storage_path  varchar(300)      NOT NULL UNIQUE,    -- <vendor>/menu/<f>.webp | <vendor>/branches/<branch>/<f>.webp
+    sort_order    integer           NOT NULL DEFAULT 0,
+    created_at    timestamptz       NOT NULL DEFAULT now(),
+    updated_at    timestamptz       NOT NULL DEFAULT now(),
+    CONSTRAINT vendor_images_branch_fk FOREIGN KEY (branch_id, vendor_id) REFERENCES branches (id, vendor_id),
+    CONSTRAINT vendor_images_kind_ck CHECK (
+        (kind = 'menu' AND branch_id IS NULL) OR
+        (kind = 'branch_photo' AND branch_id IS NOT NULL)
+    )
+);
+CREATE INDEX vendor_images_vendor_idx ON vendor_images (vendor_id, kind, branch_id, sort_order);
+
+-- ---------------------------------------------------------------------
 -- 7. FRAUD FLAGS
 -- ---------------------------------------------------------------------
 CREATE TABLE fraud_flags (
@@ -312,7 +352,8 @@ DECLARE t text;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'platform_admins','vendors','branches','staff_users','point_rules','rewards',
-        'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags']
+        'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags',
+        'vendor_images']
     LOOP
         EXECUTE format(
             'CREATE TRIGGER %I_set_updated_at BEFORE UPDATE ON %I

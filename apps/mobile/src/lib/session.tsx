@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { t } from '../i18n';
 import {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { api, ApiError, SIGN_OUT_CODES, type Me } from './api';
+import { startLive } from './live';
 import { supabase } from './supabase';
 
 interface SessionState {
@@ -33,8 +35,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
 
+  /**
+   * Signs out and clears the session here at once. (Supabase's SIGNED_OUT event clears it a
+   * moment later; until then the welcome screen still saw a session and sent the customer
+   * straight back to their cards, so logging out looked like it did nothing.)
+   */
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => undefined); // the local session is removed even if the server call fails
+    setSession(null);
     setMe(null);
   }, []);
 
@@ -42,9 +50,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refreshMe = useCallback(async () => {
     try {
       setMeError(null);
-      setMe(await api.me());
+      const fresh = await api.me();
+      // The avatar comes as a new signed link each time; keep the old link while it is the
+      // same file, so the photo doesn't reload on every refresh.
+      const samePhoto = (a: string | null, b: string | null) => !!a && !!b && a.split('?')[0] === b.split('?')[0];
+      setMe((old) => (old && samePhoto(old.avatarUrl, fresh.avatarUrl) ? { ...fresh, avatarUrl: old.avatarUrl } : fresh));
     } catch (err) {
-      setMeError(err instanceof ApiError ? err.message : 'Could not load your profile.');
+      setMeError(err instanceof ApiError ? err.message : t('errors.couldNotLoadProfile'));
       if (err instanceof ApiError && SIGN_OUT_CODES.has(err.code)) await signOut();
     }
   }, [signOut]);
@@ -62,6 +74,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
     return () => data.subscription.unsubscribe();
   }, [refreshMe]);
+
+  // Live updates from the dashboards while signed in (one connection per signed-in customer;
+  // a token refresh doesn't reconnect: the socket was authorised when it opened).
+  const userId = session?.user.id ?? null;
+  useEffect(() => (userId ? startLive() : undefined), [userId]);
 
   const handleAuthError = useCallback(
     async (err: unknown) => {

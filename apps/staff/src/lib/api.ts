@@ -100,9 +100,11 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     qr_expired: 'This QR has expired. Ask the customer to show a new one.',
     qr_cancelled: 'The customer opened a newer QR. Please scan the new one.',
     wrong_qr_type: 'This QR is not for collecting points.',
-    vendor_mismatch: 'This reward belongs to another shop.', // redeem QRs only
+    // In Arabic for the counter staff (the staff app is otherwise English for now).
+    vendor_mismatch: 'هذا الرمز خاص بمتجر آخر. اطلب من العميل فتح صفحة متجرك في تطبيق dvote، أو استخدام رمزه الرئيسي.',
     user_blocked: "This customer's account is blocked.",
-    no_active_rule: 'Your shop has no point rule yet. Ask your manager to set one.',
+    // In Arabic for the counter staff, like vendor_mismatch.
+    no_active_rule: 'لا توجد قاعدة نقاط لمتجرك بعد. اطلب من مسؤول المتجر (vendor admin) إضافة قاعدة النقاط من لوحة التحكم حتى نتمكن من حساب نقاط العملاء.',
     duplicate_receipt: 'This receipt already earned points.',
     branch_required: 'Choose your branch first.',
     invalid_branch: 'This branch is not available.',

@@ -1,88 +1,81 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import GiftIcon from '@hugeicons/core-free-icons/GiftIcon';
+import LockIcon from '@hugeicons/core-free-icons/LockIcon';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import SecurityCheckIcon from '@hugeicons/core-free-icons/SecurityCheckIcon';
+import SparklesIcon from '@hugeicons/core-free-icons/SparklesIcon';
+import Wallet01Icon from '@hugeicons/core-free-icons/Wallet01Icon';
+import { Icon, type AppIcon } from '../components/Icon';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { Group, PageHeader, Row, Screen } from '../components/ui';
-import { theme } from '../lib/theme';
+import { useI18n, type TKey } from '../i18n';
+import { theme, squircle } from '../lib/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const STEPS: { icon: IconName; title: string; text: string }[] = [
-  {
-    icon: 'qr-code-outline',
-    title: 'Show your QR',
-    text: 'Pay as usual at any dvote coffee shop and show your QR code at the counter.',
-  },
-  {
-    icon: 'sparkles-outline',
-    title: 'Earn points',
-    text: 'Points land on that shop’s card in seconds, based on how much you spent.',
-  },
-  {
-    icon: 'gift-outline',
-    title: 'Enjoy rewards',
-    text: 'Swap points for free coffee, desserts and more, whenever you choose.',
-  },
+const STEPS: { icon: AppIcon; title: TKey; text: TKey }[] = [
+  { icon: QrCodeIcon, title: 'about.step1Title', text: 'about.step1Text' },
+  { icon: SparklesIcon, title: 'about.step2Title', text: 'about.step2Text' },
+  { icon: GiftIcon, title: 'about.step3Title', text: 'about.step3Text' },
 ];
 
-const PROMISES: { icon: IconName; text: string }[] = [
-  { icon: 'wallet-outline', text: 'All your coffee shop cards in one app, no paper stamps.' },
-  { icon: 'lock-closed-outline', text: 'Shops never see your name, email or phone.' },
-  { icon: 'shield-checkmark-outline', text: 'Every QR works once and expires in minutes.' },
+const PROMISES: { icon: AppIcon; text: TKey }[] = [
+  { icon: Wallet01Icon, text: 'about.promise1' },
+  { icon: LockIcon, text: 'about.promise2' },
+  { icon: SecurityCheckIcon, text: 'about.promise3' },
 ];
 
 /** About Dvote: brand, how it works, what we promise, version. */
 export default function About() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const { t } = useI18n();
   return (
     <Screen>
-      <PageHeader title="About Dvote" />
+      <PageHeader title={t('about.title')} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <DvoteLogo height={64} color={theme.brand} />
-          <Text style={styles.tagline}>Every coffee counts.</Text>
-          <Text style={styles.lead}>
-            dvote turns the coffee you already buy into rewards at your favourite shops, and helps local coffee shops
-            keep their regulars coming back.
-          </Text>
+          <Text style={styles.tagline}>{t('about.tagline')}</Text>
+          <Text style={styles.lead}>{t('about.lead')}</Text>
         </View>
 
-        <Text style={styles.section}>How it works</Text>
+        <Text style={styles.section}>{t('about.how')}</Text>
         <View style={styles.steps}>
           {STEPS.map((s, i) => (
             <View key={s.title} style={styles.step}>
               <View style={styles.stepIcon}>
-                <Ionicons name={s.icon} size={22} color={theme.brand} />
+                <Icon icon={s.icon} size={22} color={theme.brand} />
                 <Text style={styles.stepNumber}>{i + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>{s.title}</Text>
-                <Text style={styles.stepText}>{s.text}</Text>
+                <Text style={styles.stepTitle}>{t(s.title)}</Text>
+                <Text style={styles.stepText}>{t(s.text)}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <Text style={styles.section}>Our promise</Text>
+        <Text style={styles.section}>{t('about.promise')}</Text>
         <Group style={styles.promises}>
           {PROMISES.map((p) => (
             <View key={p.text} style={styles.promise}>
-              <Ionicons name={p.icon} size={20} color={theme.brand} />
-              <Text style={styles.promiseText}>{p.text}</Text>
+              <Icon icon={p.icon} size={20} color={theme.brand} />
+              <Text style={styles.promiseText}>{t(p.text)}</Text>
             </View>
           ))}
         </Group>
 
         <Group style={{ marginTop: 24 }}>
-          <Row label="Terms and conditions" onPress={() => router.push('/info/terms')} />
-          <Row label="Own a coffee shop? Join dvote" onPress={() => router.push('/info/join')} />
+          <Row label={t('about.terms')} onPress={() => router.push('/terms')} />
+          <Row label={t('about.join')} onPress={() => router.push('/info/join')} />
         </Group>
 
         <Text style={styles.footer}>
-          Version {version}
-          {'\n'}Made with love for coffee lovers in Egypt
+          {t('about.version', { version })}
+          {'\n'}
+          {t('about.madeWith')}
         </Text>
       </ScrollView>
     </Screen>
@@ -97,6 +90,7 @@ const styles = StyleSheet.create({
   section: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 28, marginBottom: 10, marginLeft: 2 },
   steps: { gap: 10 },
   step: {
+    ...squircle,
     flexDirection: 'row',
     gap: 14,
     backgroundColor: theme.surface,

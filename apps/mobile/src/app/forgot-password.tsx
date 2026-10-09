@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
+import { useI18n } from '../i18n';
 import { ErrorBox, Field, PageHeader, PrimaryButton, Screen } from '../components/ui';
 import { sendPasswordReset } from '../lib/auth';
 import { theme } from '../lib/theme';
 
 export default function ForgotPassword() {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -12,14 +15,14 @@ export default function ForgotPassword() {
 
   async function send() {
     const clean = email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(clean)) return setError('Enter a valid email address.');
+    if (!/^\S+@\S+\.\S+$/.test(clean)) return setError(t('auth.invalidEmail'));
     setBusy(true);
     setError(null);
     try {
       await sendPasswordReset(clean);
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send the email. Try again.');
+      setError(err instanceof Error ? err.message : t('auth.resetCouldNotSend'));
     } finally {
       setBusy(false);
     }
@@ -27,18 +30,19 @@ export default function ForgotPassword() {
 
   return (
     <Screen>
-      <PageHeader title="Reset password" />
+      <PageHeader title={t('auth.resetTitle')} />
       <View style={styles.body}>
         {sent ? (
           <Text style={styles.text}>
-            If an account exists for <Text style={styles.bold}>{email.trim()}</Text>, we sent a link to set a new
-            password. Open it on this phone.
+            {t('auth.resetSentBefore')}
+            <Text style={styles.bold}>{email.trim()}</Text>
+            {t('auth.resetSentAfter')}
           </Text>
         ) : (
           <>
-            <Text style={styles.text}>Enter your email and we'll send you a link to set a new password.</Text>
+            <Text style={styles.text}>{t('auth.resetIntro')}</Text>
             <Field
-              placeholder="Email"
+              placeholder={t('common.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -47,7 +51,7 @@ export default function ForgotPassword() {
               onSubmitEditing={() => void send()}
             />
             <ErrorBox message={error} />
-            <PrimaryButton title="Send reset link" onPress={() => void send()} loading={busy} />
+            <PrimaryButton title={t('auth.resetSend')} onPress={() => void send()} loading={busy} />
           </>
         )}
       </View>

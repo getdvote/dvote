@@ -1,21 +1,27 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
+import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
+import Tick02Icon from '@hugeicons/core-free-icons/Tick02Icon';
+import WifiDisconnected01Icon from '@hugeicons/core-free-icons/WifiDisconnected01Icon';
+import { Icon } from '../components/Icon';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   Vibration,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
-import { ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
+import { Text } from '../components/Text';
+import { Avatar, ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type NewQrCode, type QrCollectResult } from '../lib/api';
+import { t, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
-import { theme } from '../lib/theme';
+import { shadows, squircle, theme, vendorColors } from '../lib/theme';
 
 const POLL_MS = 2000;
 const QR_LIFETIME_MS = 5 * 60 * 1000;
@@ -28,12 +34,32 @@ type Phase =
   | { kind: 'error'; message: string };
 
 /**
- * Collect QR (tab bar QR button). Gets a one-time code from the API, shows it, and checks
- * every 2 s whether the staff used it; then shows "+N points" and the new balance.
- * The code names no shop: the staff member who scans it decides the shop and branch.
+ * Collect QR (tab bar QR button, or Collect on a shop page). Gets a one-time code from the
+ * API, shows it, and checks every 2 s whether the staff used it; then shows "+N points" and
+ * the new balance. From the tab bar it is the master QR: it names no shop, and the staff
+ * member who scans it decides the shop and branch. From a shop page (`vendorId` + `vendorName`)
+ * it is that shop's QR: any other shop's staff get vendor_mismatch and give no points; the
+ * top of the ticket shows that shop (logo, "Collecting points from <shop>") instead of the
+ * customer, and the help text names it.
+ *
+ * Laid out like a ticket ("Dvote ID"): the customer's photo and name, a perforated tear line,
+ * then their code, in the middle of the page. When the code expires (or the clock runs out on
+ * the phone first), was replaced, or couldn't be made, the code gives way to a "Regenerate my
+ * QR code" button.
  */
 export default function Qr() {
+  const { vendorId, vendorName, logoUrl, cardDesign } = useLocalSearchParams<{
+    vendorId?: string;
+    vendorName?: string;
+    logoUrl?: string;
+    cardDesign?: string;
+  }>();
+  const shop: ShopInfo | null =
+    vendorId && vendorName
+      ? { id: vendorId, name: vendorName, logoUrl, cardDesign: cardDesign ? Number(cardDesign) : null }
+      : null;
   const { handleAuthError } = useSession();
+  useI18n(); // re-render on a language switch (children read t directly)
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [offline, setOffline] = useState(false);
   // id of the QR on screen while it can still be used: cancelled if the customer leaves
@@ -43,7 +69,7 @@ export default function Qr() {
     setPhase({ kind: 'loading' });
     setOffline(false);
     try {
-      const qr = await api.newCollectQr();
+      const qr = await api.newCollectQr(vendorId);
       // Count down from the server's expiry, unless the phone's clock is clearly off.
       const left = new Date(qr.expiresAt).getTime() - Date.now();
       const deadline = Date.now() + (left > 0 && left <= QR_LIFETIME_MS + 30_000 ? left : QR_LIFETIME_MS);
@@ -51,9 +77,9 @@ export default function Qr() {
       setPhase({ kind: 'showing', qr, deadline });
     } catch (err) {
       if (await handleAuthError(err)) return;
-      setPhase({ kind: 'error', message: err instanceof ApiError ? err.message : 'Could not create your QR code.' });
+      setPhase({ kind: 'error', message: err instanceof ApiError ? err.message : t('qr.couldNotCreate') });
     }
-  }, [handleAuthError]);
+  }, [handleAuthError, vendorId]);
 
   useEffect(() => {
     void issue();
@@ -106,47 +132,135 @@ export default function Qr() {
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>{phase.kind === 'done' ? 'Points added' : 'Collect points'}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {phase.kind === 'done' ? t('qr.pointsAdded') : t('qr.title')}
+        </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t('common.close')}
           onPress={() => router.back()}
-          style={styles.close}
+          style={({ pressed }) => [styles.close, pressed && { opacity: 0.6 }]}
           hitSlop={8}
         >
-          <Ionicons name="close" size={22} color={theme.text} />
+          <Icon icon={Cancel01Icon} size={22} color={theme.text} />
         </Pressable>
       </View>
 
-      {phase.kind === 'loading' ? (
-        <View style={styles.middle}>
-          <ActivityIndicator color={theme.text} />
-        </View>
-      ) : phase.kind === 'showing' ? (
-        <Showing qr={phase.qr} deadline={phase.deadline} offline={offline} />
-      ) : phase.kind === 'done' ? (
+      {phase.kind === 'done' ? (
         <Done result={phase.result} />
       ) : (
-        <Ended
-          heading={phase.kind === 'error' ? 'Something went wrong' : phase.reason === 'expired' ? 'QR code expired' : 'QR code replaced'}
-          text={
-            phase.kind === 'error'
-              ? null
-              : phase.reason === 'expired'
-                ? 'For your safety each code works for 5 minutes only. Get a new one when you are at the counter.'
-                : 'A newer QR code was opened, so this one stopped working.'
-          }
-          error={phase.kind === 'error' ? phase.message : null}
-          onRetry={() => void issue()}
+        <IdCard
+          phase={phase}
+          offline={offline}
+          shop={shop}
+          onExpired={() => {
+            // the phone's countdown ran out before the next poll heard it from the server
+            activeId.current = null;
+            setPhase({ kind: 'ended', reason: 'expired' });
+          }}
+          onRegenerate={() => void issue()}
         />
       )}
     </Screen>
   );
 }
 
-function Showing({ qr, deadline, offline }: { qr: NewQrCode; deadline: number; offline: boolean }) {
+interface ShopInfo {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  cardDesign: number | null;
+}
+
+/**
+ * The customer's photo and name above their code, or for a shop QR the shop it collects at
+ * (or what to do when there's no code).
+ */
+function IdCard({
+  phase,
+  offline,
+  shop,
+  onExpired,
+  onRegenerate,
+}: {
+  phase: Exclude<Phase, { kind: 'done' }>;
+  offline: boolean;
+  shop: ShopInfo | null;
+  onExpired: () => void;
+  onRegenerate: () => void;
+}) {
+  const { me } = useSession();
   const { width } = useWindowDimensions();
-  const size = Math.min(width - theme.gutter * 2 - 56, 280);
+  const cardWidth = Math.min(width - theme.gutter * 2, 380);
+  const qrSize = cardWidth - CARD_PADDING * 2 - 24;
+
+  return (
+    <View style={styles.page}>
+      <View style={[styles.card, { width: cardWidth }]}>
+        {shop ? (
+          <View style={styles.person}>
+            <ShopLogo shop={shop} />
+            <View style={styles.shopText}>
+              <Text style={styles.caption}>{t('qr.collectingFrom')}</Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {shop.name}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.person}>
+            <Avatar name={me?.name ?? null} url={me?.avatarUrl ?? null} size={56} />
+            <Text style={styles.name} numberOfLines={1}>
+              {me?.name ?? t('you.member')}
+            </Text>
+          </View>
+        )}
+
+        <TearLine width={cardWidth} />
+
+        {phase.kind === 'loading' ? (
+          <View style={[styles.qrArea, { height: qrSize }]}>
+            <ActivityIndicator color={theme.text} />
+          </View>
+        ) : phase.kind === 'showing' ? (
+          <Showing qr={phase.qr} deadline={phase.deadline} offline={offline} size={qrSize} onExpired={onExpired} />
+        ) : (
+          <Regenerate
+            minHeight={qrSize}
+            heading={
+              phase.kind === 'error'
+                ? t('qr.errorTitle')
+                : phase.reason === 'expired'
+                  ? t('qr.expiredTitle')
+                  : t('qr.replacedTitle')
+            }
+            text={phase.kind === 'error' ? null : phase.reason === 'expired' ? t('qr.expiredText') : t('qr.replacedText')}
+            error={phase.kind === 'error' ? phase.message : null}
+            onPress={onRegenerate}
+          />
+        )}
+      </View>
+
+      {phase.kind === 'showing' || phase.kind === 'loading' ? (
+        <Text style={styles.help}>{shop ? t('qr.atVendor', { vendor: shop.name }) : t('qr.worksAnywhere')}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function Showing({
+  qr,
+  deadline,
+  offline,
+  size,
+  onExpired,
+}: {
+  qr: NewQrCode;
+  deadline: number;
+  offline: boolean;
+  size: number;
+  onExpired: () => void;
+}) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -155,31 +269,28 @@ function Showing({ qr, deadline, offline }: { qr: NewQrCode; deadline: number; o
   const secondsLeft = Math.max(0, Math.ceil((deadline - now) / 1000));
   const countdown = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
+  const expiredRef = useRef(onExpired);
+  expiredRef.current = onExpired;
+  useEffect(() => {
+    if (secondsLeft === 0) expiredRef.current();
+  }, [secondsLeft]);
+
   return (
-    <View style={styles.body}>
-      <View style={styles.qrCard}>
+    <View style={styles.qrBlock}>
+      <View style={[styles.qrArea, { height: size }]}>
         <QRCode value={qr.code} size={size} color="#000" backgroundColor="#fff" ecl="M" />
-        <Text style={styles.expires}>
-          {secondsLeft > 0 ? `Expires in ${countdown}` : 'Expired'}
-        </Text>
       </View>
-
-      <Text style={styles.lead}>Show this code at the counter</Text>
-      <Text style={styles.text}>
-        Works at any dvote coffee shop: the staff scan it and enter your bill, and your points appear here
-        straight away.
-      </Text>
-
+      <Text style={styles.expires}>{t('qr.expiresIn', { time: countdown })}</Text>
       <View style={styles.waiting}>
         {offline ? (
           <>
-            <Ionicons name="cloud-offline-outline" size={16} color={theme.muted} />
-            <Text style={styles.waitingText}>Reconnecting…</Text>
+            <Icon icon={WifiDisconnected01Icon} size={16} color={theme.muted} />
+            <Text style={styles.waitingText}>{t('qr.reconnecting')}</Text>
           </>
         ) : (
           <>
             <ActivityIndicator size="small" color={theme.muted} />
-            <Text style={styles.waitingText}>Waiting for the scan…</Text>
+            <Text style={styles.waitingText}>{t('qr.waiting')}</Text>
           </>
         )}
       </View>
@@ -197,30 +308,29 @@ function Done({ result }: { result: QrCollectResult | null }) {
     <View style={styles.body}>
       <View style={styles.middle}>
         <Animated.View style={[styles.check, { transform: [{ scale: pop }] }]}>
-          <Ionicons name="checkmark" size={48} color="#fff" />
+          <Icon icon={Tick02Icon} size={48} color="#fff" strokeWidth={2.5} />
         </Animated.View>
         {result ? (
           <>
-            <Text style={styles.points}>+{result.pointsAdded} points</Text>
+            <Text style={styles.points}>{t('common.plusPoints', { count: result.pointsAdded })}</Text>
             <Text style={styles.text}>
-              at {result.vendorName}
-              {result.branchName ? ` · ${result.branchName}` : ''}
+              {t('qr.at', { place: result.branchName ? `${result.vendorName} · ${result.branchName}` : result.vendorName })}
             </Text>
             <View style={styles.summary}>
-              <SummaryRow label="Bill" value={`${result.purchaseAmount} ${result.currency}`} />
+              <SummaryRow label={t('qr.bill')} value={`${result.purchaseAmount} ${result.currency}`} />
               <View style={styles.separator} />
-              <SummaryRow label="Your balance" value={`${result.cardBalance} points`} strong />
+              <SummaryRow label={t('qr.balance')} value={t('common.points', { count: result.cardBalance })} strong />
             </View>
           </>
         ) : (
-          <Text style={styles.points}>Points added</Text>
+          <Text style={styles.points}>{t('qr.pointsAdded')}</Text>
         )}
       </View>
       <View style={styles.footer}>
         {result ? (
-          <PrimaryButton title="View card" onPress={() => router.replace(`/card/${result.cardId}`)} />
+          <PrimaryButton title={t('qr.viewCard')} onPress={() => router.replace(`/card/${result.cardId}`)} />
         ) : null}
-        <PillButton title="Done" onPress={() => router.back()} />
+        <PillButton title={t('common.done')} onPress={() => router.back()} />
       </View>
     </View>
   );
@@ -235,71 +345,135 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
   );
 }
 
-function Ended({
-  heading,
-  text,
-  error,
-  onRetry,
-}: {
-  heading: string;
-  text: string | null;
-  error: string | null;
-  onRetry: () => void;
-}) {
-  return (
-    <View style={styles.body}>
-      <View style={styles.middle}>
-        <View style={styles.icon}>
-          <Ionicons name="qr-code-outline" size={40} color={theme.text} />
-        </View>
-        <Text style={styles.lead}>{heading}</Text>
-        {text ? <Text style={styles.text}>{text}</Text> : null}
-        <ErrorBox message={error} />
-      </View>
-      <View style={styles.footer}>
-        <PrimaryButton title="Get a new QR code" onPress={onRetry} />
-      </View>
+/** The shop's logo, styled like on its shop page; without one, its initial on the card colour. */
+function ShopLogo({ shop }: { shop: ShopInfo }) {
+  return shop.logoUrl ? (
+    <Image source={{ uri: shop.logoUrl }} style={styles.shopLogo} contentFit="cover" />
+  ) : (
+    <View style={[styles.shopLogo, { backgroundColor: vendorColors(shop.id, shop.cardDesign)[0] }]}>
+      <Text style={styles.shopInitial}>{shop.name.slice(0, 1).toUpperCase()}</Text>
     </View>
   );
 }
 
+/** The ticket's perforation: a dashed line with a half-circle notch cut into each side. */
+function TearLine({ width }: { width: number }) {
+  // the dashes stop a little short of the notches
+  const inner = width - CARD_PADDING * 2 - (NOTCH - 8);
+  const dashes = Math.floor((inner + DASH_GAP) / (DASH + DASH_GAP));
+  return (
+    <View style={styles.tear}>
+      <View style={[styles.notch, { left: -CARD_PADDING - NOTCH / 2 }]} />
+      <View style={styles.dashes}>
+        {Array.from({ length: dashes }, (_, i) => (
+          <View key={i} style={styles.dash} />
+        ))}
+      </View>
+      <View style={[styles.notch, { right: -CARD_PADDING - NOTCH / 2 }]} />
+    </View>
+  );
+}
+
+/** In place of the code: why there isn't one, and a button for a new one. */
+function Regenerate({
+  minHeight,
+  heading,
+  text,
+  error,
+  onPress,
+}: {
+  minHeight: number;
+  heading: string;
+  text: string | null;
+  error: string | null;
+  onPress: () => void;
+}) {
+  return (
+    <View style={[styles.regenerate, { minHeight }]}>
+      <View style={styles.icon}>
+        <Icon icon={QrCodeIcon} size={36} color={theme.text} />
+      </View>
+      <Text style={styles.lead}>{heading}</Text>
+      {text ? <Text style={styles.text}>{text}</Text> : null}
+      <ErrorBox message={error} />
+      <PrimaryButton title={t('qr.regenerate')} onPress={onPress} style={styles.regenerateButton} />
+    </View>
+  );
+}
+
+const CARD_PADDING = 20;
+const NOTCH = 28;
+const DASH = 8;
+const DASH_GAP = 6;
+
 const styles = StyleSheet.create({
+  // Title centred; room above it and on both sides so it never runs under the close button.
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.gutter,
-    paddingTop: 8,
-    paddingBottom: 12,
+    minHeight: 40,
+    marginTop: 20,
+    marginBottom: 12,
+    marginHorizontal: theme.gutter,
   },
-  title: { fontSize: 17, fontWeight: '600', color: theme.text },
+  title: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center', marginHorizontal: 56 },
   close: {
     position: 'absolute',
-    right: theme.gutter,
-    top: 2,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // the card sits in the middle of the page
+  page: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.gutter, paddingBottom: 24 },
+  card: {
+    ...squircle,
+    ...shadows.soft,
+    // clips the ticket notches to half circles, so they read as cut-outs over the shadow
+    overflow: 'hidden',
+    backgroundColor: theme.surface,
+    borderRadius: 36,
+    padding: CARD_PADDING,
+    alignItems: 'center',
+  },
+  // Photo and name side by side; the row follows the reading side in Arabic.
+  person: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4, paddingHorizontal: 4 },
+  name: { flexShrink: 1, fontSize: 22, fontWeight: '700', color: theme.text },
+  shopText: { flexShrink: 1, gap: 2 },
+  caption: { fontSize: 14, fontWeight: '500', color: theme.muted },
+  // Same look as the logo on the shop page (round, 4 pt ring in the page colour), smaller.
+  shopLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 4,
+    borderColor: theme.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: theme.surface,
+  },
+  shopInitial: { fontSize: 22, fontWeight: '700', color: '#fff' },
+  tear: { alignSelf: 'stretch', height: NOTCH, justifyContent: 'center', marginVertical: 8 },
+  // page-coloured circles over the card's edges look like bites taken out of it
+  notch: { position: 'absolute', top: 0, width: NOTCH, height: NOTCH, borderRadius: NOTCH / 2, backgroundColor: theme.background },
+  dashes: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: NOTCH / 2 - 4 },
+  dash: { width: DASH, height: 2, borderRadius: 1, backgroundColor: theme.separator },
+  qrBlock: { alignItems: 'center', gap: 12 },
+  qrArea: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  expires: { fontSize: 15, fontWeight: '600', color: theme.muted, fontVariant: ['tabular-nums'] },
+  waiting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  waitingText: { fontSize: 14, color: theme.muted },
+  help: { fontSize: 15, color: theme.secondary, textAlign: 'center', lineHeight: 21, marginTop: 20, paddingHorizontal: 8 },
+  regenerate: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  regenerateButton: { alignSelf: 'stretch', marginTop: 12 },
+  // Done
   body: { flex: 1, paddingHorizontal: theme.gutter, paddingTop: 12 },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16 },
-  qrCard: {
-    alignSelf: 'center',
-    backgroundColor: theme.surface,
-    borderRadius: theme.radius,
-    padding: 28,
-    paddingBottom: 18,
-    alignItems: 'center',
-    gap: 14,
-  },
-  expires: { fontSize: 15, fontWeight: '600', color: theme.muted, fontVariant: ['tabular-nums'] },
-  lead: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center', marginTop: 24 },
-  text: { fontSize: 15, color: theme.secondary, textAlign: 'center', lineHeight: 21, marginTop: 6 },
-  waiting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
-  waitingText: { fontSize: 15, color: theme.muted },
+  lead: { fontSize: 20, fontWeight: '700', color: theme.text, textAlign: 'center', marginTop: 8 },
+  text: { fontSize: 15, color: theme.secondary, textAlign: 'center', lineHeight: 21 },
   check: {
     width: 96,
     height: 96,
@@ -323,10 +497,10 @@ const styles = StyleSheet.create({
   summaryStrong: { fontWeight: '700' },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: theme.separator },
   icon: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: theme.surface,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

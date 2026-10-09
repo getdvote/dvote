@@ -9,6 +9,14 @@ import { VendorsModule } from './vendors/vendors.module';
 import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { ScansModule } from './scans/scans.module';
 import { CardsModule } from './cards/cards.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { VendorImagesModule } from './vendor-images/vendor-images.module';
+import { AdminModule } from './admin/admin.module';
+import { BranchesModule } from './branches/branches.module';
+import { PointRulesModule } from './point-rules/point-rules.module';
+import { RewardsModule } from './rewards/rewards.module';
+import { ReportsModule } from './reports/vendor-summary';
+import { LiveModule } from './live/live.module';
 
 @Module({
   imports: [
@@ -18,6 +26,7 @@ import { CardsModule } from './cards/cards.module';
       validate: validateEnv,
     }),
     PrismaModule,
+    LiveModule,
     HealthModule,
     UsersApiModule,
     StaffModule,
@@ -25,6 +34,13 @@ import { CardsModule } from './cards/cards.module';
     QrCodesModule,
     ScansModule,
     CardsModule,
+    FeedbackModule,
+    VendorImagesModule,
+    AdminModule,
+    BranchesModule,
+    PointRulesModule,
+    RewardsModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

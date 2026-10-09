@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  Put,
+  UploadedFile,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -12,6 +21,7 @@ import {
   StaffRoles,
   type StaffContext,
 } from '../auth/staff-auth.guard';
+import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { UpdateVendorProfileDto } from './dto/update-vendor-profile.dto';
 import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorsService } from './vendors.service';
@@ -50,5 +60,45 @@ export class VendorProfileController {
     @Body() dto: UpdateVendorProfileDto,
   ): Promise<VendorResponseDto> {
     return VendorResponseDto.from(await this.vendors.update(ctx.vendorId, dto));
+  }
+
+  /** vendor_admin only: upload or replace the logo (public; the previous uploaded logo is deleted). */
+  @Put('logo')
+  @StaffRoles('vendor_admin')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: VendorResponseDto })
+  async setLogo(
+    @CurrentStaff() ctx: StaffContext,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.setLogo(ctx.vendorId, file.buffer));
+  }
+
+  /** vendor_admin only: remove the logo; an uploaded file is deleted from storage. */
+  @Delete('logo')
+  @StaffRoles('vendor_admin')
+  @ApiOkResponse({ type: VendorResponseDto })
+  async removeLogo(@CurrentStaff() ctx: StaffContext): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.removeLogo(ctx.vendorId));
+  }
+
+  /** vendor_admin only: upload or replace the shop-page banner (previous file deleted). */
+  @Put('banner')
+  @StaffRoles('vendor_admin')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: VendorResponseDto })
+  async setBanner(
+    @CurrentStaff() ctx: StaffContext,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.setBanner(ctx.vendorId, file.buffer));
+  }
+
+  /** vendor_admin only: remove the banner; the file is deleted from storage. */
+  @Delete('banner')
+  @StaffRoles('vendor_admin')
+  @ApiOkResponse({ type: VendorResponseDto })
+  async removeBanner(@CurrentStaff() ctx: StaffContext): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.removeBanner(ctx.vendorId));
   }
 }

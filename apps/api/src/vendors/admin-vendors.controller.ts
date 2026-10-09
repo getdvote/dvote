@@ -2,11 +2,14 @@ import { ParseUuidPipe } from '../common/uuid';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
+  Put,
   Query,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -26,6 +29,7 @@ import {
   StaffResponseDto,
 } from '../staff/dto/staff-response.dto';
 import { StaffService } from '../staff/staff.service';
+import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { CreateVendorAdminDto } from './dto/create-vendor-admin.dto';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { ListVendorsQueryDto } from './dto/list-vendors-query.dto';
@@ -83,6 +87,50 @@ export class AdminVendorsController {
     @Body() dto: UpdateVendorDto,
   ): Promise<VendorResponseDto> {
     return VendorResponseDto.from(await this.vendors.update(id, dto));
+  }
+
+  /** Upload or replace the vendor's logo (public; the previous uploaded logo is deleted). */
+  @Put(':id/logo')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: VendorResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async setLogo(
+    @Param('id', ParseUuidPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.setLogo(id, file.buffer));
+  }
+
+  /** Remove the vendor's logo; an uploaded file is deleted from storage. */
+  @Delete(':id/logo')
+  @ApiOkResponse({ type: VendorResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async removeLogo(
+    @Param('id', ParseUuidPipe) id: string,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.removeLogo(id));
+  }
+
+  /** Upload or replace the shop-page banner (wide image; the previous file is deleted). */
+  @Put(':id/banner')
+  @ApiImageUpload()
+  @ApiOkResponse({ type: VendorResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async setBanner(
+    @Param('id', ParseUuidPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.setBanner(id, file.buffer));
+  }
+
+  /** Remove the banner; the file is deleted from storage. */
+  @Delete(':id/banner')
+  @ApiOkResponse({ type: VendorResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async removeBanner(
+    @Param('id', ParseUuidPipe) id: string,
+  ): Promise<VendorResponseDto> {
+    return VendorResponseDto.from(await this.vendors.removeBanner(id));
   }
 
   /** Invite a vendor_admin (e.g. the owner) by email; they then manage their own staff. */

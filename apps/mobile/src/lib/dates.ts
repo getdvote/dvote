@@ -4,7 +4,7 @@
  * can move it to another day.
  */
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+import { calendarNames, t } from '../i18n';
 
 export const OLDEST_BIRTHDAY = '1900-01-01';
 
@@ -18,16 +18,32 @@ export const fromYmd = (s: string) => {
 
 export const todayYmd = () => toYmd(new Date());
 
-/** "12 Apr 1995" */
+/** "12 Apr 1995" / "12 أبريل 1995" */
 export const showYmd = (s: string) => {
   const [y, m, d] = s.split('-').map(Number);
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+  return `${d} ${calendarNames().monthsShort[m - 1]} ${y}`;
+};
+
+/** A moment as a day, e.g. "8 Oct 2026" / "8 أكتوبر 2026" (the phone's time zone). */
+export const showDate = (date: Date) =>
+  `${date.getDate()} ${calendarNames().monthsShort[date.getMonth()]} ${date.getFullYear()}`;
+
+const twelveHour = (h: number, m: number) =>
+  `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? t('card.am') : t('card.pm')}`;
+
+/** A moment's time of day, e.g. "3:05 PM" / "3:05 م" (the phone's time zone). */
+export const showTime = (date: Date) => twelveHour(date.getHours(), date.getMinutes());
+
+/** A wall-clock "HH:MM" (e.g. a branch's opening time) as "9:00 AM" / "9:00 ص". */
+export const showClock = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return twelveHour(h, m);
 };
 
 /** Same rules as the API. Returns what's wrong, or null when the birthday is fine. */
 export function birthdayProblem(s: string): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || toYmd(fromYmd(s)) !== s) return 'Choose a real date.';
-  if (s > todayYmd()) return "Your birthday can't be in the future.";
-  if (s < OLDEST_BIRTHDAY) return 'Choose a date after 1900.';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || toYmd(fromYmd(s)) !== s) return t('birthday.realDate');
+  if (s > todayYmd()) return t('birthday.future');
+  if (s < OLDEST_BIRTHDAY) return t('birthday.tooOld');
   return null;
 }

@@ -33,6 +33,7 @@ export class CardsController {
     return this.cards.list(user.id);
   }
 
+  /** A card's history, newest first. Page with `before` = the last event id already shown. */
   @Get(':id/events')
   @ApiOkResponse({ type: [CardEventResponseDto] })
   @ApiNotFoundResponse({ description: 'card_not_found' })
@@ -41,6 +42,6 @@ export class CardsController {
     @Param('id', ParseUuidPipe) id: string,
     @Query() query: ListCardEventsQueryDto,
   ): Promise<CardEventResponseDto[]> {
-    return this.cards.events(user.id, id, query.limit);
+    return this.cards.events(user.id, id, query.limit, query.before);
   }
 }

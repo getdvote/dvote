@@ -35,13 +35,19 @@ export class UserResponseDto {
   })
   birthDate: string | null;
 
-  @ApiProperty({ type: String, nullable: true })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Uploaded photo (a signed link valid about 1 hour: fetch /users/me again for a fresh one), else the sign-in provider photo, else null',
+  })
   avatarUrl: string | null;
 
   @ApiProperty()
   createdAt: string;
 
-  static from(user: users): UserResponseDto {
+  /** avatarUrl: pass the signed URL when the customer uploaded a photo. */
+  static from(user: users, avatarUrl: string | null = user.avatar_url): UserResponseDto {
     return {
       id: user.id,
       name: user.name,
@@ -49,7 +55,7 @@ export class UserResponseDto {
       phone: user.phone,
       gender: user.gender,
       birthDate: user.birth_date?.toISOString().slice(0, 10) ?? null,
-      avatarUrl: user.avatar_url,
+      avatarUrl,
       createdAt: user.created_at.toISOString(),
     };
   }

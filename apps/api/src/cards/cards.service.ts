@@ -14,7 +14,7 @@ export class CardsService {
       where: { user_id: userId },
       include: {
         vendors: {
-          select: { id: true, name: true, logo_url: true, currency: true },
+          select: { id: true, name: true, logo_url: true, currency: true, card_design: true },
         },
       },
       orderBy: { last_activity_at: 'desc' },
@@ -37,6 +37,7 @@ export class CardsService {
           name: card.vendors.name,
           logoUrl: card.vendors.logo_url,
           currency: card.vendors.currency,
+          cardDesign: card.vendors.card_design,
         },
         balance: card.balance,
         lifetimePoints: card.lifetime_points,
@@ -46,11 +47,13 @@ export class CardsService {
           ? {
               id: next.id,
               name: next.name,
+              nameAr: next.name_ar,
               pointsCost: next.points_cost,
               pointsNeeded: next.points_cost - card.balance,
             }
           : null,
         lastActivityAt: card.last_activity_at.toISOString(),
+        createdAt: card.created_at.toISOString(),
       };
     });
   }
@@ -60,6 +63,7 @@ export class CardsService {
     userId: string,
     cardId: string,
     limit = 50,
+    before?: string,
   ): Promise<CardEventResponseDto[]> {
     const card = await this.prisma.cards.findFirst({
       where: { id: cardId, user_id: userId },
@@ -71,9 +75,12 @@ export class CardsService {
       where: { card_id: card.id },
       include: {
         branches: { select: { name: true } },
-        rewards: { select: { name: true } },
+        rewards: { select: { name: true, name_ar: true } },
       },
-      orderBy: { created_at: 'desc' },
+      // id breaks ties so pages never skip or repeat events with the same timestamp
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      // an unknown or other card's `before` id just returns an empty page
+      ...(before ? { cursor: { id: before }, skip: 1 } : {}),
       take: limit,
     });
     return events.map((e) => ({
@@ -86,6 +93,7 @@ export class CardsService {
           : fromMinor(toMinor(e.purchase_amount)),
       branchName: e.branches?.name ?? null,
       rewardName: e.rewards?.name ?? null,
+      rewardNameAr: e.rewards?.name_ar ?? null,
       createdAt: e.created_at.toISOString(),
     }));
   }

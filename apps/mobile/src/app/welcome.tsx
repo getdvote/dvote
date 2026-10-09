@@ -1,4 +1,6 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Facebook01Icon from '@hugeicons/core-free-icons/Facebook01Icon';
+import GoogleIcon from '@hugeicons/core-free-icons/GoogleIcon';
+import { Icon } from '../components/Icon';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -7,20 +9,22 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../components/Text';
+import { useI18n } from '../i18n';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { ErrorBox, Field, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { signInWithEmail, signInWithProvider, signUpWithEmail } from '../lib/auth';
 import { useSession } from '../lib/session';
-import { theme } from '../lib/theme';
+import { theme, squircle } from '../lib/theme';
 
 type Mode = 'login' | 'signup';
 
 /** Log in / Sign up: Google, Facebook, or email + password. */
 export default function Welcome() {
   const { session } = useSession();
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -36,7 +40,7 @@ export default function Welcome() {
     try {
       if (await signInWithProvider(provider)) router.replace('/(tabs)/cards');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+      setError(err instanceof Error ? err.message : t('auth.signInFailed'));
     } finally {
       setBusy(null);
     }
@@ -45,9 +49,9 @@ export default function Welcome() {
   async function submit() {
     setError(null);
     const cleanEmail = email.trim().toLowerCase();
-    if (mode === 'signup' && !name.trim()) return setError('Enter your name.');
-    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) return setError('Enter a valid email address.');
-    if (password.length < 6) return setError('Use at least 6 characters for your password.');
+    if (mode === 'signup' && !name.trim()) return setError(t('auth.enterName'));
+    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) return setError(t('auth.invalidEmail'));
+    if (password.length < 6) return setError(t('auth.shortPassword'));
     setBusy('email');
     try {
       if (mode === 'login') {
@@ -59,7 +63,7 @@ export default function Welcome() {
         else router.replace('/(tabs)/cards');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setError(err instanceof Error ? err.message : t('common.somethingWrong'));
     } finally {
       setBusy(null);
     }
@@ -72,31 +76,31 @@ export default function Welcome() {
           <View style={styles.brand}>
             <DvoteLogo height={44} />
             <Text style={styles.title}>
-              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+              {mode === 'login' ? t('auth.welcomeBack') : t('auth.createTitle')}
             </Text>
             <Text style={styles.subtitle}>
-              Collect points at your favourite coffee shops{'\n'}and turn them into free treats.
+              {t('auth.subtitle')}
             </Text>
           </View>
 
           <View style={styles.socials}>
             <PillButton
-              title="Continue with Google"
+              title={t('auth.google')}
               onPress={() => void social('google')}
               loading={busy === 'google'}
-              icon={<FontAwesome name="google" size={20} color="#EA4335" />}
+              icon={<Icon icon={GoogleIcon} size={20} color="#EA4335" />}
             />
             <PillButton
-              title="Continue with Facebook"
+              title={t('auth.facebook')}
               onPress={() => void social('facebook')}
               loading={busy === 'facebook'}
-              icon={<FontAwesome name="facebook-square" size={21} color="#1877F2" />}
+              icon={<Icon icon={Facebook01Icon} size={21} color="#1877F2" />}
             />
           </View>
 
           <View style={styles.divider}>
             <View style={styles.line} />
-            <Text style={styles.or}>or with email</Text>
+            <Text style={styles.or}>{t('auth.orEmail')}</Text>
             <View style={styles.line} />
           </View>
 
@@ -113,7 +117,7 @@ export default function Welcome() {
                 style={[styles.segmentItem, mode === m && styles.segmentOn]}
               >
                 <Text style={[styles.segmentText, mode === m && styles.segmentTextOn]}>
-                  {m === 'login' ? 'Log in' : 'Sign up'}
+                  {m === 'login' ? t('auth.login') : t('auth.signup')}
                 </Text>
               </Pressable>
             ))}
@@ -122,7 +126,7 @@ export default function Welcome() {
           <View style={styles.form}>
             {mode === 'signup' ? (
               <Field
-                placeholder="Full name"
+                placeholder={t('auth.fullName')}
                 value={name}
                 onChangeText={setName}
                 autoComplete="name"
@@ -131,7 +135,7 @@ export default function Welcome() {
               />
             ) : null}
             <Field
-              placeholder="Email"
+              placeholder={t('common.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -141,7 +145,7 @@ export default function Welcome() {
               returnKeyType="next"
             />
             <Field
-              placeholder={mode === 'signup' ? 'Password (6+ characters)' : 'Password'}
+              placeholder={mode === 'signup' ? t('auth.passwordNew') : t('auth.password')}
               value={password}
               onChangeText={setPassword}
               secure
@@ -153,17 +157,17 @@ export default function Welcome() {
             />
             <ErrorBox message={error} />
             <PrimaryButton
-              title={mode === 'login' ? 'Log in' : 'Create account'}
+              title={mode === 'login' ? t('auth.login') : t('auth.createAccount')}
               onPress={() => void submit()}
               loading={busy === 'email'}
             />
             {mode === 'login' ? (
               <Pressable onPress={() => router.push('/forgot-password')} hitSlop={10}>
-                <Text style={styles.link}>Forgot password?</Text>
+                <Text style={styles.link}>{t('auth.forgot')}</Text>
               </Pressable>
             ) : (
               <Text style={styles.legal}>
-                By creating an account you agree to the dvote Terms and Privacy Policy.
+                {t('auth.legal')}
               </Text>
             )}
           </View>
@@ -184,13 +188,14 @@ const styles = StyleSheet.create({
   line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: theme.placeholder },
   or: { fontSize: 13, color: theme.muted },
   segment: {
+    ...squircle,
     flexDirection: 'row',
     backgroundColor: theme.fill,
     borderRadius: 22,
     padding: 3,
     marginBottom: 16,
   },
-  segmentItem: { flex: 1, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  segmentItem: { ...squircle, flex: 1, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: theme.surface },
   segmentText: { fontSize: 15, fontWeight: '600', color: theme.muted },
   segmentTextOn: { color: theme.text },

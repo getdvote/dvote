@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { errorText, t } from '../i18n';
 import { config } from './config';
 import { supabase } from './supabase';
 
@@ -22,12 +24,14 @@ export type Gender = 'male' | 'female';
 
 export interface Card {
   id: string;
-  vendor: { id: string; name: string; logoUrl: string | null; currency: string };
+  vendor: { id: string; name: string; logoUrl: string | null; currency: string; cardDesign: number | null };
   balance: number;
   lifetimePoints: number;
   affordableRewards: number;
-  nextReward: { id: string; name: string; pointsCost: number; pointsNeeded: number } | null;
+  nextReward: { id: string; name: string; nameAr: string | null; pointsCost: number; pointsNeeded: number } | null;
   lastActivityAt: string;
+  /** When the card was made: the first purchase at this shop. */
+  createdAt: string;
 }
 
 export interface CardEvent {
@@ -37,6 +41,7 @@ export interface CardEvent {
   purchaseAmount: string | null;
   branchName: string | null;
   rewardName: string | null;
+  rewardNameAr: string | null;
   createdAt: string;
 }
 
@@ -78,7 +83,9 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown): Promise<T> {
+/** JSON body, or FormData for file uploads (fetch then sets the multipart boundary itself). */
+async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   let res: Response;
@@ -87,12 +94,12 @@ async function call<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: un
       method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: isForm ? (body as FormData) : body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'network', "Can't reach dvote right now. Check your connection and try again.");
+    throw new ApiError(0, 'network', t('errors.network'));
   }
   const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string | string[] };
   if (!res.ok) {
@@ -110,24 +117,122 @@ export const api = {
   updateMe: (body: { name?: string; phone?: string; gender?: Gender | null; birthDate?: string | null }) =>
     call<Me>('PATCH', '/api/app/users/me', body),
   cards: () => call<Card[]>('GET', '/api/app/cards'),
-  cardEvents: (cardId: string) => call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=100`),
+  /** A card's history, newest first. `before`: the last event id already shown (next page). */
+  cardEvents: (cardId: string, limit: number, before?: string) =>
+    call<CardEvent[]>('GET', `/api/app/cards/${cardId}/events?limit=${limit}${before ? `&before=${before}` : ''}`),
   /** Collect QR: works at any shop (the staff who scan it decide the shop). Cancels my older one. */
-  newCollectQr: () => call<NewQrCode>('POST', '/api/app/qr-codes', { purpose: 'collect' }),
+  /** No vendorId: master QR (any shop). vendorId: shop QR, only that shop can scan it. */
+  newCollectQr: (vendorId?: string) =>
+    call<NewQrCode>('POST', '/api/app/qr-codes', vendorId ? { purpose: 'collect', vendorId } : { purpose: 'collect' }),
   qrStatus: (id: string) => call<QrCodeStatus>('GET', `/api/app/qr-codes/${id}`),
   cancelQr: (id: string) => call<QrCodeStatus>('POST', `/api/app/qr-codes/${id}/cancel`),
+  /** Upload or replace my profile photo (the API shrinks it; the old one is deleted). */
+  uploadAvatar: async (photo: PickedPhoto) => call<Me>('PUT', '/api/app/users/me/avatar', await photoForm(photo)),
+  /** Remove my profile photo. */
+  removeAvatar: () => call<Me>('DELETE', '/api/app/users/me/avatar'),
+  /** Explore: every active shop A–Z (optionally filtered by name). */
+  vendors: (search?: string) =>
+    call<VendorListItem[]>('GET', `/api/app/vendors${search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : ''}`),
+  /** A shop's page: point rule, rewards, menu pages, branches and my card there. */
+  vendor: (id: string) => call<VendorPage>('GET', `/api/app/vendors/${id}`),
+  /** Adds the feedback to the team's Google Sheet. */
+  sendFeedback: (body: { category: FeedbackCategory; message: string }) =>
+    call<void>('POST', '/api/app/feedback', body),
 };
 
+/** A photo chosen with expo-image-picker. On the web it also carries the browser File. */
+export interface PickedPhoto {
+  uri: string;
+  mimeType?: string;
+  fileName?: string | null;
+  file?: Blob;
+}
+
+/** multipart/form-data with the photo in the field "file", as the API expects. */
+async function photoForm(photo: PickedPhoto): Promise<FormData> {
+  const form = new FormData();
+  const type = photo.mimeType ?? 'image/jpeg';
+  const name = photo.fileName ?? `photo.${type.split('/')[1] ?? 'jpg'}`;
+  if (Platform.OS === 'web') {
+    form.append('file', photo.file ?? (await (await fetch(photo.uri)).blob()), name);
+  } else {
+    // React Native's FormData reads the file from its uri
+    form.append('file', { uri: photo.uri, name, type } as unknown as Blob);
+  }
+  return form;
+}
+
+/** One shop in the Explore list. */
+/** What kind of place a shop is (set in the dashboards). */
+export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
+
+export interface VendorListItem {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  category: VendorCategory | null;
+  cardDesign: number | null;
+  currency: string;
+  /** null = the shop has no point rule yet */
+  rule: { spendAmount: string; pointsPerSpend: number } | null;
+  rewardsCount: number;
+  branchesCount: number;
+  /** address of the first open branch, as a hint of where the shop is */
+  firstAddress: string | null;
+  /** my points there; null before my first purchase */
+  myBalance: number | null;
+}
+
+export interface VendorPageImage {
+  id: string;
+  url: string;
+}
+
+export interface VendorPage {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  category: VendorCategory | null;
+  cardDesign: number | null;
+  currency: string;
+  /** null = the shop has no point rule yet */
+  rule: { spendAmount: string; pointsPerSpend: number; minPurchase: string; maxPointsPerPurchase: number | null } | null;
+  rewards: {
+    id: string;
+    name: string;
+    description: string | null;
+    /** Arabic texts (null = not translated; the app shows the English ones) */
+    nameAr: string | null;
+    descriptionAr: string | null;
+    imageUrl: string | null;
+    pointsCost: number;
+  }[];
+  menu: VendorPageImage[];
+  branches: {
+    id: string;
+    name: string;
+    address: string | null;
+    /** City key: show with cityName() (lib/cities.ts) */
+    city: string | null;
+    lat: number | null;
+    lng: number | null;
+    /** "HH:MM", the same every day (branch-local); both null = not set. closesAt < opensAt = past midnight */
+    opensAt: string | null;
+    closesAt: string | null;
+    photos: VendorPageImage[];
+  }[];
+  /** My card at this shop; null before my first purchase there */
+  card: { id: string; balance: number; lifetimePoints: number } | null;
+}
+
+/** Same codes as the API (CreateFeedbackDto). */
+export type FeedbackCategory = 'bug' | 'suggestion' | 'points_rewards' | 'account' | 'other';
+
+/** The message shown for an API error code, in the app language (i18n errors.*). */
 export function friendlyMessage(code: string, serverMessage?: string): string {
-  const messages: Record<string, string> = {
-    user_blocked: 'Your account is blocked. Please contact dvote support.',
-    provider_not_allowed: 'This sign-in method is not supported. Use Google, Facebook or email.',
-    token_expired: 'Your session expired. Please sign in again.',
-    invalid_token: 'Please sign in again.',
-    missing_token: 'Please sign in again.',
-    card_not_found: 'This card was not found.',
-    qr_not_found: 'This QR code was not found. Get a new one.',
-  };
-  return messages[code] ?? serverMessage ?? 'Something went wrong. Please try again.';
+  return errorText(code) ?? serverMessage ?? t('common.somethingWrong');
 }
 
 /** Codes that mean the sign-in is no longer valid: back to the welcome screen. */

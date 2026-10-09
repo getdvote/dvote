@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { qr_codes, qr_status } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,13 +16,25 @@ export class QrCodesService {
 
   /**
    * Issues a one-time collect QR (valid 5 minutes). Any other active collect QR of this
-   * customer is cancelled, so only the newest one on screen works. It names no vendor: the
-   * scanning staff member's vendor and branch decide where the points go.
+   * customer is cancelled, so only the newest one on screen works. The master QR names no
+   * vendor (the scanning staff's vendor gets the points); a shop QR (vendorId) only works at
+   * that vendor. Unknown or suspended vendor: 404 vendor_not_found.
    */
   async create(
     userId: string,
     dto: CreateQrCodeDto,
   ): Promise<CreateQrCodeResponseDto> {
+    if (dto.vendorId) {
+      const vendor = await this.prisma.vendors.findFirst({
+        where: { id: dto.vendorId, status: 'active' },
+        select: { id: true, point_rules: { where: { is_active: true }, select: { id: true }, take: 1 } },
+      });
+      if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
+      // No points rule yet: no shop could give points with this QR, so don't issue it.
+      if (vendor.point_rules.length === 0) {
+        throw new ConflictException({ code: 'no_active_rule' });
+      }
+    }
     const { code, tokenHash } = newQrCode();
     const qr = await this.prisma.$transaction(async (tx) => {
       await tx.qr_codes.updateMany({
@@ -33,7 +45,7 @@ export class QrCodesService {
         data: {
           user_id: userId,
           purpose: dto.purpose,
-          vendor_id: null,
+          vendor_id: dto.vendorId ?? null,
           token_hash: tokenHash,
         },
       });

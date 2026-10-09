@@ -13,6 +13,9 @@ export class CardVendorDto {
 
   @ApiProperty({ example: 'EGP' })
   currency: string;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Loyalty-card design 1-10 chosen by the vendor; null = automatic' })
+  cardDesign: number | null;
 }
 
 export class NextRewardDto {
@@ -21,6 +24,14 @@ export class NextRewardDto {
 
   @ApiProperty({ example: 'Free coffee' })
   name: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'قهوة مجانية',
+    description: 'Arabic name (null = not translated; show the English one)',
+  })
+  nameAr: string | null;
 
   @ApiProperty({ example: 300 })
   pointsCost: number;
@@ -58,6 +69,9 @@ export class CardResponseDto {
 
   @ApiProperty()
   lastActivityAt: string;
+
+  @ApiProperty({ description: 'When the card was created: the first purchase at this vendor' })
+  createdAt: string;
 }
 
 export class CardEventResponseDto {
@@ -78,6 +92,14 @@ export class CardEventResponseDto {
 
   @ApiProperty({ type: String, nullable: true, example: 'Free coffee' })
   rewardName: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'قهوة مجانية',
+    description: 'Arabic reward name (null = not translated; show the English one)',
+  })
+  rewardNameAr: string | null;
 
   @ApiProperty()
   createdAt: string;
