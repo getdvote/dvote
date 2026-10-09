@@ -38,6 +38,15 @@ export interface Overview {
 
 export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
 
+/** Collects split by the QR that was scanned: master QR (tab bar, any shop) vs shop QR (a shop's page). */
+export interface QrSources {
+  days: number;
+  master: { collects: number; points: number };
+  shop: { collects: number; points: number };
+  daily: { date: string; master: number; shop: number }[];
+  vendors: { id: string; name: string; logoUrl: string | null; master: number; shop: number }[];
+}
+
 export interface Vendor {
   id: string;
   name: string;
@@ -271,6 +280,7 @@ const file = (f: File, fields: Record<string, string | undefined> = {}) => {
 export const api = {
   me: () => call<AdminMe>('GET', '/api/admin/me'),
   overview: () => call<Overview>('GET', '/api/admin/overview'),
+  qrSources: (days: number) => call<QrSources>('GET', `/api/admin/stats/qr-sources?days=${days}`),
 
   vendors: (q: { search?: string; status?: VendorStatus } = {}) => call<Vendor[]>('GET', `/api/admin/vendors${qs(q)}`),
   vendor: (id: string) => call<Vendor>('GET', `/api/admin/vendors/${id}`),

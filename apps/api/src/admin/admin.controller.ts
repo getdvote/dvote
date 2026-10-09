@@ -5,6 +5,7 @@ import { CurrentAdmin } from '../auth/current-admin.decorator';
 import type { AdminContext } from '../auth/platform-admin.guard';
 import { ParseUuidPipe } from '../common/uuid';
 import { AdminService } from './admin.service';
+import { QrSourcesQueryDto, QrSourcesResponseDto, QrStatsService } from './qr-stats';
 import {
   AdminMeResponseDto,
   AdminUserDetailDto,
@@ -17,13 +18,23 @@ import {
 @AdminApi('admin: overview & customers')
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly qrStats: QrStatsService,
+  ) {}
 
   /** The signed-in platform admin (the dashboard calls this after sign-in). */
   @Get('me')
   @ApiOkResponse({ type: AdminMeResponseDto })
   me(@CurrentAdmin() ctx: AdminContext): Promise<AdminMeResponseDto> {
     return this.admin.me(ctx.adminId);
+  }
+
+  /** Collects split by master QR (any shop) vs shop QR (made on a shop page), last N days. */
+  @Get('stats/qr-sources')
+  @ApiOkResponse({ type: QrSourcesResponseDto })
+  qrSources(@Query() q: QrSourcesQueryDto): Promise<QrSourcesResponseDto> {
+    return this.qrStats.qrSources(q.days ?? 30);
   }
 
   /** Dashboard home: totals, the last 14 days, the busiest shops. */

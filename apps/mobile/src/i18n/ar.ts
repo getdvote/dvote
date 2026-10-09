@@ -447,6 +447,7 @@ export const ar: Dictionary = {
     qr_not_found: 'لم يتم العثور على رمز QR هذا. احصل على رمز جديد.',
     feedback_not_configured: 'الملاحظات غير متاحة بعد. حاول لاحقًا.',
     vendor_not_found: 'هذا المتجر غير موجود على dvote حاليًا.',
+    no_active_rule: 'لم يضع هذا المتجر قاعدة النقاط بعد، لذلك لا يمكن حساب نقاطك هنا. اطلب من المتجر إعدادها على dvote.',
     unsupported_image: 'اختر صورة بصيغة JPG أو PNG أو HEIC.',
     file_too_large: 'الصورة كبيرة جدًا. اختر صورة أقل من 10 ميجابايت.',
     storage_not_configured: 'لا يمكن حفظ الصور الآن. حاول لاحقًا.',

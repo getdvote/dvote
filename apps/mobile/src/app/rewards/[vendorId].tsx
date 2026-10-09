@@ -36,7 +36,7 @@ export default function AllRewards() {
     }
   }, [vendorId, handleAuthError, t]);
 
-  useLiveRefresh(load);
+  useLiveRefresh(load, { vendorId });
 
   const visible = shop ? shop.rewards.slice(0, pages * PAGE_SIZE) : [];
   const hasMore = shop ? visible.length < shop.rewards.length : false;

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { qr_codes, qr_status } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
@@ -27,9 +27,13 @@ export class QrCodesService {
     if (dto.vendorId) {
       const vendor = await this.prisma.vendors.findFirst({
         where: { id: dto.vendorId, status: 'active' },
-        select: { id: true },
+        select: { id: true, point_rules: { where: { is_active: true }, select: { id: true }, take: 1 } },
       });
       if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
+      // No points rule yet: no shop could give points with this QR, so don't issue it.
+      if (vendor.point_rules.length === 0) {
+        throw new ConflictException({ code: 'no_active_rule' });
+      }
     }
     const { code, tokenHash } = newQrCode();
     const qr = await this.prisma.$transaction(async (tx) => {

@@ -59,7 +59,7 @@ export default function Shop() {
     }
   }, [params.id, handleAuthError, t]);
 
-  useLiveRefresh(load);
+  useLiveRefresh(load, { vendorId: params.id });
 
   const shopName = shop?.name ?? (params.name || t('shop.fallbackName'));
   const logoUrl = shop?.logoUrl ?? params.logoUrl ?? null;
@@ -124,6 +124,7 @@ export default function Shop() {
           <PrimaryButton
             title={t('shop.collect')}
             style={styles.action}
+            disabled={!!shop && !shop.rule}
             onPress={() =>
               router.push({
                 pathname: '/qr',
@@ -137,6 +138,8 @@ export default function Shop() {
             }
           />
         </View>
+        {/* No points rule yet: points can't be calculated here, so don't open a QR. */}
+        {shop && !shop.rule ? <Text style={styles.noRule}>{t('errors.no_active_rule')}</Text> : null}
 
         {!shop ? (
           error ? (
@@ -327,6 +330,7 @@ const styles = StyleSheet.create({
   logoInitial: { fontSize: 44, fontWeight: '700', color: '#fff' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   action: { flex: 1 },
+  noRule: { marginTop: 10, fontSize: 14, lineHeight: 20, color: theme.muted, textAlign: 'center' },
   name: { fontSize: 24, fontWeight: '700', color: theme.text, textAlign: 'center' },
   balance: { fontSize: 15, fontWeight: '500', color: theme.muted },
   myCard: {
