@@ -34,8 +34,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
 
+  /**
+   * Signs out and clears the session here at once. (Supabase's SIGNED_OUT event clears it a
+   * moment later; until then the welcome screen still saw a session and sent the customer
+   * straight back to their cards, so logging out looked like it did nothing.)
+   */
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => undefined); // the local session is removed even if the server call fails
+    setSession(null);
     setMe(null);
   }, []);
 

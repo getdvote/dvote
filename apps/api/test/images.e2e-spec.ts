@@ -348,6 +348,32 @@ describe('Images: customer photos, vendor logos, menu pages, branch photos (e2e)
       await prisma.vendors.update({ where: { id: ids.vendorB }, data: { status: 'active' } });
     });
 
+    it('Explore list: active shops A–Z with rule, counts and where they are; search by name', async () => {
+      const res = await as('mona', 'get', '/api/app/vendors').expect(200);
+      const list = res.body as { id: string; name: string }[];
+      const a = list.find((v) => v.id === ids.vendorA);
+      expect(a).toMatchObject({
+        name: `Images A ${run}`,
+        currency: 'EGP',
+        rule: { spendAmount: '10.00', pointsPerSpend: 2 },
+        rewardsCount: 2, // archived one not counted
+        branchesCount: 2, // closed branch not counted
+        firstAddress: '14 Victor Emmanuel St, Smouha',
+        myBalance: null,
+      });
+      expect(list.find((v) => v.id === ids.vendorB)).toMatchObject({ rule: null, rewardsCount: 0, branchesCount: 1 });
+      const names = list.map((v) => v.name);
+      expect(names).toEqual([...names].sort((x, y) => x.localeCompare(y, 'en', { sensitivity: 'base' })));
+
+      const found = await as('mona', 'get', `/api/app/vendors?search=images a ${run}`).expect(200);
+      expect(found.body.map((v: { id: string }) => v.id)).toEqual([ids.vendorA]);
+
+      await prisma.vendors.update({ where: { id: ids.vendorB }, data: { status: 'suspended' } });
+      const after = await as('mona', 'get', '/api/app/vendors').expect(200);
+      expect(after.body.find((v: { id: string }) => v.id === ids.vendorB)).toBeUndefined();
+      await prisma.vendors.update({ where: { id: ids.vendorB }, data: { status: 'active' } });
+    });
+
     it('needs a signed-in customer', async () => {
       await http().get(`/api/app/vendors/${ids.vendorA}`).expect(401);
     });

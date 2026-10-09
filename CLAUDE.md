@@ -31,7 +31,7 @@ Four clients:
 
 ## Repo layout (monorepo)
 
-`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` is the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). **Languages: English (default) + Arabic** — see "Customer app localization" below. `dashboard` and `api-client` are placeholders — not scaffolded yet. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, `mobile:*` (no npm workspaces yet; add them when the other packages get a `package.json`).
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` is the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). **Languages: English (default) + Arabic** — see "Customer app localization" below. `apps/dashboard` is the **admin dashboard** (React 19 + Vite + Ant Design 6 + TanStack Query + Recharts + React Router 7, port 5173; own `package.json`/`.env` with `VITE_*` public values; the API needs `http://localhost:5173` in `CORS_ORIGINS`). The vendor dashboard will live in the same app (decided 2026-10-09: same screens, scoped to one vendor). `api-client` is still a placeholder. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, `mobile:*` (no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
@@ -158,7 +158,7 @@ Run as a scheduled job.
 | PUT / DELETE | /users/me/avatar | Upload or replace my photo (private bucket; old file deleted) / remove it (file deleted, provider photo cleared too) — **built** |
 | GET | /cards | My cards: vendor, balance, lifetime, affordableRewards, nextReward — **built** |
 | GET | /cards/{id}/events | History for one card (`?limit`) — **built** |
-| GET | /vendors | Active vendors + branches + rule summary |
+| GET | /vendors | Explore: active vendors A–Z (`?search` by name) with rule summary, active reward and open branch counts, first branch address, my balance — **built** |
 | GET | /vendors/{id} | Shop page: active rule, active rewards (shop order), menu pages, open branches (address, lat/lng, photos), my card; suspended/unknown → 404 `vendor_not_found` — **built** (`vendors/app-vendors.controller.ts`, `vendor-page.service.ts`) |
 | POST | /qr-codes | `{purpose:"collect"}` (no vendorId: works at any shop) → `{id, code, expiresAt}` — **built** (redeem purpose comes with the redeem flow) |
 | GET | /qr-codes/{id} | Status + result once used (polled) — **built** |
@@ -184,7 +184,9 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 **Built:** `GET|POST /vendors`, `GET|PATCH /vendors/{id}` (filters `status`, `search`; PATCH `status:"suspended"` = soft delete; `logoUrl`/`contactEmail` accept null to clear; `currency` locked once the vendor has a point rule → 409 `currency_locked`; `vendor_not_found` 404) · `POST /vendors/{id}/admins` (invite a vendor_admin by email; same rules/errors as staff invites) · `PUT|DELETE /vendors/{id}/logo` (upload/replace/remove any vendor logo).
 
-**Planned:**  `GET /vendors/{id}/summary` · `GET|PATCH /users/{id}` (support, block) · `POST /cards/{id}/adjust` (adjust ledger row with reason, balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
+**Built (2026-10-09, all with `@AdminApi()`):** `GET /me` · `GET /overview` (totals, 14 days in Cairo time, top vendors 30 days) · `GET|POST /vendors/{id}/branches`, `PATCH /branches/{id}` (close = status) · `GET|POST /vendors/{id}/point-rules` (POST = new active version, previous retired in one tx), `DELETE /vendors/{id}/point-rules/active` (stop earning) · `GET|POST /vendors/{id}/rewards`, `PATCH /rewards/{id}` (incl. `nameAr`/`descriptionAr`, archive = status) · `GET /vendors/{id}/staff`, `PATCH /staff/{id}` (name, status only) · `GET|POST /vendors/{id}/images`, `DELETE /vendors/{id}/images/{imageId}` · `GET /users?search&status&page&pageSize`, `GET /users/{id}` (cards + 30 latest events), `PATCH /users/{id}` (block/unblock). Services (`BranchesService`, `PointRulesService`, `RewardsService`) are reusable by the vendor dashboard. Tests: `test/admin-dashboard.e2e-spec.ts`. Error codes: `branch_not_found`, `reward_not_found`, `user_not_found`.
+
+**Planned:** `GET /vendors/{id}/summary` · `POST /cards/{id}/adjust` (adjust ledger row with reason, balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
 
 ---
 
@@ -206,7 +208,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 6. Redeem flow.
 7. Reports, admin APIs, fraud-flag job, then the React dashboard.
 8. React Native customer app + staff app, using the shared `packages/api-client`.
-   - Customer app: welcome (Google/Facebook/email sign-up + login, reset password), cards + history, You hub, profile details (photo via expo-image-picker → `PUT|DELETE /users/me/avatar`, name, phone, gender, birthday calendar), shop page `/shop/[id]` (rule, rewards with "pts to go", menu pages, branches with directions and photos), settings, about, collect QR screen (`/qr`: polls status every 2 s → "+N points" + balance; no push yet) ✅ (`apps/mobile`). Placeholders: Discover, feedback/help/terms/join. Supabase Redirect URLs must allow `exp://**` and `dvote://**`.
+   - Customer app: welcome (Google/Facebook/email sign-up + login, reset password), cards + history, You hub, profile details (photo via expo-image-picker → `PUT|DELETE /users/me/avatar`, name, phone, gender, birthday calendar), shop page `/shop/[id]` (rule, rewards with "pts to go", menu pages, branches with directions and photos), settings, about, collect QR screen (`/qr`: polls status every 2 s → "+N points" + balance; no push yet) ✅ (`apps/mobile`). Explore tab (all shops, search, opens the shop page). Placeholders: help/terms/join. Supabase Redirect URLs must allow `exp://**` and `dvote://**`.
    - Staff app (login → home → scan → bill amount → done) ✅ (`apps/staff`; types hand-written until api-client exists). The API needs `CORS_ORIGINS` for its web origin (`http://localhost:8081`).
 
 ## Must-have tests

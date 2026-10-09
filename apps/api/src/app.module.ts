@@ -11,6 +11,10 @@ import { ScansModule } from './scans/scans.module';
 import { CardsModule } from './cards/cards.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { VendorImagesModule } from './vendor-images/vendor-images.module';
+import { AdminModule } from './admin/admin.module';
+import { BranchesModule } from './branches/branches.module';
+import { PointRulesModule } from './point-rules/point-rules.module';
+import { RewardsModule } from './rewards/rewards.module';
 
 @Module({
   imports: [
@@ -29,6 +33,10 @@ import { VendorImagesModule } from './vendor-images/vendor-images.module';
     CardsModule,
     FeedbackModule,
     VendorImagesModule,
+    AdminModule,
+    BranchesModule,
+    PointRulesModule,
+    RewardsModule,
   ],
 })
 export class AppModule {}

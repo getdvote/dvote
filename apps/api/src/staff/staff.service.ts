@@ -173,6 +173,23 @@ export class StaffService {
     });
   }
 
+  /** Platform admin: every staff account of a vendor (admins first, then by name). */
+  async listForVendor(vendorId: string): Promise<staff_users[]> {
+    const vendor = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
+    if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
+    return this.prisma.staff_users.findMany({
+      where: { vendor_id: vendorId },
+      orderBy: [{ role: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  /** Platform admin: rename, or disable / re-enable a staff account (soft delete). */
+  async adminUpdate(id: string, dto: Pick<UpdateStaffDto, 'name' | 'status'>): Promise<staff_users> {
+    const found = await this.prisma.staff_users.findUnique({ where: { id }, select: { id: true } });
+    if (!found) throw new NotFoundException({ code: 'staff_not_found' });
+    return this.prisma.staff_users.update({ where: { id }, data: { name: dto.name, status: dto.status } });
+  }
+
   /**
    * Adds a vendor_admin to a vendor on behalf of the platform (not a staff member):
    * POST /api/admin/vendors/{id}/admins. Sends an invite email (or links an existing account).

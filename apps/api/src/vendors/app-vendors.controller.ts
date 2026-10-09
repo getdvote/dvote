@@ -1,5 +1,5 @@
 import { ParseUuidPipe } from '../common/uuid';
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -11,6 +11,8 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
+import { ListAppVendorsQueryDto } from './dto/list-app-vendors-query.dto';
+import { VendorListItemDto } from './dto/vendor-list-item.dto';
 import { VendorPageResponseDto } from './dto/vendor-page-response.dto';
 import { VendorPageService } from './vendor-page.service';
 
@@ -24,6 +26,16 @@ import { VendorPageService } from './vendor-page.service';
 @Controller('app/vendors')
 export class AppVendorsController {
   constructor(private readonly page: VendorPageService) {}
+
+  /** Explore: every active shop A–Z with its rule, reward and branch counts, and my points there. */
+  @Get()
+  @ApiOkResponse({ type: [VendorListItemDto] })
+  list(
+    @CurrentUser() user: users,
+    @Query() query: ListAppVendorsQueryDto,
+  ): Promise<VendorListItemDto[]> {
+    return this.page.list(user.id, query.search);
+  }
 
   /** Shop page: point rule, rewards, menu pages, branches (with photos) and my card there. */
   @Get(':id')

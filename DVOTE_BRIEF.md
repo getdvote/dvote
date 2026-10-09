@@ -42,7 +42,7 @@ cheesecake = 500 pts**, **coffee + cheesecake = 750 pts**.
 | **Customer app** (React Native/Expo, iOS + Android) | Customers | Sign in, see cards (points per shop), show collect QR, profile; later browse shops + redeem | **Mostly built** (`apps/mobile`) |
 | **Staff app** (React Native/Expo, separate app; web + phones) | Cashiers, branch managers, vendor admins | Sign in, scan customer QR, enter bill amount, see points granted; later confirm redemptions | **Built for collect** (`apps/staff`) |
 | **Vendor dashboard** (React web) | Vendor admins, branch managers | Branches, staff, point rule, rewards, reports | Not started |
-| **Admin dashboard** (React web, same app as vendor dashboard, role-based) | dvote platform admins | All vendors, onboarding, support, point corrections, fraud review | Not started (admin **APIs** for vendors exist) |
+| **Admin dashboard** (React web, `apps/dashboard`, port 5173) | dvote platform admins | Overview charts; vendors (create, edit, suspend, logo, branches, points rule, rewards incl. Arabic, menu & photos, staff, invite owner); customers (search, details, block) | **Built** (sign-in with authenticator code) |
 
 All four talk to **one NestJS API**. The apps never touch the database directly.
 
@@ -140,7 +140,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 **Image storage (Supabase Storage):** bucket **`vendors`** (public: `<vendor>/logo/…`, `<vendor>/menu/…`, `<vendor>/branches/<branch>/…`) and bucket **`avatars`** (private: `<user>/…`, shown only to the owner via 1-hour signed links). Apps send images to the API, never to Storage directly; the API checks and shrinks them to WebP. Replacing or deleting an image deletes its file. Buckets are created with `npm run storage:setup`.
 
-**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, **English + Arabic** (Settings → Language; English default, right-to-left Arabic), Profile details (**photo** add/change/remove, name, phone, gender switch, **birthday calendar** with validation), **shop page** (how you earn points, rewards with "pts to go", menu pages, branches with directions and photos), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
+**Customer app (`apps/mobile`)** — welcome (Google / Facebook / email sign-up + log-in, forgot/reset password, email confirmation), Cards list + per-card history, "You" hub, **Explore** (every shop with its rule, rewards/branches count and your points; search), **English + Arabic** (Settings → Language; English default, right-to-left Arabic), Profile details (**photo** add/change/remove, name, phone, gender switch, **birthday calendar** with validation), **shop page** (how you earn points, rewards with "pts to go", menu pages, branches with directions and photos), Settings, About, **collect QR screen** with live "+N points" update. Placeholders: Discover (needs vendors API), feedback / help / terms / join-as-vendor content, delete account.
 
 **Staff app (`apps/staff`)** — log-in → home (vendor, logo, branch) → scan QR (camera) → enter bill (shows the rule) → "points granted" screen. Runs in the browser and on phones.
 
