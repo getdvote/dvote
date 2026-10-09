@@ -1,13 +1,26 @@
 # apps/dashboard — dvote admin dashboard
 
-React 19 + TypeScript (Vite), Ant Design 6, TanStack Query, Recharts, React Router 7.
-Web only. Also the vendor dashboard: vendor admins and branch managers sign in on the same screen and see only their own vendor (the vendor comes from their token). Staff accounts are refused (staff app).
+React 19 + TypeScript (Vite), Tailwind CSS v4 + shadcn/ui (Radix primitives, Lucide icons, Sonner toasts),
+TanStack Query, Recharts (through shadcn `chart`), React Router 7. Web only. Also the vendor dashboard: vendor admins and branch managers sign in on the same screen and see only their own vendor (the vendor comes from their token); staff accounts are refused (staff app).
 
 ## Run
 
 1. `cp .env.example .env` and fill in the Supabase URL and **publishable** key (same as the apps).
 2. The API must allow this origin: `CORS_ORIGINS=…,http://localhost:5173` in `apps/api/.env`.
 3. From the repo root: `npm run dashboard:install` (first time), then `npm run dashboard:dev` → http://localhost:5173
+
+## UI
+
+- shadcn components live in `src/components/ui` (our code: edit freely). Add more with
+  `npx shadcn@latest add <name>` from this folder.
+- dvote theme: brand purple as the one accent, Inter, grey canvas with white cards. All colours are
+  tokens in `src/styles.css` (`bg-card`, `text-muted-foreground`, `bg-brand-soft`, `text-success`…);
+  never hard-code hex values.
+- Light / dark / system: toggle in the top bar, saved in localStorage (`src/lib/theme.tsx`;
+  `index.html` applies it before the first paint).
+- Shared pieces in `src/components`: `PageHeader`, `StatusTag`, `ConfirmAction` (ask before
+  suspend/block/delete), `Field` (form rows), `TableState`, `ListControls` (search, status filter,
+  pager), `ErrorAlert`, `ThemeToggle`.
 
 ## Sign-in
 

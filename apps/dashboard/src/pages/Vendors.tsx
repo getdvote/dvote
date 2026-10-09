@@ -1,25 +1,39 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Avatar, Button, Card, Flex, Form, Input, Modal, Segmented, Select, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
+import { Loader2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { PageHeader } from '../components/PageHeader';
-import { api, errorMessage, type Vendor, type VendorStatus } from '../lib/api';
-import { brand } from '../theme';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { Field } from '../components/Field';
+import { Pager, SearchInput, StatusFilter } from '../components/ListControls';
+import { initial, PageHeader } from '../components/PageHeader';
+import { StatusTag } from '../components/StatusTag';
+import { TableState } from '../components/TableState';
+import { api, type Vendor, type VendorStatus } from '../lib/api';
 
 export const CURRENCIES = ['EGP', 'SAR', 'AED', 'USD', 'EUR'];
+const PAGE_SIZE = 20;
 
 /** Every vendor (brand) on dvote: search, filter by status, create a new one. */
 export function Vendors() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<VendorStatus | 'all'>('all');
+  const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ['vendors', search.trim(), status],
     queryFn: () => api.vendors({ search: search.trim() || undefined, status: status === 'all' ? undefined : status }),
   });
+  const rows = (data ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <>
@@ -27,125 +41,158 @@ export function Vendors() {
         title="Vendors"
         subtitle="Coffee shop brands on dvote"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => setCreating(true)}>
-            New vendor
+          <Button size="lg" onClick={() => setCreating(true)}>
+            <Plus /> New vendor
           </Button>
         }
       />
-      <Card styles={{ body: { padding: 0 } }}>
-        <Flex gap={12} wrap style={{ padding: 16 }}>
-          <Input
-            allowClear
-            prefix={<SearchOutlined />}
-            placeholder="Search by name"
+      <Card className="gap-0 py-0">
+        <div className="flex flex-wrap gap-3 p-4">
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ maxWidth: 320 }}
+            onChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
+            placeholder="Search by name"
           />
-          <Segmented
+          <StatusFilter
             value={status}
-            onChange={(v) => setStatus(v as VendorStatus | 'all')}
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
             options={[
               { label: 'All', value: 'all' },
               { label: 'Active', value: 'active' },
               { label: 'Suspended', value: 'suspended' },
             ]}
           />
-        </Flex>
-        {error ? <Alert type="error" showIcon message={errorMessage(error)} style={{ margin: '0 16px 16px' }} /> : null}
-        <Table<Vendor>
-          rowKey="id"
-          loading={isLoading}
-          dataSource={data ?? []}
-          pagination={{ pageSize: 20, hideOnSinglePage: true }}
-          rowClassName="clickable-row"
-          onRow={(v) => ({ onClick: () => navigate(`/vendors/${v.id}`) })}
-          columns={[
-            {
-              title: 'Vendor',
-              key: 'name',
-              render: (_, v) => (
-                <Flex align="center" gap={12}>
-                  <Avatar size={40} src={v.logoUrl ?? undefined} style={{ background: brand.purpleSoft, color: brand.purple }}>
-                    {v.name.slice(0, 1).toUpperCase()}
-                  </Avatar>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{v.name}</div>
-                    <div style={{ color: brand.muted, fontSize: 12 }}>{v.contactEmail ?? 'No contact email'}</div>
+        </div>
+        <ErrorAlert error={error} className="mx-4 mb-4 w-auto" />
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="pl-4">Vendor</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Branches</TableHead>
+              <TableHead className="text-right">Staff</TableHead>
+              <TableHead>Currency</TableHead>
+              <TableHead className="pr-4">Joined</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableState loading={isLoading} empty={rows.length === 0} colSpan={6} emptyText="No vendors found" />
+            {rows.map((v) => (
+              <TableRow key={v.id} className="cursor-pointer" onClick={() => navigate(`/vendors/${v.id}`)}>
+                <TableCell className="pl-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-10">
+                      <AvatarImage src={v.logoUrl ?? undefined} alt="" />
+                      <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{initial(v.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold">{v.name}</div>
+                      <div className="text-xs text-muted-foreground">{v.contactEmail ?? 'No contact email'}</div>
+                    </div>
                   </div>
-                </Flex>
-              ),
-            },
-            { title: 'Status', dataIndex: 'status', render: (s: VendorStatus) => <StatusTag status={s} /> },
-            { title: 'Branches', dataIndex: 'branchCount', align: 'right' },
-            { title: 'Staff', dataIndex: 'staffCount', align: 'right' },
-            { title: 'Currency', dataIndex: 'currency' },
-            { title: 'Joined', dataIndex: 'createdAt', render: (d: string) => dayjs(d).format('D MMM YYYY') },
-          ]}
-        />
+                </TableCell>
+                <TableCell>
+                  <StatusTag status={v.status} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{v.branchCount}</TableCell>
+                <TableCell className="text-right tabular-nums">{v.staffCount}</TableCell>
+                <TableCell>{v.currency}</TableCell>
+                <TableCell className="pr-4">{dayjs(v.createdAt).format('D MMM YYYY')}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <Pager page={page} pageSize={PAGE_SIZE} total={data?.length ?? 0} onChange={setPage} />
       </Card>
-      <CreateVendorModal open={creating} onClose={() => setCreating(false)} onCreated={(v) => navigate(`/vendors/${v.id}`)} />
+      <CreateVendorDialog open={creating} onClose={() => setCreating(false)} onCreated={(v) => navigate(`/vendors/${v.id}`)} />
     </>
   );
 }
 
-export function StatusTag({ status }: { status: string }) {
-  const map: Record<string, { color: string; label: string }> = {
-    active: { color: 'green', label: 'Active' },
-    suspended: { color: 'red', label: 'Suspended' },
-    closed: { color: 'default', label: 'Closed' },
-    archived: { color: 'default', label: 'Archived' },
-    disabled: { color: 'red', label: 'Disabled' },
-    blocked: { color: 'red', label: 'Blocked' },
-  };
-  const s = map[status] ?? { color: 'default', label: status };
+/** Currency picker shared by the create and edit dialogs (posted as `currency`). */
+export function CurrencySelect({ id, defaultValue }: { id: string; defaultValue: string }) {
   return (
-    <Tag color={s.color} bordered={false} style={{ fontWeight: 600 }}>
-      {s.label}
-    </Tag>
+    <Select name="currency" defaultValue={defaultValue}>
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {CURRENCIES.map((c) => (
+          <SelectItem key={c} value={c}>
+            {c}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
-function CreateVendorModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (v: Vendor) => void }) {
-  const [form] = Form.useForm();
+function CreateVendorDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (v: Vendor) => void }) {
   const qc = useQueryClient();
-  const { message } = App.useApp();
   const create = useMutation({
-    mutationFn: (v: { name: string; contactEmail?: string; currency: string }) =>
-      api.createVendor({ name: v.name.trim(), contactEmail: v.contactEmail?.trim() || undefined, currency: v.currency }),
+    mutationFn: (v: { name: string; contactEmail?: string; currency: string }) => api.createVendor(v),
     onSuccess: (v) => {
       void qc.invalidateQueries({ queryKey: ['vendors'] });
-      void message.success(`${v.name} created`);
-      form.resetFields();
+      toast.success(`${v.name} created`);
       onClose();
       onCreated(v);
     },
   });
   return (
-    <Modal
-      title="New vendor"
+    <Dialog
       open={open}
-      onCancel={onClose}
-      okText="Create vendor"
-      confirmLoading={create.isPending}
-      onOk={() => form.submit()}
-      destroyOnHidden
+      onOpenChange={(o) => {
+        if (!o) {
+          onClose();
+          create.reset();
+        }
+      }}
     >
-      <Form form={form} layout="vertical" requiredMark={false} initialValues={{ currency: 'EGP' }} onFinish={(v) => create.mutate(v)}>
-        <Form.Item name="name" label="Brand name" rules={[{ required: true, whitespace: true, max: 120 }]}>
-          <Input placeholder="e.g. Joy Corner" autoFocus />
-        </Form.Item>
-        <Form.Item name="contactEmail" label="Contact email" rules={[{ type: 'email' }]}>
-          <Input placeholder="owner@shop.com (optional)" />
-        </Form.Item>
-        <Form.Item name="currency" label="Currency" extra="Locked once the vendor has a points rule.">
-          <Select options={CURRENCIES.map((c) => ({ value: c, label: c }))} />
-        </Form.Item>
-        {create.error ? <Alert type="error" showIcon message={errorMessage(create.error)} /> : null}
-      </Form>
-      <div style={{ color: brand.muted, fontSize: 13 }}>
-        Next, on the vendor page: add branches, a points rule and rewards, then invite the owner.
-      </div>
-    </Modal>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>New vendor</DialogTitle>
+          <DialogDescription>Next, on the vendor page: add branches, a points rule and rewards, then invite the owner.</DialogDescription>
+        </DialogHeader>
+        <form
+          id="create-vendor"
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            create.mutate({
+              name: String(f.get('name')).trim(),
+              contactEmail: String(f.get('contactEmail')).trim() || undefined,
+              currency: String(f.get('currency')),
+            });
+          }}
+        >
+          <Field label="Brand name" htmlFor="vendor-name">
+            <Input id="vendor-name" name="name" required maxLength={120} pattern=".*\S.*" placeholder="e.g. Joy Corner" autoFocus />
+          </Field>
+          <Field label="Contact email" htmlFor="vendor-email">
+            <Input id="vendor-email" name="contactEmail" type="email" placeholder="owner@shop.com (optional)" />
+          </Field>
+          <Field label="Currency" htmlFor="vendor-currency" hint="Locked once the vendor has a points rule.">
+            <CurrencySelect id="vendor-currency" defaultValue="EGP" />
+          </Field>
+          <ErrorAlert error={create.error} />
+        </form>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="create-vendor" disabled={create.isPending}>
+            {create.isPending ? <Loader2 className="animate-spin" /> : null}
+            Create vendor
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

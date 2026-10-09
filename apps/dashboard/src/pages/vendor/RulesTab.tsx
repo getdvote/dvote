@@ -1,9 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Card, Col, Empty, Flex, Form, InputNumber, Row, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { errorMessage, type PointRule } from '../../lib/api';
+import { Calculator, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmAction } from '../../components/ConfirmAction';
+import { ErrorAlert } from '../../components/ErrorAlert';
+import { Field } from '../../components/Field';
+import { TableState } from '../../components/TableState';
+import { errorMessage} from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
-import { brand } from '../../theme';
+import { cn } from '@/lib/utils';
 
 const amount = (v: string) => (v.endsWith('.00') ? v.slice(0, -3) : v);
 
@@ -17,149 +29,169 @@ function pointsFor(bill: number, r: { spendAmount: number; pointsPerSpend: numbe
 /** The vendor's earning rule: the active one, publish a new version, history, stop earning. */
 export function RulesTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
-  const { message, modal } = App.useApp();
-  const [form] = Form.useForm();
-  const draft = Form.useWatch([], form) as
-    | { spendAmount?: number; pointsPerSpend?: number; minPurchase?: number; maxPointsPerPurchase?: number | null }
-    | undefined;
+  const [draft, setDraft] = useState({ spendAmount: '10', pointsPerSpend: '1', minPurchase: '0', maxPointsPerPurchase: '' });
+  const set = (k: keyof typeof draft) => (e: React.ChangeEvent<HTMLInputElement>) => setDraft((d) => ({ ...d, [k]: e.target.value }));
   const { data, isLoading, error } = useQuery({ queryKey: ['rules', scope.key], queryFn: () => scope.pointRules() });
   const active = data?.find((r) => r.isActive) ?? null;
 
   const done = (text: string) => {
     void qc.invalidateQueries({ queryKey: ['rules', scope.key] });
-    void message.success(text);
+    toast.success(text);
   };
   const publish = useMutation({
-    mutationFn: (v: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null }) =>
-      scope.publishRule({ ...v, maxPointsPerPurchase: v.maxPointsPerPurchase || null }),
+    mutationFn: (v: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase: number | null }) => scope.publishRule(v),
     onSuccess: (r) => done(`Rule version ${r.version} is now active`),
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
   const stop = useMutation({
     mutationFn: () => scope.deactivateRule(),
     onSuccess: () => done('Earning stopped'),
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
 
+  const spend = Number(draft.spendAmount);
+  const per = Number(draft.pointsPerSpend);
+  const preview = spend > 0 && per > 0
+    ? [50, 95, 250].map((bill) => ({
+        bill,
+        pts: pointsFor(bill, {
+          spendAmount: spend,
+          pointsPerSpend: per,
+          minPurchase: Number(draft.minPurchase) || 0,
+          maxPointsPerPurchase: Number(draft.maxPointsPerPurchase) || null,
+        }),
+      }))
+    : null;
+
   return (
-    <Flex vertical gap={20}>
-      {error ? <Alert type="error" showIcon message={errorMessage(error)} /> : null}
-      <Row gutter={[20, 20]}>
-        <Col xs={24} lg={11}>
-          <Card style={{ background: active ? brand.purpleSoft : '#FAFAFC', border: 'none', height: '100%' }}>
-            <Typography.Text type="secondary">Current rule</Typography.Text>
+    <div className="grid gap-6">
+      <ErrorAlert error={error} />
+      <div className="grid gap-5 lg:grid-cols-[11fr_13fr]">
+        <Card className={cn('border-none ring-0', active ? 'bg-brand-soft' : 'bg-muted')}>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">Current rule</div>
             {active ? (
               <>
-                <Typography.Title level={2} style={{ margin: '6px 0 4px', color: brand.purple }}>
+                <div className="mt-1.5 mb-1 text-3xl font-bold tracking-tight text-accent-foreground">
                   Every {amount(active.spendAmount)} {scope.currency} = {active.pointsPerSpend} point{active.pointsPerSpend === 1 ? '' : 's'}
-                </Typography.Title>
-                <Typography.Text type="secondary">
+                </div>
+                <p className="text-sm text-muted-foreground">
                   Version {active.version} · since {dayjs(active.createdAt).format('D MMM YYYY')}
                   {Number(active.minPurchase) > 0 ? ` · bills from ${amount(active.minPurchase)} ${scope.currency}` : ''}
                   {active.maxPointsPerPurchase ? ` · max ${active.maxPointsPerPurchase} per purchase` : ''}
-                </Typography.Text>
-                <div style={{ marginTop: 18, display: scope.can.editVendor ? undefined : 'none' }}>
-                  <Button
-                    danger
-                    loading={stop.isPending}
-                    onClick={() =>
-                      modal.confirm({
-                        title: 'Stop earning points here?',
-                        content: 'Staff will not be able to give points until a new rule is published. Points customers already have stay.',
-                        okText: 'Stop earning',
-                        okButtonProps: { danger: true },
-                        onOk: () => stop.mutateAsync(),
-                      })
-                    }
-                  >
-                    Stop earning
-                  </Button>
-                </div>
+                </p>
+                {scope.can.editVendor ? (
+                <ConfirmAction
+                  title="Stop earning points here?"
+                  description="Staff will not be able to give points until a new rule is published. Points customers already have stay."
+                  actionLabel="Stop earning"
+                  onConfirm={() => stop.mutateAsync()}
+                  trigger={
+                    <Button variant="destructive" className="mt-5">
+                      Stop earning
+                    </Button>
+                  }
+                />
+                ) : null}
               </>
             ) : (
-              <Typography.Title level={4} style={{ margin: '6px 0 0' }}>
-                No active rule: customers can't earn points here yet.
-              </Typography.Title>
+              <p className="mt-1.5 text-lg font-semibold">No active rule: customers can't earn points here yet.</p>
             )}
-          </Card>
-        </Col>
-        <Col xs={24} lg={13} style={{ display: scope.can.editVendor ? undefined : 'none' }}>
-          <Card title={active ? 'Publish a new rule' : 'Set the points rule'}>
-            <Form
-              form={form}
-              layout="vertical"
-              requiredMark={false}
-              initialValues={{ spendAmount: 10, pointsPerSpend: 1, minPurchase: 0 }}
-              onFinish={(v) => publish.mutate(v)}
+          </CardContent>
+        </Card>
+
+        <Card className={scope.can.editVendor ? undefined : 'hidden'}>
+          <CardHeader>
+            <CardTitle>{active ? 'Publish a new rule' : 'Set the points rule'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                publish.mutate({
+                  spendAmount: spend,
+                  pointsPerSpend: per,
+                  minPurchase: draft.minPurchase === '' ? undefined : Number(draft.minPurchase),
+                  maxPointsPerPurchase: Number(draft.maxPointsPerPurchase) || null,
+                });
+              }}
             >
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item name="spendAmount" label={`Every (${scope.currency})`} rules={[{ required: true }]}>
-                    <InputNumber min={0.01} max={99999999} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="pointsPerSpend" label="Gives (points)" rules={[{ required: true }]}>
-                    <InputNumber min={1} max={10000} precision={0} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="minPurchase" label={`Minimum bill (${scope.currency})`}>
-                    <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="maxPointsPerPurchase" label="Max points per purchase">
-                    <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="No limit" />
-                  </Form.Item>
-                </Col>
-              </Row>
-              {draft?.spendAmount && draft.pointsPerSpend ? (
-                <Alert
-                  type="info"
-                  style={{ marginBottom: 16 }}
-                  message={[50, 95, 250]
-                    .map(
-                      (bill) =>
-                        `${bill} ${scope.currency} → ${pointsFor(bill, {
-                          spendAmount: draft.spendAmount!,
-                          pointsPerSpend: draft.pointsPerSpend!,
-                          minPurchase: draft.minPurchase,
-                          maxPointsPerPurchase: draft.maxPointsPerPurchase,
-                        })} pts`,
-                    )
-                    .join('   ·   ')}
-                />
-              ) : null}
-              <Button type="primary" htmlType="submit" loading={publish.isPending}>
-                {active ? 'Publish new version' : 'Publish rule'}
-              </Button>
-              <div style={{ color: brand.muted, fontSize: 12, marginTop: 10 }}>
-                Applies to new purchases only. Points already earned don't change.
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={`Every (${scope.currency})`} htmlFor="rule-spend">
+                  <Input id="rule-spend" type="number" required min={0.01} max={99999999} step={0.01} value={draft.spendAmount} onChange={set('spendAmount')} />
+                </Field>
+                <Field label="Gives (points)" htmlFor="rule-points">
+                  <Input id="rule-points" type="number" required min={1} max={10000} step={1} value={draft.pointsPerSpend} onChange={set('pointsPerSpend')} />
+                </Field>
+                <Field label={`Minimum bill (${scope.currency})`} htmlFor="rule-min">
+                  <Input id="rule-min" type="number" min={0} step={0.01} value={draft.minPurchase} onChange={set('minPurchase')} />
+                </Field>
+                <Field label="Max points per purchase" htmlFor="rule-max">
+                  <Input id="rule-max" type="number" min={1} step={1} placeholder="No limit" value={draft.maxPointsPerPurchase} onChange={set('maxPointsPerPurchase')} />
+                </Field>
               </div>
-            </Form>
-          </Card>
-        </Col>
-      </Row>
+              {preview ? (
+                <Alert>
+                  <Calculator />
+                  <AlertDescription className="flex flex-wrap gap-x-5 gap-y-1 text-foreground">
+                    {preview.map((p) => (
+                      <span key={p.bill} className="tabular-nums">
+                        {p.bill} {scope.currency} → <strong>{p.pts} pts</strong>
+                      </span>
+                    ))}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <div>
+                <Button type="submit" disabled={publish.isPending}>
+                  {publish.isPending ? <Loader2 className="animate-spin" /> : null}
+                  {active ? 'Publish new version' : 'Publish rule'}
+                </Button>
+                <p className="mt-2.5 text-xs text-muted-foreground">Applies to new purchases only. Points already earned don't change.</p>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
 
       <div>
-        <Typography.Title level={5}>History</Typography.Title>
-        <Table<PointRule>
-          rowKey="id"
-          size="small"
-          loading={isLoading}
-          dataSource={data ?? []}
-          pagination={false}
-          locale={{ emptyText: <Empty description="No rules yet" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-          columns={[
-            { title: 'Version', dataIndex: 'version', render: (v: number, r) => <>v{v} {r.isActive ? <Tag color="purple">Active</Tag> : null}</> },
-            { title: 'Rule', key: 'rule', render: (_, r) => `${amount(r.spendAmount)} ${scope.currency} = ${r.pointsPerSpend} pt` },
-            { title: 'Minimum bill', dataIndex: 'minPurchase', render: (m: string) => (Number(m) > 0 ? `${amount(m)} ${scope.currency}` : '—') },
-            { title: 'Max per purchase', dataIndex: 'maxPointsPerPurchase', render: (m: number | null) => m ?? '—' },
-            { title: 'Published', dataIndex: 'createdAt', render: (d: string) => dayjs(d).format('D MMM YYYY, HH:mm') },
-          ]}
-        />
+        <h3 className="mb-3 font-semibold">History</h3>
+        <div className="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-4">Version</TableHead>
+                <TableHead>Rule</TableHead>
+                <TableHead>Minimum bill</TableHead>
+                <TableHead>Max per purchase</TableHead>
+                <TableHead className="pr-4">Published</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableState loading={isLoading} empty={!data?.length} colSpan={5} emptyText="No rules yet" />
+              {data?.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="pl-4">
+                    v{r.version}{' '}
+                    {r.isActive ? (
+                      <Badge variant="brand" className="ml-1">
+                        Active
+                      </Badge>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    {amount(r.spendAmount)} {scope.currency} = {r.pointsPerSpend} pt
+                  </TableCell>
+                  <TableCell>{Number(r.minPurchase) > 0 ? `${amount(r.minPurchase)} ${scope.currency}` : '—'}</TableCell>
+                  <TableCell>{r.maxPointsPerPurchase ?? '—'}</TableCell>
+                  <TableCell className="pr-4">{dayjs(r.createdAt).format('D MMM YYYY, HH:mm')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </Flex>
+    </div>
   );
 }

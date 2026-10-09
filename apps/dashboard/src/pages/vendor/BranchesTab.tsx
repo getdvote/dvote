@@ -1,16 +1,23 @@
-import { EnvironmentOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Col, Flex, Form, Input, InputNumber, Modal, Row, Table, type TableColumnsType } from 'antd';
+import { Loader2, MapPin, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { ErrorAlert } from '../../components/ErrorAlert';
+import { Field, optionalNumber } from '../../components/Field';
+import { StatusTag } from '../../components/StatusTag';
+import { TableState } from '../../components/TableState';
 import { errorMessage, type Branch } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
-import { brand } from '../../theme';
-import { StatusTag } from '../Vendors';
+import { TabToolbar } from './TabToolbar';
 
 /** The vendor's shops: add, edit (address, map location), close / reopen. */
 export function BranchesTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
-  const { message } = App.useApp();
   const [editing, setEditing] = useState<Branch | 'new' | null>(null);
   const { data, isLoading, error } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
 
@@ -19,123 +26,149 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
     onSuccess: (b) => {
       void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
       void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
-      void message.success(b.status === 'active' ? `${b.name} reopened` : `${b.name} closed`);
+      toast.success(b.status === 'active' ? `${b.name} reopened` : `${b.name} closed`);
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
 
   return (
     <>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
-        <span style={{ color: brand.muted }}>Customers see open branches on the shop page, with directions.</span>
+      <TabToolbar hint="Customers see open branches on the shop page, with directions.">
         {scope.can.editVendor ? (
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
-          Add branch
-        </Button>
+          <Button onClick={() => setEditing('new')}>
+            <Plus /> Add branch
+          </Button>
         ) : null}
-      </Flex>
-      {error ? <Alert type="error" showIcon message={errorMessage(error)} /> : null}
-      <Table<Branch>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data ?? []}
-        pagination={false}
-        locale={{ emptyText: 'No branches yet' }}
-        columns={([
-          { title: 'Branch', dataIndex: 'name', render: (n: string) => <strong>{n}</strong> },
-          { title: 'Address', dataIndex: 'address', render: (a: string | null) => a ?? <span style={{ color: brand.muted }}>—</span> },
-          {
-            title: 'Map',
-            key: 'map',
-            render: (_, b) =>
-              b.lat !== null && b.lng !== null ? (
-                <a href={`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`} target="_blank" rel="noreferrer">
-                  <EnvironmentOutlined /> {b.lat.toFixed(4)}, {b.lng.toFixed(4)}
-                </a>
-              ) : (
-                <span style={{ color: brand.muted }}>Not set</span>
-              ),
-          },
-          { title: 'Status', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
-          {
-            title: '',
-            key: 'actions',
-            align: 'right',
-            render: (_, b) => (
-              <Flex gap={8} justify="flex-end">
-                <Button size="small" onClick={() => setEditing(b)}>
-                  Edit
-                </Button>
-                <Button size="small" danger={b.status === 'active'} loading={toggle.isPending && toggle.variables?.id === b.id} onClick={() => toggle.mutate(b)}>
-                  {b.status === 'active' ? 'Close' : 'Reopen'}
-                </Button>
-              </Flex>
-            ),
-          },
-        ] as TableColumnsType<Branch>).filter((c) => scope.can.editVendor || c.key !== 'actions')}
-      />
-      <BranchModal scope={scope} branch={editing} onClose={() => setEditing(null)} />
+      </TabToolbar>
+      <ErrorAlert error={error} className="mb-4" />
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="pl-4">Branch</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead>Map</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="pr-4" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableState loading={isLoading} empty={!data?.length} colSpan={5} emptyText="No branches yet" />
+            {data?.map((b) => (
+              <TableRow key={b.id}>
+                <TableCell className="pl-4 font-semibold">{b.name}</TableCell>
+                <TableCell className="max-w-xs whitespace-normal">{b.address ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell>
+                  {b.lat !== null && b.lng !== null ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <MapPin className="size-3.5" /> {b.lat.toFixed(4)}, {b.lng.toFixed(4)}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">Not set</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <StatusTag status={b.status} />
+                </TableCell>
+                <TableCell className="pr-4">
+                  <div className={scope.can.editVendor ? 'flex justify-end gap-2' : 'hidden'}>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(b)}>
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={b.status === 'active' ? 'destructive' : 'outline'}
+                      disabled={toggle.isPending && toggle.variables?.id === b.id}
+                      onClick={() => toggle.mutate(b)}
+                    >
+                      {b.status === 'active' ? 'Close' : 'Reopen'}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <BranchDialog scope={scope} branch={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function BranchModal({ scope, branch, onClose }: { scope: VendorScope; branch: Branch | 'new' | null; onClose: () => void }) {
-  const [form] = Form.useForm();
+function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: Branch | 'new' | null; onClose: () => void }) {
   const qc = useQueryClient();
-  const { message } = App.useApp();
   const isNew = branch === 'new';
+  const current = branch && branch !== 'new' ? branch : null;
   const save = useMutation({
-    mutationFn: (v: { name: string; address?: string; lat?: number | null; lng?: number | null }) => {
-      const body = { name: v.name.trim(), address: v.address?.trim() || null, lat: v.lat ?? null, lng: v.lng ?? null };
-      return isNew ? scope.createBranch(body) : scope.updateBranch((branch as Branch).id, body);
-    },
+    mutationFn: (body: { name: string; address: string | null; lat: number | null; lng: number | null }) =>
+      isNew ? scope.createBranch(body) : scope.updateBranch(current!.id, body),
     onSuccess: (b) => {
       void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
       void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
-      void message.success(isNew ? `${b.name} added` : 'Saved');
+      toast.success(isNew ? `${b.name} added` : 'Saved');
       onClose();
     },
   });
   return (
-    <Modal
-      title={isNew ? 'Add branch' : 'Edit branch'}
+    <Dialog
       open={branch !== null}
-      onCancel={onClose}
-      okText={isNew ? 'Add branch' : 'Save'}
-      confirmLoading={save.isPending}
-      onOk={() => form.submit()}
-      destroyOnHidden
+      onOpenChange={(o) => {
+        if (!o) {
+          onClose();
+          save.reset();
+        }
+      }}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        requiredMark={false}
-        initialValues={branch && branch !== 'new' ? { name: branch.name, address: branch.address ?? '', lat: branch.lat, lng: branch.lng } : {}}
-        onFinish={(v) => save.mutate(v)}
-      >
-        <Form.Item name="name" label="Branch name" rules={[{ required: true, whitespace: true, max: 120 }]}>
-          <Input placeholder="e.g. Joy Corner Smouha" autoFocus />
-        </Form.Item>
-        <Form.Item name="address" label="Address" rules={[{ max: 500 }]}>
-          <Input.TextArea rows={2} placeholder="Street, area, city" />
-        </Form.Item>
-        <Row gutter={12}>
-          <Col span={12}>
-            <Form.Item name="lat" label="Latitude">
-              <InputNumber style={{ width: '100%' }} min={-90} max={90} step={0.0001} placeholder="31.2156" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="lng" label="Longitude">
-              <InputNumber style={{ width: '100%' }} min={-180} max={180} step={0.0001} placeholder="29.9553" />
-            </Form.Item>
-          </Col>
-        </Row>
-        <div style={{ color: brand.muted, fontSize: 12, marginTop: -8, marginBottom: 12 }}>
-          Tip: in Google Maps, right-click the shop and click the numbers to copy them.
-        </div>
-        {save.error ? <Alert type="error" showIcon message={errorMessage(save.error)} /> : null}
-      </Form>
-    </Modal>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isNew ? 'Add branch' : 'Edit branch'}</DialogTitle>
+        </DialogHeader>
+        <form
+          id="branch-form"
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            save.mutate({
+              name: String(f.get('name')).trim(),
+              address: String(f.get('address')).trim() || null,
+              lat: optionalNumber(f.get('lat')) ?? null,
+              lng: optionalNumber(f.get('lng')) ?? null,
+            });
+          }}
+        >
+          <Field label="Branch name" htmlFor="branch-name">
+            <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="e.g. Joy Corner Smouha" autoFocus />
+          </Field>
+          <Field label="Address" htmlFor="branch-address">
+            <Textarea id="branch-address" name="address" rows={2} maxLength={500} defaultValue={current?.address ?? ''} placeholder="Street, area, city" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Latitude" htmlFor="branch-lat">
+              <Input id="branch-lat" name="lat" type="number" min={-90} max={90} step="any" defaultValue={current?.lat ?? ''} placeholder="31.2156" />
+            </Field>
+            <Field label="Longitude" htmlFor="branch-lng">
+              <Input id="branch-lng" name="lng" type="number" min={-180} max={180} step="any" defaultValue={current?.lng ?? ''} placeholder="29.9553" />
+            </Field>
+          </div>
+          <p className="-mt-1 text-xs text-muted-foreground">Tip: in Google Maps, right-click the shop and click the numbers to copy them.</p>
+          <ErrorAlert error={save.error} />
+        </form>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="branch-form" disabled={save.isPending}>
+            {save.isPending ? <Loader2 className="animate-spin" /> : null}
+            {isNew ? 'Add branch' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

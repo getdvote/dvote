@@ -1,5 +1,5 @@
-import { Card } from 'antd';
 import type { ReactNode } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '../../components/PageHeader';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { BranchesTab } from '../vendor/BranchesTab';
@@ -13,7 +13,9 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
   return (
     <>
       <PageHeader title={title} subtitle={subtitle} />
-      <Card>{children}</Card>
+      <Card>
+        <CardContent>{children}</CardContent>
+      </Card>
     </>
   );
 }

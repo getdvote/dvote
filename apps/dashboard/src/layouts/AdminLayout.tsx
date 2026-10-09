@@ -1,23 +1,40 @@
-import { DashboardOutlined, LogoutOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
-import { Avatar, Button, Flex, Layout, Menu, Typography, type MenuProps } from 'antd';
-import type { ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { LayoutDashboard, LogOut, Store, Users } from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
+import { NavLink, useLocation } from 'react-router';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DvoteLogo } from '../components/DvoteLogo';
+import { initial } from '../components/PageHeader';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../lib/auth';
-import { brand } from '../theme';
-
-const { Sider, Content } = Layout;
 
 export interface NavItem {
-  key: string;
-  icon: ReactNode;
+  to: string;
+  icon: ComponentType;
   label: string;
 }
 
 const NAV: NavItem[] = [
-  { key: '/', icon: <DashboardOutlined />, label: 'Overview' },
-  { key: '/vendors', icon: <ShopOutlined />, label: 'Vendors' },
-  { key: '/customers', icon: <TeamOutlined />, label: 'Customers' },
+  { to: '/', icon: LayoutDashboard, label: 'Overview' },
+  { to: '/vendors', icon: Store, label: 'Vendors' },
+  { to: '/customers', icon: Users, label: 'Customers' },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -29,7 +46,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   );
 }
 
-/** White sidebar (logo, sections, signed-in person) + grey canvas for the page. */
+/** Sidebar (logo, sections, signed-in person) + a top bar (menu button, theme) above the page. */
 export function SideLayout({
   nav,
   badge,
@@ -39,53 +56,74 @@ export function SideLayout({
 }: {
   nav: NavItem[];
   badge: string;
-  /** Shown under the logo (e.g. the vendor's name). */
+  /** Shown under the logo (e.g. the vendor's logo and name). */
   top?: ReactNode;
   person: { name: string; email: string };
   children: ReactNode;
 }) {
   const { signOut } = useAuth();
-  const navigate = useNavigate();
   const { pathname } = useLocation();
-  const selected = nav.filter((n) => (n.key === '/' ? pathname === '/' : pathname.startsWith(n.key))).map((n) => n.key);
+  const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={248} breakpoint="lg" collapsedWidth={0} style={{ borderRight: '1px solid #ECECF1' }}>
-        <Flex vertical style={{ height: '100%', padding: '24px 14px 18px' }}>
-          <Flex align="center" gap={10} style={{ padding: '0 10px 28px' }}>
-            <DvoteLogo height={30} color={brand.purple} />
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: brand.purple,
-                background: brand.purpleSoft,
-                padding: '2px 8px',
-                borderRadius: 999,
-                letterSpacing: 0.4,
-              }}
-            >
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="px-4 pt-6 pb-5">
+          <div className="flex items-center gap-2.5">
+            <DvoteLogo height={30} className="text-primary" />
+            <Badge variant="brand" className="font-bold tracking-wide">
               {badge}
-            </span>
-          </Flex>
+            </Badge>
+          </div>
           {top}
-          <Menu mode="inline" selectedKeys={selected} items={nav as MenuProps['items']} onClick={(e) => navigate(e.key)} style={{ border: 'none', flex: 1 }} />
-          <Flex align="center" gap={10} style={{ padding: '12px 10px', borderTop: '1px solid #ECECF1' }}>
-            <Avatar style={{ background: brand.purple, flexShrink: 0 }}>{person.name.slice(0, 1).toUpperCase()}</Avatar>
-            <Flex vertical style={{ minWidth: 0, flex: 1 }}>
-              <Typography.Text strong ellipsis>
-                {person.name}
-              </Typography.Text>
-              <Typography.Text type="secondary" ellipsis style={{ fontSize: 12 }}>
-                {person.email}
-              </Typography.Text>
-            </Flex>
-            <Button type="text" icon={<LogoutOutlined />} title="Sign out" onClick={() => void signOut()} />
-          </Flex>
-        </Flex>
-      </Sider>
-      <Content style={{ padding: '28px 32px 48px', maxWidth: 1280, width: '100%', margin: '0 auto' }}>{children}</Content>
-    </Layout>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {nav.map((n) => (
+                  <SidebarMenuItem key={n.to}>
+                    <SidebarMenuButton asChild isActive={isActive(n.to)} size="lg" className="h-10 font-medium">
+                      <NavLink to={n.to}>
+                        <n.icon />
+                        <span>{n.label}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="p-3">
+          <Separator className="mb-2" />
+          <div className="flex items-center gap-2.5 px-1">
+            <Avatar className="size-9">
+              <AvatarFallback className="bg-primary font-semibold text-primary-foreground">{initial(person.name)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">{person.name}</div>
+              <div className="truncate text-xs text-muted-foreground">{person.email}</div>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => void signOut()}>
+                  <LogOut />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Sign out</TooltipContent>
+            </Tooltip>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="bg-background">
+        <header className="flex h-14 items-center gap-2 px-4 md:px-8">
+          <SidebarTrigger />
+          <div className="flex-1" />
+          <ThemeToggle />
+        </header>
+        <main className="mx-auto w-full max-w-7xl px-4 pb-12 md:px-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

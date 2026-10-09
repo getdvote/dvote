@@ -1,86 +1,108 @@
-import { CameraOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Avatar, Button, Card, Flex, Form, Input, Typography, Upload } from 'antd';
-import { PageHeader } from '../../components/PageHeader';
+import { Camera, Loader2, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ErrorAlert } from '../../components/ErrorAlert';
+import { Field } from '../../components/Field';
+import { initial, PageHeader } from '../../components/PageHeader';
 import { useMyVendor } from '../../layouts/VendorLayout';
 import { errorMessage, vendorApi, type Vendor } from '../../lib/api';
-import { brand } from '../../theme';
+import { IMAGE_ACCEPT } from '../vendor/ImagesTab';
 
 /** Vendor admin: my shop's name, contact email and logo (status and currency stay with dvote). */
 export function MyProfile() {
   const vendor = useMyVendor();
   const qc = useQueryClient();
-  const { message } = App.useApp();
+  const fileInput = useRef<HTMLInputElement>(null);
   const done = (v: Vendor, text: string) => {
     qc.setQueryData(['vendor', 'me'], v);
-    void message.success(text);
+    toast.success(text);
   };
 
   const logo = useMutation({
     mutationFn: vendorApi.uploadLogo,
     onSuccess: (v) => done(v, 'Logo updated'),
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
   const removeLogo = useMutation({
     mutationFn: vendorApi.removeLogo,
     onSuccess: (v) => done(v, 'Logo removed'),
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
   const save = useMutation({
-    mutationFn: (v: { name: string; contactEmail?: string }) =>
-      vendorApi.updateProfile({ name: v.name.trim(), contactEmail: v.contactEmail?.trim() || null }),
+    mutationFn: vendorApi.updateProfile,
     onSuccess: (v) => done(v, 'Saved'),
   });
 
   return (
     <>
       <PageHeader title="Shop profile" subtitle="How your shop appears in the dvote app." />
-      <Card style={{ maxWidth: 720 }}>
-        <Flex gap={28} wrap>
-          <Flex vertical align="center" gap={6}>
-            <Upload accept="image/png,image/jpeg,image/webp,image/heic" showUploadList={false} customRequest={({ file }) => logo.mutate(file as File)}>
-              <div style={{ position: 'relative', cursor: 'pointer' }} title="Upload logo">
-                <Avatar size={104} src={vendor.logoUrl ?? undefined} style={{ background: brand.purpleSoft, color: brand.purple, fontSize: 38 }}>
-                  {vendor.name.slice(0, 1).toUpperCase()}
-                </Avatar>
-                <Avatar
-                  size={32}
-                  icon={<CameraOutlined />}
-                  style={{ position: 'absolute', right: -2, bottom: -2, background: '#fff', color: brand.ink, border: '2px solid #F4F4F8' }}
-                />
-              </div>
-            </Upload>
-            {logo.isPending ? <Typography.Text type="secondary">Uploading…</Typography.Text> : null}
+      <Card className="max-w-3xl">
+        <CardContent className="flex flex-wrap gap-8">
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              className="relative rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              title="Upload logo"
+              onClick={() => fileInput.current?.click()}
+            >
+              <Avatar className="size-26">
+                {vendor.logoUrl ? <AvatarImage src={vendor.logoUrl} alt="" /> : null}
+                <AvatarFallback className="bg-brand-soft text-4xl font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
+              </Avatar>
+              <span className="absolute -right-0.5 -bottom-0.5 flex size-8 items-center justify-center rounded-full border-2 border-background bg-card">
+                {logo.isPending ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+              </span>
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept={IMAGE_ACCEPT}
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) logo.mutate(f);
+                e.target.value = '';
+              }}
+            />
             {vendor.logoUrl ? (
-              <Button size="small" type="link" danger icon={<DeleteOutlined />} loading={removeLogo.isPending} onClick={() => removeLogo.mutate()}>
-                Remove
+              <Button size="sm" variant="ghost" className="text-destructive" disabled={removeLogo.isPending} onClick={() => removeLogo.mutate()}>
+                <Trash2 /> Remove
               </Button>
             ) : null}
-          </Flex>
+          </div>
 
-          <Form
+          <form
             key={vendor.updatedAt}
-            layout="vertical"
-            requiredMark={false}
-            style={{ flex: 1, minWidth: 260 }}
-            initialValues={{ name: vendor.name, contactEmail: vendor.contactEmail ?? '' }}
-            onFinish={(v) => save.mutate(v)}
+            className="grid min-w-64 flex-1 gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              save.mutate({ name: String(f.get('name')).trim(), contactEmail: String(f.get('contactEmail')).trim() || null });
+            }}
           >
-            <Form.Item name="name" label="Shop name" rules={[{ required: true, whitespace: true, max: 120 }]}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="contactEmail" label="Contact email" rules={[{ type: 'email' }]}>
-              <Input placeholder="hello@shop.com" />
-            </Form.Item>
-            <Form.Item label="Currency" extra="Set by dvote. Contact support to change it.">
-              <Input value={vendor.currency} disabled />
-            </Form.Item>
-            {save.error ? <Alert type="error" showIcon message={errorMessage(save.error)} style={{ marginBottom: 12 }} /> : null}
-            <Button type="primary" htmlType="submit" loading={save.isPending}>
-              Save
-            </Button>
-          </Form>
-        </Flex>
+            <Field label="Shop name" htmlFor="profile-name">
+              <Input id="profile-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={vendor.name} />
+            </Field>
+            <Field label="Contact email" htmlFor="profile-email">
+              <Input id="profile-email" name="contactEmail" type="email" defaultValue={vendor.contactEmail ?? ''} placeholder="hello@shop.com" />
+            </Field>
+            <Field label="Currency" htmlFor="profile-currency" hint="Set by dvote. Contact support to change it.">
+              <Input id="profile-currency" value={vendor.currency} disabled />
+            </Field>
+            <ErrorAlert error={save.error} />
+            <div>
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? <Loader2 className="animate-spin" /> : null}
+                Save
+              </Button>
+            </div>
+          </form>
+        </CardContent>
       </Card>
     </>
   );

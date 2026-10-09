@@ -14,11 +14,21 @@ const WORD = [
   'M256.13 172.15H246.643C246.708 173.008 247.109 173.705 247.845 174.241C248.582 174.777 249.437 175.045 250.412 175.045C251.95 175.045 253.098 174.573 253.856 173.63L255.318 175.206C254.019 176.557 252.318 177.232 250.217 177.232C248.484 177.232 247.033 176.664 245.864 175.527C244.694 174.391 244.109 172.89 244.109 171.024C244.109 169.202 244.705 167.722 245.896 166.586C247.087 165.449 248.528 164.881 250.217 164.881C251.907 164.881 253.315 165.385 254.441 166.393C255.567 167.401 256.13 168.741 256.13 170.413V172.15ZM253.596 170.156C253.596 169.191 253.282 168.43 252.654 167.872C252.048 167.315 251.257 167.036 250.282 167.036C249.308 167.036 248.452 167.326 247.716 167.905C247.001 168.484 246.643 169.234 246.643 170.156H253.596Z',
 ];
 
-/** `height` sets the size; the width follows the logo's proportions. */
-export function DvoteLogo({ height = 32, color = 'currentColor', wordmark = true }: { height?: number; color?: string; wordmark?: boolean }) {
+/** `height` sets the size; the width follows the logo's proportions. Colour: `color`, or the text colour (`className`). */
+export function DvoteLogo({
+  height = 32,
+  color = 'currentColor',
+  wordmark = true,
+  className,
+}: {
+  height?: number;
+  color?: string;
+  wordmark?: boolean;
+  className?: string;
+}) {
   const box = wordmark ? { x: 133, w: 124 } : { x: 133, w: 59 };
   return (
-    <svg width={(height * box.w) / 59} height={height} viewBox={`${box.x} 139 ${box.w} 59`} role="img" aria-label="dvote">
+    <svg width={(height * box.w) / 59} height={height} viewBox={`${box.x} 139 ${box.w} 59`} role="img" aria-label="dvote" className={className}>
       {[...MARK, ...(wordmark ? WORD : [])].map((d) => (
         <path key={d.slice(0, 24)} d={d} fill={color} />
       ))}

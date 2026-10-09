@@ -1,19 +1,11 @@
-import {
-  CrownOutlined,
-  DashboardOutlined,
-  GiftOutlined,
-  PictureOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { Avatar, Flex, Typography } from 'antd';
+import { Crown, Gift, Image, LayoutDashboard, Settings, Store, Users } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
-import { vendorApi, type StaffMe } from '../lib/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { initial } from '../components/PageHeader';
+import { vendorApi, type StaffMe, type Vendor } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { myVendorScope, type VendorScope } from '../lib/scope';
-import { brand } from '../theme';
 import { SideLayout, type NavItem } from './AdminLayout';
 
 /** The signed-in vendor account (only call inside the vendor routes). */
@@ -30,17 +22,20 @@ export function useMyScope(): VendorScope {
 }
 
 /** My vendor's profile (name, logo); starts from what sign-in returned. */
-export function useMyVendor() {
+export function useMyVendor(): Vendor {
   const me = useMe();
-  return useQuery({ queryKey: ['vendor', 'me'], queryFn: vendorApi.profile, staleTime: 60_000 }).data ?? {
-    ...me.vendor,
-    contactEmail: null,
-    status: 'active' as const,
-    branchCount: 0,
-    staffCount: 0,
-    createdAt: '',
-    updatedAt: '',
-  };
+  const { data } = useQuery({ queryKey: ['vendor', 'me'], queryFn: vendorApi.profile, staleTime: 60_000 });
+  return (
+    data ?? {
+      ...me.vendor,
+      contactEmail: null,
+      status: 'active',
+      branchCount: 0,
+      staffCount: 0,
+      createdAt: '',
+      updatedAt: '',
+    }
+  );
 }
 
 export function VendorLayout({ children }: { children: ReactNode }) {
@@ -48,13 +43,13 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const vendor = useMyVendor();
   const isAdmin = me.role === 'vendor_admin';
   const nav: NavItem[] = [
-    { key: '/', icon: <DashboardOutlined />, label: 'Overview' },
-    { key: '/branches', icon: <ShopOutlined />, label: 'Branches' },
-    { key: '/rule', icon: <CrownOutlined />, label: 'Points rule' },
-    { key: '/rewards', icon: <GiftOutlined />, label: 'Rewards' },
-    { key: '/images', icon: <PictureOutlined />, label: 'Menu & photos' },
-    { key: '/staff', icon: <TeamOutlined />, label: 'Staff' },
-    ...(isAdmin ? [{ key: '/profile', icon: <SettingOutlined />, label: 'Shop profile' }] : []),
+    { to: '/', icon: LayoutDashboard, label: 'Overview' },
+    { to: '/branches', icon: Store, label: 'Branches' },
+    { to: '/rule', icon: Crown, label: 'Points rule' },
+    { to: '/rewards', icon: Gift, label: 'Rewards' },
+    { to: '/images', icon: Image, label: 'Menu & photos' },
+    { to: '/staff', icon: Users, label: 'Staff' },
+    ...(isAdmin ? [{ to: '/profile', icon: Settings, label: 'Shop profile' }] : []),
   ];
 
   return (
@@ -63,19 +58,16 @@ export function VendorLayout({ children }: { children: ReactNode }) {
       badge="VENDOR"
       person={{ name: me.name, email: me.email }}
       top={
-        <Flex align="center" gap={12} style={{ padding: '0 10px 20px' }}>
-          <Avatar size={42} src={vendor.logoUrl ?? undefined} style={{ background: brand.purpleSoft, color: brand.purple, flexShrink: 0 }}>
-            {vendor.name.slice(0, 1).toUpperCase()}
+        <div className="mt-5 flex items-center gap-3 rounded-lg bg-muted/60 p-2.5">
+          <Avatar className="size-10">
+            {vendor.logoUrl ? <AvatarImage src={vendor.logoUrl} alt="" /> : null}
+            <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
           </Avatar>
-          <Flex vertical style={{ minWidth: 0 }}>
-            <Typography.Text strong ellipsis>
-              {vendor.name}
-            </Typography.Text>
-            <Typography.Text type="secondary" ellipsis style={{ fontSize: 12 }}>
-              {isAdmin ? 'Vendor admin' : `Manager · ${me.branch?.name ?? ''}`}
-            </Typography.Text>
-          </Flex>
-        </Flex>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold">{vendor.name}</div>
+            <div className="truncate text-xs text-muted-foreground">{isAdmin ? 'Vendor admin' : `Manager · ${me.branch?.name ?? ''}`}</div>
+          </div>
+        </div>
       }
     >
       {children}

@@ -1,12 +1,18 @@
-import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Empty, Flex, Image, Popconfirm, Select, Typography, Upload } from 'antd';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Trash2, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmAction } from '../../components/ConfirmAction';
+import { ErrorAlert } from '../../components/ErrorAlert';
 import { errorMessage, type VendorImage } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
-import { brand } from '../../theme';
 
-const ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
+export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 
 /** Menu pages (shown on the shop page in order) and photos per branch. */
 export function ImagesTab({ scope }: { scope: VendorScope }) {
@@ -17,8 +23,8 @@ export function ImagesTab({ scope }: { scope: VendorScope }) {
   const chosen = branchId ?? openBranches[0]?.id;
 
   return (
-    <Flex vertical gap={28}>
-      {error ? <Alert type="error" showIcon message={errorMessage(error)} /> : null}
+    <div className="grid gap-8">
+      <ErrorAlert error={error} />
       <Section
         title="Menu pages"
         hint="Up to 20 pages, shown in this order. Portrait photos of the printed menu work best."
@@ -28,40 +34,39 @@ export function ImagesTab({ scope }: { scope: VendorScope }) {
         images={(images ?? []).filter((i) => i.kind === 'menu')}
         loading={isLoading}
       />
-      <div>
-        <Flex align="center" gap={12} wrap style={{ marginBottom: 4 }}>
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            Branch photos
-          </Typography.Title>
-          {openBranches.length ? (
-            <Select
-              value={chosen}
-              onChange={setBranchId}
-              style={{ minWidth: 220 }}
-              options={openBranches.map((b) => ({ value: b.id, label: b.name }))}
-            />
-          ) : null}
-        </Flex>
-        {chosen ? (
-          <Section
-            hint="Up to 10 photos per branch."
-            scope={scope}
-            kind="branch_photo"
-            canEdit={scope.can.branchPhotos(chosen)}
-            branchId={chosen}
-            images={(images ?? []).filter((i) => i.kind === 'branch_photo' && i.branchId === chosen)}
-            loading={isLoading}
-          />
-        ) : (
-          <Typography.Text type="secondary">Add an open branch first.</Typography.Text>
-        )}
-      </div>
-    </Flex>
+      <Section
+        title="Branch photos"
+        titleExtra={
+          openBranches.length ? (
+            <Select value={chosen} onValueChange={setBranchId}>
+              <SelectTrigger className="min-w-56" aria-label="Branch">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {openBranches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null
+        }
+        hint={chosen ? 'Up to 10 photos per branch.' : 'Add an open branch first.'}
+        scope={scope}
+        kind="branch_photo"
+        canEdit={!!chosen && scope.can.branchPhotos(chosen)}
+        branchId={chosen}
+        images={(images ?? []).filter((i) => i.kind === 'branch_photo' && i.branchId === chosen)}
+        loading={isLoading}
+      />
+    </div>
   );
 }
 
 function Section({
   title,
+  titleExtra,
   hint,
   scope,
   kind,
@@ -70,7 +75,8 @@ function Section({
   loading,
   canEdit,
 }: {
-  title?: string;
+  title: string;
+  titleExtra?: React.ReactNode;
   hint: string;
   scope: VendorScope;
   kind: VendorImage['kind'];
@@ -80,74 +86,136 @@ function Section({
   canEdit: boolean;
 }) {
   const qc = useQueryClient();
-  const { message } = App.useApp();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: ['images', scope.key] });
   const upload = useMutation({
     mutationFn: (file: File) => scope.uploadImage(file, kind, branchId),
     onSuccess: () => {
       refresh();
-      void message.success('Uploaded');
+      toast.success('Uploaded');
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
   const remove = useMutation({
     mutationFn: (id: string) => scope.deleteImage(id),
     onSuccess: () => {
       refresh();
-      void message.success('Deleted');
+      toast.success('Deleted');
     },
-    onError: (e) => void message.error(errorMessage(e)),
+    onError: (e) => void toast.error(errorMessage(e)),
   });
+  const canUpload = kind === 'menu' || !!branchId;
+  const size = kind === 'menu' ? 'h-52 w-37' : 'h-36 w-50';
 
   return (
-    <div>
-      {title ? (
-        <Typography.Title level={5} style={{ marginBottom: 4 }}>
-          {title}
-        </Typography.Title>
-      ) : null}
-      <Flex justify="space-between" align="center" gap={12} wrap style={{ marginBottom: 14 }}>
-        <Typography.Text type="secondary">{hint}</Typography.Text>
-        {canEdit ? (
-        <Upload accept={ACCEPT} multiple showUploadList={false} customRequest={({ file }) => upload.mutate(file as File)}>
-          <Button icon={<UploadOutlined />} loading={upload.isPending}>
-            Upload
-          </Button>
-        </Upload>
+    <section>
+      <div className="mb-1 flex flex-wrap items-center gap-3">
+        <h3 className="font-semibold">{title}</h3>
+        {titleExtra}
+      </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">{hint}</p>
+        {canUpload && canEdit ? (
+          <>
+            <Button variant="outline" disabled={upload.isPending} onClick={() => fileInput.current?.click()}>
+              {upload.isPending ? <Loader2 className="animate-spin" /> : <Upload />} Upload
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept={IMAGE_ACCEPT}
+              multiple
+              hidden
+              onChange={(e) => {
+                for (const file of Array.from(e.target.files ?? [])) upload.mutate(file);
+                e.target.value = '';
+              }}
+            />
+          </>
         ) : null}
-      </Flex>
-      {!loading && images.length === 0 ? (
-        <Empty description="Nothing uploaded yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      </div>
+      {!canUpload ? null : loading ? (
+        <div className="flex flex-wrap gap-3.5">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className={`${size} rounded-xl`} />
+          ))}
+        </div>
+      ) : images.length === 0 ? (
+        <Empty className="border border-dashed py-10">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ImageIcon />
+            </EmptyMedia>
+            <EmptyDescription>Nothing uploaded yet</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <Image.PreviewGroup>
-          <Flex gap={14} wrap>
-            {images.map((img, i) => (
-              <div key={img.id} style={{ position: 'relative' }}>
-                <Image
-                  src={img.url}
-                  width={kind === 'menu' ? 150 : 200}
-                  height={kind === 'menu' ? 210 : 140}
-                  style={{ objectFit: 'cover', borderRadius: 12, background: '#EEE' }}
+        <div className="flex flex-wrap gap-3.5">
+          {images.map((img, i) => (
+            <div key={img.id} className="group relative">
+              <button
+                type="button"
+                className={`${size} overflow-hidden rounded-xl bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50`}
+                onClick={() => setViewing(i)}
+                aria-label={`View image ${i + 1}`}
+              >
+                <img src={img.url} alt="" className="size-full object-cover transition-transform group-hover:scale-[1.02]" />
+              </button>
+              <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-between">
+                <span className="rounded-full bg-black/60 px-2 py-px text-xs text-white">{i + 1}</span>
+                {canEdit ? (
+                <ConfirmAction
+                  title="Delete this image?"
+                  description="It is removed from the shop page and can't be recovered."
+                  actionLabel="Delete"
+                  onConfirm={() => remove.mutateAsync(img.id)}
+                  trigger={
+                    <Button size="icon-sm" variant="outline" className="pointer-events-auto bg-card text-destructive hover:text-destructive" aria-label="Delete image">
+                      <Trash2 />
+                    </Button>
+                  }
                 />
-                <Flex
-                  justify="space-between"
-                  align="center"
-                  style={{ position: 'absolute', left: 8, right: 8, bottom: 8, pointerEvents: 'none' }}
-                >
-                  <span style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 12, padding: '1px 8px', borderRadius: 999 }}>
-                    {i + 1}
-                  </span>
-                  {canEdit ? (
-                  <Popconfirm title="Delete this image?" okText="Delete" okButtonProps={{ danger: true }} onConfirm={() => remove.mutateAsync(img.id)}>
-                    <Button size="small" danger icon={<DeleteOutlined />} style={{ pointerEvents: 'auto', background: '#fff', borderColor: brand.red }} />
-                  </Popconfirm>
-                  ) : null}
-                </Flex>
+                ) : null}
               </div>
-            ))}
-          </Flex>
-        </Image.PreviewGroup>
+            </div>
+          ))}
+        </div>
       )}
-    </div>
+      <ImageViewer images={images} index={viewing} onChange={setViewing} />
+    </section>
+  );
+}
+
+/** Full-size view with previous / next (arrow keys work too). */
+function ImageViewer({ images, index, onChange }: { images: VendorImage[]; index: number | null; onChange: (i: number | null) => void }) {
+  const img = index !== null ? images[index] : undefined;
+  const go = (d: number) => index !== null && images.length && onChange((index + d + images.length) % images.length);
+  return (
+    <Dialog open={!!img} onOpenChange={(o) => !o && onChange(null)}>
+      <DialogContent
+        className="max-w-[calc(100%-2rem)] bg-transparent p-0 ring-0 sm:max-w-3xl"
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowRight') go(1);
+          if (e.key === 'ArrowLeft') go(-1);
+        }}
+      >
+        <DialogTitle className="sr-only">Image {index !== null ? index + 1 : ''}</DialogTitle>
+        {img ? <img src={img.url} alt="" className="max-h-[85vh] w-full rounded-xl object-contain" /> : null}
+        {images.length > 1 ? (
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="secondary" size="icon" aria-label="Previous image" onClick={() => go(-1)}>
+              <ChevronLeft />
+            </Button>
+            <span className="text-sm text-white tabular-nums">
+              {(index ?? 0) + 1} / {images.length}
+            </span>
+            <Button variant="secondary" size="icon" aria-label="Next image" onClick={() => go(1)}>
+              <ChevronRight />
+            </Button>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
