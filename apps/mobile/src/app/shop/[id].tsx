@@ -10,7 +10,7 @@ import { DvoteLogo } from '../../components/DvoteLogo';
 import { Icon } from '../../components/Icon';
 import { ImageViewer } from '../../components/ImageViewer';
 import { MenuGallery } from '../../components/MenuGallery';
-import { RewardList } from '../../components/RewardList';
+import { CAROUSEL_LIMIT, RewardCards } from '../../components/RewardCards';
 import { Text } from '../../components/Text';
 import {
   EmptySection,
@@ -124,8 +124,18 @@ export default function Shop() {
             <SectionTitle title={t('shop.earnTitle')} />
             <EarnRule shop={shop} />
 
-            <SectionTitle title={t('shop.rewards')} />
-            <RewardList rewards={shop.rewards} balance={shop.card?.balance ?? 0} />
+            <SectionTitle
+              title={t('shop.rewards')}
+              action={
+                shop.rewards.length > CAROUSEL_LIMIT
+                  ? {
+                      label: t('rewards.viewAll'),
+                      onPress: () => router.push({ pathname: '/rewards/[vendorId]', params: { vendorId: shop.id } }),
+                    }
+                  : undefined
+              }
+            />
+            <RewardCards rewards={shop.rewards} balance={shop.card?.balance ?? 0} layout="row" />
 
             <SectionTitle title={t('shop.menu')} />
             <MenuGallery images={shop.menu.map((m) => m.url)} />

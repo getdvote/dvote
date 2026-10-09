@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
-import { RewardList } from '../../components/RewardList';
+import { CAROUSEL_LIMIT, RewardCards } from '../../components/RewardCards';
 import { Text } from '../../components/Text';
 import { EmptySection, ErrorBox, PageHeader, Screen, SectionTitle } from '../../components/ui';
 import { api, ApiError, type Card, type CardEvent, type VendorPage } from '../../lib/api';
@@ -19,8 +19,8 @@ import { useSession } from '../../lib/session';
 import { theme, vendorColors, squircle } from '../../lib/theme';
 
 /**
- * Card details: the card, the shop that issued it (opens the shop page), every reward of
- * that shop (from GET /api/app/vendors/{id}) and the history. The title is fixed ("Card details") so it doesn't change while data loads.
+ * Card details: the card, the shop that issued it (opens the shop page), the shop's first
+ * rewards as a horizontal carousel with "View all" (from GET /api/app/vendors/{id}) and the history. The title is fixed ("Card details") so it doesn't change while data loads.
  */
 export default function CardDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -184,8 +184,22 @@ function Rewards({ card, rewards }: { card: Card; rewards: VendorPage['rewards']
         <ActivityIndicator color={theme.text} />
       ) : (
         <>
-          {rewards.length > 0 && (ready > 0 || next) ? <Text style={styles.allTitle}>{translate('card.allRewards')}</Text> : null}
-          <RewardList rewards={rewards} balance={card.balance} />
+          {rewards.length > 0 ? (
+            <View style={styles.allHeader}>
+              <Text style={styles.allTitle}>{translate('card.allRewards')}</Text>
+              {rewards.length > CAROUSEL_LIMIT ? (
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() => router.push({ pathname: '/rewards/[vendorId]', params: { vendorId: card.vendor.id } })}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  <Text style={styles.viewAll}>{translate('rewards.viewAll')}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+          <RewardCards rewards={rewards} balance={card.balance} layout="row" />
         </>
       )}
     </View>
@@ -253,7 +267,9 @@ const styles = StyleSheet.create({
   },
   rewardName: { fontSize: 17, fontWeight: '600', color: theme.text },
   rewardDetail: { fontSize: 14, color: theme.muted, marginTop: 2 },
-  allTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginTop: 8, marginLeft: 2 },
+  allHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  allTitle: { fontSize: 15, fontWeight: '600', color: theme.muted, marginStart: 2 },
+  viewAll: { fontSize: 15, fontWeight: '600', color: theme.link },
   track: { ...squircle, height: 6, borderRadius: 3, backgroundColor: theme.fill, overflow: 'hidden' },
   fill: { ...squircle, height: '100%', borderRadius: 3, backgroundColor: theme.brand },
   row: {
