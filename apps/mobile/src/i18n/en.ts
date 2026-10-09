@@ -31,10 +31,10 @@ export const en = {
     backToLogin: 'Back to log in',
     showMyQr: 'Show my QR code',
     somethingWrong: 'Something went wrong. Please try again.',
-    /** "95 pts" */
-    pts: { one: '{count} pt', other: '{count} pts' },
+    /** "95 points" */
+    pts: { one: '{count} point', other: '{count} points' },
     /** the unit alone, after a big number */
-    ptsUnit: { one: 'pt', other: 'pts' },
+    ptsUnit: { one: 'point', other: 'points' },
     /** "9 points" */
     points: { one: '{count} point', other: '{count} points' },
     /** "+9 points" */
@@ -111,9 +111,7 @@ export const en = {
       'Show your QR code at a dvote coffee shop. Your card for that shop appears here with your first points.',
     couldNotLoad: 'Could not load your cards.',
     cardA11y: '{name}: {balance}',
-    toNext: { one: '{count} pt to {reward}', other: '{count} pts to {reward}' },
     ready: { one: '{count} reward ready to redeem', other: '{count} rewards ready to redeem' },
-    lifetime: { one: 'Lifetime {count} pt', other: 'Lifetime {count} pts' },
     stackA11y: '{count} cards. Show all',
     forYou: 'For you',
     forYouEmpty: 'Offers coming soon',
@@ -155,7 +153,7 @@ export const en = {
     none: 'No rewards yet',
     noneText: "This shop's rewards will show here.",
     enough: 'You have enough points',
-    toGo: { one: '{count} pt to go', other: '{count} pts to go' },
+    toGo: { one: '{count} point to go', other: '{count} points to go' },
     details: 'Reward details',
     required: { one: '{count} point required', other: '{count} points required' },
     redeem: 'Redeem',
@@ -170,7 +168,7 @@ export const en = {
     rewards: { one: '{count} reward', other: '{count} rewards' },
     branches: { one: '{count} branch', other: '{count} branches' },
     noRule: 'Points rule coming soon',
-    myPoints: { one: '{count} pt', other: '{count} pts' },
+    myPoints: { one: '{count} point', other: '{count} points' },
     shopA11y: '{name}. Open shop',
     emptyTitle: 'No coffee shops yet',
     emptyText: 'dvote coffee shops will show here as they join.',
@@ -314,7 +312,7 @@ export const en = {
 
   shop: {
     fallbackName: 'Shop',
-    youHave: { one: 'You have {count} pt here', other: 'You have {count} pts here' },
+    youHave: { one: 'You have {count} point here', other: 'You have {count} points here' },
     logoA11y: '{name} logo. Open full screen',
     earnTitle: 'How you earn points',
     rewards: 'Rewards',

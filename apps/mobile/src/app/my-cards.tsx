@@ -5,7 +5,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Icon } from '../components/Icon';
-import { rewardCaption } from '../components/LoyaltyCard';
 import { Text } from '../components/Text';
 import { ErrorBox, PageHeader, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type Card } from '../lib/api';
@@ -93,13 +92,13 @@ export default function MyCards() {
   );
 }
 
-/** One card as a list row: logo, shop name, balance + progress, chevron. Rows join into one white group. */
+/** One card as a list row: logo, shop name, balance, chevron. Rows join into one white group. */
 function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; last: boolean; onPress: () => void }) {
   const [color] = vendorColors(card.vendor.id);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${translate('cards.cardA11y', { name: card.vendor.name, balance: translate('common.points', { count: card.balance }) })}. ${rewardCaption(card)}`}
+      accessibilityLabel={`${translate('cards.cardA11y', { name: card.vendor.name, balance: translate('common.points', { count: card.balance }) })}`}
       onPress={onPress}
       style={({ pressed }) => [styles.row, first && styles.rowFirst, last && styles.rowLast, pressed && styles.pressed]}
     >
@@ -113,9 +112,6 @@ function CardRow({ card, first, last, onPress }: { card: Card; first: boolean; l
       <View style={styles.rowText}>
         <Text style={styles.vendor} numberOfLines={1}>
           {card.vendor.name}
-        </Text>
-        <Text style={styles.caption} numberOfLines={1}>
-          {rewardCaption(card)}
         </Text>
       </View>
       <Text style={styles.balance}>
@@ -155,7 +151,6 @@ const styles = StyleSheet.create({
   logoInitial: { fontSize: 17, fontWeight: '700', color: '#fff' },
   rowText: { flex: 1, gap: 2 },
   vendor: { fontSize: 17, fontWeight: '600', color: theme.text },
-  caption: { fontSize: 14, color: theme.muted },
   balance: { fontSize: 17, fontWeight: '700', color: theme.text },
   pts: { fontSize: 13, fontWeight: '500', color: theme.muted },
   empty: { alignItems: 'center', gap: 12, marginTop: 40, paddingHorizontal: 8 },
