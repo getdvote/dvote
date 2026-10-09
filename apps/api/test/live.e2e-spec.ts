@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -47,7 +48,7 @@ describe('Live updates to the customer app (e2e)', () => {
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.listen(0, '127.0.0.1');
-    port = (app.getHttpServer().address() as AddressInfo).port;
+    port = ((app.getHttpServer() as unknown as Server).address() as AddressInfo).port;
     prisma = app.get(PrismaService);
 
     await prisma.vendors.createMany({ data: [{ id: ids.vendorA, name: `Live A ${run}` }, { id: ids.vendorB, name: `Live B ${run}` }] });

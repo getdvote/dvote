@@ -1,5 +1,6 @@
 import GiftCard02Icon from '@hugeicons/core-free-icons/GiftCard02Icon';
 import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
+import Notification01Icon from '@hugeicons/core-free-icons/Notification01Icon';
 import SparklesIcon from '@hugeicons/core-free-icons/SparklesIcon';
 import { CardStack } from '../../components/CardStack';
 import { Icon } from '../../components/Icon';
@@ -70,7 +71,18 @@ export default function Cards() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.title}>{t('cards.title')}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{t('cards.title')}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('notifications.title')}
+              onPress={() => router.push('/notifications')}
+              style={({ pressed }) => [styles.bell, pressed && { opacity: 0.6 }]}
+              hitSlop={6}
+            >
+              <Icon icon={Notification01Icon} size={22} color={theme.text} />
+            </Pressable>
+          </View>
           {cards && cards.length > 0 ? <Text style={styles.count}>{t('cards.shops', { count: cards.length })}</Text> : null}
           <ErrorBox message={error} />
         </View>
@@ -119,7 +131,17 @@ export default function Cards() {
 const styles = StyleSheet.create({
   list: { paddingHorizontal: theme.gutter, paddingBottom: TAB_BAR_SPACE },
   header: { paddingTop: 12, paddingBottom: 20, gap: 4 },
-  title: { fontSize: 34, fontWeight: '700', color: theme.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  title: { flexShrink: 1, fontSize: 34, fontWeight: '700', color: theme.text },
+  // Same size and look as the round back button in PageHeader.
+  bell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   closeWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   // Same size and look as the tab bar's QR button it replaces.
   close: {

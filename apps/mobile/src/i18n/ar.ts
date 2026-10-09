@@ -124,6 +124,9 @@ export const ar: Dictionary = {
     emptyListText: 'اعرض رمز QR في أي مقهى في dvote. ستظهر بطاقتك لهذا المقهى هنا مع أول نقاطك.',
     couldNotLoad: 'تعذّر تحميل بطاقاتك.',
     cardA11y: '{name}: {balance}',
+    addedOn: 'أُضيفت في {date}',
+    cardDetails: 'تفاصيل البطاقة',
+    shopDetails: 'تفاصيل المتجر',
     ready: {
       zero: 'لا توجد مكافآت جاهزة',
       one: 'مكافأة واحدة جاهزة للاستبدال',
@@ -245,14 +248,16 @@ export const ar: Dictionary = {
 
   profile: {
     title: 'البيانات الشخصية',
+    name: 'الاسم',
+    email: 'البريد الإلكتروني',
+    phone: 'رقم الهاتف (اختياري)',
     namePlaceholder: 'اسمك',
     noEmail: 'لا يوجد بريد إلكتروني',
-    phonePlaceholder: 'رقم الهاتف (اختياري)',
+    phonePlaceholder: 'مثال: 01001234567',
     gender: 'النوع',
     male: 'ذكر',
     female: 'أنثى',
     save: 'حفظ التغييرات',
-    saving: 'جارٍ الحفظ…',
     saved: 'تم الحفظ',
     note: 'بريدك الإلكتروني هو الذي تسجّل الدخول به. المتاجر لا ترى أبدًا اسمك أو بريدك أو هاتفك أو نوعك أو تاريخ ميلادك.',
     nameEmpty: 'اكتب اسمك.',
@@ -279,7 +284,6 @@ export const ar: Dictionary = {
     chooseMonthYear: 'اختر الشهر والسنة',
     previousMonth: 'الشهر السابق',
     nextMonth: 'الشهر التالي',
-    closeCalendar: 'إغلاق التقويم',
     realDate: 'اختر تاريخًا صحيحًا.',
     future: 'لا يمكن أن يكون تاريخ ميلادك في المستقبل.',
     tooOld: 'اختر تاريخًا بعد عام 1900.',
@@ -288,6 +292,7 @@ export const ar: Dictionary = {
   settings: {
     title: 'الإعدادات',
     language: 'اللغة',
+    notificationsTitle: 'الإشعارات',
     notifications: 'تفعيل الإشعارات',
     note: 'إشعارات النقاط قادمة قريبًا.',
     logout: 'تسجيل الخروج',
@@ -296,10 +301,9 @@ export const ar: Dictionary = {
     logoutText: 'يمكنك تسجيل الدخول مرة أخرى في أي وقت بنفس الحساب.',
     logoutAction: 'تسجيل الخروج',
     deleteTitle: 'حذف حسابك؟',
-    deleteText: 'سيؤدي هذا إلى حذف حسابك في dvote وكل نقاطك في كل المتاجر نهائيًا. لا يمكن التراجع عن ذلك.',
-    deleteAction: 'حذف',
-    notAvailableTitle: 'غير متاح بعد',
-    notAvailableText: 'حذف الحساب من التطبيق قادم قريبًا. لم يتغير أي شيء في حسابك.',
+    deleteText:
+      'سيتم إيقاف حسابك فورًا وحذفه نهائيًا بعد 90 يومًا مع كل نقاطك في كل المتاجر. غيّرت رأيك؟ سجّل الدخول مرة أخرى خلال 90 يومًا لاستعادته بكل نقاطه.',
+    deleteAction: 'حذف حسابي',
   },
 
   about: {
@@ -323,14 +327,19 @@ export const ar: Dictionary = {
     madeWith: 'صُنع بحب لعشاق القهوة في مصر',
   },
 
+  notifications: {
+    title: 'الإشعارات',
+    emptyTitle: 'لا توجد إشعارات بعد',
+    emptyText: 'ستظهر هنا التحديثات عن نقاطك ومكافآتك وعروض مقاهيك.',
+  },
+
   info: {
     helpTitle: 'المساعدة',
     helpHeading: 'المساعدة في الطريق',
     helpText:
       'إجابات الأسئلة الشائعة وطريقة للتواصل مع فريقنا قادمة قريبًا. إذا لم تظهر نقاطك، اطلب من موظفي المتجر مراجعة عملية المسح.',
     termsTitle: 'الشروط والأحكام',
-    termsHeading: 'الشروط والأحكام',
-    termsText: 'سيتم نشر الشروط الكاملة وسياسة الخصوصية هنا قبل الإطلاق.',
+    termsFailed: 'تعذّر تحميل الشروط. تحقق من اتصالك وحاول مرة أخرى.',
     joinTitle: 'انضم كتاجر',
     joinHeading: 'أحضر dvote إلى مقهاك',
     joinText: 'كافئ زبائنك الدائمين بالنقاط والمكافآت المجانية. تسجيل التجار قادم قريبًا في التطبيق.',
@@ -338,6 +347,7 @@ export const ar: Dictionary = {
 
   qr: {
     title: 'هوية dvote',
+    collectingFrom: 'تجميع النقاط من',
     regenerate: 'أعد إنشاء رمز QR',
     pointsAdded: 'تمت إضافة النقاط',
     expiresIn: 'تنتهي صلاحيته خلال {time}',
@@ -360,6 +370,7 @@ export const ar: Dictionary = {
 
   shop: {
     fallbackName: 'متجر',
+    yourCard: 'بطاقتك',
     youHave: {
       zero: 'لديك {count} نقطة هنا',
       one: 'لديك نقطة واحدة هنا',
@@ -414,7 +425,6 @@ export const ar: Dictionary = {
     send: 'إرسال',
     thanks: 'شكرًا على ملاحظاتك',
     thanksText: 'نقرأ كل رسالة لنجعل dvote أفضل.',
-    closeA11y: 'إغلاق الملاحظات',
     failed: 'تعذّر إرسال ملاحظاتك. حاول مرة أخرى.',
   },
 

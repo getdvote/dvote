@@ -50,6 +50,8 @@ export class LiveService implements OnApplicationBootstrap, OnModuleDestroy {
   ) {}
 
   onApplicationBootstrap(): void {
+    // Scripts boot the app without a web server (createApplicationContext): nothing to attach to.
+    if (!this.http?.httpAdapter) return;
     this.server = this.http.httpAdapter.getHttpServer() as Server;
     this.server.on('upgrade', this.onUpgrade);
     this.wss.on('connection', (socket) => this.onConnection(socket));

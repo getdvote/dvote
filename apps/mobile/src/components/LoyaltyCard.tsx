@@ -24,7 +24,7 @@ export function LoyaltyCard({ card, onPress }: { card: Card; onPress?: () => voi
 
         <View style={styles.top}>
           {card.vendor.logoUrl ? (
-            <Image source={{ uri: card.vendor.logoUrl }} style={styles.logo} contentFit="contain" />
+            <Image source={{ uri: card.vendor.logoUrl }} style={styles.logo} contentFit="cover" />
           ) : (
             <View style={[styles.logo, styles.logoFallback]}>
               <Text style={[styles.logoInitial, { color: colors[0] }]}>{card.vendor.name.slice(0, 1).toUpperCase()}</Text>
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   card: {
     ...squircle,
     height: 200,
-    borderRadius: 24,
+    borderRadius: 32,
     padding: 20,
     overflow: 'hidden',
   },
@@ -93,10 +93,11 @@ const styles = StyleSheet.create({
   stripe: { position: 'absolute', top: -60, width: 22, height: 340, transform: [{ rotate: '28deg' }] },
   dots: { position: 'absolute', right: 18, top: 18, width: 150, flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 40, height: 40, borderRadius: 20 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  // The shop logo fills its circle (like on the shop page), a little larger than a list icon.
+  logo: { width: 52, height: 52, borderRadius: 26, overflow: 'hidden' },
   logoFallback: { backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
-  logoInitial: { fontSize: 18, fontWeight: '800' },
+  logoInitial: { fontSize: 22, fontWeight: '800' },
   vendor: { flex: 1, fontSize: 17, fontWeight: '700' },
   // Sits in the card's upper part so it stays visible when the open stack overlaps the
   // bottom of every card but the front one (CardStack's STEP).

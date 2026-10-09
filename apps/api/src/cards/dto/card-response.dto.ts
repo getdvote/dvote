@@ -69,6 +69,9 @@ export class CardResponseDto {
 
   @ApiProperty()
   lastActivityAt: string;
+
+  @ApiProperty({ description: 'When the card was created: the first purchase at this vendor' })
+  createdAt: string;
 }
 
 export class CardEventResponseDto {

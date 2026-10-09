@@ -603,6 +603,50 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
     });
   });
 
+  describe('admin statistics: master QR vs shop QR', () => {
+    it('each collect is counted under the QR it came from (totals, today, per shop)', async () => {
+      const authId = randomUUID();
+      const admin = await prisma.platform_admins.create({
+        data: { name: `Stats ${run}`, email: `stats-${run}@test.dvote`, auth_user_id: authId },
+      });
+      tokens.statsAdmin = await signer.sign(authId, { aal: 'aal2' });
+      try {
+        type Stats = {
+          master: { collects: number; points: number };
+          shop: { collects: number; points: number };
+          daily: { date: string; master: number; shop: number }[];
+          vendors: { id: string; master: number; shop: number }[];
+        };
+        const stats = async () => (await as('statsAdmin', 'get', '/api/admin/stats/qr-sources?days=7').expect(200)).body as Stats;
+        const before = await stats();
+        expect(before.daily).toHaveLength(7);
+
+        // one master-QR collect and one shop-QR collect at vendor A
+        const master = await qr('karim');
+        const viaMaster = (await collect('staffA1', { code: master.code, amount: 30 }).expect(200)).body as { pointsAdded: number };
+        const shop = (await as('karim', 'post', '/api/app/qr-codes').send({ purpose: 'collect', vendorId: ids.vendorA }).expect(201)).body as { code: string };
+        const viaShop = (await collect('staffA1', { code: shop.code, amount: 30 }).expect(200)).body as { pointsAdded: number };
+
+        const after = await stats();
+        expect(after.master.collects - before.master.collects).toBe(1);
+        expect(after.shop.collects - before.shop.collects).toBe(1);
+        expect(after.master.points - before.master.points).toBe(viaMaster.pointsAdded);
+        expect(after.shop.points - before.shop.points).toBe(viaShop.pointsAdded);
+        const today = (s: Stats) => s.daily[s.daily.length - 1];
+        expect(today(after).master - today(before).master).toBe(1);
+        expect(today(after).shop - today(before).shop).toBe(1);
+        const a = (s: Stats) => s.vendors.find((v) => v.id === ids.vendorA) ?? { master: 0, shop: 0 };
+        expect(a(after).master - a(before).master).toBe(1);
+        expect(a(after).shop - a(before).shop).toBe(1);
+
+        await as('statsAdmin', 'get', '/api/admin/stats/qr-sources?days=400').expect(400);
+        await as('karim', 'get', '/api/admin/stats/qr-sources').expect(403); // customers can't see it
+      } finally {
+        await prisma.platform_admins.delete({ where: { id: admin.id } });
+      }
+    });
+  });
+
   describe('customers', () => {
     it('blocked customer → 403 user_blocked at the counter', async () => {
       const { code } = await qr('blocked');

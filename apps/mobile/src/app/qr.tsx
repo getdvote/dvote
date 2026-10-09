@@ -14,13 +14,14 @@ import {
   Vibration,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../components/Text';
 import { Avatar, ErrorBox, PillButton, PrimaryButton, Screen } from '../components/ui';
 import { api, ApiError, type NewQrCode, type QrCollectResult } from '../lib/api';
 import { t, useI18n } from '../i18n';
 import { useSession } from '../lib/session';
-import { squircle, theme } from '../lib/theme';
+import { shadows, squircle, theme, vendorColors } from '../lib/theme';
 
 const POLL_MS = 2000;
 const QR_LIFETIME_MS = 5 * 60 * 1000;
@@ -38,7 +39,8 @@ type Phase =
  * the new balance. From the tab bar it is the master QR: it names no shop, and the staff
  * member who scans it decides the shop and branch. From a shop page (`vendorId` + `vendorName`)
  * it is that shop's QR: any other shop's staff get vendor_mismatch and give no points; the
- * help text names that shop.
+ * top of the ticket shows that shop (logo, "Collecting points from <shop>") instead of the
+ * customer, and the help text names it.
  *
  * Laid out like a ticket ("Dvote ID"): the customer's photo and name, a perforated tear line,
  * then their code, in the middle of the page. When the code expires (or the clock runs out on
@@ -46,7 +48,16 @@ type Phase =
  * QR code" button.
  */
 export default function Qr() {
-  const { vendorId, vendorName } = useLocalSearchParams<{ vendorId?: string; vendorName?: string }>();
+  const { vendorId, vendorName, logoUrl, cardDesign } = useLocalSearchParams<{
+    vendorId?: string;
+    vendorName?: string;
+    logoUrl?: string;
+    cardDesign?: string;
+  }>();
+  const shop: ShopInfo | null =
+    vendorId && vendorName
+      ? { id: vendorId, name: vendorName, logoUrl, cardDesign: cardDesign ? Number(cardDesign) : null }
+      : null;
   const { handleAuthError } = useSession();
   useI18n(); // re-render on a language switch (children read t directly)
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
@@ -141,7 +152,7 @@ export default function Qr() {
         <IdCard
           phase={phase}
           offline={offline}
-          vendorName={vendorName}
+          shop={shop}
           onExpired={() => {
             // the phone's countdown ran out before the next poll heard it from the server
             activeId.current = null;
@@ -154,17 +165,27 @@ export default function Qr() {
   );
 }
 
-/** The customer's photo and name above their code (or what to do when there's no code). */
+interface ShopInfo {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  cardDesign: number | null;
+}
+
+/**
+ * The customer's photo and name above their code, or for a shop QR the shop it collects at
+ * (or what to do when there's no code).
+ */
 function IdCard({
   phase,
   offline,
-  vendorName,
+  shop,
   onExpired,
   onRegenerate,
 }: {
   phase: Exclude<Phase, { kind: 'done' }>;
   offline: boolean;
-  vendorName?: string;
+  shop: ShopInfo | null;
   onExpired: () => void;
   onRegenerate: () => void;
 }) {
@@ -176,12 +197,24 @@ function IdCard({
   return (
     <View style={styles.page}>
       <View style={[styles.card, { width: cardWidth }]}>
-        <View style={styles.person}>
-          <Avatar name={me?.name ?? null} url={me?.avatarUrl ?? null} size={72} />
-          <Text style={styles.name} numberOfLines={1}>
-            {me?.name ?? t('you.member')}
-          </Text>
-        </View>
+        {shop ? (
+          <View style={styles.person}>
+            <ShopLogo shop={shop} />
+            <View style={styles.shopText}>
+              <Text style={styles.caption}>{t('qr.collectingFrom')}</Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {shop.name}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.person}>
+            <Avatar name={me?.name ?? null} url={me?.avatarUrl ?? null} size={56} />
+            <Text style={styles.name} numberOfLines={1}>
+              {me?.name ?? t('you.member')}
+            </Text>
+          </View>
+        )}
 
         <TearLine width={cardWidth} />
 
@@ -209,7 +242,7 @@ function IdCard({
       </View>
 
       {phase.kind === 'showing' || phase.kind === 'loading' ? (
-        <Text style={styles.help}>{vendorName ? t('qr.atVendor', { vendor: vendorName }) : t('qr.worksAnywhere')}</Text>
+        <Text style={styles.help}>{shop ? t('qr.atVendor', { vendor: shop.name }) : t('qr.worksAnywhere')}</Text>
       ) : null}
     </View>
   );
@@ -312,6 +345,17 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
   );
 }
 
+/** The shop's logo, styled like on its shop page; without one, its initial on the card colour. */
+function ShopLogo({ shop }: { shop: ShopInfo }) {
+  return shop.logoUrl ? (
+    <Image source={{ uri: shop.logoUrl }} style={styles.shopLogo} contentFit="cover" />
+  ) : (
+    <View style={[styles.shopLogo, { backgroundColor: vendorColors(shop.id, shop.cardDesign)[0] }]}>
+      <Text style={styles.shopInitial}>{shop.name.slice(0, 1).toUpperCase()}</Text>
+    </View>
+  );
+}
+
 /** The ticket's perforation: a dashed line with a half-circle notch cut into each side. */
 function TearLine({ width }: { width: number }) {
   // the dashes stop a little short of the notches
@@ -386,13 +430,32 @@ const styles = StyleSheet.create({
   page: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.gutter, paddingBottom: 24 },
   card: {
     ...squircle,
+    ...shadows.soft,
+    // clips the ticket notches to half circles, so they read as cut-outs over the shadow
+    overflow: 'hidden',
     backgroundColor: theme.surface,
-    borderRadius: 28,
+    borderRadius: 36,
     padding: CARD_PADDING,
     alignItems: 'center',
   },
-  person: { alignItems: 'center', gap: 10, paddingTop: 4 },
-  name: { fontSize: 22, fontWeight: '700', color: theme.text, textAlign: 'center' },
+  // Photo and name side by side; the row follows the reading side in Arabic.
+  person: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4, paddingHorizontal: 4 },
+  name: { flexShrink: 1, fontSize: 22, fontWeight: '700', color: theme.text },
+  shopText: { flexShrink: 1, gap: 2 },
+  caption: { fontSize: 14, fontWeight: '500', color: theme.muted },
+  // Same look as the logo on the shop page (round, 4 pt ring in the page colour), smaller.
+  shopLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 4,
+    borderColor: theme.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: theme.surface,
+  },
+  shopInitial: { fontSize: 22, fontWeight: '700', color: '#fff' },
   tear: { alignSelf: 'stretch', height: NOTCH, justifyContent: 'center', marginVertical: 8 },
   // page-coloured circles over the card's edges look like bites taken out of it
   notch: { position: 'absolute', top: 0, width: NOTCH, height: NOTCH, borderRadius: NOTCH / 2, backgroundColor: theme.background },

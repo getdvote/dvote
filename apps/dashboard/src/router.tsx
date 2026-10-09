@@ -9,6 +9,7 @@ import { MyHome } from './pages/my/MyHome';
 import { MyProfile } from './pages/my/MyProfile';
 import { MyBranches, MyImages, MyRewards, MyRule, MyStaff } from './pages/my/MySections';
 import { Overview } from './pages/Overview';
+import { Statistics } from './pages/Statistics';
 import { VendorDetail } from './pages/VendorDetail';
 import { Vendors } from './pages/Vendors';
 
@@ -36,6 +37,7 @@ function Shell() {
           <Route path="/vendors" element={<Vendors />} />
           <Route path="/vendors/:id" element={<VendorDetail />} />
           <Route path="/customers" element={<Customers />} />
+          <Route path="/statistics" element={<Statistics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>
