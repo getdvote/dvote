@@ -146,7 +146,7 @@ function DailyBars({ title, data, dataKey }: { title: string; data: { date: stri
   );
 }
 
-function Stat({ icon: Icon, title, value, note }: { icon: LucideIcon; title: string; value: number; note: string }) {
+export function Stat({ icon: Icon, title, value, note }: { icon: LucideIcon; title: string; value: number; note: string }) {
   return (
     <Card>
       <CardContent className="flex items-start gap-3.5">
@@ -163,7 +163,7 @@ function Stat({ icon: Icon, title, value, note }: { icon: LucideIcon; title: str
   );
 }
 
-function OverviewSkeleton() {
+export function OverviewSkeleton() {
   return (
     <div className="grid gap-5">
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">

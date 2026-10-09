@@ -11,19 +11,20 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field, optionalNumber } from '../../components/Field';
 import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
-import { api, errorMessage, type Reward } from '../../lib/api';
+import { errorMessage, type Reward } from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 import { TabToolbar } from './TabToolbar';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts/order, archive / restore. */
-export function RewardsTab({ vendorId }: { vendorId: string }) {
+export function RewardsTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Reward | 'new' | null>(null);
-  const { data, isLoading, error } = useQuery({ queryKey: ['rewards', vendorId], queryFn: () => api.rewards(vendorId) });
+  const { data, isLoading, error } = useQuery({ queryKey: ['rewards', scope.key], queryFn: () => scope.rewards() });
 
   const toggle = useMutation({
-    mutationFn: (r: Reward) => api.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
+    mutationFn: (r: Reward) => scope.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
     onSuccess: (r) => {
-      void qc.invalidateQueries({ queryKey: ['rewards', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
       toast.success(r.status === 'active' ? `${r.name} restored` : `${r.name} archived`);
     },
     onError: (e) => void toast.error(errorMessage(e)),
@@ -32,9 +33,11 @@ export function RewardsTab({ vendorId }: { vendorId: string }) {
   return (
     <>
       <TabToolbar hint="Archived rewards can't be redeemed. A new price applies to future redemptions only.">
-        <Button onClick={() => setEditing('new')}>
-          <Plus /> Add reward
-        </Button>
+        {scope.can.editVendor ? (
+          <Button onClick={() => setEditing('new')}>
+            <Plus /> Add reward
+          </Button>
+        ) : null}
       </TabToolbar>
       <ErrorAlert error={error} className="mb-4" />
       <div className="overflow-hidden rounded-lg border">
@@ -70,7 +73,7 @@ export function RewardsTab({ vendorId }: { vendorId: string }) {
                   <StatusTag status={r.status} />
                 </TableCell>
                 <TableCell className="pr-4">
-                  <div className="flex justify-end gap-2">
+                  <div className={scope.can.editVendor ? 'flex justify-end gap-2' : 'hidden'}>
                     <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
                       Edit
                     </Button>
@@ -89,19 +92,19 @@ export function RewardsTab({ vendorId }: { vendorId: string }) {
           </TableBody>
         </Table>
       </div>
-      <RewardDialog vendorId={vendorId} reward={editing} onClose={() => setEditing(null)} />
+      <RewardDialog scope={scope} reward={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function RewardDialog({ vendorId, reward, onClose }: { vendorId: string; reward: Reward | 'new' | null; onClose: () => void }) {
+function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: Reward | 'new' | null; onClose: () => void }) {
   const qc = useQueryClient();
   const isNew = reward === 'new';
   const current = reward && reward !== 'new' ? reward : null;
   const save = useMutation({
-    mutationFn: (body: Partial<Reward>) => (isNew ? api.createReward(vendorId, body) : api.updateReward(current!.id, body)),
+    mutationFn: (body: Partial<Reward>) => (isNew ? scope.createReward(body) : scope.updateReward(current!.id, body)),
     onSuccess: (r) => {
-      void qc.invalidateQueries({ queryKey: ['rewards', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
       toast.success(isNew ? `${r.name} added` : 'Saved');
       onClose();
     },

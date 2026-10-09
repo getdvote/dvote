@@ -16,6 +16,7 @@ import { Field } from '../components/Field';
 import { initial } from '../components/PageHeader';
 import { StatusTag } from '../components/StatusTag';
 import { api, errorMessage, type Vendor } from '../lib/api';
+import { adminScope } from '../lib/scope';
 import { BranchesTab } from './vendor/BranchesTab';
 import { IMAGE_ACCEPT, ImagesTab } from './vendor/ImagesTab';
 import { RewardsTab } from './vendor/RewardsTab';
@@ -58,19 +59,19 @@ export function VendorDetail() {
                   <TabsTrigger value="staff" className={TAB}>Staff</TabsTrigger>
                 </TabsList>
                 <TabsContent value="branches">
-                  <BranchesTab vendorId={id} />
+                  <BranchesTab scope={adminScope(vendor.id, vendor.currency)} />
                 </TabsContent>
                 <TabsContent value="rule">
-                  <RulesTab vendor={vendor} />
+                  <RulesTab scope={adminScope(vendor.id, vendor.currency)} />
                 </TabsContent>
                 <TabsContent value="rewards">
-                  <RewardsTab vendorId={id} />
+                  <RewardsTab scope={adminScope(vendor.id, vendor.currency)} />
                 </TabsContent>
                 <TabsContent value="images">
-                  <ImagesTab vendorId={id} />
+                  <ImagesTab scope={adminScope(vendor.id, vendor.currency)} />
                 </TabsContent>
                 <TabsContent value="staff">
-                  <StaffTab vendorId={id} />
+                  <StaffTab scope={adminScope(vendor.id, vendor.currency)} />
                 </TabsContent>
               </Tabs>
             </CardContent>

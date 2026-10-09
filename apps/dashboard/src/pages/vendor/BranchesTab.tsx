@@ -11,20 +11,21 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field, optionalNumber } from '../../components/Field';
 import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
-import { api, errorMessage, type Branch } from '../../lib/api';
+import { errorMessage, type Branch } from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 import { TabToolbar } from './TabToolbar';
 
 /** The vendor's shops: add, edit (address, map location), close / reopen. */
-export function BranchesTab({ vendorId }: { vendorId: string }) {
+export function BranchesTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Branch | 'new' | null>(null);
-  const { data, isLoading, error } = useQuery({ queryKey: ['branches', vendorId], queryFn: () => api.branches(vendorId) });
+  const { data, isLoading, error } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
 
   const toggle = useMutation({
-    mutationFn: (b: Branch) => api.updateBranch(b.id, { status: b.status === 'active' ? 'closed' : 'active' }),
+    mutationFn: (b: Branch) => scope.updateBranch(b.id, { status: b.status === 'active' ? 'closed' : 'active' }),
     onSuccess: (b) => {
-      void qc.invalidateQueries({ queryKey: ['branches', vendorId] });
-      void qc.invalidateQueries({ queryKey: ['vendor', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
+      void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
       toast.success(b.status === 'active' ? `${b.name} reopened` : `${b.name} closed`);
     },
     onError: (e) => void toast.error(errorMessage(e)),
@@ -33,9 +34,11 @@ export function BranchesTab({ vendorId }: { vendorId: string }) {
   return (
     <>
       <TabToolbar hint="Customers see open branches on the shop page, with directions.">
-        <Button onClick={() => setEditing('new')}>
-          <Plus /> Add branch
-        </Button>
+        {scope.can.editVendor ? (
+          <Button onClick={() => setEditing('new')}>
+            <Plus /> Add branch
+          </Button>
+        ) : null}
       </TabToolbar>
       <ErrorAlert error={error} className="mb-4" />
       <div className="overflow-hidden rounded-lg border">
@@ -73,7 +76,7 @@ export function BranchesTab({ vendorId }: { vendorId: string }) {
                   <StatusTag status={b.status} />
                 </TableCell>
                 <TableCell className="pr-4">
-                  <div className="flex justify-end gap-2">
+                  <div className={scope.can.editVendor ? 'flex justify-end gap-2' : 'hidden'}>
                     <Button size="sm" variant="outline" onClick={() => setEditing(b)}>
                       Edit
                     </Button>
@@ -92,21 +95,21 @@ export function BranchesTab({ vendorId }: { vendorId: string }) {
           </TableBody>
         </Table>
       </div>
-      <BranchDialog vendorId={vendorId} branch={editing} onClose={() => setEditing(null)} />
+      <BranchDialog scope={scope} branch={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function BranchDialog({ vendorId, branch, onClose }: { vendorId: string; branch: Branch | 'new' | null; onClose: () => void }) {
+function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: Branch | 'new' | null; onClose: () => void }) {
   const qc = useQueryClient();
   const isNew = branch === 'new';
   const current = branch && branch !== 'new' ? branch : null;
   const save = useMutation({
     mutationFn: (body: { name: string; address: string | null; lat: number | null; lng: number | null }) =>
-      isNew ? api.createBranch(vendorId, body) : api.updateBranch(current!.id, body),
+      isNew ? scope.createBranch(body) : scope.updateBranch(current!.id, body),
     onSuccess: (b) => {
-      void qc.invalidateQueries({ queryKey: ['branches', vendorId] });
-      void qc.invalidateQueries({ queryKey: ['vendor', vendorId] });
+      void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
+      void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
       toast.success(isNew ? `${b.name} added` : 'Saved');
       onClose();
     },

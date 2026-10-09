@@ -11,7 +11,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { errorMessage } from '../lib/api';
 import { useAuth, type Enrollment } from '../lib/auth';
 
-/** Sign-in for platform admins: password, then the authenticator-app code (or its first-time setup). */
+/** Sign-in for platform admins and vendor accounts: password, then the authenticator-app code (or its first-time setup). */
 export function Login() {
   const { status, notice } = useAuth();
   return (
@@ -22,7 +22,7 @@ export function Login() {
       <div className="flex w-full max-w-[420px] flex-col items-center gap-7">
         <div className="flex flex-col items-center gap-1.5">
           <DvoteLogo height={44} className="text-primary" />
-          <span className="text-muted-foreground">Admin dashboard</span>
+          <span className="text-muted-foreground">Dashboard</span>
         </div>
         <Card className="w-full shadow-lg shadow-black/5">
           {notice ? (
@@ -69,7 +69,7 @@ function PasswordStep() {
 
   return (
     <>
-      <StepHeader title="Sign in" description="Use your dvote admin email and password." />
+      <StepHeader title="Sign in" description="Shop owners and managers: use the email your invite was sent to." />
       <CardContent>
         <form onSubmit={submit} className="grid gap-5">
           <Field label="Email" htmlFor="email">

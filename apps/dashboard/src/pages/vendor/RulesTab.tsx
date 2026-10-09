@@ -13,7 +13,8 @@ import { ConfirmAction } from '../../components/ConfirmAction';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
 import { TableState } from '../../components/TableState';
-import { api, errorMessage, type Vendor } from '../../lib/api';
+import { errorMessage} from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 import { cn } from '@/lib/utils';
 
 const amount = (v: string) => (v.endsWith('.00') ? v.slice(0, -3) : v);
@@ -26,24 +27,24 @@ function pointsFor(bill: number, r: { spendAmount: number; pointsPerSpend: numbe
 }
 
 /** The vendor's earning rule: the active one, publish a new version, history, stop earning. */
-export function RulesTab({ vendor }: { vendor: Vendor }) {
+export function RulesTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const [draft, setDraft] = useState({ spendAmount: '10', pointsPerSpend: '1', minPurchase: '0', maxPointsPerPurchase: '' });
   const set = (k: keyof typeof draft) => (e: React.ChangeEvent<HTMLInputElement>) => setDraft((d) => ({ ...d, [k]: e.target.value }));
-  const { data, isLoading, error } = useQuery({ queryKey: ['rules', vendor.id], queryFn: () => api.pointRules(vendor.id) });
+  const { data, isLoading, error } = useQuery({ queryKey: ['rules', scope.key], queryFn: () => scope.pointRules() });
   const active = data?.find((r) => r.isActive) ?? null;
 
   const done = (text: string) => {
-    void qc.invalidateQueries({ queryKey: ['rules', vendor.id] });
+    void qc.invalidateQueries({ queryKey: ['rules', scope.key] });
     toast.success(text);
   };
   const publish = useMutation({
-    mutationFn: (v: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase: number | null }) => api.publishRule(vendor.id, v),
+    mutationFn: (v: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase: number | null }) => scope.publishRule(v),
     onSuccess: (r) => done(`Rule version ${r.version} is now active`),
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const stop = useMutation({
-    mutationFn: () => api.deactivateRule(vendor.id),
+    mutationFn: () => scope.deactivateRule(),
     onSuccess: () => done('Earning stopped'),
     onError: (e) => void toast.error(errorMessage(e)),
   });
@@ -72,13 +73,14 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
             {active ? (
               <>
                 <div className="mt-1.5 mb-1 text-3xl font-bold tracking-tight text-accent-foreground">
-                  Every {amount(active.spendAmount)} {vendor.currency} = {active.pointsPerSpend} point{active.pointsPerSpend === 1 ? '' : 's'}
+                  Every {amount(active.spendAmount)} {scope.currency} = {active.pointsPerSpend} point{active.pointsPerSpend === 1 ? '' : 's'}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Version {active.version} · since {dayjs(active.createdAt).format('D MMM YYYY')}
-                  {Number(active.minPurchase) > 0 ? ` · bills from ${amount(active.minPurchase)} ${vendor.currency}` : ''}
+                  {Number(active.minPurchase) > 0 ? ` · bills from ${amount(active.minPurchase)} ${scope.currency}` : ''}
                   {active.maxPointsPerPurchase ? ` · max ${active.maxPointsPerPurchase} per purchase` : ''}
                 </p>
+                {scope.can.editVendor ? (
                 <ConfirmAction
                   title="Stop earning points here?"
                   description="Staff will not be able to give points until a new rule is published. Points customers already have stay."
@@ -90,6 +92,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
                     </Button>
                   }
                 />
+                ) : null}
               </>
             ) : (
               <p className="mt-1.5 text-lg font-semibold">No active rule: customers can't earn points here yet.</p>
@@ -97,7 +100,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={scope.can.editVendor ? undefined : 'hidden'}>
           <CardHeader>
             <CardTitle>{active ? 'Publish a new rule' : 'Set the points rule'}</CardTitle>
           </CardHeader>
@@ -115,13 +118,13 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
               }}
             >
               <div className="grid grid-cols-2 gap-3">
-                <Field label={`Every (${vendor.currency})`} htmlFor="rule-spend">
+                <Field label={`Every (${scope.currency})`} htmlFor="rule-spend">
                   <Input id="rule-spend" type="number" required min={0.01} max={99999999} step={0.01} value={draft.spendAmount} onChange={set('spendAmount')} />
                 </Field>
                 <Field label="Gives (points)" htmlFor="rule-points">
                   <Input id="rule-points" type="number" required min={1} max={10000} step={1} value={draft.pointsPerSpend} onChange={set('pointsPerSpend')} />
                 </Field>
-                <Field label={`Minimum bill (${vendor.currency})`} htmlFor="rule-min">
+                <Field label={`Minimum bill (${scope.currency})`} htmlFor="rule-min">
                   <Input id="rule-min" type="number" min={0} step={0.01} value={draft.minPurchase} onChange={set('minPurchase')} />
                 </Field>
                 <Field label="Max points per purchase" htmlFor="rule-max">
@@ -134,7 +137,7 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
                   <AlertDescription className="flex flex-wrap gap-x-5 gap-y-1 text-foreground">
                     {preview.map((p) => (
                       <span key={p.bill} className="tabular-nums">
-                        {p.bill} {vendor.currency} → <strong>{p.pts} pts</strong>
+                        {p.bill} {scope.currency} → <strong>{p.pts} pts</strong>
                       </span>
                     ))}
                   </AlertDescription>
@@ -178,9 +181,9 @@ export function RulesTab({ vendor }: { vendor: Vendor }) {
                     ) : null}
                   </TableCell>
                   <TableCell>
-                    {amount(r.spendAmount)} {vendor.currency} = {r.pointsPerSpend} pt
+                    {amount(r.spendAmount)} {scope.currency} = {r.pointsPerSpend} pt
                   </TableCell>
-                  <TableCell>{Number(r.minPurchase) > 0 ? `${amount(r.minPurchase)} ${vendor.currency}` : '—'}</TableCell>
+                  <TableCell>{Number(r.minPurchase) > 0 ? `${amount(r.minPurchase)} ${scope.currency}` : '—'}</TableCell>
                   <TableCell>{r.maxPointsPerPurchase ?? '—'}</TableCell>
                   <TableCell className="pr-4">{dayjs(r.createdAt).format('D MMM YYYY, HH:mm')}</TableCell>
                 </TableRow>

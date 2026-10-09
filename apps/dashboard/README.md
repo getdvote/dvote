@@ -1,7 +1,7 @@
 # apps/dashboard — dvote admin dashboard
 
 React 19 + TypeScript (Vite), Tailwind CSS v4 + shadcn/ui (Radix primitives, Lucide icons, Sonner toasts),
-TanStack Query, Recharts (through shadcn `chart`), React Router 7. Web only. The vendor dashboard will be added to this same app later (same screens, one vendor).
+TanStack Query, Recharts (through shadcn `chart`), React Router 7. Web only. Also the vendor dashboard: vendor admins and branch managers sign in on the same screen and see only their own vendor (the vendor comes from their token); staff accounts are refused (staff app).
 
 ## Run
 

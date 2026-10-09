@@ -36,9 +36,10 @@ export class RewardsService {
     });
   }
 
-  async update(id: string, dto: UpdateRewardDto): Promise<rewards> {
+  /** vendorId (vendor dashboard): the reward must belong to that vendor, else reward_not_found. */
+  async update(id: string, dto: UpdateRewardDto, vendorId?: string): Promise<rewards> {
     const reward = await this.prisma.rewards.findUnique({ where: { id } });
-    if (!reward) throw new NotFoundException({ code: 'reward_not_found' });
+    if (!reward || (vendorId && reward.vendor_id !== vendorId)) throw new NotFoundException({ code: 'reward_not_found' });
     return this.prisma.rewards.update({
       where: { id },
       data: {

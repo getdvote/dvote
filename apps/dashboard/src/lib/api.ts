@@ -143,6 +143,24 @@ export interface UserDetail extends UserListItem {
   }[];
 }
 
+/** The signed-in vendor account (GET /api/vendor/staff/me). */
+export interface StaffMe extends Staff {
+  vendor: { id: string; name: string; logoUrl: string | null; currency: string };
+  branch: { id: string; name: string } | null;
+}
+
+export interface VendorSummary {
+  collectsToday: number;
+  pointsToday: number;
+  customers: number;
+  newCustomers7d: number;
+  pointsEarned30d: number;
+  pointsRedeemed30d: number;
+  pointsOutstanding: number;
+  days: { date: string; pointsEarned: number; collects: number }[];
+  branches: { id: string; name: string; collects: number; pointsEarned: number }[];
+}
+
 export interface Page<T> {
   items: T[];
   total: number;
@@ -177,6 +195,13 @@ const MESSAGES: Record<string, string> = {
   too_many_images: 'Limit reached: delete an image first.',
   unsupported_image: 'Use a JPG, PNG, WebP or HEIC image.',
   file_too_large: 'The image must be under 10 MB.',
+  not_staff: 'This account has no access to the dvote dashboard.',
+  staff_disabled: 'This account is disabled. Ask your vendor admin.',
+  vendor_suspended: 'This shop is suspended on dvote. Contact dvote support.',
+  branch_closed: 'Your branch is closed.',
+  forbidden_role: "Your role can't do this.",
+  forbidden_branch: 'That belongs to another branch.',
+  cannot_modify_self: "You can't change your own account here.",
 };
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -262,6 +287,43 @@ export const api = {
     call<Page<UserListItem>>('GET', `/api/admin/users${qs(q)}`),
   user: (id: string) => call<UserDetail>('GET', `/api/admin/users/${id}`),
   setUserStatus: (id: string, status: UserStatus) => call<UserDetail>('PATCH', `/api/admin/users/${id}`, { status }),
+};
+
+/**
+ * The signed-in vendor account's own data (/api/vendor). No vendor id is ever sent: the API takes
+ * it from the token, so a Starbucks account can only ever reach Starbucks.
+ */
+export const vendorApi = {
+  me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
+  summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
+
+  profile: () => call<Vendor>('GET', '/api/vendor/profile'),
+  updateProfile: (body: { name?: string; contactEmail?: string | null }) => call<Vendor>('PATCH', '/api/vendor/profile', body),
+  uploadLogo: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/logo', file(f)),
+  removeLogo: () => call<Vendor>('DELETE', '/api/vendor/profile/logo'),
+
+  branches: () => call<Branch[]>('GET', '/api/vendor/branches'),
+  createBranch: (body: Partial<Branch>) => call<Branch>('POST', '/api/vendor/branches', body),
+  updateBranch: (id: string, body: Partial<Branch>) => call<Branch>('PATCH', `/api/vendor/branches/${id}`, body),
+
+  pointRules: () => call<PointRule[]>('GET', '/api/vendor/point-rules'),
+  publishRule: (body: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null }) =>
+    call<PointRule>('POST', '/api/vendor/point-rules', body),
+  deactivateRule: () => call<void>('DELETE', '/api/vendor/point-rules/active'),
+
+  rewards: () => call<Reward[]>('GET', '/api/vendor/rewards'),
+  createReward: (body: Partial<Reward>) => call<Reward>('POST', '/api/vendor/rewards', body),
+  updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
+
+  images: () => call<VendorImage[]>('GET', '/api/vendor/images'),
+  uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) =>
+    call<VendorImage>('POST', '/api/vendor/images', file(f, { kind, branchId })),
+  deleteImage: (id: string) => call<void>('DELETE', `/api/vendor/images/${id}`),
+
+  staff: () => call<Staff[]>('GET', '/api/vendor/staff'),
+  inviteStaff: (body: { name: string; email: string; role: StaffRole; branchId?: string }) =>
+    call<Staff & { invited: boolean }>('POST', '/api/vendor/staff', body),
+  updateStaff: (id: string, body: { name?: string; status?: AccountStatus }) => call<Staff>('PATCH', `/api/vendor/staff/${id}`, body),
 };
 
 /** A readable message for any error thrown by an API call or Supabase. */

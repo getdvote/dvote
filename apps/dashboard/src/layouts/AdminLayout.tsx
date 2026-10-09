@@ -1,5 +1,5 @@
 import { LayoutDashboard, LogOut, Store, Users } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -25,15 +25,43 @@ import { initial } from '../components/PageHeader';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../lib/auth';
 
-const NAV = [
+export interface NavItem {
+  to: string;
+  icon: ComponentType;
+  label: string;
+}
+
+const NAV: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Overview' },
   { to: '/vendors', icon: Store, label: 'Vendors' },
   { to: '/customers', icon: Users, label: 'Customers' },
 ];
 
-/** Sidebar (logo, sections, signed-in admin) + a top bar (menu button, theme) above the page. */
 export function AdminLayout({ children }: { children: ReactNode }) {
-  const { admin, signOut } = useAuth();
+  const { admin } = useAuth();
+  return (
+    <SideLayout nav={NAV} badge="ADMIN" person={{ name: admin?.name ?? '', email: admin?.email ?? '' }}>
+      {children}
+    </SideLayout>
+  );
+}
+
+/** Sidebar (logo, sections, signed-in person) + a top bar (menu button, theme) above the page. */
+export function SideLayout({
+  nav,
+  badge,
+  top,
+  person,
+  children,
+}: {
+  nav: NavItem[];
+  badge: string;
+  /** Shown under the logo (e.g. the vendor's logo and name). */
+  top?: ReactNode;
+  person: { name: string; email: string };
+  children: ReactNode;
+}) {
+  const { signOut } = useAuth();
   const { pathname } = useLocation();
   const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
 
@@ -44,15 +72,16 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2.5">
             <DvoteLogo height={30} className="text-primary" />
             <Badge variant="brand" className="font-bold tracking-wide">
-              ADMIN
+              {badge}
             </Badge>
           </div>
+          {top}
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
-                {NAV.map((n) => (
+                {nav.map((n) => (
                   <SidebarMenuItem key={n.to}>
                     <SidebarMenuButton asChild isActive={isActive(n.to)} size="lg" className="h-10 font-medium">
                       <NavLink to={n.to}>
@@ -70,11 +99,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <Separator className="mb-2" />
           <div className="flex items-center gap-2.5 px-1">
             <Avatar className="size-9">
-              <AvatarFallback className="bg-primary font-semibold text-primary-foreground">{initial(admin?.name)}</AvatarFallback>
+              <AvatarFallback className="bg-primary font-semibold text-primary-foreground">{initial(person.name)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{admin?.name}</div>
-              <div className="truncate text-xs text-muted-foreground">{admin?.email}</div>
+              <div className="truncate text-sm font-semibold">{person.name}</div>
+              <div className="truncate text-xs text-muted-foreground">{person.email}</div>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>

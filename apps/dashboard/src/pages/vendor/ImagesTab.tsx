@@ -9,14 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmAction } from '../../components/ConfirmAction';
 import { ErrorAlert } from '../../components/ErrorAlert';
-import { api, errorMessage, type VendorImage } from '../../lib/api';
+import { errorMessage, type VendorImage } from '../../lib/api';
+import type { VendorScope } from '../../lib/scope';
 
 export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 
 /** Menu pages (shown on the shop page in order) and photos per branch. */
-export function ImagesTab({ vendorId }: { vendorId: string }) {
-  const { data: images, isLoading, error } = useQuery({ queryKey: ['images', vendorId], queryFn: () => api.images(vendorId) });
-  const { data: branches } = useQuery({ queryKey: ['branches', vendorId], queryFn: () => api.branches(vendorId) });
+export function ImagesTab({ scope }: { scope: VendorScope }) {
+  const { data: images, isLoading, error } = useQuery({ queryKey: ['images', scope.key], queryFn: () => scope.images() });
+  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
   const [branchId, setBranchId] = useState<string | undefined>();
   const openBranches = (branches ?? []).filter((b) => b.status === 'active');
   const chosen = branchId ?? openBranches[0]?.id;
@@ -27,8 +28,9 @@ export function ImagesTab({ vendorId }: { vendorId: string }) {
       <Section
         title="Menu pages"
         hint="Up to 20 pages, shown in this order. Portrait photos of the printed menu work best."
-        vendorId={vendorId}
+        scope={scope}
         kind="menu"
+        canEdit={scope.can.editVendor}
         images={(images ?? []).filter((i) => i.kind === 'menu')}
         loading={isLoading}
       />
@@ -51,8 +53,9 @@ export function ImagesTab({ vendorId }: { vendorId: string }) {
           ) : null
         }
         hint={chosen ? 'Up to 10 photos per branch.' : 'Add an open branch first.'}
-        vendorId={vendorId}
+        scope={scope}
         kind="branch_photo"
+        canEdit={!!chosen && scope.can.branchPhotos(chosen)}
         branchId={chosen}
         images={(images ?? []).filter((i) => i.kind === 'branch_photo' && i.branchId === chosen)}
         loading={isLoading}
@@ -65,27 +68,29 @@ function Section({
   title,
   titleExtra,
   hint,
-  vendorId,
+  scope,
   kind,
   branchId,
   images,
   loading,
+  canEdit,
 }: {
   title: string;
   titleExtra?: React.ReactNode;
   hint: string;
-  vendorId: string;
+  scope: VendorScope;
   kind: VendorImage['kind'];
   branchId?: string;
   images: VendorImage[];
   loading: boolean;
+  canEdit: boolean;
 }) {
   const qc = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [viewing, setViewing] = useState<number | null>(null);
-  const refresh = () => void qc.invalidateQueries({ queryKey: ['images', vendorId] });
+  const refresh = () => void qc.invalidateQueries({ queryKey: ['images', scope.key] });
   const upload = useMutation({
-    mutationFn: (file: File) => api.uploadImage(vendorId, file, kind, branchId),
+    mutationFn: (file: File) => scope.uploadImage(file, kind, branchId),
     onSuccess: () => {
       refresh();
       toast.success('Uploaded');
@@ -93,7 +98,7 @@ function Section({
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const remove = useMutation({
-    mutationFn: (id: string) => api.deleteImage(vendorId, id),
+    mutationFn: (id: string) => scope.deleteImage(id),
     onSuccess: () => {
       refresh();
       toast.success('Deleted');
@@ -111,7 +116,7 @@ function Section({
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{hint}</p>
-        {canUpload ? (
+        {canUpload && canEdit ? (
           <>
             <Button variant="outline" disabled={upload.isPending} onClick={() => fileInput.current?.click()}>
               {upload.isPending ? <Loader2 className="animate-spin" /> : <Upload />} Upload
@@ -159,6 +164,7 @@ function Section({
               </button>
               <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-between">
                 <span className="rounded-full bg-black/60 px-2 py-px text-xs text-white">{i + 1}</span>
+                {canEdit ? (
                 <ConfirmAction
                   title="Delete this image?"
                   description="It is removed from the shop page and can't be recovered."
@@ -170,6 +176,7 @@ function Section({
                     </Button>
                   }
                 />
+                ) : null}
               </div>
             </div>
           ))}
