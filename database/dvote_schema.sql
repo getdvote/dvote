@@ -86,8 +86,10 @@ CREATE TABLE branches (
     lat         decimal(9,6)  CHECK (lat BETWEEN -90 AND 90),
     lng         decimal(9,6)  CHECK (lng BETWEEN -180 AND 180),
     timezone    varchar(64)   NOT NULL DEFAULT 'Africa/Cairo',
-    opens_at    varchar(5),                -- "HH:MM", the same every day, branch-local time
+    opens_at    varchar(5),                -- legacy: "HH:MM" when every day has the same single slot, else NULL (kept by the API)
     closes_at   varchar(5),                -- earlier than opens_at = open past midnight
+    weekly_hours jsonb,                    -- [{"day":0-6 (0=Sunday),"opensAt":"HH:MM","closesAt":"HH:MM"}], split shifts = several per day; no entry = closed that day; NULL = not set
+    paused_until timestamptz,              -- temporarily closed until then (ends by itself)
     status      branch_status NOT NULL DEFAULT 'active',
     created_at  timestamptz   NOT NULL DEFAULT now(),
     updated_at  timestamptz   NOT NULL DEFAULT now(),
@@ -97,7 +99,8 @@ CREATE TABLE branches (
         OR (opens_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
             AND closes_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
             AND opens_at <> closes_at)
-    )
+    ),
+    CONSTRAINT branches_weekly_hours_ck CHECK (weekly_hours IS NULL OR jsonb_typeof(weekly_hours) = 'array')
 );
 CREATE INDEX branches_vendor_idx ON branches (vendor_id);
 
@@ -326,6 +329,25 @@ CREATE TABLE vendor_images (
 CREATE INDEX vendor_images_vendor_idx ON vendor_images (vendor_id, kind, branch_id, sort_order);
 
 -- ---------------------------------------------------------------------
+-- 6c. REWARD SOLD-OUTS (per branch; sold out while sold_out_until IS NULL or > now();
+--     "available again" sets sold_out_until = now(), rows are never deleted)
+-- ---------------------------------------------------------------------
+CREATE TABLE reward_sold_outs (
+    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id       uuid        NOT NULL REFERENCES vendors (id),
+    reward_id       uuid        NOT NULL,
+    branch_id       uuid        NOT NULL,
+    sold_out_until  timestamptz,                              -- NULL = until turned back on
+    set_by_staff_id uuid        REFERENCES staff_users (id),  -- who last changed it (NULL = dvote admin)
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT reward_sold_outs_reward_fk FOREIGN KEY (reward_id, vendor_id) REFERENCES rewards (id, vendor_id),
+    CONSTRAINT reward_sold_outs_branch_fk FOREIGN KEY (branch_id, vendor_id) REFERENCES branches (id, vendor_id),
+    CONSTRAINT reward_sold_outs_uq UNIQUE (reward_id, branch_id)
+);
+CREATE INDEX reward_sold_outs_vendor_idx ON reward_sold_outs (vendor_id, branch_id);
+
+-- ---------------------------------------------------------------------
 -- 7. FRAUD FLAGS
 -- ---------------------------------------------------------------------
 CREATE TABLE fraud_flags (
@@ -356,7 +378,7 @@ BEGIN
     FOREACH t IN ARRAY ARRAY[
         'platform_admins','vendors','branches','staff_users','point_rules','rewards',
         'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags',
-        'vendor_images']
+        'vendor_images','reward_sold_outs']
     LOOP
         EXECUTE format(
             'CREATE TRIGGER %I_set_updated_at BEFORE UPDATE ON %I

@@ -37,8 +37,8 @@ export function VendorDetail() {
 
   return (
     <>
-      <Button variant="ghost" className="mb-3 -ml-2.5 text-muted-foreground" onClick={() => navigate('/vendors')}>
-        <ArrowLeft /> All vendors
+      <Button variant="ghost" className="mb-3 -ml-2.5 text-muted-foreground" onClick={() => navigate('/merchants')}>
+        <ArrowLeft /> All merchants
       </Button>
       <ErrorAlert error={error} />
       {isLoading || !vendor ? (
@@ -246,7 +246,7 @@ function EditVendorDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit vendor</DialogTitle>
+          <DialogTitle>Edit merchant</DialogTitle>
         </DialogHeader>
         <form
           id="edit-vendor"
@@ -267,7 +267,7 @@ function EditVendorDialog({
           <Field label="Contact email" htmlFor="edit-email">
             <Input id="edit-email" name="contactEmail" type="email" defaultValue={vendor.contactEmail ?? ''} />
           </Field>
-          <Field label="Currency" htmlFor="edit-currency" hint="Can't change once the vendor has a points rule.">
+          <Field label="Currency" htmlFor="edit-currency" hint="Can't change once the merchant has a points rule.">
             <CurrencySelect id="edit-currency" defaultValue={vendor.currency} />
           </Field>
           <ErrorAlert error={save.error} />

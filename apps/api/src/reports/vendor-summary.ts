@@ -6,6 +6,10 @@ import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { VendorApi } from '../auth/vendor-api.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { VendorActivityController, VendorActivityService } from './vendor-activity';
+import { VendorAttentionController, VendorAttentionService } from './vendor-attention';
+import { VendorInsightsController, VendorInsightsService } from './vendor-insights';
+import { VendorRedemptionsController, VendorRedemptionsService } from './vendor-redemptions';
 
 const TZ = 'Africa/Cairo';
 
@@ -119,10 +123,10 @@ export class VendorSummaryController {
   }
 }
 
-/** Reports for the vendor dashboard (/api/vendor/summary). */
+/** Reports for the vendor dashboard (/api/vendor/summary, /api/vendor/events, /api/vendor/redemptions, /api/vendor/attention, /api/vendor/insights). */
 @Module({
   imports: [AuthModule],
-  controllers: [VendorSummaryController],
-  providers: [VendorSummaryService],
+  controllers: [VendorSummaryController, VendorActivityController, VendorRedemptionsController, VendorAttentionController, VendorInsightsController],
+  providers: [VendorSummaryService, VendorActivityService, VendorRedemptionsService, VendorAttentionService, VendorInsightsService],
 })
 export class ReportsModule {}

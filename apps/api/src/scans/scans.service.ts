@@ -10,6 +10,7 @@ import { Prisma, type qr_codes } from '../generated/prisma/client.js';
 import type { StaffContext } from '../auth/staff-auth.guard';
 import { fromMinor, pointsFor, toMinor } from '../points/points';
 import { LiveService } from '../live/live.service';
+import { isSoldOut } from '../rewards/reward-sold-outs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { tokenHashOf } from '../qr-codes/qr-code.token';
 import { CollectScanDto, RedeemScanDto } from './dto/scan.dto';
@@ -76,7 +77,16 @@ export class ScansService {
         }),
       ]);
       const balance = card?.balance ?? 0;
-      reason = reward.status !== 'active' ? 'reward_unavailable' : balance < reward.points_cost ? 'insufficient_points' : null;
+      // A vendor admin picks the branch when confirming, so only branch staff can know here.
+      const soldOut = ctx.branchId ? await isSoldOut(this.prisma, reward.id, ctx.branchId) : false;
+      reason =
+        reward.status !== 'active'
+          ? 'reward_unavailable'
+          : soldOut
+            ? 'reward_sold_out'
+            : balance < reward.points_cost
+              ? 'insufficient_points'
+              : null;
       if (!reason) {
         redeem = {
           rewardId: reward.id,
@@ -104,7 +114,7 @@ export class ScansService {
    * Gives a reward: takes its points from the customer's card at this vendor. Checks in order
    * (any failure changes nothing, the QR stays usable): code valid, purpose redeem, the QR's
    * vendor is the staff's vendor (vendor_mismatch), branch, customer not blocked, reward still
-   * active (reward_unavailable), enough points (insufficient_points). Then one transaction:
+   * active (reward_unavailable), not sold out at this branch (reward_sold_out), enough points (insufficient_points). Then one transaction:
    * QR used (conditional) + balance −= cost only WHERE balance >= cost + ledger row (redeem,
    * −cost) + redemptions row (name and cost snapshot). The customer's app is told at once.
    */
@@ -127,6 +137,7 @@ export class ScansService {
     ]);
     if (user.status !== 'active') throw new ForbiddenException({ code: 'user_blocked' });
     if (reward.status !== 'active') throw new ConflictException({ code: 'reward_unavailable' });
+    if (await isSoldOut(this.prisma, reward.id, branch.id)) throw new ConflictException({ code: 'reward_sold_out' });
     const card = await this.prisma.cards.findUnique({
       where: { user_id_vendor_id: { user_id: user.id, vendor_id: ctx.vendorId } },
       select: { id: true, balance: true },

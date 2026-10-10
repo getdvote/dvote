@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await vendorApi.me();
       if (me.role === 'staff') {
-        setNotice('Staff accounts use the dvote staff app. The dashboard is for vendor admins and branch managers.');
+        setNotice('Staff accounts use the dvote staff app. The dashboard is for merchant admins and branch managers.');
         await signOut();
         return;
       }

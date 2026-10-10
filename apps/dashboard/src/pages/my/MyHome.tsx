@@ -11,6 +11,7 @@ import { TableState } from '../../components/TableState';
 import { useMe, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi } from '../../lib/api';
 import { OverviewSkeleton, Stat } from '../Overview';
+import { NeedsAttention } from './NeedsAttention';
 
 const chartConfig = {
   pointsEarned: { label: 'Points', color: 'var(--chart-1)' },
@@ -30,6 +31,9 @@ export function MyHome() {
         title={`Hi ${me.name.split(' ')[0]}`}
         subtitle={`${branchOnly ? me.branch?.name : vendor.name} today, ${dayjs().format('dddd D MMMM')}`}
       />
+      <div className="mb-5">
+        <NeedsAttention />
+      </div>
       <ErrorAlert error={error} className="mb-4" />
       {isLoading || !data ? (
         error ? null : <OverviewSkeleton />

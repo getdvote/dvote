@@ -246,6 +246,10 @@ export interface VendorPage {
     descriptionAr: string | null;
     imageUrl: string | null;
     pointsCost: number;
+    /** Open branches where it is sold out right now (until: back at; null = no time given). Empty = everywhere. */
+    soldOutAt: { branchId: string; branchName: string; until: string | null }[];
+    /** Sold out at every open branch: can't be redeemed anywhere right now. */
+    soldOutEverywhere: boolean;
   }[];
   menu: VendorPageImage[];
   branches: {
@@ -256,9 +260,13 @@ export interface VendorPage {
     city: string | null;
     lat: number | null;
     lng: number | null;
-    /** "HH:MM", the same every day (branch-local); both null = not set. closesAt < opensAt = past midnight */
+    /** Legacy: "HH:MM" only when every day has the same single slot; use `hours`. closesAt < opensAt = past midnight */
     opensAt: string | null;
     closesAt: string | null;
+    /** Per weekday (0 = Sunday), several a day = split shifts, no slot = closed that day; null = not set. */
+    hours: { day: number; opensAt: string; closesAt: string }[] | null;
+    /** Temporarily closed until (only while ahead). */
+    pausedUntil: string | null;
     photos: VendorPageImage[];
   }[];
   /** My card at this shop; null before my first purchase there */

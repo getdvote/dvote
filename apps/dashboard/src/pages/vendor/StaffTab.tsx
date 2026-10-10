@@ -18,7 +18,7 @@ import type { VendorScope } from '../../lib/scope';
 import { TabToolbar } from './TabToolbar';
 
 const ROLE: Record<StaffRole, { label: string; variant: 'brand' | 'secondary' | 'outline' }> = {
-  vendor_admin: { label: 'Vendor admin', variant: 'brand' },
+  vendor_admin: { label: 'Merchant admin', variant: 'brand' },
   branch_manager: { label: 'Branch manager', variant: 'secondary' },
   staff: { label: 'Staff', variant: 'outline' },
 };
@@ -46,13 +46,13 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
       <TabToolbar
         hint={
           onlyAdmins
-            ? 'Invite the owner as vendor admin; they add managers and staff from their side.'
+            ? 'Invite the owner as merchant admin; they add managers and staff from their side.'
             : 'People you invite get an email to set a password, then sign in to the staff app.'
         }
       >
         {scope.can.inviteRoles.length ? (
           <Button onClick={() => setInviting(true)}>
-            <UserPlus /> {onlyAdmins ? 'Invite vendor admin' : 'Invite'}
+            <UserPlus /> {onlyAdmins ? 'Invite merchant admin' : 'Invite'}
           </Button>
         ) : null}
       </TabToolbar>
@@ -149,7 +149,7 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{role === 'vendor_admin' ? 'Invite vendor admin' : 'Invite'}</DialogTitle>
+          <DialogTitle>{role === 'vendor_admin' ? 'Invite merchant admin' : 'Invite'}</DialogTitle>
           <DialogDescription>They get an email to set their password, then sign in.</DialogDescription>
         </DialogHeader>
         <form

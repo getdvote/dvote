@@ -39,11 +39,11 @@ export function Vendors() {
   return (
     <>
       <PageHeader
-        title="Vendors"
+        title="Merchants"
         subtitle="Coffee shop brands on dvote"
         extra={
           <Button size="lg" onClick={() => setCreating(true)}>
-            <Plus /> New vendor
+            <Plus /> New merchant
           </Button>
         }
       />
@@ -74,7 +74,7 @@ export function Vendors() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-4">Vendor</TableHead>
+              <TableHead className="pl-4">Merchant</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Branches</TableHead>
@@ -84,9 +84,9 @@ export function Vendors() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={rows.length === 0} colSpan={7} emptyText="No vendors found" />
+            <TableState loading={isLoading} empty={rows.length === 0} colSpan={7} emptyText="No merchants found" />
             {rows.map((v) => (
-              <TableRow key={v.id} className="cursor-pointer" onClick={() => navigate(`/vendors/${v.id}`)}>
+              <TableRow key={v.id} className="cursor-pointer" onClick={() => navigate(`/merchants/${v.id}`)}>
                 <TableCell className="pl-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="size-10">
@@ -113,7 +113,7 @@ export function Vendors() {
         </Table>
         <Pager page={page} pageSize={PAGE_SIZE} total={data?.length ?? 0} onChange={setPage} />
       </Card>
-      <CreateVendorDialog open={creating} onClose={() => setCreating(false)} onCreated={(v) => navigate(`/vendors/${v.id}`)} />
+      <CreateVendorDialog open={creating} onClose={() => setCreating(false)} onCreated={(v) => navigate(`/merchants/${v.id}`)} />
     </>
   );
 }
@@ -159,8 +159,8 @@ function CreateVendorDialog({ open, onClose, onCreated }: { open: boolean; onClo
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New vendor</DialogTitle>
-          <DialogDescription>Next, on the vendor page: add branches, a points rule and rewards, then invite the owner.</DialogDescription>
+          <DialogTitle>New merchant</DialogTitle>
+          <DialogDescription>Next, on the merchant page: add branches, a points rule and rewards, then invite the owner.</DialogDescription>
         </DialogHeader>
         <form
           id="create-vendor"
@@ -182,10 +182,10 @@ function CreateVendorDialog({ open, onClose, onCreated }: { open: boolean; onClo
           <Field label="Contact email" htmlFor="vendor-email">
             <Input id="vendor-email" name="contactEmail" type="email" placeholder="owner@shop.com (optional)" />
           </Field>
-          <Field label="Currency" htmlFor="vendor-currency" hint="Locked once the vendor has a points rule.">
+          <Field label="Currency" htmlFor="vendor-currency" hint="Locked once the merchant has a points rule.">
             <CurrencySelect id="vendor-currency" defaultValue="EGP" />
           </Field>
-          <Field label="Category" htmlFor="vendor-category" hint="Card design and banner are set later, on the vendor's Branding tab.">
+          <Field label="Category" htmlFor="vendor-category" hint="Card design and banner are set later, on the merchant's Branding tab.">
             <Select name="category">
               <SelectTrigger id="vendor-category" className="w-full">
                 <SelectValue placeholder="Choose (optional)" />
