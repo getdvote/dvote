@@ -59,7 +59,7 @@ All four talk to **one NestJS API**. The apps never touch the database directly.
 7. **Versioning:** a new point rule is a new version that applies from then on (past earns keep their rule). Reward price/name edits apply to future redemptions; each redemption snapshots the name and cost. Archived rewards can't be redeemed.
 8. **QR codes are one-time server secrets:** random 128-bit code (`dvote:q1:<code>`), only its SHA-256 stored, **valid 5 minutes, single use**. Opening a new QR cancels the customer's previous one. The customer's id is never inside the QR.
 9. **The vendor and branch always come from the staff member who scans** — never from the customer's phone. (Decided 2026-10-08: there are **no shop-specific collect QRs**; one QR works at any dvote shop, so a customer can't pick the wrong shop.) Vendor admins (who have no branch) choose the branch when scanning.
-10. **Tenant isolation:** a vendor's staff can only ever see/act on their own vendor's data (other vendors' rows look like "not found"). Vendors never see customer names, emails or phones — only counts.
+10. **Tenant isolation:** a vendor's staff can only ever see/act on their own vendor's data (other vendors' rows look like "not found"). Merchant admins and branch managers can see customer names and merchant-scoped loyalty profiles in Customers. Email, phone, auth identifiers and other private profile data are excluded from merchant API responses. Branch managers see only customers and activity in their assigned branch.
 11. **Never hard-delete business rows**; use a `status` (suspended / disabled / archived / blocked).
 
 ### Fraud flags (planned, scheduled job; they only flag, never block)

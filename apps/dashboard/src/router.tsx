@@ -6,6 +6,7 @@ import { useAuth } from './lib/auth';
 import { Customers } from './pages/Customers';
 import { Login } from './pages/Login';
 import { MyActivity } from './pages/my/MyActivity';
+import { MyCustomers } from './pages/my/my-customers';
 import { MyHome } from './pages/my/MyHome';
 import { MyInsights } from './pages/my/MyInsights';
 import { MyProfile } from './pages/my/MyProfile';
@@ -52,6 +53,7 @@ function Shell() {
       <VendorLayout>
         <Routes>
           <Route path="/" element={<MyHome />} />
+          <Route path="/customers" element={<MyCustomers />} />
           <Route path="/insights" element={<MyInsights />} />
           <Route path="/activity" element={<MyActivity />} />
           <Route path="/branches" element={<MyBranches />} />
