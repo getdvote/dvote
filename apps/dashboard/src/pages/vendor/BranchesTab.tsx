@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Images, Loader2, MapPin, Plus, X } from 'lucide-react';
+import { Images, Loader2, MapPin, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,13 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
 import { LocationPicker, type LatLng, type PlaceAddress } from '../../components/LocationPicker';
 import { StatusTag } from '../../components/StatusTag';
+import { WeeklyHoursEditor } from '../../components/WeeklyHoursEditor';
 import { TableState } from '../../components/TableState';
-import { errorMessage, type Branch } from '../../lib/api';
+import { errorMessage, type Branch, type HoursSlot } from '../../lib/api';
+import { hoursSummary } from '../../lib/hours';
 import { CITIES_AZ, cityName, type CityKey } from '../../lib/cities';
 import type { VendorScope } from '../../lib/scope';
+import { BranchNow } from './BranchNow';
 import { BranchPhotos, StagedBranchPhotos } from './ImagesTab';
 import { TabToolbar } from './TabToolbar';
 
@@ -58,21 +61,18 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
               <TableHead>Address</TableHead>
               <TableHead>Map</TableHead>
               <TableHead>Photos</TableHead>
+              <TableHead>Now</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="pr-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText="No branches yet" />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={7} emptyText="No branches yet" />
             {data?.map((b) => (
               <TableRow key={b.id}>
                 <TableCell className="pl-4">
                   <div className="font-semibold">{b.name}</div>
-                  {b.opensAt && b.closesAt ? (
-                    <div className="text-xs text-muted-foreground tabular-nums">
-                      {b.opensAt}–{b.closesAt}
-                    </div>
-                  ) : null}
+                  {hoursSummary(b.hours) ? <div className="text-xs text-muted-foreground tabular-nums">{hoursSummary(b.hours)}</div> : null}
                 </TableCell>
                 <TableCell className="max-w-xs whitespace-normal">
                   {b.address || b.city ? [b.address, cityName(b.city)].filter(Boolean).join(', ') : <span className="text-muted-foreground">—</span>}
@@ -95,6 +95,9 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
                   <Button size="sm" variant="outline" onClick={() => setPhotosOf(b)}>
                     <Images /> {photoCount(b.id)}
                   </Button>
+                </TableCell>
+                <TableCell>
+                  <BranchNow scope={scope} branch={b} />
                 </TableCell>
                 <TableCell>
                   <StatusTag status={b.status} />
@@ -141,8 +144,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
   const [address, setAddress] = useState('');
   const [city, setCity] = useState<CityKey | null>(null);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
-  const [opensAt, setOpensAt] = useState('');
-  const [closesAt, setClosesAt] = useState('');
+  const [hours, setHours] = useState<HoursSlot[]>([]);
   // Start from the branch's saved location and address each time the dialog opens.
   const [openedFor, setOpenedFor] = useState<Branch | 'new' | null>(null);
   if (branch !== openedFor) {
@@ -151,8 +153,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
     setAddress(current?.address ?? '');
     setCity(current?.city ?? null);
     setNewPhotos([]);
-    setOpensAt(current?.opensAt ?? '');
-    setClosesAt(current?.closesAt ?? '');
+    setHours(current?.hours ?? []);
   }
   // The map only fills empty fields; it never overwrites what's typed or picked.
   const fillAddress = (found: PlaceAddress) => {
@@ -160,7 +161,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
     if (found.city) setCity((c) => c ?? found.city);
   };
   const save = useMutation({
-    mutationFn: async (body: Pick<Branch, 'name' | 'address' | 'city' | 'lat' | 'lng' | 'opensAt' | 'closesAt'>) => {
+    mutationFn: async (body: Pick<Branch, 'name' | 'address' | 'city' | 'lat' | 'lng' | 'hours'>) => {
       if (!isNew) return { branch: await scope.updateBranch(current!.id, body), failed: 0 };
       // A new branch's photos can only upload once it exists.
       const branch = await scope.createBranch(body);
@@ -205,8 +206,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
               city,
               lat: location?.lat ?? null,
               lng: location?.lng ?? null,
-              opensAt: opensAt || null,
-              closesAt: closesAt || null,
+              hours,
             });
           }}
         >
@@ -241,36 +241,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
               </Select>
             </Field>
           </div>
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">
-                Opening hours <span className="font-normal text-muted-foreground">(optional)</span>
-              </span>
-              {opensAt || closesAt ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setOpensAt('');
-                    setClosesAt('');
-                  }}
-                >
-                  <X /> Clear hours
-                </Button>
-              ) : null}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* One time filled makes the other required: both or neither. */}
-              <Field label={<span className="font-normal text-muted-foreground">Opens</span>} htmlFor="branch-opens">
-                <Input id="branch-opens" type="time" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} required={!!closesAt} />
-              </Field>
-              <Field label={<span className="font-normal text-muted-foreground">Closes</span>} htmlFor="branch-closes">
-                <Input id="branch-closes" type="time" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} required={!!opensAt} />
-              </Field>
-            </div>
-            <p className="text-xs text-muted-foreground">The same every day. A closing time before the opening time means open past midnight.</p>
-          </div>
+          <WeeklyHoursEditor value={hours} onChange={setHours} />
           <div className="grid gap-2">
             <span className="text-sm font-medium">Location on the map</span>
             <LocationPicker value={location} onChange={setLocation} onAddress={fillAddress} />

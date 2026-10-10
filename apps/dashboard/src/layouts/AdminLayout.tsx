@@ -33,7 +33,7 @@ export interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Overview' },
-  { to: '/vendors', icon: Store, label: 'Vendors' },
+  { to: '/merchants', icon: Store, label: 'Merchants' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/statistics', icon: ChartColumn, label: 'Statistics' },
 ];

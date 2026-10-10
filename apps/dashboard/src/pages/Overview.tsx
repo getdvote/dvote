@@ -34,7 +34,7 @@ export function Overview() {
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <Stat
               icon={Store}
-              title="Active vendors"
+              title="Active merchants"
               value={data.vendorsActive}
               note={`${num(data.branchesOpen)} open branches · ${num(data.vendorsSuspended)} suspended`}
             />
@@ -94,7 +94,7 @@ export function Overview() {
                       <li key={v.id}>
                         <button
                           type="button"
-                          onClick={() => navigate(`/vendors/${v.id}`)}
+                          onClick={() => navigate(`/merchants/${v.id}`)}
                           className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-muted"
                         >
                           <Avatar className="size-10">

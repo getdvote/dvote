@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { qr_codes, qr_status } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
+import { isSoldOutEverywhere } from '../rewards/reward-sold-outs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQrCodeDto } from './dto/create-qr-code.dto';
 import {
@@ -65,7 +66,8 @@ export class QrCodesService {
 
   /**
    * Issues a one-time redeem QR for a reward (valid 5 minutes). Checked now so the customer
-   * isn't sent to the counter for nothing: the reward is active at an active shop and the
+   * isn't sent to the counter for nothing: the reward is active at an active shop, not sold
+   * out at every open branch (reward_sold_out), and the
    * customer's card there has enough points. Checked again when staff confirm (the balance
    * may change meanwhile). The QR carries the reward's vendor: only that vendor's staff can
    * confirm it. A new redeem QR cancels the customer's previous one.
@@ -78,6 +80,8 @@ export class QrCodesService {
     });
     if (!reward || reward.vendors.status !== 'active') throw new NotFoundException({ code: 'reward_not_found' });
     if (reward.status !== 'active') throw new ConflictException({ code: 'reward_unavailable' });
+    // Sold out at some branches is fine (another may have it); at every open branch it isn't.
+    if (await isSoldOutEverywhere(this.prisma, reward.id, reward.vendor_id)) throw new ConflictException({ code: 'reward_sold_out' });
     const card = await this.prisma.cards.findUnique({
       where: { user_id_vendor_id: { user_id: userId, vendor_id: reward.vendor_id } },
       select: { balance: true },

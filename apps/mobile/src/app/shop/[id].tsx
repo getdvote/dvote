@@ -24,7 +24,7 @@ import {
 } from '../../components/ui';
 import { api, ApiError, type VendorPage } from '../../lib/api';
 import { cityName } from '../../lib/cities';
-import { showClock } from '../../lib/dates';
+import { showClock, showTime } from '../../lib/dates';
 import { getLanguage, t as translate, useI18n } from '../../i18n';
 import { openInMaps } from '../../lib/maps';
 import { useSession } from '../../lib/session';
@@ -271,9 +271,10 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
                 <Text style={styles.rewardText} numberOfLines={2}>
                   {placeLine(b) ?? translate('shop.addressSoon')}
                 </Text>
-                {b.opensAt && b.closesAt ? (
-                  <Text style={styles.rewardText}>{translate('shop.hours', { from: showClock(b.opensAt), to: showClock(b.closesAt) })}</Text>
+                {b.pausedUntil ? (
+                  <Text style={styles.paused}>{translate('shop.pausedUntil', { time: showTime(new Date(b.pausedUntil)) })}</Text>
                 ) : null}
+                {hoursLine(b) ? <Text style={styles.rewardText}>{hoursLine(b)}</Text> : null}
                 {canNavigate ? <Text style={styles.link}>{translate('shop.directions')}</Text> : null}
               </View>
               {canNavigate ? <Icon icon={ArrowRight01Icon} size={18} color={theme.placeholder} mirror /> : null}
@@ -307,6 +308,25 @@ function Branches({ shop, onOpenPhotos }: { shop: VendorPage; onOpenPhotos: (ima
 const LOGO_SIZE = 120;
 /** A branch has at most 3 photos (the API's limit); they share one row. */
 const BRANCH_PHOTOS = 3;
+
+type ShopBranch = VendorPage['branches'][number];
+
+/**
+ * The branch's hours as one line: "Open 9:00 AM – 11:00 PM" when every day is the same single
+ * time, else today's times (split shifts joined), or "Closed today". Older data: the single pair.
+ */
+function hoursLine(b: ShopBranch): string | null {
+  const clock = (s: { opensAt: string; closesAt: string }) => `${showClock(s.opensAt)} – ${showClock(s.closesAt)}`;
+  if (!b.hours?.length) return b.opensAt && b.closesAt ? translate('shop.hours', { from: showClock(b.opensAt), to: showClock(b.closesAt) }) : null;
+  const first = b.hours[0];
+  if (b.hours.length === 7 && b.hours.every((s) => s.opensAt === first.opensAt && s.closesAt === first.closesAt)) {
+    return translate('shop.hours', { from: showClock(first.opensAt), to: showClock(first.closesAt) });
+  }
+  const today = b.hours.filter((s) => s.day === new Date().getDay());
+  return today.length
+    ? translate('shop.todayHours', { times: today.map(clock).join(translate('shop.listSeparator')) })
+    : translate('shop.closedToday');
+}
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.gutter, paddingBottom: 40 },
@@ -363,6 +383,7 @@ const styles = StyleSheet.create({
   ruleNote: { fontSize: 14, color: theme.muted, lineHeight: 20 },
   rewardName: { fontSize: 17, fontWeight: '600', color: theme.text },
   rewardText: { fontSize: 14, color: theme.muted, marginTop: 2 },
+  paused: { fontSize: 14, fontWeight: '600', color: theme.danger, marginTop: 2 },
   branch: { paddingVertical: 22, gap: 12 },
   branchRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   link: { fontSize: 14, fontWeight: '600', color: theme.link, marginTop: 4 },
