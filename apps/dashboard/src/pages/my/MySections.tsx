@@ -20,7 +20,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
   );
 }
 
-const readOnly = (canEdit: boolean, text: string) => (canEdit ? text : `${text} Only your vendor admin can change it.`);
+const readOnly = (canEdit: boolean, text: string) => (canEdit ? text : `${text} Only your merchant admin can change it.`);
 
 export function MyBranches() {
   const scope = useMyScope();

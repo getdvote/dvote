@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 /** Search box with a magnifier and a clear button. */
@@ -67,5 +68,36 @@ export function Pager({ page, pageSize, total, onChange }: { page: number; pageS
         <ChevronRight />
       </Button>
     </div>
+  );
+}
+
+/** A dropdown filter whose first option means "no filter" (value `all`). */
+export function SelectFilter({
+  value,
+  onChange,
+  label,
+  allLabel,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+  allLabel: string;
+  options: { value: string; label: string }[] | undefined;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-9 w-44" aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{allLabel}</SelectItem>
+        {options?.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

@@ -14,6 +14,7 @@ import { TableState } from '../../components/TableState';
 import { errorMessage, type Reward } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
 import { IMAGE_ACCEPT } from './ImagesTab';
+import { RewardAvailability } from './RewardAvailability';
 import { TabToolbar } from './TabToolbar';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts/order, archive / restore. */
@@ -21,6 +22,16 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Reward | 'new' | null>(null);
   const { data, isLoading, error } = useQuery({ queryKey: ['rewards', scope.key], queryFn: () => scope.rewards() });
+  // Sold out per branch (merchant accounts only). Re-read every minute: timed ones end by themselves.
+  const { data: soldOut } = useQuery({
+    queryKey: ['soldOut', scope.key],
+    queryFn: () => scope.soldOut!.list(),
+    enabled: !!scope.soldOut,
+    refetchInterval: 60_000,
+  });
+  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: !!scope.soldOut });
+  const openBranches = branches?.filter((b) => b.status === 'active') ?? [];
+  const cols = scope.soldOut ? 7 : 6;
 
   const toggle = useMutation({
     mutationFn: (r: Reward) => scope.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
@@ -33,7 +44,13 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
 
   return (
     <>
-      <TabToolbar hint="Archived rewards can't be redeemed. A new price applies to future redemptions only.">
+      <TabToolbar
+        hint={
+          scope.soldOut
+            ? "Ran out of something? Mark it sold out at a branch: staff there can't give it, and customers see where it's sold out. Archived rewards can't be redeemed."
+            : "Archived rewards can't be redeemed. A new price applies to future redemptions only."
+        }
+      >
         {scope.can.editVendor ? (
           <Button onClick={() => setEditing('new')}>
             <Plus /> Add reward
@@ -49,12 +66,13 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
               <TableHead className="w-20">Photo</TableHead>
               <TableHead>Reward</TableHead>
               <TableHead className="text-right">Cost</TableHead>
+              {scope.soldOut ? <TableHead>Availability</TableHead> : null}
               <TableHead>Status</TableHead>
               <TableHead className="pr-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText="No rewards yet" />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyText="No rewards yet" />
             {data?.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="pl-4 text-muted-foreground tabular-nums">{r.sortOrder}</TableCell>
@@ -74,6 +92,15 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
                   {r.description ? <div className="text-xs text-muted-foreground">{r.description}</div> : null}
                 </TableCell>
                 <TableCell className="text-right font-semibold tabular-nums">{r.pointsCost.toLocaleString()} pts</TableCell>
+                {scope.soldOut ? (
+                  <TableCell>
+                    {r.status === 'active' && soldOut && branches ? (
+                      <RewardAvailability scope={scope} reward={r} soldOut={soldOut.filter((s) => s.rewardId === r.id)} branches={openBranches} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                ) : null}
                 <TableCell>
                   <StatusTag status={r.status} />
                 </TableCell>

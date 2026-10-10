@@ -34,7 +34,7 @@ export class PreviewScanResponseDto {
     nullable: true,
     example: 'qr_used',
     description:
-      'Why not usable: qr_used | qr_expired | qr_cancelled | vendor_mismatch | user_blocked | no_active_rule (collect) | reward_unavailable | insufficient_points (redeem)',
+      'Why not usable: qr_used | qr_expired | qr_cancelled | vendor_mismatch | user_blocked | no_active_rule (collect) | reward_unavailable | reward_sold_out (branch staff only) | insufficient_points (redeem)',
   })
   reason: string | null;
 

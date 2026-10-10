@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { HoursSlotDto } from '../../branches/dto/branch.dto';
 
 export class VendorPageRuleDto {
   @ApiProperty({ example: '10.00', description: 'Spend this much (vendor currency)…' })
@@ -12,6 +13,17 @@ export class VendorPageRuleDto {
 
   @ApiProperty({ type: Number, nullable: true, example: null, description: 'Cap per purchase' })
   maxPointsPerPurchase: number | null;
+}
+
+export class VendorPageSoldOutDto {
+  @ApiProperty({ format: 'uuid' })
+  branchId: string;
+
+  @ApiProperty({ example: 'Joy Corner Zamalek' })
+  branchName: string;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Back at this time; null = no time given' })
+  until: string | null;
 }
 
 export class VendorPageRewardDto {
@@ -45,6 +57,15 @@ export class VendorPageRewardDto {
 
   @ApiProperty({ example: 300 })
   pointsCost: number;
+
+  @ApiProperty({
+    type: [VendorPageSoldOutDto],
+    description: 'Open branches where it is sold out right now (empty = available everywhere)',
+  })
+  soldOutAt: VendorPageSoldOutDto[];
+
+  @ApiProperty({ description: 'Sold out at every open branch right now: it can’t be redeemed anywhere' })
+  soldOutEverywhere: boolean;
 }
 
 export class VendorPageImageDto {
@@ -74,11 +95,21 @@ export class VendorPageBranchDto {
   @ApiProperty({ type: Number, nullable: true, example: 29.9553 })
   lng: number | null;
 
-  @ApiProperty({ type: String, nullable: true, example: '09:00', description: 'Opening time "HH:MM" (branch-local, every day); null = not set' })
+  @ApiProperty({ type: String, nullable: true, example: '09:00', description: 'Legacy: set only when every day has the same single slot (use hours)' })
   opensAt: string | null;
 
   @ApiProperty({ type: String, nullable: true, example: '23:00', description: 'Earlier than opensAt = open past midnight' })
   closesAt: string | null;
+
+  @ApiProperty({
+    type: [HoursSlotDto],
+    nullable: true,
+    description: 'Per weekday (0 = Sunday), several slots = split shifts, no slot = closed that day; null = not set',
+  })
+  hours: HoursSlotDto[] | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Temporarily closed until (only while ahead)' })
+  pausedUntil: string | null;
 
   @ApiProperty({ type: [VendorPageImageDto] })
   photos: VendorPageImageDto[];

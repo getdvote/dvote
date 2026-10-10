@@ -15,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { BranchesModule } from './branches/branches.module';
 import { PointRulesModule } from './point-rules/point-rules.module';
 import { RewardsModule } from './rewards/rewards.module';
+import { MerchantCustomersModule } from './merchant-customers/merchant-customers.module';
 import { ReportsModule } from './reports/vendor-summary';
 import { LiveModule } from './live/live.module';
 import { SystemModule } from './system/system.module';
@@ -45,6 +46,7 @@ import { FraudFlagsModule } from './fraud-flags/fraud-flags';
     PointRulesModule,
     RewardsModule,
     ReportsModule,
+    MerchantCustomersModule,
   ],
 })
 export class AppModule {}

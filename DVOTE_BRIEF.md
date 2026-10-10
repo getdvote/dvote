@@ -59,7 +59,7 @@ All four talk to **one NestJS API**. The apps never touch the database directly.
 7. **Versioning:** a new point rule is a new version that applies from then on (past earns keep their rule). Reward price/name edits apply to future redemptions; each redemption snapshots the name and cost. Archived rewards can't be redeemed.
 8. **QR codes are one-time server secrets:** random 128-bit code (`dvote:q1:<code>`), only its SHA-256 stored, **valid 5 minutes, single use**. Opening a new QR cancels the customer's previous one. The customer's id is never inside the QR.
 9. **The vendor and branch always come from the staff member who scans** — never from the customer's phone. (Decided 2026-10-08: there are **no shop-specific collect QRs**; one QR works at any dvote shop, so a customer can't pick the wrong shop.) Vendor admins (who have no branch) choose the branch when scanning.
-10. **Tenant isolation:** a vendor's staff can only ever see/act on their own vendor's data (other vendors' rows look like "not found"). Vendors never see customer names, emails or phones — only counts.
+10. **Tenant isolation:** a vendor's staff can only ever see/act on their own vendor's data (other vendors' rows look like "not found"). Merchant admins and branch managers can see customer names and merchant-scoped loyalty profiles in Customers. Email, phone, auth identifiers and other private profile data are excluded from merchant API responses. Branch managers see only customers and activity in their assigned branch.
 11. **Never hard-delete business rows**; use a `status` (suspended / disabled / archived / blocked).
 
 ### Fraud flags (planned, scheduled job; they only flag, never block)
@@ -177,6 +177,13 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 | Date | Decision |
 |---|---|
+| 2026-10-10 | **Vendors are called "merchants" in every app's text** (dashboard, staff app, customer app). Code, API routes and database keep `vendor`. |
+| 2026-10-10 | **Merchant Insights page**: sales through dvote, visits, average bill, customers (new / returning), repeat rate and rewards for any period vs the one before, per branch. Counts only. |
+| 2026-10-10 | **Dashboard home "Needs your attention"**: what stops customers today (no rule, no rewards, branch closed, sold out), unusual activity (a card collecting > 3× a day, a cashier far above their usual, a bill > 5× the branch average) and missing setup, each with the action that fixes it. Unusual activity only points, never blocks. |
+| 2026-10-10 | **Branch hours per weekday with split shifts** (e.g. 09:00–15:00 and 17:00–01:00, closed Fridays), and **"temporarily closed"** for 30 min to rest of today, set by the branch manager or merchant admin; customers see it on the shop page. It doesn't block scans. Migration 14. |
+| 2026-10-10 | **Rewards can be sold out per branch** (e.g. no cheesecake at Zamalek today): for 2 h / 4 h / rest of today / until put back, set by the branch manager (own branch) or merchant admin (one or all branches). Staff at that branch can't give it; customers see where it's sold out but can still redeem at other branches. New table `reward_sold_outs` (migration 13). |
+| 2026-10-10 | **Merchant redemptions page** (`GET /api/vendor/redemptions`, dashboard page Redemptions): rewards given with totals and a per-reward breakdown; names and costs as they were when given. |
+| 2026-10-10 | **Merchant activity log** (`GET /api/vendor/events`, dashboard page Activity): every collect / redemption / correction with branch, staff, bill and receipt; customers appear only as a card code (first 6 characters of the card id), never by name. |
 | 2026-10-09 | **Two kinds of collect QR.** The main QR (tab bar) works at any shop. A shop QR (Collect on a shop page) works only at that shop: another shop's staff get "This QR is for another shop" and give no points. Replaces the 2026-10-08 "no shop QRs" rule. |
 | 2026-10-09 | **Reward photos** (one per reward, uploaded from either dashboard, stored at `<vendor>/rewards/`). **Branch locations are picked on a map** (search, Google Maps link, or click), never typed. Branch photos moved to the Branches page. |
 | 2026-10-09 | Customer app **refreshes itself** every 20 s on the visible screen (and when reopened), so dashboard edits show up without pulling down. |

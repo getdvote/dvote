@@ -271,7 +271,7 @@ export function Statistics() {
                       <TableRow
                         key={v.id}
                         className="cursor-pointer"
-                        onClick={() => navigate(`/vendors/${v.id}`)}
+                        onClick={() => navigate(`/merchants/${v.id}`)}
                       >
                         <TableCell className="pl-4">
                           <div className="flex items-center gap-3">

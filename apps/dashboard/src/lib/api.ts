@@ -138,11 +138,22 @@ export interface Branch {
   lat: number | null;
   lng: number | null;
   timezone: string;
-  /** "HH:MM", the same every day; both null = not set. closesAt < opensAt = past midnight. */
+  /** Legacy: "HH:MM" only when every day has the same single slot (use `hours`). */
   opensAt: string | null;
   closesAt: string | null;
+  /** Per weekday, sorted; several a day = split shifts; a day without slots is closed; null = not set. */
+  hours: HoursSlot[] | null;
+  /** Temporarily closed until (only while ahead). */
+  pausedUntil: string | null;
   status: BranchStatus;
   createdAt: string;
+}
+
+/** One opening slot: day 0 = Sunday … 6 = Saturday; closesAt < opensAt = past midnight (a day's last slot only). */
+export interface HoursSlot {
+  day: number;
+  opensAt: string;
+  closesAt: string;
 }
 
 export interface PointRule {
@@ -168,6 +179,14 @@ export interface Reward {
   status: RewardStatus;
   sortOrder: number;
   createdAt: string;
+}
+
+/** A reward sold out at one open branch right now (until: back on sale at; null = until turned back on). */
+export interface SoldOut {
+  rewardId: string;
+  branchId: string;
+  branchName: string;
+  until: string | null;
 }
 
 export interface VendorImage {
@@ -254,6 +273,144 @@ export interface Page<T> {
   pageSize: number;
 }
 
+export type PointEventType = 'earn' | 'redeem' | 'adjust';
+
+/** One row of my vendor's ledger (GET /api/vendor/events). The customer is a card code, never a name. */
+export interface ActivityItem {
+  id: string;
+  type: PointEventType;
+  points: number;
+  amount: string | null;
+  receiptRef: string | null;
+  branch: { id: string; name: string } | null;
+  staff: { id: string; name: string } | null;
+  reward: { id: string; name: string } | null;
+  reason: string | null;
+  customerRef: string;
+  createdAt: string;
+}
+
+export interface ActivityQuery {
+  type?: PointEventType;
+  branchId?: string;
+  staffId?: string;
+  from?: string;
+  to?: string;
+  receipt?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ActivityPage extends Page<ActivityItem> {
+  /** For every row matching the filters, not just this page. */
+  totals: { collects: number; redemptions: number; pointsEarned: number; pointsRedeemed: number; sales: string };
+}
+
+/** One reward given at my shops (GET /api/vendor/redemptions). Name and cost as they were then. */
+export interface RedemptionItem {
+  id: string;
+  rewardId: string;
+  rewardName: string;
+  imageUrl: string | null;
+  pointsCost: number;
+  branch: { id: string; name: string };
+  staff: { id: string; name: string };
+  customerRef: string;
+  createdAt: string;
+}
+
+export interface RedemptionQuery {
+  rewardId?: string;
+  branchId?: string;
+  staffId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RedemptionPage extends Page<RedemptionItem> {
+  totals: { redemptions: number; points: number; customers: number };
+  /** Per reward for the period/branch/staff (ignores the reward filter), most given first. */
+  byReward: { rewardId: string; name: string; imageUrl: string | null; status: RewardStatus; count: number; points: number }[];
+}
+
+/** One "needs your attention" item on the dashboard home (GET /api/vendor/attention). */
+export interface AttentionItem {
+  key: string;
+  /** now = affects customers / operations today; setup = profile still incomplete */
+  group: 'now' | 'setup';
+  tone: 'critical' | 'warning' | 'info';
+  title: string;
+  detail: string | null;
+  action: { label: string; to: string };
+}
+
+export type CustomerSegment = 'new' | 'returning' | 'regular' | 'at_risk' | 'no_visits';
+export interface MerchantCustomer {
+  id: string;
+  reference: string;
+  name: string | null;
+  segment: CustomerSegment;
+  firstVisitAt: string | null;
+  lastVisitAt: string | null;
+  visits: number;
+  visits90d: number;
+  spend: string;
+  averageBill: string;
+  rewardsRedeemed: number;
+  pointsBalance: number | null;
+}
+export interface MerchantCustomerQuery {
+  branchId?: string;
+  search?: string;
+  segment?: CustomerSegment;
+  sort?: 'recent' | 'spend' | 'visits' | 'name';
+  page?: number;
+  pageSize?: number;
+}
+export interface MerchantCustomerList extends Page<MerchantCustomer> {
+  customersTotal: number;
+  segments: { key: CustomerSegment; count: number }[];
+  asOf: string;
+}
+export interface MerchantCustomerDetail {
+  customer: MerchantCustomer;
+  asOf: string;
+  events: { id: string; type: 'earn' | 'redeem' | 'adjust'; points: number; amount: string | null; branchName: string | null; rewardName: string | null; createdAt: string }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface InsightsKpis {
+  sales: string;
+  visits: number;
+  avgBill: string;
+  customers: number;
+  newCustomers: number;
+  returningCustomers: number;
+  /** 0-1 */
+  repeatRate: number;
+  visitsPerCustomer: number;
+  redeemingCustomers: number;
+  rewardsRedeemed: number;
+  pointsGiven: number;
+  pointsRedeemed: number;
+}
+
+/** Loyalty performance for a period vs the one before (GET /api/vendor/insights). Counts only. */
+export interface Insights {
+  range: { from: string; to: string };
+  previousRange: { from: string; to: string } | null;
+  current: InsightsKpis;
+  previous: InsightsKpis | null;
+  days: { date: string; sales: string; visits: number; previousSales: string | null; previousVisits: number | null }[];
+  /** Merchant admin, all branches only. */
+  branches: { id: string; name: string; sales: string; visits: number; customers: number; avgBill: string }[];
+  updatedAt: string;
+}
+
 /** An error from the API with its stable `code` (e.g. mfa_required). */
 export class ApiError extends Error {
   constructor(
@@ -273,10 +430,10 @@ const MESSAGES: Record<string, string> = {
   token_expired: 'Your session expired. Sign in again.',
   invalid_token: 'Sign in again.',
   missing_token: 'Sign in again.',
-  vendor_not_found: 'This vendor no longer exists.',
-  currency_locked: "The currency can't change once the vendor has a points rule.",
+  vendor_not_found: 'This merchant no longer exists.',
+  currency_locked: "The currency can't change once the merchant has a points rule.",
   email_taken: 'This email is already used by another staff account.',
-  account_already_staff: 'This account already works at a vendor.',
+  account_already_staff: 'This account already works at a merchant.',
   email_rate_limited: 'Too many invite emails were sent. Try again in a while.',
   too_many_images: 'Limit reached: delete an image first.',
   unsupported_image: 'Use a JPG, PNG, WebP or HEIC image.',
@@ -284,8 +441,15 @@ const MESSAGES: Record<string, string> = {
   location_incomplete: 'Pick a place on the map, or clear both coordinates.',
   hours_incomplete: 'Set both the opening and closing time, or leave both empty.',
   hours_invalid: 'Opening and closing time can\'t be the same.',
+  hours_overlap: 'Two opening times on the same day overlap. Only the last one of a day can run past midnight.',
+  too_many_slots: 'At most 3 opening times a day.',
+  until_in_past: 'Pick a time in the future.',
+  customer_not_found: 'This customer is not available in your selected merchant or branch.',
+  range_invalid: 'Pick a valid start and end date.',
+  range_too_long: 'Pick at most a year.',
+  until_too_far: 'That is too far ahead. For a long closure, close the branch instead.',
   not_staff: 'This account has no access to the dvote dashboard.',
-  staff_disabled: 'This account is disabled. Ask your vendor admin.',
+  staff_disabled: 'This account is disabled. Ask your merchant admin.',
   vendor_suspended: 'This shop is suspended on dvote. Contact dvote support.',
   branch_closed: 'Your branch is closed.',
   forbidden_role: "Your role can't do this.",
@@ -395,8 +559,16 @@ export const api = {
  * it from the token, so a Starbucks account can only ever reach Starbucks.
  */
 export const vendorApi = {
+  customers: (q: MerchantCustomerQuery) => call<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
+  customer: (id: string, q: { branchId?: string; page?: number; pageSize?: number }) =>
+    call<MerchantCustomerDetail>('GET', `/api/vendor/customers/${encodeURIComponent(id)}${qs({ ...q })}`),
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
   summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
+  attention: () => call<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
+  insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
+    call<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
+  redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
+  events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
   updateProfile: (body: { name?: string; contactEmail?: string | null } & Partial<VendorBranding>) =>
@@ -409,6 +581,8 @@ export const vendorApi = {
   branches: () => call<Branch[]>('GET', '/api/vendor/branches'),
   createBranch: (body: Partial<Branch>) => call<Branch>('POST', '/api/vendor/branches', body),
   updateBranch: (id: string, body: Partial<Branch>) => call<Branch>('PATCH', `/api/vendor/branches/${id}`, body),
+  pauseBranch: (id: string, until: string) => call<Branch>('PUT', `/api/vendor/branches/${id}/pause`, { until }),
+  resumeBranch: (id: string) => call<Branch>('DELETE', `/api/vendor/branches/${id}/pause`),
 
   pointRules: () => call<PointRule[]>('GET', '/api/vendor/point-rules'),
   publishRule: (body: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null }) =>
@@ -420,6 +594,12 @@ export const vendorApi = {
   updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
   uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/vendor/rewards/${id}/image`, file(f)),
   removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/vendor/rewards/${id}/image`),
+  soldOuts: () => call<SoldOut[]>('GET', '/api/vendor/rewards/sold-out'),
+  /** branchId omitted (vendor admin) = every open branch; until null = until turned back on. */
+  setSoldOut: (rewardId: string, body: { branchId?: string; until: string | null }) =>
+    call<SoldOut[]>('PUT', `/api/vendor/rewards/${rewardId}/sold-out`, body),
+  clearSoldOut: (rewardId: string, branchId?: string) =>
+    call<SoldOut[]>('DELETE', `/api/vendor/rewards/${rewardId}/sold-out${qs({ branchId })}`),
 
   images: () => call<VendorImage[]>('GET', '/api/vendor/images'),
   uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) =>

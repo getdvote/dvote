@@ -50,7 +50,7 @@ export function BranchPhotos({ scope, branchId }: { scope: VendorScope; branchId
     <div className="grid gap-4">
       <ErrorAlert error={error} />
       <Section
-        hint={canEdit ? `Up to ${MAX_BRANCH_PHOTOS} photos per branch.` : 'Only this branch\x27s manager or the vendor admin can change these.'}
+        hint={canEdit ? `Up to ${MAX_BRANCH_PHOTOS} photos per branch.` : 'Only this branch\x27s manager or the merchant admin can change these.'}
         scope={scope}
         kind="branch_photo"
         max={MAX_BRANCH_PHOTOS}

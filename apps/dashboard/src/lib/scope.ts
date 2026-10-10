@@ -1,4 +1,4 @@
-import { api, vendorApi, type AccountStatus, type Branch, type PointRule, type Reward, type Staff, type StaffMe, type StaffRole, type VendorImage } from './api';
+import { api, vendorApi, type AccountStatus, type Branch, type PointRule, type Reward, type SoldOut, type Staff, type StaffMe, type StaffRole, type VendorImage } from './api';
 
 type RuleBody = { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null };
 
@@ -37,6 +37,21 @@ export interface VendorScope {
   staff: () => Promise<Staff[]>;
   updateStaff: (id: string, body: { name?: string; status?: AccountStatus }) => Promise<Staff>;
   inviteStaff: (body: { name: string; email: string; role: StaffRole; branchId?: string }) => Promise<Staff & { invited: boolean }>;
+  /** "Temporarily closed until" (merchant accounts only). */
+  branchPause?: {
+    /** The only branch this account can pause (branch managers); null = any. */
+    fixedBranchId: string | null;
+    pause: (branchId: string, until: string) => Promise<Branch>;
+    resume: (branchId: string) => Promise<Branch>;
+  };
+  /** Per-branch "sold out" for rewards (merchant accounts only; the admin pages don't show it). */
+  soldOut?: {
+    /** The only branch this account can mark (branch managers); null = any branch or all. */
+    fixedBranchId: string | null;
+    list: () => Promise<SoldOut[]>;
+    set: (rewardId: string, body: { branchId?: string; until: string | null }) => Promise<SoldOut[]>;
+    clear: (rewardId: string, branchId?: string) => Promise<SoldOut[]>;
+  };
 }
 
 export function adminScope(vendorId: string, currency: string): VendorScope {
@@ -94,5 +109,16 @@ export function myVendorScope(me: StaffMe): VendorScope {
     staff: vendorApi.staff,
     updateStaff: vendorApi.updateStaff,
     inviteStaff: vendorApi.inviteStaff,
+    branchPause: {
+      fixedBranchId: isAdmin ? null : me.branchId,
+      pause: vendorApi.pauseBranch,
+      resume: vendorApi.resumeBranch,
+    },
+    soldOut: {
+      fixedBranchId: isAdmin ? null : me.branchId,
+      list: vendorApi.soldOuts,
+      set: vendorApi.setSoldOut,
+      clear: vendorApi.clearSoldOut,
+    },
   };
 }

@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { fromMinor, toMinor, type DecimalLike } from '../points/points';
+import { activeSoldOut } from '../rewards/reward-sold-outs.service';
+import { activePause, readWeek } from '../branches/hours';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUCKETS, StorageService } from '../storage/storage.service';
 import { MAX_BRANCH_PHOTOS } from '../vendor-images/vendor-images.service';
@@ -147,6 +149,12 @@ export class VendorPageService {
         rewards: {
           where: { status: 'active' },
           orderBy: [{ sort_order: 'asc' }, { points_cost: 'asc' }],
+          include: {
+            reward_sold_outs: {
+              where: { branches: { status: 'active' }, ...activeSoldOut() },
+              include: { branches: { select: { name: true } } },
+            },
+          },
         },
         branches: { where: { status: 'active' }, orderBy: { name: 'asc' } },
         vendor_images: { orderBy: [{ sort_order: 'asc' }, { created_at: 'asc' }] },
@@ -186,6 +194,12 @@ export class VendorPageService {
         descriptionAr: r.description_ar,
         imageUrl: r.image_url,
         pointsCost: r.points_cost,
+        soldOutEverywhere: vendor.branches.length > 0 && r.reward_sold_outs.length >= vendor.branches.length,
+        soldOutAt: r.reward_sold_outs.map((o) => ({
+          branchId: o.branch_id,
+          branchName: o.branches.name,
+          until: o.sold_out_until?.toISOString() ?? null,
+        })),
       })),
       menu: vendor.vendor_images.filter((i) => i.kind === 'menu').map(image),
       branches: vendor.branches.map((b) => ({
@@ -197,6 +211,8 @@ export class VendorPageService {
         lng: b.lng === null ? null : Number(b.lng),
         opensAt: b.opens_at,
         closesAt: b.closes_at,
+        hours: readWeek(b.weekly_hours),
+        pausedUntil: activePause(b.paused_until),
         photos: vendor.vendor_images
           .filter((i) => i.kind === 'branch_photo' && i.branch_id === b.id)
           .slice(0, MAX_BRANCH_PHOTOS) // branches from before the limit may have more

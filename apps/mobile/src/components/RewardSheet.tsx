@@ -73,8 +73,11 @@ export function RewardSheet({
             <Text style={styles.required}>{t('rewards.required', { count: reward.pointsCost })}</Text>
             <Text style={styles.name}>{localized(reward.name, reward.nameAr)}</Text>
             {description ? <Text style={styles.description}>{description}</Text> : null}
+            {reward.soldOutAt.length ? <SoldOut places={reward.soldOutAt} everywhere={reward.soldOutEverywhere} /> : null}
 
-            {short <= 0 ? (
+            {reward.soldOutEverywhere ? (
+              <PillButton title={t('rewards.soldOutButton')} disabled onPress={() => undefined} style={styles.button} />
+            ) : short <= 0 ? (
               <PrimaryButton
                 title={t('rewards.redeem')}
                 style={styles.redeem}
@@ -110,6 +113,31 @@ export function RewardSheet({
         </View>
       ) : null}
     </BottomSheet>
+  );
+}
+
+/**
+ * Branches that ran out of this reward for now (set in the dashboard). Redeem stays on while
+ * another branch has it (the staff app refuses it at a sold-out branch); sold out at every
+ * branch turns it off.
+ */
+function SoldOut({ places, everywhere }: { places: Reward['soldOutAt']; everywhere: boolean }) {
+  const { t } = useI18n();
+  const back = (until: string | null) => {
+    if (!until) return null;
+    const at = new Date(until);
+    const today = at.toDateString() === new Date().toDateString();
+    return today ? t('rewards.backAt', { time: showTime(at) }) : t('rewards.backOn', { date: showDate(at), time: showTime(at) });
+  };
+  return (
+    <View style={styles.soldOut}>
+      <Text style={styles.soldOutTitle}>{t(everywhere ? 'rewards.soldOutEverywhere' : 'rewards.soldOut')}</Text>
+      {places.map((p) => (
+        <Text key={p.branchId} style={styles.soldOutRow}>
+          {[p.branchName, back(p.until)].filter(Boolean).join(' · ')}
+        </Text>
+      ))}
+    </View>
   );
 }
 
@@ -189,6 +217,9 @@ const styles = StyleSheet.create({
   // The sheet is white, so the pill gets the light page grey (the darker "Soon" tag stays visible on it).
   button: { backgroundColor: theme.surface, marginTop: 14 },
   redeem: { marginTop: 14 },
+  soldOut: { marginTop: 10, gap: 2, backgroundColor: theme.surface, ...squircle, borderRadius: theme.radius, paddingHorizontal: 14, paddingVertical: 10 },
+  soldOutTitle: { fontSize: 14, fontWeight: '600', color: theme.text },
+  soldOutRow: { fontSize: 14, color: theme.muted },
   history: { marginTop: 18, gap: 8 },
   historyTitle: { fontSize: 13, fontWeight: '600', color: theme.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   historyLoading: { alignSelf: 'flex-start', marginVertical: 6 },

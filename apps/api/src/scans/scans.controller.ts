@@ -75,7 +75,7 @@ export class ScansController {
   @ApiNotFoundResponse({ description: 'qr_invalid' })
   @ApiBadRequestResponse({ description: 'wrong_qr_type | branch_required | invalid_branch | validation errors' })
   @ApiForbiddenResponse({ description: 'vendor_mismatch | forbidden_branch | user_blocked | not_staff | staff_disabled | vendor_suspended | branch_closed' })
-  @ApiConflictResponse({ description: 'qr_used | qr_expired | qr_cancelled | reward_unavailable | insufficient_points | idempotency_key_reused' })
+  @ApiConflictResponse({ description: 'qr_used | qr_expired | qr_cancelled | reward_unavailable | reward_sold_out | insufficient_points | idempotency_key_reused' })
   redeem(@CurrentStaff() ctx: StaffContext, @Body() dto: RedeemScanDto): Promise<RedeemResponseDto> {
     return this.scans.redeem(ctx, dto);
   }

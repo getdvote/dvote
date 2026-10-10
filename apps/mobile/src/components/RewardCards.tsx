@@ -93,6 +93,14 @@ function RewardCard({
   const { t } = useI18n();
   const description = localized(reward.description, reward.descriptionAr);
   const enough = reward.pointsCost <= balance;
+  // Where it's sold out right now (set by the shop in its dashboard).
+  const soldOut = reward.soldOutEverywhere
+    ? t('rewards.soldOutBadge')
+    : reward.soldOutAt.length === 1
+      ? t('rewards.soldOutAtBadge', { branch: reward.soldOutAt[0].branchName })
+      : reward.soldOutAt.length > 1
+        ? t('rewards.soldOutAtCount', { count: reward.soldOutAt.length })
+        : null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -112,6 +120,13 @@ function RewardCard({
             <Icon icon={GiftIcon} size={wide ? 48 : 36} color={theme.brand} strokeWidth={1.5} />
           </LinearGradient>
         )}
+        {soldOut ? (
+          <View style={styles.soldOut}>
+            <Text style={styles.soldOutText} numberOfLines={1}>
+              {soldOut}
+            </Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>
@@ -129,7 +144,7 @@ function RewardCard({
             {description ?? ' '}
           </Text>
         )}
-        <Text style={[styles.cost, enough && styles.ready]}>{t('common.pts', { count: reward.pointsCost })}</Text>
+        <Text style={[styles.cost, enough && !reward.soldOutEverywhere && styles.ready]}>{t('common.pts', { count: reward.pointsCost })}</Text>
       </View>
     </Pressable>
   );
@@ -147,6 +162,24 @@ const styles = StyleSheet.create({
   image: { height: 120 },
   imageWide: { height: 160 },
   placeholder: { alignItems: 'center', justifyContent: 'center' },
+  // On the photo's top corner (start side, so it follows Arabic right-to-left).
+  soldOut: {
+    position: 'absolute',
+    top: 8,
+    start: 8,
+    end: 8,
+    alignItems: 'flex-start',
+  },
+  soldOutText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+    backgroundColor: 'rgba(17, 17, 17, 0.78)',
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
   body: { padding: 14, gap: 4 },
   name: { fontSize: 16, fontWeight: '600', color: theme.text },
   description: { fontSize: 13, lineHeight: 18, color: theme.muted },
