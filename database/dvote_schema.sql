@@ -338,6 +338,7 @@ CREATE TABLE fraud_flags (
     details      jsonb             NOT NULL DEFAULT '{}'::jsonb,
     status       fraud_flag_status NOT NULL DEFAULT 'open',
     reviewed_by  uuid              REFERENCES platform_admins (id),
+    key          varchar(200)      UNIQUE,                         -- one flag per finding (set by the fraud check)
     created_at   timestamptz       NOT NULL DEFAULT now(),
     updated_at   timestamptz       NOT NULL DEFAULT now(),
     CONSTRAINT fraud_flags_target_ck CHECK (num_nonnulls(vendor_id, branch_id, user_id, staff_id) >= 1),

@@ -38,6 +38,63 @@ export interface Overview {
 
 export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
 
+/** Database + storage sizes and the database server's RAM / disk / load. */
+export interface SystemDatabase {
+  sizeBytes: number;
+  version: string;
+  connections: number;
+  maxConnections: number;
+  cacheHitPercent: number | null;
+  authUsers: number;
+  tables: { name: string; rows: number; sizeBytes: number }[];
+  storage: { bucket: string; files: number; sizeBytes: number }[];
+  server: {
+    memoryTotalBytes: number | null;
+    memoryAvailableBytes: number | null;
+    diskTotalBytes: number | null;
+    diskAvailableBytes: number | null;
+    load1: number | null;
+    load5: number | null;
+    load15: number | null;
+    cpus: number | null;
+  } | null;
+  checkedAt: string;
+}
+
+export type FraudType = 'too_many_collects' | 'large_purchase' | 'branch_spike' | 'staff_spike';
+export type FraudStatus = 'open' | 'dismissed' | 'confirmed';
+
+/** A risk finding from the fraud check (never blocks anything by itself). */
+export interface FraudFlag {
+  id: string;
+  type: FraudType;
+  status: FraudStatus;
+  vendor: { id: string; name: string } | null;
+  branch: { id: string; name: string } | null;
+  user: { id: string; name: string; email: string | null; status: UserStatus } | null;
+  staff: { id: string; name: string } | null;
+  details: Record<string, unknown> & { day?: string; review?: { note: string | null; at: string } };
+  reviewedBy: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FraudSummary {
+  open: number;
+  openByType: Record<FraudType, number>;
+  confirmed: number;
+  dismissed: number;
+  last7d: number;
+  lastCheckAt: string | null;
+  rules: Record<string, number>;
+}
+
+/** Which parts of dvote are up. */
+export interface SystemStatus {
+  checks: { name: string; kind: 'api' | 'database' | 'auth' | 'storage' | 'website'; up: boolean; latencyMs: number; detail: string; url?: string }[];
+  checkedAt: string;
+}
+
 /** Collects split by the QR that was scanned: master QR (tab bar, any shop) vs shop QR (a shop's page). */
 export interface QrSources {
   days: number;
@@ -281,6 +338,13 @@ export const api = {
   me: () => call<AdminMe>('GET', '/api/admin/me'),
   overview: () => call<Overview>('GET', '/api/admin/overview'),
   qrSources: (days: number) => call<QrSources>('GET', `/api/admin/stats/qr-sources?days=${days}`),
+  systemDatabase: () => call<SystemDatabase>('GET', '/api/admin/system/database'),
+  systemStatus: () => call<SystemStatus>('GET', '/api/admin/system/status'),
+  fraudSummary: () => call<FraudSummary>('GET', '/api/admin/fraud/summary'),
+  fraudFlags: (q: { status?: FraudStatus; type?: FraudType; page?: number; pageSize?: number }) =>
+    call<Page<FraudFlag>>('GET', `/api/admin/fraud/flags${qs(q)}`),
+  reviewFraudFlag: (id: string, body: { status: FraudStatus; note?: string }) => call<FraudFlag>('PATCH', `/api/admin/fraud/flags/${id}`, body),
+  runFraudCheck: () => call<{ at: string; created: number; byType: Record<FraudType, number> }>('POST', '/api/admin/fraud/check'),
 
   vendors: (q: { search?: string; status?: VendorStatus } = {}) => call<Vendor[]>('GET', `/api/admin/vendors${qs(q)}`),
   vendor: (id: string) => call<Vendor>('GET', `/api/admin/vendors/${id}`),

@@ -94,6 +94,23 @@ describe('Admin dashboard API: overview, branches, rules, rewards, staff, images
     expect(Array.isArray(o.topVendors)).toBe(true);
   });
 
+  it('system: database stats (sizes, tables, connections) and status checks; admins only', async () => {
+    const db = (await admin('get', '/api/admin/system/database').expect(200)).body;
+    expect(db.sizeBytes).toBeGreaterThan(0);
+    expect(db.version).toMatch(/^PostgreSQL \d+/);
+    expect(db.connections).toBeGreaterThan(0);
+    expect(db.maxConnections).toBeGreaterThan(0);
+    const names = (db.tables as { name: string; rows: number; sizeBytes: number }[]).map((t) => t.name);
+    expect(names).toEqual(expect.arrayContaining(['point_events', 'cards', 'vendors', 'users']));
+    expect(Array.isArray(db.storage)).toBe(true);
+
+    const status = (await admin('get', '/api/admin/system/status').expect(200)).body as { checks: { kind: string; up: boolean }[] };
+    expect(status.checks.find((c) => c.kind === 'api')).toMatchObject({ up: true });
+    expect(status.checks.find((c) => c.kind === 'database')).toMatchObject({ up: true });
+
+    await request(app.getHttpServer()).get('/api/admin/system/database').set('Authorization', `Bearer ${tokens.customer}`).expect(403);
+  }, 20_000);
+
   it('branches: add, edit, close; unknown vendor/branch → 404', async () => {
     const created = await admin('post', `/api/admin/vendors/${vendorId}/branches`)
       .send({ name: 'Smouha', address: 'Smouha, Alexandria', lat: 31.2156, lng: 29.9553 })
