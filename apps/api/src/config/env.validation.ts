@@ -52,6 +52,15 @@ export class Env {
   STAFF_INVITE_REDIRECT_URL?: string;
 
   /**
+   * Websites the admin "System status" page checks, as "Name=https://url" pairs separated
+   * by commas, e.g. "Dashboard=https://admin.dvote.app,Staff web app=https://staff.dvote.app".
+   * The API itself, the database and Supabase Auth / Storage are always checked.
+   */
+  @IsOptional()
+  @IsString()
+  STATUS_TARGETS?: string;
+
+  /**
    * Platform admins must have completed two-factor (authenticator app) login, i.e. a
    * token with aal2. Keep true everywhere real; set false only for local development.
    */

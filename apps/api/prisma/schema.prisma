@@ -51,6 +51,7 @@ model fraud_flags {
   reviewed_by     String?           @db.Uuid
   created_at      DateTime          @default(now()) @db.Timestamptz(6)
   updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  key             String?           @unique(map: "fraud_flags_key_uq") @db.VarChar(200)
   branches        branches?         @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   platform_admins platform_admins?  @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   staff_users     staff_users?      @relation(fields: [staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

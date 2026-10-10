@@ -131,6 +131,9 @@ describe('Vendor activity log + redemptions: GET /api/vendor/events, /api/vendor
           point_event_id: ev.id,
           reward_name: e.redeem.snapshotName,
           points_cost: e.redeem.cost,
+          // same moment as its ledger row (as the redeem transaction writes them), so the
+          // date filters don't depend on the day the tests run
+          created_at: new Date(e.at),
         },
       });
     }

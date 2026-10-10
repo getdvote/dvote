@@ -1,4 +1,4 @@
-import { ChartColumn, LayoutDashboard, LogOut, Store, Users } from 'lucide-react';
+import { ChartColumn, LayoutDashboard, LogOut, Server, Store, Users } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -36,6 +36,7 @@ const NAV: NavItem[] = [
   { to: '/merchants', icon: Store, label: 'Merchants' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/statistics', icon: ChartColumn, label: 'Statistics' },
+  { to: '/system', icon: Server, label: 'System' },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {

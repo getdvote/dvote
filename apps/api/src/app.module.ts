@@ -18,6 +18,8 @@ import { RewardsModule } from './rewards/rewards.module';
 import { MerchantCustomersModule } from './merchant-customers/merchant-customers.module';
 import { ReportsModule } from './reports/vendor-summary';
 import { LiveModule } from './live/live.module';
+import { SystemModule } from './system/system.module';
+import { FraudFlagsModule } from './fraud-flags/fraud-flags';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { LiveModule } from './live/live.module';
     }),
     PrismaModule,
     LiveModule,
+    SystemModule,
+    FraudFlagsModule,
     HealthModule,
     UsersApiModule,
     StaffModule,
