@@ -172,7 +172,7 @@ export function MyActivity() {
         <Pager page={page} pageSize={PAGE_SIZE} total={data?.total ?? 0} onChange={setPage} />
       </Card>
       <p className="mt-3 text-xs text-muted-foreground">
-        dvote never shows you who your customers are. Each customer appears as a card code: the same code means the same customer at {vendor.name}.
+        Each card code identifies a customer at {vendor.name}. View customer names and loyalty profiles in Customers; email and phone stay private.
       </p>
 
       <ActivitySheet item={open} currency={vendor.currency} onClose={() => setOpen(null)} />

@@ -51,6 +51,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const isAdmin = me.role === 'vendor_admin';
   const nav: NavItem[] = [
     { to: '/', icon: LayoutDashboard, label: 'Overview' },
+    { to: '/customers', icon: Users, label: 'Customers' },
     { to: '/insights', icon: ChartLine, label: 'Insights' },
     { to: '/activity', icon: ReceiptText, label: 'Activity' },
     { to: '/branches', icon: Store, label: 'Branches' },

@@ -289,6 +289,43 @@ export interface AttentionItem {
   action: { label: string; to: string };
 }
 
+export type CustomerSegment = 'new' | 'returning' | 'regular' | 'at_risk' | 'no_visits';
+export interface MerchantCustomer {
+  id: string;
+  reference: string;
+  name: string | null;
+  segment: CustomerSegment;
+  firstVisitAt: string | null;
+  lastVisitAt: string | null;
+  visits: number;
+  visits90d: number;
+  spend: string;
+  averageBill: string;
+  rewardsRedeemed: number;
+  pointsBalance: number | null;
+}
+export interface MerchantCustomerQuery {
+  branchId?: string;
+  search?: string;
+  segment?: CustomerSegment;
+  sort?: 'recent' | 'spend' | 'visits' | 'name';
+  page?: number;
+  pageSize?: number;
+}
+export interface MerchantCustomerList extends Page<MerchantCustomer> {
+  customersTotal: number;
+  segments: { key: CustomerSegment; count: number }[];
+  asOf: string;
+}
+export interface MerchantCustomerDetail {
+  customer: MerchantCustomer;
+  asOf: string;
+  events: { id: string; type: 'earn' | 'redeem' | 'adjust'; points: number; amount: string | null; branchName: string | null; rewardName: string | null; createdAt: string }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface InsightsKpis {
   sales: string;
   visits: number;
@@ -350,6 +387,7 @@ const MESSAGES: Record<string, string> = {
   hours_overlap: 'Two opening times on the same day overlap. Only the last one of a day can run past midnight.',
   too_many_slots: 'At most 3 opening times a day.',
   until_in_past: 'Pick a time in the future.',
+  customer_not_found: 'This customer is not available in your selected merchant or branch.',
   range_invalid: 'Pick a valid start and end date.',
   range_too_long: 'Pick at most a year.',
   until_too_far: 'That is too far ahead. For a long closure, close the branch instead.',
@@ -457,6 +495,9 @@ export const api = {
  * it from the token, so a Starbucks account can only ever reach Starbucks.
  */
 export const vendorApi = {
+  customers: (q: MerchantCustomerQuery) => call<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
+  customer: (id: string, q: { branchId?: string; page?: number; pageSize?: number }) =>
+    call<MerchantCustomerDetail>('GET', `/api/vendor/customers/${encodeURIComponent(id)}${qs({ ...q })}`),
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
   summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
   attention: () => call<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
