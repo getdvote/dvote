@@ -14,6 +14,7 @@ import { api, ApiError, SIGN_OUT_CODES, type Me } from './api';
 import { startLive } from './live';
 import { refreshMyLocation, resetLocation } from './location';
 import { supabase } from './supabase';
+import { refreshWidgets } from '../widgets';
 
 interface SessionState {
   /** true until the stored sign-in (if any) has been checked */
@@ -81,6 +82,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // a token refresh doesn't reconnect: the socket was authorised when it opened).
   const userId = session?.user.id ?? null;
   useEffect(() => (userId ? startLive() : undefined), [userId]);
+
+  // Home-screen widgets (my points, collect QR): fresh cards when the session opens and when the
+  // app comes back; signed out = the widgets ask to sign in. (The cards tab refreshes them too.)
+  useEffect(() => {
+    if (loading) return;
+    if (!userId) return refreshWidgets(null);
+    const load = () => api.cards().then(refreshWidgets, () => undefined);
+    void load();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && void load());
+    return () => sub.remove();
+  }, [userId, loading]);
 
   // Where the customer is, for "Near you": asked once when the session opens, then refreshed
   // when the app comes back to the foreground (at most every 10 minutes).

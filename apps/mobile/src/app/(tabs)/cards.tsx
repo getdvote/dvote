@@ -16,6 +16,7 @@ import { useI18n } from '../../i18n';
 import { useSession } from '../../lib/session';
 import { TAB_BAR_SPACE, theme } from '../../lib/theme';
 import { useLiveRefresh } from '../../lib/live';
+import { refreshWidgets } from '../../widgets';
 
 /**
  * My cards: one card per shop where the customer has points, as an Apple Wallet-style stack
@@ -45,7 +46,9 @@ export default function Cards() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      setCards(await api.cards());
+      const fresh = await api.cards();
+      setCards(fresh);
+      refreshWidgets(fresh); // keep the home-screen widgets in step
     } catch (err) {
       if (await handleAuthError(err)) return;
       setError(err instanceof ApiError ? err.message : t('cards.couldNotLoad'));
