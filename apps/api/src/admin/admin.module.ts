@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { AdminController } from './admin.controller';
+import { PointAdjustService } from './point-adjust';
 import { QrStatsService } from './qr-stats';
 import { AdminService } from './admin.service';
 
@@ -8,6 +9,6 @@ import { AdminService } from './admin.service';
 @Module({
   imports: [AuthModule],
   controllers: [AdminController],
-  providers: [AdminService, QrStatsService],
+  providers: [AdminService, QrStatsService, PointAdjustService],
 })
 export class AdminModule {}

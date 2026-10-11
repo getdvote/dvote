@@ -44,74 +44,48 @@ import {
   type MerchantCustomerQuery,
 } from "../../lib/api";
 import { cn } from "@/lib/utils";
+import { localeOf, t } from "../../i18n";
 
 const SEGMENTS: {
   key: CustomerSegment;
-  label: string;
-  description: string;
   variant: "brand" | "success" | "warning" | "secondary";
 }[] = [
-  {
-    key: "new",
-    label: "New",
-    description: "First purchase in the last 30 days.",
-    variant: "brand",
-  },
-  {
-    key: "returning",
-    label: "Returning",
-    description:
-      "First purchase over 30 days ago; visited recently, with fewer than 5 purchases in 90 days.",
-    variant: "secondary",
-  },
-  {
-    key: "regular",
-    label: "Regulars",
-    description:
-      "First purchase over 30 days ago; 5+ purchases in 90 days and a visit in the last 30 days.",
-    variant: "success",
-  },
-  {
-    key: "at_risk",
-    label: "At risk",
-    description: "No purchase in the last 30 days.",
-    variant: "warning",
-  },
-  {
-    key: "no_visits",
-    label: "No visits yet",
-    description: "A loyalty card without a recorded purchase.",
-    variant: "secondary",
-  },
+  { key: "new", variant: "brand" },
+  { key: "returning", variant: "secondary" },
+  { key: "regular", variant: "success" },
+  { key: "at_risk", variant: "warning" },
+  { key: "no_visits", variant: "secondary" },
 ];
+const segmentLabel = (key: CustomerSegment) => t(`customers.segments.${key}.label`);
+const segmentText = (key: CustomerSegment) => t(`customers.segments.${key}.description`);
 const PAGE_SIZE = 25;
 const date = (value: string | null) =>
   value
-    ? new Intl.DateTimeFormat("en-GB", {
+    ? new Intl.DateTimeFormat(localeOf(), {
         day: "numeric",
         month: "short",
         year: "numeric",
         timeZone: "Africa/Cairo",
       }).format(new Date(value))
-    : "No visits yet";
+    : t("customers.segments.no_visits.label");
 const time = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", {
+  new Intl.DateTimeFormat(localeOf(), {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Africa/Cairo",
   }).format(new Date(value));
 const cash = (value: string, currency: string) =>
-  new Intl.NumberFormat("en-EG", {
+  new Intl.NumberFormat(localeOf(), {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
   }).format(Number(value));
 const displayName = (c: MerchantCustomer) =>
-  c.name?.trim() || `Customer #${c.reference}`;
+  c.name?.trim() || t("customers.fallbackName", { ref: c.reference });
 
 function SegmentBadge({ segment }: { segment: CustomerSegment }) {
   const s = SEGMENTS.find((item) => item.key === segment)!;
-  return <Badge variant={s.variant}>{s.label}</Badge>;
+  return <Badge variant={s.variant}>{segmentLabel(s.key)}</Badge>;
 }
 
 /** Merchant customer directory. URL state preserves filters, paging and the open profile. */
@@ -149,7 +123,7 @@ export function MyCustomers() {
     enabled: !manager,
   });
   const scopeName = manager
-    ? (me.branch?.name ?? "your branch")
+    ? (me.branch?.name ?? t("availability.yourBranch"))
     : (branches?.find((b) => b.id === branchId)?.name ?? vendor.name);
   const set = (key: string, value?: string, resetPage = true) => {
     setParams(
@@ -170,17 +144,17 @@ export function MyCustomers() {
   return (
     <>
       <PageHeader
-        title="Customers"
-        subtitle={`Get to know the people who visit ${scopeName}.`}
+        title={t("nav.customers")}
+        subtitle={t("customers.subtitle", { scope: scopeName })}
       />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Segments update automatically from purchases recorded through dvote.
+          {t("customers.segmentsAuto")}
         </p>
         {!manager && (
           <SelectFilter
-            label="Branch"
-            allLabel="All branches"
+            label={t("common.branch")}
+            allLabel={t("common.allBranches")}
             value={branchId ?? "all"}
             onChange={(v) => set("branch", v === "all" ? undefined : v)}
             options={branches?.map((b) => ({ value: b.id, label: b.name }))}
@@ -190,13 +164,13 @@ export function MyCustomers() {
       <ErrorAlert error={error} className="mb-4" />
       {error ? (
         <Button variant="outline" onClick={() => void refetch()}>
-          Try again
+          {t("customers.tryAgain")}
         </Button>
       ) : (
         <>
           <div
             className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label="Customer segments"
+            aria-label={t("customers.segmentsLabel")}
           >
             {SEGMENTS.slice(0, 4).map((s) => (
               <button
@@ -212,9 +186,9 @@ export function MyCustomers() {
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{s.label}</span>
+                  <span className="font-medium">{segmentLabel(s.key)}</span>
                   <ArrowUpRight
-                    className="size-4 text-muted-foreground"
+                    className="size-4 text-muted-foreground rtl:-scale-x-100"
                     aria-hidden
                   />
                 </div>
@@ -225,12 +199,13 @@ export function MyCustomers() {
                         {num(count(s.key))}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {data.customersTotal
-                          ? Math.round(
-                              (count(s.key) / data.customersTotal) * 100,
-                            )
-                          : 0}
-                        % of customers
+                        {t("customers.percentOf", {
+                          n: data.customersTotal
+                            ? Math.round(
+                                (count(s.key) / data.customersTotal) * 100,
+                              )
+                            : 0,
+                        })}
                       </span>
                     </>
                   ) : (
@@ -238,7 +213,7 @@ export function MyCustomers() {
                   )}
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {s.description}
+                  {segmentText(s.key)}
                 </p>
               </button>
             ))}
@@ -251,7 +226,7 @@ export function MyCustomers() {
                   aria-pressed={!segment}
                   onClick={() => set("segment")}
                 >
-                  <UsersRound /> All customers{" "}
+                  <UsersRound /> {t("customers.all")}{" "}
                   {data && (
                     <Badge variant="outline">{num(data.customersTotal)}</Badge>
                   )}
@@ -261,41 +236,41 @@ export function MyCustomers() {
                     variant={segment === "no_visits" ? "secondary" : "ghost"}
                     onClick={() => set("segment", "no_visits")}
                   >
-                    No visits yet ({count("no_visits")})
+                    {segmentLabel("no_visits")} ({count("no_visits")})
                   </Button>
                 )}
                 {segment && segment !== "no_visits" && (
                   <Badge variant="brand">
-                    {SEGMENTS.find((s) => s.key === segment)?.label}
+                    {segmentLabel(segment)}
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
                 {data
-                  ? `${num(data.total)} matching customers`
-                  : "Loading customers…"}
+                  ? t("customers.matching", { n: data.total })
+                  : t("customers.loading")}
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 p-4">
               <SearchInput
                 value={search}
                 onChange={(v) => set("search", v.slice(0, 120) || undefined)}
-                placeholder="Search name or card reference"
+                placeholder={t("customers.search")}
               />
               <Select value={sort} onValueChange={(v) => set("sort", v)}>
-                <SelectTrigger aria-label="Sort customers" className="w-48">
+                <SelectTrigger aria-label={t("customers.sort")} className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="recent">Most recent visit</SelectItem>
-                  <SelectItem value="spend">Highest recorded spend</SelectItem>
-                  <SelectItem value="visits">Most visits</SelectItem>
-                  <SelectItem value="name">Name A–Z</SelectItem>
+                  <SelectItem value="recent">{t("customers.sorts.recent")}</SelectItem>
+                  <SelectItem value="spend">{t("customers.sorts.spend")}</SelectItem>
+                  <SelectItem value="visits">{t("customers.sorts.visits")}</SelectItem>
+                  <SelectItem value="name">{t("customers.sorts.name")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {isPending ? (
-              <div className="space-y-3 p-4" aria-label="Loading customers">
+              <div className="space-y-3 p-4" aria-label={t("customers.loading")}>
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-14 w-full" />
                 ))}
@@ -308,15 +283,15 @@ export function MyCustomers() {
                 />
                 <h2 className="font-semibold">
                   {search || segment
-                    ? "No customers match these filters"
+                    ? t("customers.noMatch")
                     : page > 1
-                      ? "No customers on this page"
-                      : "Your customer list starts with a visit"}
+                      ? t("customers.noPage")
+                      : t("customers.emptyTitle")}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {search || segment
-                    ? "Try another name or view all customers."
-                    : "Customers appear here when they collect points at your shop."}
+                    ? t("customers.noMatchText")
+                    : t("customers.emptyText")}
                 </p>
                 {(search || segment || page > 1) && (
                   <Button
@@ -328,7 +303,7 @@ export function MyCustomers() {
                       )
                     }
                   >
-                    Reset filters
+                    {t("customers.reset")}
                   </Button>
                 )}
               </div>
@@ -338,16 +313,12 @@ export function MyCustomers() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="ps-4">Customer</TableHead>
-                        <TableHead>Segment</TableHead>
-                        <TableHead>Last visit</TableHead>
-                        <TableHead className="text-end">Visits</TableHead>
-                        <TableHead className="text-end">
-                          Recorded spend
-                        </TableHead>
-                        <TableHead className="pe-4 text-end">
-                          Rewards redeemed
-                        </TableHead>
+                        <TableHead className="ps-4">{t("activity.customer")}</TableHead>
+                        <TableHead>{t("customers.segment")}</TableHead>
+                        <TableHead>{t("customers.lastVisit")}</TableHead>
+                        <TableHead className="text-end">{t("insights.kpi.visits")}</TableHead>
+                        <TableHead className="text-end">{t("customers.spend")}</TableHead>
+                        <TableHead className="pe-4 text-end">{t("customers.rewardsRedeemed")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -391,11 +362,11 @@ export function MyCustomers() {
                       </div>
                       <div className="flex flex-wrap justify-between gap-2 text-sm">
                         <span>
-                          {num(c.visits)} visits ·{" "}
+                          {t("customers.visitsN", { n: c.visits })} ·{" "}
                           {cash(c.spend, vendor.currency)}
                         </span>
                         <span className="text-muted-foreground">
-                          Last: {date(c.lastVisitAt)}
+                          {t("customers.last", { date: date(c.lastVisitAt) })}
                         </span>
                       </div>
                     </div>
@@ -414,20 +385,19 @@ export function MyCustomers() {
       )}
       <div className="mt-4 flex flex-wrap justify-between gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <LockKeyhole className="size-3.5" aria-hidden /> Phone numbers and
-          emails stay private.
+          <LockKeyhole className="size-3.5" aria-hidden /> {t("customers.private")}
         </span>
         {data && (
           <span>
-            As of {data.asOf} · Cairo time · Counts cover {scopeName}
-            {branchId ? " only" : ""}
+            {t(branchId ? "customers.asOfOnly" : "customers.asOf", {
+              date: data.asOf,
+              scope: scopeName,
+            })}
           </span>
         )}
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Each customer belongs to one segment. Recent means the last 30 Cairo
-        calendar days. Visits and spend are lifetime totals in the selected
-        scope; a visit is one recorded purchase.
+        {t("customers.footnote")}
       </p>
       <Sheet
         open={!!customerId}
@@ -501,10 +471,9 @@ function CustomerProfile({
   return (
     <>
       <SheetHeader className="border-b pe-12">
-        <SheetTitle>{c ? displayName(c) : "Customer profile"}</SheetTitle>
+        <SheetTitle>{c ? displayName(c) : t("customers.profile")}</SheetTitle>
         <SheetDescription>
-          Loyalty relationship with {scopeName}
-          {branchId ? " only" : ""}.
+          {t(branchId ? "customers.relationOnly" : "customers.relation", { scope: scopeName })}
         </SheetDescription>
       </SheetHeader>
       <div className="space-y-6 p-4">
@@ -512,7 +481,7 @@ function CustomerProfile({
           <>
             <ErrorAlert error={error} />
             <Button variant="outline" onClick={() => void refetch()}>
-              Try again
+              {t("customers.tryAgain")}
             </Button>
           </>
         ) : isPending ? (
@@ -537,42 +506,42 @@ function CustomerProfile({
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                {SEGMENTS.find((s) => s.key === c.segment)?.description}
+                {segmentText(c.segment)}
               </p>
               <dl className="grid grid-cols-2 gap-3">
-                <Metric label="Recorded spend">
+                <Metric label={t("customers.spend")}>
                   {cash(c.spend, currency)}
                 </Metric>
-                <Metric label="Average bill">
+                <Metric label={t("insights.kpi.avgBill")}>
                   {cash(c.averageBill, currency)}
                 </Metric>
-                <Metric label="Lifetime visits">{num(c.visits)}</Metric>
-                <Metric label="Visits · last 90 days">
+                <Metric label={t("customers.lifetimeVisits")}>{num(c.visits)}</Metric>
+                <Metric label={t("customers.visits90")}>
                   {num(c.visits90d)}
                 </Metric>
-                <Metric label="Rewards redeemed">
+                <Metric label={t("customers.rewardsRedeemed")}>
                   {num(c.rewardsRedeemed)}
                 </Metric>
-                <Metric label="Points balance">
+                <Metric label={t("customers.balance")}>
                   {c.pointsBalance === null
-                    ? "Merchant-wide · hidden"
+                    ? t("customers.balanceHidden")
                     : num(c.pointsBalance)}
                 </Metric>
               </dl>
               <dl className="divide-y text-sm">
-                <Info label="First purchase">{date(c.firstVisitAt)}</Info>
-                <Info label="Last purchase">{date(c.lastVisitAt)}</Info>
-                <Info label="Email">
+                <Info label={t("customers.firstPurchase")}>{date(c.firstVisitAt)}</Info>
+                <Info label={t("customers.lastPurchase")}>{date(c.lastVisitAt)}</Info>
+                <Info label={t("staff.email")}>
                   <Hidden />
                 </Info>
-                <Info label="Phone">
+                <Info label={t("customers.phone")}>
                   <Hidden />
                 </Info>
               </dl>
-              <section aria-label="Loyalty history">
-                <h3 className="font-semibold">Loyalty history</h3>
+              <section aria-label={t("customers.history")}>
+                <h3 className="font-semibold">{t("customers.history")}</h3>
                 <p className="mb-3 text-xs text-muted-foreground">
-                  {num(data.total)} events · {scopeName} · Cairo time
+                  {t("customers.events", { n: data.total, scope: scopeName })}
                 </p>
                 {data.events.length ? (
                   <ol className="divide-y">
@@ -584,10 +553,10 @@ function CustomerProfile({
                         <div>
                           <p className="text-sm font-medium">
                             {e.type === "earn"
-                              ? "Points collected"
+                              ? t("customers.collected")
                               : e.type === "redeem"
-                                ? (e.rewardName ?? "Reward redeemed")
-                                : "Points corrected"}
+                                ? (e.rewardName ?? t("customers.redeemed"))
+                                : t("customers.corrected")}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {date(e.createdAt)} · {time(e.createdAt)}
@@ -595,20 +564,20 @@ function CustomerProfile({
                           </p>
                           {e.amount !== null && (
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Bill {cash(e.amount, currency)}
+                              {t("customers.bill", { amount: cash(e.amount, currency) })}
                             </p>
                           )}
                         </div>
-                        <span className="whitespace-nowrap text-sm font-semibold tabular-nums">
+                        <span dir="ltr" className="whitespace-nowrap text-sm font-semibold tabular-nums">
                           {e.points > 0 ? "+" : ""}
-                          {num(e.points)} pts
+                          {num(e.points)} {t("branding.pts")}
                         </span>
                       </li>
                     ))}
                   </ol>
                 ) : (
                   <p className="py-6 text-sm text-muted-foreground">
-                    No loyalty activity recorded yet.
+                    {t("customers.noHistory")}
                   </p>
                 )}
                 <Pager
@@ -627,7 +596,7 @@ function CustomerProfile({
 }
 const Hidden = () => (
   <span className="flex items-center gap-1.5 text-muted-foreground">
-    <LockKeyhole className="size-3.5" aria-hidden /> Private
+    <LockKeyhole className="size-3.5" aria-hidden /> {t("customers.privateShort")}
   </span>
 );
 const Metric = ({

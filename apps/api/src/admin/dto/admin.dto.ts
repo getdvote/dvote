@@ -122,6 +122,9 @@ export class AdminUserCardDto {
 
 export class AdminUserEventDto {
   @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) cardId: string;
+  @ApiProperty({ description: 'A collect already undone by an admin' }) reversed: boolean;
+  @ApiProperty({ type: String, nullable: true, description: 'Admin who made an adjust row' }) adminName: string | null;
   @ApiProperty({ enum: ['earn', 'redeem', 'adjust'] }) type: 'earn' | 'redeem' | 'adjust';
   @ApiProperty() delta: number;
   @ApiProperty() vendorName: string;
@@ -136,11 +139,35 @@ export class AdminUserDetailDto extends AdminUserListItemDto {
   @ApiProperty({ enum: user_gender, enumName: 'UserGender', nullable: true }) gender: user_gender | null;
   @ApiProperty({ type: String, nullable: true, format: 'date' }) birthDate: string | null;
   @ApiProperty({ type: [AdminUserCardDto] }) cards: AdminUserCardDto[];
-  @ApiProperty({ type: [AdminUserEventDto], description: 'Latest 30 point events, newest first' }) events: AdminUserEventDto[];
+  @ApiProperty({ type: [AdminUserEventDto], description: 'Latest 10 point events, newest first (more: GET /users/{id}/events)' }) events: AdminUserEventDto[];
 }
 
 export class UpdateUserStatusDto {
   @ApiProperty({ enum: user_status, enumName: 'UserStatus', description: 'blocked = can no longer use the app' })
   @IsIn(Object.values(user_status))
   status: user_status;
+}
+
+export class ListUserEventsQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  pageSize?: number;
+}
+
+export class AdminUserEventsPageDto {
+  @ApiProperty({ type: [AdminUserEventDto] }) items: AdminUserEventDto[];
+  @ApiProperty() total: number;
+  @ApiProperty() page: number;
+  @ApiProperty() pageSize: number;
 }

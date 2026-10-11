@@ -26,6 +26,7 @@ import {
   QrCodeStatusResponseDto,
 } from './dto/qr-code-response.dto';
 import { QrCodesService } from './qr-codes.service';
+import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
 
 @ApiTags('app: qr codes')
 @ApiBearerAuth()
@@ -40,6 +41,7 @@ export class QrCodesController {
 
   /** Get a one-time collect QR (valid 5 minutes). Works at any shop: the scanning staff decide the vendor. */
   @Post()
+  @UserLimit(LIMITS.qrCreate)
   @ApiCreatedResponse({ type: CreateQrCodeResponseDto })
   create(
     @CurrentUser() user: users,

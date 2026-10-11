@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { t } from '../i18n';
 
 /**
  * A trigger (usually a button) that asks before doing something hard to undo: suspend, block,
@@ -39,7 +40,7 @@ export function ConfirmAction({
           {description ? <AlertDialogDescription>{description}</AlertDialogDescription> : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t('common.cancel')}</AlertDialogCancel>
           <Button
             variant="destructive"
             disabled={busy}
@@ -55,7 +56,7 @@ export function ConfirmAction({
               }
             }}
           >
-            {busy ? 'Working…' : actionLabel}
+            {busy ? t('common.working') : actionLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

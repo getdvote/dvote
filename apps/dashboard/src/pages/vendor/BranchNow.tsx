@@ -12,14 +12,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { errorMessage, type Branch } from '../../lib/api';
-import { branchState, STATE_LABEL, type BranchState } from '../../lib/hours';
+import { branchState, stateLabel, type BranchState } from '../../lib/hours';
+import { t } from '../../i18n';
 import type { VendorScope } from '../../lib/scope';
 
-const DURATIONS: { label: string; until: () => string }[] = [
-  { label: '30 minutes', until: () => dayjs().add(30, 'minute').toISOString() },
-  { label: '1 hour', until: () => dayjs().add(1, 'hour').toISOString() },
-  { label: '2 hours', until: () => dayjs().add(2, 'hour').toISOString() },
-  { label: 'Rest of today', until: () => dayjs().endOf('day').toISOString() },
+const DURATIONS: { label: () => string; until: () => string }[] = [
+  { label: () => t('branchNow.min30'), until: () => dayjs().add(30, 'minute').toISOString() },
+  { label: () => t('branchNow.hour1'), until: () => dayjs().add(1, 'hour').toISOString() },
+  { label: () => t('branchNow.hour2'), until: () => dayjs().add(2, 'hour').toISOString() },
+  { label: () => t('branchNow.restOfToday'), until: () => dayjs().endOf('day').toISOString() },
 ];
 
 const VARIANT: Record<BranchState, 'success' | 'warning' | 'secondary' | 'outline'> = {
@@ -39,7 +40,7 @@ export function BranchNow({ scope, branch }: { scope: VendorScope; branch: Branc
   const api = scope.branchPause;
   const canPause = !!api && (api.fixedBranchId === null || api.fixedBranchId === branch.id);
   const state = branchState(branch);
-  const label = state === 'paused' ? `Closed until ${dayjs(branch.pausedUntil).format('HH:mm')}` : STATE_LABEL[state];
+  const label = state === 'paused' ? t('branchNow.closedUntil', { time: dayjs(branch.pausedUntil).format('HH:mm') }) : stateLabel(state);
 
   const done = (text: string) => {
     void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
@@ -47,19 +48,19 @@ export function BranchNow({ scope, branch }: { scope: VendorScope; branch: Branc
   };
   const pause = useMutation({
     mutationFn: (until: string) => api!.pause(branch.id, until),
-    onSuccess: (b) => done(`${b.name} is temporarily closed until ${dayjs(b.pausedUntil).format('HH:mm')}`),
+    onSuccess: (b) => done(t('branchNow.pausedToast', { branch: b.name, time: dayjs(b.pausedUntil).format('HH:mm') })),
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const resume = useMutation({
     mutationFn: () => api!.resume(branch.id),
-    onSuccess: (b) => done(`${b.name} is open again`),
+    onSuccess: (b) => done(t('branchNow.openToast', { branch: b.name })),
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const busy = pause.isPending || resume.isPending;
 
   if (branch.status !== 'active') return <span className="text-muted-foreground">—</span>;
   const pill = (
-    <Badge variant={VARIANT[state]} className={canPause ? 'h-6 cursor-pointer gap-1 pr-1.5' : 'h-6 gap-1'}>
+    <Badge variant={VARIANT[state]} className={canPause ? 'h-6 cursor-pointer gap-1 pe-1.5' : 'h-6 gap-1'}>
       {busy ? <Loader2 className="animate-spin" /> : state === 'paused' ? <PauseCircle /> : null}
       {label}
       {canPause ? <ChevronDown /> : null}
@@ -70,7 +71,7 @@ export function BranchNow({ scope, branch }: { scope: VendorScope; branch: Branc
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild disabled={busy}>
-        <button type="button" className="rounded-4xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label={`${branch.name}: ${label}. Change`}>
+        <button type="button" className="rounded-4xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label={t('branchNow.change', { branch: branch.name, state: label })}>
           {pill}
         </button>
       </DropdownMenuTrigger>
@@ -78,17 +79,17 @@ export function BranchNow({ scope, branch }: { scope: VendorScope; branch: Branc
         {state === 'paused' ? (
           <>
             <DropdownMenuItem onSelect={() => resume.mutate()}>
-              <CircleCheck className="text-success" /> Open again now
+              <CircleCheck className="text-success" /> {t('branchNow.openNow')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
         ) : null}
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          {state === 'paused' ? 'Change how long' : 'Temporarily closed for'}
+          {state === 'paused' ? t('branchNow.changeHowLong') : t('branchNow.closedFor')}
         </DropdownMenuLabel>
         {DURATIONS.map((d) => (
-          <DropdownMenuItem key={d.label} onSelect={() => pause.mutate(d.until())}>
-            <PauseCircle className="text-warning" /> {d.label}
+          <DropdownMenuItem key={d.label()} onSelect={() => pause.mutate(d.until())}>
+            <PauseCircle className="text-warning" /> {d.label()}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

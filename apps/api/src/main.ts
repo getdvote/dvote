@@ -12,6 +12,10 @@ async function bootstrap() {
 
   configureApp(app);
 
+  // Behind Cloudflare / a load balancer: take the client IP from X-Forwarded-For (rate limits).
+  const trustProxy = config.get('TRUST_PROXY', { infer: true });
+  if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
+
   const origins = config.get('CORS_ORIGINS', { infer: true });
   if (origins) {
     app.enableCors({ origin: origins.split(',').map((o) => o.trim()) });

@@ -132,6 +132,7 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     reward_unavailable: 'This reward is no longer available.',
     reward_sold_out: "This reward is marked sold out at your branch. If you have it again, put it back on sale in the dashboard (Rewards).",
     insufficient_points: "The customer doesn't have enough points for this reward.",
+    rate_limited: 'Too many scans in a short time. Wait a minute and try again.',
     idempotency_key_reused: 'Something went wrong. Please scan the QR again.',
     // In Arabic for the counter staff (the staff app is otherwise English for now).
     vendor_mismatch: 'هذا الرمز خاص بمتجر آخر. اطلب من العميل فتح صفحة متجرك في تطبيق dvote، أو استخدام رمزه الرئيسي.',

@@ -14,15 +14,17 @@ import { TableState } from '../../components/TableState';
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi, type ActivityItem, type PointEventType } from '../../lib/api';
 import { cn } from '@/lib/utils';
+import { localized, t } from '../../i18n';
 
 const PAGE_SIZE = 25;
 const ALL = 'all';
 
-const TYPE: Record<PointEventType, { label: string; variant: 'success' | 'warning' | 'brand' }> = {
-  earn: { label: 'Collect', variant: 'success' },
-  redeem: { label: 'Redemption', variant: 'warning' },
-  adjust: { label: 'Correction', variant: 'brand' },
+const TYPE: Record<PointEventType, 'success' | 'warning' | 'brand'> = {
+  earn: 'success',
+  redeem: 'warning',
+  adjust: 'brand',
 };
+const typeLabel = (type: PointEventType) => t(`activity.types.${type}`);
 
 /** Every collect, redemption and correction at my shops, newest first. Customers show as a card code. */
 export function MyActivity() {
@@ -42,11 +44,11 @@ export function MyActivity() {
 
   // search after a short pause in typing
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setReceipt(receiptInput.trim());
       setPage(1);
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [receiptInput]);
 
   const query = {
@@ -76,23 +78,23 @@ export function MyActivity() {
     };
 
   const filtered = type !== ALL || branchId !== ALL || staffId !== ALL || !!receipt;
-  const t = data?.totals;
+  const totals = data?.totals;
 
   return (
     <>
       <PageHeader
-        title="Activity"
-        subtitle={`Every collect and redemption at ${branchOnly ? (me.branch?.name ?? 'your branch') : vendor.name}, newest first.`}
+        title={t('nav.activity')}
+        subtitle={t('activity.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
       />
 
       <PeriodPicker state={period} onChange={() => setPage(1)} />
 
       <Card className="mb-5 flex-row flex-wrap gap-0 divide-x py-0">
-        <Total label="Sales with dvote" value={t ? `${num(Number(t.sales))} ${vendor.currency}` : null} hint="Sum of bills on collects" />
-        <Total label="Collects" value={t ? num(t.collects) : null} />
-        <Total label="Points given" value={t ? num(t.pointsEarned) : null} />
-        <Total label="Redemptions" value={t ? num(t.redemptions) : null} />
-        <Total label="Points redeemed" value={t ? num(t.pointsRedeemed) : null} />
+        <Total label={t('activity.sales')} value={totals ? `${num(Number(totals.sales))} ${vendor.currency}` : null} hint={t('activity.salesHint')} />
+        <Total label={t('home.collects')} value={totals ? num(totals.collects) : null} />
+        <Total label={t('home.pointsGiven')} value={totals ? num(totals.pointsEarned) : null} />
+        <Total label={t('nav.redemptions')} value={totals ? num(totals.redemptions) : null} />
+        <Total label={t('activity.pointsRedeemed')} value={totals ? num(totals.pointsRedeemed) : null} />
       </Card>
 
       <Card className="gap-0 py-0">
@@ -101,43 +103,43 @@ export function MyActivity() {
             value={type}
             onChange={reset(setType)}
             options={[
-              { value: ALL, label: 'All' },
-              { value: 'earn', label: 'Collects' },
-              { value: 'redeem', label: 'Redemptions' },
-              { value: 'adjust', label: 'Corrections' },
+              { value: ALL, label: t('common.all') },
+              { value: 'earn', label: t('activity.filters.earn') },
+              { value: 'redeem', label: t('activity.filters.redeem') },
+              { value: 'adjust', label: t('activity.filters.adjust') },
             ]}
           />
           {branchOnly ? null : (
             <SelectFilter
-              label="Branch"
-              allLabel="All branches"
+              label={t('common.branch')}
+              allLabel={t('common.allBranches')}
               value={branchId}
               onChange={reset(setBranchId)}
               options={branches?.map((b) => ({ value: b.id, label: b.name }))}
             />
           )}
           <SelectFilter
-            label="Staff"
-            allLabel="All staff"
+            label={t('nav.staff')}
+            allLabel={t('activity.allStaff')}
             value={staffId}
             onChange={reset(setStaffId)}
             options={staff?.map((m) => ({ value: m.id, label: m.name }))}
           />
-          <SearchInput value={receiptInput} onChange={setReceiptInput} placeholder="Search receipt number" />
+          <SearchInput value={receiptInput} onChange={setReceiptInput} placeholder={t('activity.searchReceipt')} />
         </div>
         <ErrorAlert error={error} className="mx-4 mb-4 w-auto" />
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4">Time</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Points</TableHead>
-                <TableHead className="text-right">Bill</TableHead>
-                <TableHead>Receipt</TableHead>
-                {branchOnly ? null : <TableHead>Branch</TableHead>}
-                <TableHead>Staff</TableHead>
-                <TableHead className="pr-4">Customer</TableHead>
+                <TableHead className="ps-4">{t('activity.time')}</TableHead>
+                <TableHead>{t('activity.type')}</TableHead>
+                <TableHead className="text-end">{t('common.points')}</TableHead>
+                <TableHead className="text-end">{t('activity.bill')}</TableHead>
+                <TableHead>{t('activity.receipt')}</TableHead>
+                {branchOnly ? null : <TableHead>{t('common.branch')}</TableHead>}
+                <TableHead>{t('nav.staff')}</TableHead>
+                <TableHead className="pe-4">{t('activity.customer')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -145,25 +147,25 @@ export function MyActivity() {
                 loading={isLoading}
                 empty={!data?.items.length}
                 colSpan={branchOnly ? 7 : 8}
-                emptyText={filtered ? 'Nothing matches these filters. Try another period or clear a filter.' : 'No activity in this period yet. Collects show here as soon as staff scan a customer.'}
+                emptyText={filtered ? t('activity.noMatch') : t('activity.empty')}
               />
               {data?.items.map((e) => (
                 <TableRow key={e.id} className="cursor-pointer" onClick={() => setOpen(e)}>
-                  <TableCell className="pl-4 whitespace-nowrap tabular-nums">
+                  <TableCell className="ps-4 whitespace-nowrap tabular-nums">
                     {dayjs(e.createdAt).format('D MMM')} <span className="text-muted-foreground">{dayjs(e.createdAt).format('HH:mm')}</span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={TYPE[e.type].variant}>{TYPE[e.type].label}</Badge>
-                    {e.reward ? <span className="ml-2 text-sm">{e.reward.name}</span> : null}
+                    <Badge variant={TYPE[e.type]}>{typeLabel(e.type)}</Badge>
+                    {e.reward ? <span className="ms-2 text-sm">{rewardName(e.reward)}</span> : null}
                   </TableCell>
-                  <TableCell className={cn('text-right font-semibold tabular-nums', e.points > 0 ? 'text-success' : 'text-muted-foreground')}>
+                  <TableCell className={cn('text-end font-semibold tabular-nums', e.points > 0 ? 'text-success' : 'text-muted-foreground')}>
                     {signed(e.points)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{e.amount ? money(e.amount) : <Dash />}</TableCell>
+                  <TableCell className="text-end tabular-nums">{e.amount ? money(e.amount) : <Dash />}</TableCell>
                   <TableCell className="tabular-nums">{e.receiptRef ?? <Dash />}</TableCell>
                   {branchOnly ? null : <TableCell>{e.branch?.name ?? <Dash />}</TableCell>}
                   <TableCell>{e.staff?.name ?? (e.type === 'adjust' ? 'dvote' : <Dash />)}</TableCell>
-                  <TableCell className="pr-4 font-mono text-xs text-muted-foreground">#{e.customerRef}</TableCell>
+                  <TableCell className="pe-4 font-mono text-xs text-muted-foreground">#{e.customerRef}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -172,7 +174,7 @@ export function MyActivity() {
         <Pager page={page} pageSize={PAGE_SIZE} total={data?.total ?? 0} onChange={setPage} />
       </Card>
       <p className="mt-3 text-xs text-muted-foreground">
-        Each card code identifies a customer at {vendor.name}. View customer names and loyalty profiles in Customers; email and phone stay private.
+        {t('activity.footnote', { shop: vendor.name })}
       </p>
 
       <ActivitySheet item={open} currency={vendor.currency} onClose={() => setOpen(null)} />
@@ -182,6 +184,8 @@ export function MyActivity() {
 
 const Dash = () => <span className="text-muted-foreground">—</span>;
 const signed = (n: number) => (n > 0 ? `+${num(n)}` : `−${num(-n)}`);
+/** The reward snapshot name, in Arabic when the reward has one. */
+const rewardName = (r: { name: string; nameAr?: string | null }) => localized(r.name, r.nameAr);
 const money = (s: string) => (s.endsWith('.00') ? num(Number(s)) : Number(s).toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
 /** One ledger row in full, with the list still behind it. */
@@ -193,29 +197,29 @@ function ActivitySheet({ item, currency, onClose }: { item: ActivityItem | null;
           <>
             <SheetHeader>
               <SheetTitle>
-                {TYPE[item.type].label} · {signed(item.points)} points
+                {typeLabel(item.type)} · {t('activity.pointsN', { n: signed(item.points) })}
               </SheetTitle>
               <SheetDescription>{dayjs(item.createdAt).format('dddd D MMMM YYYY, HH:mm')}</SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-6">
               <Separator className="mb-2" />
               <dl className="divide-y text-sm">
-                {item.reward ? <Row label="Reward">{item.reward.name}</Row> : null}
+                {item.reward ? <Row label={t('rewards.reward')}>{rewardName(item.reward)}</Row> : null}
                 {item.amount ? (
-                  <Row label="Bill">
+                  <Row label={t('activity.bill')}>
                     {money(item.amount)} {currency}
                   </Row>
                 ) : null}
-                {item.type === 'earn' ? <Row label="Receipt">{item.receiptRef ?? 'Not entered'}</Row> : null}
-                {item.reason ? <Row label="Reason">{item.reason}</Row> : null}
-                <Row label="Branch">{item.branch?.name ?? '—'}</Row>
-                <Row label={item.type === 'adjust' ? 'By' : 'Scanned by'}>{item.staff?.name ?? (item.type === 'adjust' ? 'dvote support' : '—')}</Row>
-                <Row label="Customer">
+                {item.type === 'earn' ? <Row label={t('activity.receipt')}>{item.receiptRef ?? t('activity.notEntered')}</Row> : null}
+                {item.reason ? <Row label={t('activity.reason')}>{item.reason}</Row> : null}
+                <Row label={t('common.branch')}>{item.branch?.name ?? '—'}</Row>
+                <Row label={item.type === 'adjust' ? t('activity.by') : t('activity.scannedBy')}>{item.staff?.name ?? (item.type === 'adjust' ? t('activity.support') : '—')}</Row>
+                <Row label={t('activity.customer')}>
                   <span className="font-mono">#{item.customerRef}</span>
                 </Row>
               </dl>
               {item.type === 'adjust' ? (
-                <p className="mt-4 text-xs text-muted-foreground">Corrections are made by dvote support. They add or remove points without changing the original record.</p>
+                <p className="mt-4 text-xs text-muted-foreground">{t('activity.correctionNote')}</p>
               ) : null}
             </div>
           </>
@@ -229,7 +233,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex justify-between gap-6 py-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{children}</dd>
+      <dd className="text-end font-medium">{children}</dd>
     </div>
   );
 }

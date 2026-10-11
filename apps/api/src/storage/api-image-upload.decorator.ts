@@ -7,6 +7,7 @@ import {
   ApiServiceUnavailableResponse,
   ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
+import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
 import { ImageUploadInterceptor } from './image-upload.interceptor';
 
 /**
@@ -15,6 +16,7 @@ import { ImageUploadInterceptor } from './image-upload.interceptor';
  */
 export function ApiImageUpload(fields: Record<string, { type: 'string'; enum?: string[]; format?: string; description?: string }> = {}) {
   return applyDecorators(
+    UserLimit(LIMITS.uploads),
     UseInterceptors(ImageUploadInterceptor),
     ApiConsumes('multipart/form-data'),
     ApiBody({

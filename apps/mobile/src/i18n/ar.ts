@@ -493,6 +493,7 @@ export const ar: Dictionary = {
     qr_not_found: 'لم يتم العثور على رمز QR هذا. احصل على رمز جديد.',
     feedback_not_configured: 'الملاحظات غير متاحة بعد. حاول لاحقًا.',
     vendor_not_found: 'هذا المتجر غير موجود على dvote حاليًا.',
+    rate_limited: 'محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.',
     insufficient_points: 'ليس لديك نقاط كافية لهذه المكافأة بعد.',
     reward_unavailable: 'هذه المكافأة لم تعد متاحة.',
     reward_sold_out: 'هذه المكافأة نفدت في كل الفروع الآن. حاول لاحقًا.',

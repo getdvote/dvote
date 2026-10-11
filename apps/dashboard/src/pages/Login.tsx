@@ -8,6 +8,8 @@ import { DvoteLogo } from '../components/DvoteLogo';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { Field } from '../components/Field';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { LanguageToggle } from '../components/LanguageToggle';
+import { t } from '../i18n';
 import { errorMessage } from '../lib/api';
 import { useAuth, type Enrollment } from '../lib/auth';
 
@@ -16,13 +18,14 @@ export function Login() {
   const { status, notice } = useAuth();
   return (
     <div className="relative flex min-h-screen items-center justify-center p-6">
-      <div className="absolute top-4 right-4">
+      <div className="absolute end-4 top-4 flex gap-1">
+        <LanguageToggle />
         <ThemeToggle />
       </div>
       <div className="flex w-full max-w-[420px] flex-col items-center gap-7">
         <div className="flex flex-col items-center gap-1.5">
           <DvoteLogo height={44} className="text-primary" />
-          <span className="text-muted-foreground">Dashboard</span>
+          <span className="text-muted-foreground">{t('login.dashboard')}</span>
         </div>
         <Card className="w-full shadow-lg shadow-black/5">
           {notice ? (
@@ -32,7 +35,7 @@ export function Login() {
           ) : null}
           {status === 'mfaVerify' ? <CodeStep /> : status === 'mfaEnroll' ? <EnrollStep /> : <PasswordStep />}
         </Card>
-        <span className="text-xs text-muted-foreground">Only dvote team accounts can sign in here.</span>
+        <span className="text-xs text-muted-foreground">{t('login.footer')}</span>
       </div>
     </div>
   );
@@ -69,18 +72,18 @@ function PasswordStep() {
 
   return (
     <>
-      <StepHeader title="Sign in" description="Shop owners and managers: use the email your invite was sent to." />
+      <StepHeader title={t('login.title')} description={t('login.description')} />
       <CardContent>
         <form onSubmit={submit} className="grid gap-5">
-          <Field label="Email" htmlFor="email">
+          <Field label={t('staff.email')} htmlFor="email">
             <div className="relative">
-              <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="email" name="email" type="email" required autoComplete="username" autoFocus className="h-10 pl-9" />
+              <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input id="email" name="email" type="email" required autoComplete="username" autoFocus className="h-10 ps-9" dir="ltr" />
             </div>
           </Field>
-          <Field label="Password" htmlFor="password">
+          <Field label={t('login.password')} htmlFor="password">
             <div className="relative">
-              <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Lock className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="password"
                 name="password"
@@ -93,8 +96,8 @@ function PasswordStep() {
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="absolute top-1/2 right-1.5 -translate-y-1/2 text-muted-foreground"
-                aria-label={show ? 'Hide password' : 'Show password'}
+                className="absolute end-1.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-label={show ? t('login.hide') : t('login.show')}
                 onClick={() => setShow((s) => !s)}
               >
                 {show ? <EyeOff /> : <Eye />}
@@ -104,7 +107,7 @@ function PasswordStep() {
           <ErrorAlert error={error} />
           <Button type="submit" size="lg" className="h-10 w-full" disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : null}
-            Continue
+            {t('login.continue')}
           </Button>
         </form>
       </CardContent>

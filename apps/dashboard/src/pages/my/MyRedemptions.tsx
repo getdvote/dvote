@@ -15,6 +15,7 @@ import { TableState } from '../../components/TableState';
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi, type RedemptionPage } from '../../lib/api';
 import { cn } from '@/lib/utils';
+import { t } from '../../i18n';
 
 const PAGE_SIZE = 25;
 const ALL = 'all';
@@ -55,23 +56,23 @@ export function MyRedemptions() {
     setPage(1);
   };
 
-  const t = data?.totals;
+  const totals = data?.totals;
   const top = data?.byReward[0];
   const filtered = rewardId !== ALL || branchId !== ALL || staffId !== ALL;
 
   return (
     <>
       <PageHeader
-        title="Redemptions"
-        subtitle={`Rewards given at ${branchOnly ? (me.branch?.name ?? 'your branch') : vendor.name}: what customers choose and who handed it over.`}
+        title={t('nav.redemptions')}
+        subtitle={t('redemptions.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
       />
       <PeriodPicker state={period} onChange={() => setPage(1)} />
 
       <Card className="mb-5 flex-row flex-wrap gap-0 divide-x py-0">
-        <Total label="Rewards given" value={t ? num(t.redemptions) : null} />
-        <Total label="Points redeemed" value={t ? num(t.points) : null} />
-        <Total label="Customers rewarded" value={t ? num(t.customers) : null} hint="Different customer cards" />
-        <Total label="Most popular" value={data ? (top?.name ?? '—') : null} />
+        <Total label={t('redemptions.given')} value={totals ? num(totals.redemptions) : null} />
+        <Total label={t('activity.pointsRedeemed')} value={totals ? num(totals.points) : null} />
+        <Total label={t('redemptions.customers')} value={totals ? num(totals.customers) : null} hint={t('redemptions.customersHint')} />
+        <Total label={t('redemptions.popular')} value={data ? (top?.name ?? '—') : null} />
       </Card>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -80,24 +81,24 @@ export function MyRedemptions() {
         <Card className="gap-0 py-0">
           <div className="flex flex-wrap gap-3 p-4">
             <SelectFilter
-              label="Reward"
-              allLabel="All rewards"
+              label={t('rewards.reward')}
+              allLabel={t('redemptions.allRewards')}
               value={rewardId}
               onChange={reset(setRewardId)}
               options={data?.byReward.map((r) => ({ value: r.rewardId, label: r.name }))}
             />
             {branchOnly ? null : (
               <SelectFilter
-                label="Branch"
-                allLabel="All branches"
+                label={t('common.branch')}
+                allLabel={t('common.allBranches')}
                 value={branchId}
                 onChange={reset(setBranchId)}
                 options={branches?.map((b) => ({ value: b.id, label: b.name }))}
               />
             )}
             <SelectFilter
-              label="Given by"
-              allLabel="All staff"
+              label={t('redemptions.givenBy')}
+              allLabel={t('activity.allStaff')}
               value={staffId}
               onChange={reset(setStaffId)}
               options={staff?.map((m) => ({ value: m.id, label: m.name }))}
@@ -108,12 +109,12 @@ export function MyRedemptions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-4">Time</TableHead>
-                  <TableHead>Reward</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                  {branchOnly ? null : <TableHead>Branch</TableHead>}
-                  <TableHead>Given by</TableHead>
-                  <TableHead className="pr-4">Customer</TableHead>
+                  <TableHead className="ps-4">{t('activity.time')}</TableHead>
+                  <TableHead>{t('rewards.reward')}</TableHead>
+                  <TableHead className="text-end">{t('common.points')}</TableHead>
+                  {branchOnly ? null : <TableHead>{t('common.branch')}</TableHead>}
+                  <TableHead>{t('redemptions.givenBy')}</TableHead>
+                  <TableHead className="pe-4">{t('activity.customer')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -121,11 +122,11 @@ export function MyRedemptions() {
                   loading={isLoading}
                   empty={!data?.items.length}
                   colSpan={branchOnly ? 5 : 6}
-                  emptyText={filtered ? 'Nothing matches these filters. Try another period or clear a filter.' : 'No rewards given in this period.'}
+                  emptyText={filtered ? t('activity.noMatch') : t('redemptions.empty')}
                 />
                 {data?.items.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="pl-4 whitespace-nowrap tabular-nums">
+                    <TableCell className="ps-4 whitespace-nowrap tabular-nums">
                       {dayjs(r.createdAt).format('D MMM')} <span className="text-muted-foreground">{dayjs(r.createdAt).format('HH:mm')}</span>
                     </TableCell>
                     <TableCell>
@@ -134,10 +135,10 @@ export function MyRedemptions() {
                         <span className="font-medium">{r.rewardName}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">{num(r.pointsCost)}</TableCell>
+                    <TableCell className="text-end font-semibold tabular-nums">{num(r.pointsCost)}</TableCell>
                     {branchOnly ? null : <TableCell>{r.branch.name}</TableCell>}
                     <TableCell>{r.staff.name}</TableCell>
-                    <TableCell className="pr-4 font-mono text-xs text-muted-foreground">#{r.customerRef}</TableCell>
+                    <TableCell className="pe-4 font-mono text-xs text-muted-foreground">#{r.customerRef}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -147,7 +148,7 @@ export function MyRedemptions() {
         </Card>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Reward names and points are shown as they were when given. The same card code means the same customer at {vendor.name}.
+        {t('redemptions.footnote', { shop: vendor.name })}
       </p>
     </>
   );
@@ -167,10 +168,10 @@ function ByReward({ data, selected, onSelect }: { data: RedemptionPage | undefin
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>By reward</CardTitle>
+        <CardTitle>{t('redemptions.byReward')}</CardTitle>
         {selected !== ALL ? (
           <Button size="sm" variant="ghost" className="-my-1 text-muted-foreground" onClick={() => onSelect(ALL)}>
-            <X /> Clear
+            <X /> {t('hours.clear')}
           </Button>
         ) : null}
       </CardHeader>
@@ -178,7 +179,7 @@ function ByReward({ data, selected, onSelect }: { data: RedemptionPage | undefin
         {!data ? (
           Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)
         ) : data.byReward.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No rewards given in this period.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t('redemptions.empty')}</p>
         ) : (
           data.byReward.map((r) => (
             <button
@@ -187,7 +188,7 @@ function ByReward({ data, selected, onSelect }: { data: RedemptionPage | undefin
               aria-pressed={selected === r.rewardId}
               onClick={() => onSelect(selected === r.rewardId ? ALL : r.rewardId)}
               className={cn(
-                '-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 text-left outline-none transition-colors duration-100 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50',
+                '-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 text-start outline-none transition-colors duration-100 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50',
                 selected === r.rewardId && 'bg-accent hover:bg-accent',
               )}
             >
@@ -195,15 +196,15 @@ function ByReward({ data, selected, onSelect }: { data: RedemptionPage | undefin
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{r.name}</span>
-                  {r.status === 'archived' ? <Badge variant="secondary">Archived</Badge> : null}
+                  {r.status === 'archived' ? <Badge variant="secondary">{t('status.archived')}</Badge> : null}
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-muted">
                   <div className="h-full rounded-full bg-primary" style={{ width: `${(r.count / max) * 100}%` }} />
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-end">
                 <div className="font-semibold tabular-nums">{num(r.count)}</div>
-                <div className="text-xs text-muted-foreground tabular-nums">{num(r.points)} pts</div>
+                <div className="text-xs text-muted-foreground tabular-nums">{t('common.pts', { n: r.points })}</div>
               </div>
             </button>
           ))

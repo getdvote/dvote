@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatusFilter } from '../../components/ListControls';
 import { vendorApi, type AttentionItem } from '../../lib/api';
 import { cn } from '@/lib/utils';
+import { getLanguage, t, type TKey } from '../../i18n';
+import { useMe } from '../../layouts/VendorLayout';
 
 type Filter = 'all' | AttentionItem['group'];
 
@@ -23,6 +25,7 @@ const TONE = {
  * Re-read every minute, like the rest of the home.
  */
 export function NeedsAttention() {
+  const admin = useMe().role === 'vendor_admin';
   const [filter, setFilter] = useState<Filter>('all');
   const { data, isLoading, error } = useQuery({ queryKey: ['attention', 'me'], queryFn: vendorApi.attention, refetchInterval: 60_000 });
   if (error) return null; // the rest of the home still works
@@ -35,15 +38,15 @@ export function NeedsAttention() {
   return (
     <Card className="gap-0 pb-2">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
-        <CardTitle>Needs your attention</CardTitle>
+        <CardTitle>{t('attention.title')}</CardTitle>
         {items.length ? (
           <StatusFilter
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: `All ${items.length}` },
-              { value: 'now', label: `Today ${now}` },
-              { value: 'setup', label: `Setup ${setup}` },
+              { value: 'all', label: t('attention.all', { n: items.length }) },
+              { value: 'now', label: t('attention.today', { n: now }) },
+              { value: 'setup', label: t('attention.setup', { n: setup }) },
             ]}
           />
         ) : null}
@@ -58,27 +61,28 @@ export function NeedsAttention() {
           <div className="flex items-center gap-3 px-6 pb-4 text-sm">
             <CircleCheck className="size-5 text-success" />
             <span>
-              <span className="font-medium">All good.</span> <span className="text-muted-foreground">Nothing needs you right now.</span>
+              <span className="font-medium">{t('attention.allGood')}</span> <span className="text-muted-foreground">{t('attention.nothingNow')}</span>
             </span>
           </div>
         ) : !shown.length ? (
-          <p className="px-6 pb-4 text-sm text-muted-foreground">Nothing here. {filter === 'now' ? 'Today looks normal.' : 'Your setup is complete.'}</p>
+          <p className="px-6 pb-4 text-sm text-muted-foreground">{t('attention.nothingHere')} {filter === 'now' ? t('attention.todayNormal') : t('attention.setupDone')}</p>
         ) : (
           <ul className="divide-y">
             {shown.map((i) => {
               const tone = TONE[i.tone];
+              const text = wording(i, admin);
               return (
                 <li key={i.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
                   <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', tone.className)}>
                     <tone.icon className="size-4" />
                   </span>
                   <div className="min-w-48 flex-1">
-                    <div className="font-medium">{i.title}</div>
-                    {i.detail ? <div className="text-sm text-muted-foreground">{i.detail}</div> : null}
+                    <div className="font-medium">{text.title}</div>
+                    {text.detail ? <div className="text-sm text-muted-foreground">{text.detail}</div> : null}
                   </div>
                   <Button asChild size="sm" variant={i.tone === 'critical' ? 'default' : 'outline'}>
                     <Link to={i.action.to}>
-                      {i.action.label} <ArrowRight />
+                      {text.action} <ArrowRight className="rtl:rotate-180" />
                     </Link>
                   </Button>
                 </li>
@@ -90,3 +94,38 @@ export function NeedsAttention() {
     </Card>
   );
 }
+
+/**
+ * The item in the dashboard language: the API sends English text plus its values (params);
+ * known kinds are worded from the dictionary, anything new falls back to the API's English.
+ */
+function wording(i: AttentionItem, admin: boolean): { title: string; detail: string | null; action: string } {
+  const kind = i.key.split(':')[0];
+  const p = i.params ?? {};
+  if (getLanguage() === 'en' || !(kind in KINDS)) return { title: i.title, detail: i.detail, action: i.action.label };
+  const k = `attention.kinds.${kind}` as const;
+  const one = Number(p.count) === 1;
+  const params = { ...p, count: Number(p.count ?? 0), missing: p.missing ? t(`attention.missing.${p.missing}` as TKey) : '' };
+  return {
+    title: t(`${k}.${one && KINDS[kind].oneTitle ? 'titleOne' : 'title'}` as TKey, params),
+    detail: t(`${k}.detail` as TKey, params),
+    action: t(`${k}.${KINDS[kind].adminAction && !admin ? 'actionView' : 'action'}` as TKey, params),
+  };
+}
+
+/** Kinds worded in the dictionary: whether they have a singular title / a view-only action. */
+const KINDS: Record<string, { oneTitle?: boolean; adminAction?: boolean }> = {
+  no_active_rule: { adminAction: true },
+  no_active_rewards: { adminAction: true },
+  branch_paused: {},
+  sold_out: {},
+  rewards_no_photo: {},
+  rewards_no_arabic: {},
+  branches_no_hours: { oneTitle: true },
+  branches_no_location: { oneTitle: true },
+  profile_branding: {},
+  no_staff: {},
+  staff_spike: {},
+  card_spike: {},
+  large_bill: {},
+};

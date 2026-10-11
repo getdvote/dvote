@@ -1,5 +1,5 @@
 import { Controller, Get, Injectable } from '@nestjs/common';
-import { ApiOkResponse, ApiProperty } from '@nestjs/swagger';
+import { ApiOkResponse, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Prisma } from '../generated/prisma/client.js';
 import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
@@ -39,6 +39,12 @@ class AttentionItemDto {
   @ApiProperty() title: string;
   @ApiProperty({ type: String, nullable: true }) detail: string | null;
   @ApiProperty({ type: AttentionActionDto }) action: AttentionActionDto;
+  @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Values in the text (names, counts, times) so the dashboard can word it in its own language',
+  })
+  params?: Record<string, string | number>;
 }
 
 export class VendorAttentionDto {
@@ -143,6 +149,7 @@ export class VendorAttentionService {
           title: `${b.name} is temporarily closed`,
           detail: `Customers see it as closed until ${clock(until)}.`,
           action: { label: 'Open again', to: '/branches' },
+          params: { branch: b.name, until: clock(until) },
         });
       }
     }
@@ -162,6 +169,7 @@ export class VendorAttentionService {
         title: `${plural(s.n, 'reward')} sold out at ${s.name}`,
         detail: 'Staff there can’t give them until they’re back on sale.',
         action: { label: 'Check availability', to: '/rewards' },
+        params: { count: s.n, branch: s.name },
       });
     }
     items.push(...(await this.unusual(ctx)));
@@ -177,6 +185,7 @@ export class VendorAttentionService {
         title: `${plural(noPhoto, 'reward')} without a photo`,
         detail: 'Rewards with a photo get noticed more in the app.',
         action: { label: 'Add photos', to: '/rewards' },
+        params: { count: noPhoto },
       });
     }
     if (admin && noArabic) {
@@ -188,6 +197,7 @@ export class VendorAttentionService {
         detail:
           'Customers using the app in Arabic see the English name instead.',
         action: { label: 'Add Arabic names', to: '/rewards' },
+        params: { count: noArabic },
       });
     }
     const noHours = branches.filter((b) => !readWeek(b.weekly_hours)?.length);
@@ -203,6 +213,7 @@ export class VendorAttentionService {
             : `${noHours.length} branches have no opening hours`,
         detail: 'Customers can’t tell when to come by.',
         action: { label: 'Set hours', to: '/branches' },
+        params: { count: noHours.length, branch: noHours[0].name },
       });
     }
     if (admin && noMap.length) {
@@ -217,6 +228,7 @@ export class VendorAttentionService {
         detail:
           'Without a map pin, customers get no directions and the branch isn’t in “Near you”.',
         action: { label: 'Pick on the map', to: '/branches' },
+        params: { count: noMap.length, branch: noMap[0].name },
       });
     }
     if (admin && (!vendor.logo_url || !vendor.banner_url)) {
@@ -233,6 +245,7 @@ export class VendorAttentionService {
         title: `Your shop has no ${missing}`,
         detail: 'They make your shop page and cards in the app look like you.',
         action: { label: 'Open shop profile', to: '/profile' },
+        params: { missing: !vendor.logo_url && !vendor.banner_url ? 'both' : !vendor.logo_url ? 'logo' : 'banner' },
       });
     }
     if (admin && staffCount === 0) {
@@ -316,6 +329,7 @@ export class VendorAttentionService {
         title: `${s.name} gave points ${Number(s.today)} times today`,
         detail: `Usually about ${Math.max(1, Math.round(s.usual))} a day. Worth a look in Activity.`,
         action: { label: 'Review activity', to: '/activity' },
+        params: { name: s.name, count: Number(s.today), usual: Math.max(1, Math.round(s.usual)) },
       })),
       ...cards.map((c) => ({
         key: `card_spike:${c.card_id}`,
@@ -324,6 +338,7 @@ export class VendorAttentionService {
         title: `Card #${c.card_id.slice(0, 6).toUpperCase()} collected ${Number(c.n)} times today`,
         detail: 'More than 3 collects in a day from one customer is unusual.',
         action: { label: 'Review activity', to: '/activity' },
+        params: { card: c.card_id.slice(0, 6).toUpperCase(), count: Number(c.n) },
       })),
       ...bills.map((b) => ({
         key: `large_bill:${b.id}`,
@@ -332,6 +347,7 @@ export class VendorAttentionService {
         title: `A ${money(b.amount)} bill at ${b.branch}`,
         detail: `Bills there are usually about ${money(b.avg)}. Check it was typed right.`,
         action: { label: 'Review activity', to: '/activity' },
+        params: { amount: money(b.amount), avg: money(b.avg), branch: b.branch },
       })),
     ];
   }
