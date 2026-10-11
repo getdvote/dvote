@@ -3,18 +3,12 @@ import { useState, type ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { t } from '../i18n';
 
 const DAY = 'YYYY-MM-DD';
 
 export type Period = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
-const PERIODS: { value: Period; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: 'month', label: 'This month' },
-  { value: 'lastMonth', label: 'Last month' },
-  { value: 'custom', label: 'Custom dates' },
-];
+const PERIODS: Period[] = ['today', '7d', '30d', 'month', 'lastMonth', 'custom'];
 
 /** First and last day (inclusive, YYYY-MM-DD) for the API. */
 export interface DayRange {
@@ -43,10 +37,10 @@ function range(period: Period, custom: { from: string; to: string }): DayRange {
 }
 
 export function rangeText({ from, to }: DayRange) {
-  if (!from && !to) return 'All time';
+  if (!from && !to) return t('period.allTime');
   if (from === to) return dayjs(from).format('D MMM YYYY');
-  if (!from) return `Until ${dayjs(to).format('D MMM YYYY')}`;
-  if (!to) return `From ${dayjs(from).format('D MMM YYYY')}`;
+  if (!from) return t('period.until', { date: dayjs(to).format('D MMM YYYY') });
+  if (!to) return t('period.from', { date: dayjs(from).format('D MMM YYYY') });
   return `${dayjs(from).format('D MMM')} – ${dayjs(to).format('D MMM YYYY')}`;
 }
 
@@ -73,22 +67,22 @@ export function PeriodPicker({ state, onChange, children }: { state: ReturnType<
           onChange?.();
         }}
       >
-        <SelectTrigger className="h-9 w-40" aria-label="Period">
+        <SelectTrigger className="h-9 w-40" aria-label={t('period.label')}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {PERIODS.map((p) => (
-            <SelectItem key={p.value} value={p.value}>
-              {p.label}
+            <SelectItem key={p} value={p}>
+              {t(`period.${p}`)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {period === 'custom' ? (
         <div className="flex items-center gap-2">
-          <Input type="date" className="h-9 w-40" aria-label="From" value={custom.from} max={custom.to || undefined} onChange={(e) => setDay('from', e.target.value)} />
-          <span className="text-muted-foreground">to</span>
-          <Input type="date" className="h-9 w-40" aria-label="To" value={custom.to} min={custom.from || undefined} onChange={(e) => setDay('to', e.target.value)} />
+          <Input type="date" className="h-9 w-40" aria-label={t('period.fromLabel')} value={custom.from} max={custom.to || undefined} onChange={(e) => setDay('from', e.target.value)} />
+          <span className="text-muted-foreground">{t('hours.to')}</span>
+          <Input type="date" className="h-9 w-40" aria-label={t('period.toLabel')} value={custom.to} min={custom.from || undefined} onChange={(e) => setDay('to', e.target.value)} />
         </div>
       ) : null}
       {children}

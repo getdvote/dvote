@@ -2,7 +2,8 @@ import { Copy, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { HoursSlot } from '../lib/api';
-import { DAY_NAMES, MAX_SLOTS_PER_DAY, WEEK_ORDER } from '../lib/hours';
+import { dayName, MAX_SLOTS_PER_DAY, WEEK_ORDER } from '../lib/hours';
+import { t } from '../i18n';
 
 const DEFAULT = { opensAt: '09:00', closesAt: '23:00' };
 const SECOND = { opensAt: '17:00', closesAt: '23:00' };
@@ -22,7 +23,7 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium">
-          Opening hours <span className="font-normal text-muted-foreground">(optional)</span>
+          {t('hours.title')} <span className="font-normal text-muted-foreground">({t('common.optional')})</span>
         </span>
         <div className="flex gap-1">
           {firstOpen !== undefined ? (
@@ -35,16 +36,16 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
                 onChange(WEEK_ORDER.flatMap((day) => model.map((s) => ({ ...s, day }))));
               }}
             >
-              <Copy /> Use {DAY_NAMES[firstOpen]}'s hours every day
+              <Copy /> {t('hours.copyDay', { day: dayName(firstOpen) })}
             </Button>
           ) : null}
           {value.length ? (
             <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
-              <X /> Clear
+              <X /> {t('hours.clear')}
             </Button>
           ) : (
             <Button type="button" variant="ghost" size="sm" onClick={() => onChange(WEEK_ORDER.map((day) => ({ ...DEFAULT, day })))}>
-              <Plus /> Set hours
+              <Plus /> {t('hours.set')}
             </Button>
           )}
         </div>
@@ -64,7 +65,7 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
                     checked={open}
                     onChange={(e) => replaceDay(day, e.target.checked ? [DEFAULT] : [])}
                   />
-                  <span className="font-medium">{DAY_NAMES[day]}</span>
+                  <span className="font-medium">{dayName(day)}</span>
                 </label>
                 {open ? (
                   <div className="grid flex-1 gap-2">
@@ -76,16 +77,16 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
                             type="time"
                             required
                             className="h-8 w-32"
-                            aria-label={`${DAY_NAMES[day]} opens`}
+                            aria-label={t('hours.opens', { day: dayName(day) })}
                             value={s.opensAt}
                             onChange={(e) => set('opensAt', e.target.value)}
                           />
-                          <span className="text-muted-foreground">to</span>
+                          <span className="text-muted-foreground">{t('hours.to')}</span>
                           <Input
                             type="time"
                             required
                             className="h-8 w-32"
-                            aria-label={`${DAY_NAMES[day]} closes`}
+                            aria-label={t('hours.closes', { day: dayName(day) })}
                             value={s.closesAt}
                             onChange={(e) => set('closesAt', e.target.value)}
                           />
@@ -94,7 +95,7 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
                               type="button"
                               variant="ghost"
                               size="icon-sm"
-                              aria-label="Remove this time"
+                              aria-label={t('hours.removeTime')}
                               onClick={() => replaceDay(day, slots.filter((_, j) => j !== i))}
                             >
                               <X />
@@ -102,7 +103,7 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
                           ) : null}
                           {i === slots.length - 1 && slots.length < MAX_SLOTS_PER_DAY ? (
                             <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => replaceDay(day, [...slots, SECOND])}>
-                              <Plus /> Add time
+                              <Plus /> {t('hours.addTime')}
                             </Button>
                           ) : null}
                         </div>
@@ -110,7 +111,7 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
                     })}
                   </div>
                 ) : (
-                  <span className="pt-1.5 text-sm text-muted-foreground">Closed</span>
+                  <span className="pt-1.5 text-sm text-muted-foreground">{t('hours.closed')}</span>
                 )}
               </div>
             );
@@ -119,8 +120,8 @@ export function WeeklyHoursEditor({ value, onChange }: { value: HoursSlot[]; onC
       ) : null}
       <p className="text-xs text-muted-foreground">
         {value.length
-          ? 'Add a second time for split shifts. A closing time before the opening time means open past midnight.'
-          : 'Customers see your hours on the shop page in the app.'}
+          ? t('hours.hintSet')
+          : t('hours.hintEmpty')}
       </p>
     </div>
   );

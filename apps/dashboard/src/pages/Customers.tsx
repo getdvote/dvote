@@ -121,6 +121,15 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
   const qc = useQueryClient();
   const { data: u, isLoading } = useQuery({ queryKey: ['user', id], queryFn: () => api.user(id!), enabled: !!id });
   const [correction, setCorrection] = useState<Correction | null>(null);
+  // History a page at a time, so a long-time customer doesn't load everything.
+  const [eventsPage, setEventsPage] = useState(1);
+  useEffect(() => setEventsPage(1), [id]);
+  const events = useQuery({
+    queryKey: ['user', id, 'events', eventsPage],
+    queryFn: () => api.userEvents(id!, eventsPage),
+    enabled: !!id,
+    placeholderData: (prev) => prev,
+  });
 
   const setStatus = useMutation({
     mutationFn: (status: UserStatus) => api.setUserStatus(id!, status),
@@ -230,11 +239,13 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
 
               <section>
                 <h3 className="mb-2 font-semibold">Recent activity</h3>
-                {u.events.length === 0 ? (
+                {events.isLoading ? (
+                  <Skeleton className="h-24 w-full" />
+                ) : !events.data || events.data.total === 0 ? (
                   <p className="py-4 text-center text-sm text-muted-foreground">No activity yet</p>
                 ) : (
                   <ul className="divide-y">
-                    {u.events.map((e, i) => {
+                    {events.data.items.map((e, i) => {
                       const t = EVENT[e.type] ?? EVENT.adjust;
                       return (
                         <li key={e.id ?? i} className="flex items-center gap-3 py-2.5">
@@ -273,6 +284,11 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
                       );
                     })}
                   </ul>
+                )}
+                {events.data && (
+                  <div className="mt-2">
+                    <Pager page={eventsPage} pageSize={events.data.pageSize} total={events.data.total} onChange={setEventsPage} />
+                  </div>
                 )}
               </section>
             </div>

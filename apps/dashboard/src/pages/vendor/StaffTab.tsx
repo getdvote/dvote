@@ -16,12 +16,14 @@ import { TableState } from '../../components/TableState';
 import { errorMessage, type Branch, type Staff, type StaffRole } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
 import { TabToolbar } from './TabToolbar';
+import { t } from '../../i18n';
 
-const ROLE: Record<StaffRole, { label: string; variant: 'brand' | 'secondary' | 'outline' }> = {
-  vendor_admin: { label: 'Merchant admin', variant: 'brand' },
-  branch_manager: { label: 'Branch manager', variant: 'secondary' },
-  staff: { label: 'Staff', variant: 'outline' },
+const ROLE: Record<StaffRole, 'brand' | 'secondary' | 'outline'> = {
+  vendor_admin: 'brand',
+  branch_manager: 'secondary',
+  staff: 'outline',
 };
+const roleLabel = (r: StaffRole) => t(`staff.roles.${r}`);
 
 /** Everyone working at the vendor. The platform invites the vendor admin; they invite the rest. */
 export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: string }) {
@@ -29,14 +31,14 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
   const [inviting, setInviting] = useState(false);
   const { data, isLoading, error } = useQuery({ queryKey: ['staff', scope.key], queryFn: () => scope.staff() });
   const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
-  const branchName = (id: string | null) => (id ? (branches?.find((b) => b.id === id)?.name ?? '—') : 'All branches');
+  const branchName = (id: string | null) => (id ? (branches?.find((b) => b.id === id)?.name ?? '—') : t('common.allBranches'));
   const onlyAdmins = scope.can.inviteRoles.length === 1 && scope.can.inviteRoles[0] === 'vendor_admin';
 
   const toggle = useMutation({
     mutationFn: (s: Staff) => scope.updateStaff(s.id, { status: s.status === 'active' ? 'disabled' : 'active' }),
     onSuccess: (s) => {
       void qc.invalidateQueries({ queryKey: ['staff', scope.key] });
-      toast.success(s.status === 'active' ? `${s.name} can sign in again` : `${s.name} is disabled`);
+      toast.success(s.status === 'active' ? t('staff.enabledToast', { name: s.name }) : t('staff.disabledToast', { name: s.name }));
     },
     onError: (e) => void toast.error(errorMessage(e)),
   });
@@ -46,13 +48,13 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
       <TabToolbar
         hint={
           onlyAdmins
-            ? 'Invite the owner as merchant admin; they add managers and staff from their side.'
-            : 'People you invite get an email to set a password, then sign in to the staff app.'
+            ? t('staff.hintAdmins')
+            : t('staff.hint')
         }
       >
         {scope.can.inviteRoles.length ? (
           <Button onClick={() => setInviting(true)}>
-            <UserPlus /> {onlyAdmins ? 'Invite merchant admin' : 'Invite'}
+            <UserPlus /> {onlyAdmins ? t('staff.inviteAdmin') : t('staff.invite')}
           </Button>
         ) : null}
       </TabToolbar>
@@ -61,33 +63,33 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-4">Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Branch</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead className="pr-4" />
+              <TableHead className="ps-4">{t('common.name')}</TableHead>
+              <TableHead>{t('staff.role')}</TableHead>
+              <TableHead>{t('common.branch')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
+              <TableHead>{t('staff.added')}</TableHead>
+              <TableHead className="pe-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText="No staff yet" />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText={t('staff.empty')} />
             {data?.map((s) => (
               <TableRow key={s.id}>
-                <TableCell className="pl-4">
+                <TableCell className="ps-4">
                   <div className="font-semibold">
-                    {s.name} {s.id === selfId ? <Badge variant="outline">You</Badge> : null}
+                    {s.name} {s.id === selfId ? <Badge variant="outline">{t('staff.you')}</Badge> : null}
                   </div>
                   <div className="text-xs text-muted-foreground">{s.email}</div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={ROLE[s.role].variant}>{ROLE[s.role].label}</Badge>
+                  <Badge variant={ROLE[s.role]}>{roleLabel(s.role)}</Badge>
                 </TableCell>
                 <TableCell>{branchName(s.branchId)}</TableCell>
                 <TableCell>
                   <StatusTag status={s.status} />
                 </TableCell>
                 <TableCell>{dayjs(s.createdAt).format('D MMM YYYY')}</TableCell>
-                <TableCell className="pr-4 text-right">
+                <TableCell className="pe-4 text-end">
                   {s.id === selfId ? null : (
                     <Button
                       size="sm"
@@ -95,7 +97,7 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
                       disabled={toggle.isPending && toggle.variables?.id === s.id}
                       onClick={() => toggle.mutate(s)}
                     >
-                      {s.status === 'active' ? 'Disable' : 'Enable'}
+                      {s.status === 'active' ? t('staff.disable') : t('staff.enable')}
                     </Button>
                   )}
                 </TableCell>
@@ -123,7 +125,7 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
 
   const invite = useMutation({
     mutationFn: async (v: { name: string; email: string }) => {
-      if (pickBranch && !branchId) throw new Error('Choose a branch.');
+      if (pickBranch && !branchId) throw new Error(t('staff.chooseBranchError'));
       return scope.inviteStaff({
         ...v,
         role,
@@ -133,7 +135,7 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
     onSuccess: (s) => {
       void qc.invalidateQueries({ queryKey: ['staff', scope.key] });
       void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
-      toast.success(s.invited ? `Invite email sent to ${s.email}` : `${s.email} already had an account: linked, no email sent`);
+      toast.success(s.invited ? t('staff.invitedToast', { email: s.email }) : t('staff.linkedToast', { email: s.email }));
       onClose();
     },
   });
@@ -149,8 +151,8 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{role === 'vendor_admin' ? 'Invite merchant admin' : 'Invite'}</DialogTitle>
-          <DialogDescription>They get an email to set their password, then sign in.</DialogDescription>
+          <DialogTitle>{role === 'vendor_admin' ? t('staff.inviteAdmin') : t('staff.invite')}</DialogTitle>
+          <DialogDescription>{t('staff.inviteText')}</DialogDescription>
         </DialogHeader>
         <form
           id="invite-form"
@@ -161,17 +163,17 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
             invite.mutate({ name: String(f.get('name')).trim(), email: String(f.get('email')).trim() });
           }}
         >
-          <Field label="Name" htmlFor="invite-name">
-            <Input id="invite-name" name="name" required maxLength={120} pattern=".*\S.*" placeholder="Full name" autoFocus />
+          <Field label={t('common.name')} htmlFor="invite-name">
+            <Input id="invite-name" name="name" required maxLength={120} pattern=".*\S.*" placeholder={t('staff.fullName')} autoFocus />
           </Field>
-          <Field label="Email" htmlFor="invite-email">
+          <Field label={t('staff.email')} htmlFor="invite-email">
             <div className="relative">
-              <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="invite-email" name="email" type="email" required placeholder="name@shop.com" className="pl-9" />
+              <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input id="invite-email" name="email" type="email" required placeholder="name@shop.com" className="ps-9" />
             </div>
           </Field>
           {roles.length > 1 ? (
-            <Field label="Role" htmlFor="invite-role" hint="Branch managers run one branch and its staff. Staff only scan in the staff app.">
+            <Field label={t('staff.role')} htmlFor="invite-role" hint={t('staff.roleHint')}>
               <Select value={role} onValueChange={(v) => setRole(v as StaffRole)}>
                 <SelectTrigger id="invite-role" className="w-full">
                   <SelectValue />
@@ -179,7 +181,7 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
                 <SelectContent>
                   {roles.map((r) => (
                     <SelectItem key={r} value={r}>
-                      {ROLE[r].label}
+                      {roleLabel(r)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -187,10 +189,10 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
             </Field>
           ) : null}
           {pickBranch ? (
-            <Field label="Branch" htmlFor="invite-branch">
+            <Field label={t('common.branch')} htmlFor="invite-branch">
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger id="invite-branch" className="w-full">
-                  <SelectValue placeholder="Choose a branch" />
+                  <SelectValue placeholder={t('staff.chooseBranch')} />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => (
@@ -206,11 +208,11 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
         </form>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="invite-form" disabled={invite.isPending}>
             {invite.isPending ? <Loader2 className="animate-spin" /> : null}
-            Send invite
+            {t('staff.send')}
           </Button>
         </DialogFooter>
       </DialogContent>

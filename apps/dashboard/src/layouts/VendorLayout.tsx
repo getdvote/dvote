@@ -7,10 +7,11 @@ import { initial } from '../components/PageHeader';
 import { WhatsAppSoon } from '../components/WhatsAppSoon';
 import { vendorApi, type StaffMe, type Vendor } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { branchState, STATE_LABEL, type BranchState } from '../lib/hours';
+import { branchState, stateLabel, type BranchState } from '../lib/hours';
 import { myVendorScope, type VendorScope } from '../lib/scope';
 import { cn } from '@/lib/utils';
 import { SideLayout, type NavItem } from './AdminLayout';
+import { t } from '../i18n';
 
 /** The signed-in vendor account (only call inside the vendor routes). */
 export function useMe(): StaffMe {
@@ -50,23 +51,24 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const vendor = useMyVendor();
   const isAdmin = me.role === 'vendor_admin';
   const nav: NavItem[] = [
-    { to: '/', icon: LayoutDashboard, label: 'Overview' },
-    { to: '/customers', icon: Users, label: 'Customers' },
-    { to: '/insights', icon: ChartLine, label: 'Insights' },
-    { to: '/activity', icon: ReceiptText, label: 'Activity' },
-    { to: '/branches', icon: Store, label: 'Branches' },
-    { to: '/rule', icon: Crown, label: 'Points rule' },
-    { to: '/rewards', icon: Gift, label: 'Rewards' },
-    { to: '/redemptions', icon: HandHeart, label: 'Redemptions' },
-    { to: '/menu', icon: BookOpen, label: 'Menu' },
-    { to: '/staff', icon: Users, label: 'Staff' },
-    ...(isAdmin ? [{ to: '/profile', icon: Settings, label: 'Shop profile' }] : []),
+    { to: '/', icon: LayoutDashboard, label: t('nav.overview') },
+    { to: '/customers', icon: Users, label: t('nav.customers') },
+    { to: '/insights', icon: ChartLine, label: t('nav.insights') },
+    { to: '/activity', icon: ReceiptText, label: t('nav.activity') },
+    { to: '/branches', icon: Store, label: t('nav.branches') },
+    { to: '/rule', icon: Crown, label: t('nav.rule') },
+    { to: '/rewards', icon: Gift, label: t('nav.rewards') },
+    { to: '/redemptions', icon: HandHeart, label: t('nav.redemptions') },
+    { to: '/menu', icon: BookOpen, label: t('nav.menu') },
+    { to: '/staff', icon: Users, label: t('nav.staff') },
+    ...(isAdmin ? [{ to: '/profile', icon: Settings, label: t('nav.profile') }] : []),
   ];
 
   return (
     <SideLayout
       nav={nav}
-      badge="MERCHANT"
+      badge={t('nav.merchantBadge')}
+      languageSwitch
       headerExtra={<WhatsAppSoon />}
       person={{ name: me.name, email: me.email }}
       top={
@@ -77,7 +79,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
           </Avatar>
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{vendor.name}</div>
-            <div className="truncate text-xs text-muted-foreground">{isAdmin ? 'Merchant admin' : `Manager · ${me.branch?.name ?? ''}`}</div>
+            <div className="truncate text-xs text-muted-foreground">{isAdmin ? t('nav.merchantAdmin') : t('nav.manager', { branch: me.branch?.name ?? '' })}</div>
             <BranchesNow />
           </div>
         </div>
@@ -112,12 +114,12 @@ function BranchesNow() {
   let text: string;
   if (open.length === 1) {
     state = states[0];
-    text = STATE_LABEL[state];
+    text = stateLabel(state);
   } else {
     const n = states.filter((s) => s === 'open').length;
     const paused = states.filter((s) => s === 'paused').length;
     state = paused ? 'paused' : n ? 'open' : states.every((s) => s === 'unknown') ? 'unknown' : 'closed';
-    text = `${n} of ${open.length} open now${paused ? ` · ${paused} paused` : ''}`;
+    text = t('nav.branchesOpen', { n, total: open.length }) + (paused ? ` · ${t('nav.branchesPaused', { n: paused })}` : '');
   }
   return (
     <Link to="/branches" className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">

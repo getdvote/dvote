@@ -1,22 +1,23 @@
 import { Badge } from '@/components/ui/badge';
+import { t } from '../i18n';
 
 type Variant = 'success' | 'destructive' | 'muted';
 
-const MAP: Record<string, { variant: Variant; label: string }> = {
-  active: { variant: 'success', label: 'Active' },
-  suspended: { variant: 'destructive', label: 'Suspended' },
-  closed: { variant: 'muted', label: 'Closed' },
-  archived: { variant: 'muted', label: 'Archived' },
-  disabled: { variant: 'destructive', label: 'Disabled' },
-  blocked: { variant: 'destructive', label: 'Blocked' },
-};
+const MAP = {
+  active: 'success',
+  suspended: 'destructive',
+  closed: 'muted',
+  archived: 'muted',
+  disabled: 'destructive',
+  blocked: 'destructive',
+} satisfies Record<string, Variant>;
 
 /** One colour per status, used by every list (vendors, branches, rewards, staff, customers). */
 export function StatusTag({ status }: { status: string }) {
-  const s = MAP[status] ?? { variant: 'muted', label: status };
+  const known = status in MAP ? (status as keyof typeof MAP) : null;
   return (
-    <Badge variant={s.variant} className="font-semibold">
-      {s.label}
+    <Badge variant={known ? MAP[known] : 'muted'} className="font-semibold">
+      {known ? t(`status.${known}`) : status}
     </Badge>
   );
 }

@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from './lib/auth';
 import { configProblem } from './lib/config';
 import { ThemeProvider } from './lib/theme';
+import { I18nProvider } from './i18n';
 import { router } from './router';
 import './styles.css';
 
@@ -17,6 +18,7 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
+      <I18nProvider>
       <TooltipProvider>
         {configProblem ? (
           <div className="max-w-xl p-10">
@@ -32,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
         )}
         <Toaster position="top-center" richColors />
       </TooltipProvider>
+      </I18nProvider>
     </ThemeProvider>
   </StrictMode>,
 );

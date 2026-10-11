@@ -16,6 +16,7 @@ import { TableState } from '../../components/TableState';
 import { errorMessage} from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
 import { cn } from '@/lib/utils';
+import { t } from '../../i18n';
 
 const amount = (v: string) => (v.endsWith('.00') ? v.slice(0, -3) : v);
 
@@ -40,12 +41,12 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
   };
   const publish = useMutation({
     mutationFn: (v: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase: number | null }) => scope.publishRule(v),
-    onSuccess: (r) => done(`Rule version ${r.version} is now active`),
+    onSuccess: (r) => done(t('rules.publishedToast', { version: r.version })),
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const stop = useMutation({
     mutationFn: () => scope.deactivateRule(),
-    onSuccess: () => done('Earning stopped'),
+    onSuccess: () => done(t('rules.stoppedToast')),
     onError: (e) => void toast.error(errorMessage(e)),
   });
 
@@ -69,40 +70,40 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
       <div className="grid gap-5 lg:grid-cols-[11fr_13fr]">
         <Card className={cn('border-none ring-0', active ? 'bg-brand-soft' : 'bg-muted')}>
           <CardContent>
-            <div className="text-sm text-muted-foreground">Current rule</div>
+            <div className="text-sm text-muted-foreground">{t('rules.current')}</div>
             {active ? (
               <>
                 <div className="mt-1.5 mb-1 text-3xl font-bold tracking-tight text-accent-foreground">
-                  Every {amount(active.spendAmount)} {scope.currency} = {active.pointsPerSpend} point{active.pointsPerSpend === 1 ? '' : 's'}
+                  {t('rules.every', { amount: amount(active.spendAmount), currency: scope.currency, count: active.pointsPerSpend })}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Version {active.version} · since {dayjs(active.createdAt).format('D MMM YYYY')}
-                  {Number(active.minPurchase) > 0 ? ` · bills from ${amount(active.minPurchase)} ${scope.currency}` : ''}
-                  {active.maxPointsPerPurchase ? ` · max ${active.maxPointsPerPurchase} per purchase` : ''}
+                  {t('rules.versionSince', { version: active.version, date: dayjs(active.createdAt).format('D MMM YYYY') })}
+                  {Number(active.minPurchase) > 0 ? ` · ${t('rules.billsFrom', { amount: amount(active.minPurchase), currency: scope.currency })}` : ''}
+                  {active.maxPointsPerPurchase ? ` · ${t('rules.maxPer', { n: active.maxPointsPerPurchase })}` : ''}
                 </p>
                 {scope.can.editVendor ? (
                 <ConfirmAction
-                  title="Stop earning points here?"
-                  description="Staff will not be able to give points until a new rule is published. Points customers already have stay."
-                  actionLabel="Stop earning"
+                  title={t('rules.stopTitle')}
+                  description={t('rules.stopText')}
+                  actionLabel={t('rules.stop')}
                   onConfirm={() => stop.mutateAsync()}
                   trigger={
                     <Button variant="destructive" className="mt-5">
-                      Stop earning
+                      {t('rules.stop')}
                     </Button>
                   }
                 />
                 ) : null}
               </>
             ) : (
-              <p className="mt-1.5 text-lg font-semibold">No active rule: customers can't earn points here yet.</p>
+              <p className="mt-1.5 text-lg font-semibold">{t('rules.none')}</p>
             )}
           </CardContent>
         </Card>
 
         <Card className={scope.can.editVendor ? undefined : 'hidden'}>
           <CardHeader>
-            <CardTitle>{active ? 'Publish a new rule' : 'Set the points rule'}</CardTitle>
+            <CardTitle>{active ? t('rules.publishNew') : t('rules.set')}</CardTitle>
           </CardHeader>
           <CardContent>
             <form
@@ -118,17 +119,17 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
               }}
             >
               <div className="grid grid-cols-2 gap-3">
-                <Field label={`Every (${scope.currency})`} htmlFor="rule-spend">
+                <Field label={t('rules.everyLabel', { currency: scope.currency })} htmlFor="rule-spend">
                   <Input id="rule-spend" type="number" required min={0.01} max={99999999} step={0.01} value={draft.spendAmount} onChange={set('spendAmount')} />
                 </Field>
-                <Field label="Gives (points)" htmlFor="rule-points">
+                <Field label={t('rules.gives')} htmlFor="rule-points">
                   <Input id="rule-points" type="number" required min={1} max={10000} step={1} value={draft.pointsPerSpend} onChange={set('pointsPerSpend')} />
                 </Field>
-                <Field label={`Minimum bill (${scope.currency})`} htmlFor="rule-min">
+                <Field label={t('rules.minLabel', { currency: scope.currency })} htmlFor="rule-min">
                   <Input id="rule-min" type="number" min={0} step={0.01} value={draft.minPurchase} onChange={set('minPurchase')} />
                 </Field>
-                <Field label="Max points per purchase" htmlFor="rule-max">
-                  <Input id="rule-max" type="number" min={1} step={1} placeholder="No limit" value={draft.maxPointsPerPurchase} onChange={set('maxPointsPerPurchase')} />
+                <Field label={t('rules.maxLabel')} htmlFor="rule-max">
+                  <Input id="rule-max" type="number" min={1} step={1} placeholder={t('rules.noLimit')} value={draft.maxPointsPerPurchase} onChange={set('maxPointsPerPurchase')} />
                 </Field>
               </div>
               {preview ? (
@@ -137,7 +138,7 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
                   <AlertDescription className="flex flex-wrap gap-x-5 gap-y-1 text-foreground">
                     {preview.map((p) => (
                       <span key={p.bill} className="tabular-nums">
-                        {p.bill} {scope.currency} → <strong>{p.pts} pts</strong>
+                        {p.bill} {scope.currency} → <strong>{t('common.pts', { n: p.pts })}</strong>
                       </span>
                     ))}
                   </AlertDescription>
@@ -146,9 +147,9 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
               <div>
                 <Button type="submit" disabled={publish.isPending}>
                   {publish.isPending ? <Loader2 className="animate-spin" /> : null}
-                  {active ? 'Publish new version' : 'Publish rule'}
+                  {active ? t('rules.publishVersion') : t('rules.publish')}
                 </Button>
-                <p className="mt-2.5 text-xs text-muted-foreground">Applies to new purchases only. Points already earned don't change.</p>
+                <p className="mt-2.5 text-xs text-muted-foreground">{t('rules.appliesNew')}</p>
               </div>
             </form>
           </CardContent>
@@ -156,36 +157,36 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
       </div>
 
       <div>
-        <h3 className="mb-3 font-semibold">History</h3>
+        <h3 className="mb-3 font-semibold">{t('rules.history')}</h3>
         <div className="overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4">Version</TableHead>
-                <TableHead>Rule</TableHead>
-                <TableHead>Minimum bill</TableHead>
-                <TableHead>Max per purchase</TableHead>
-                <TableHead className="pr-4">Published</TableHead>
+                <TableHead className="ps-4">{t('rules.version')}</TableHead>
+                <TableHead>{t('rules.rule')}</TableHead>
+                <TableHead>{t('rules.minBill')}</TableHead>
+                <TableHead>{t('rules.maxPerPurchase')}</TableHead>
+                <TableHead className="pe-4">{t('rules.published')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableState loading={isLoading} empty={!data?.length} colSpan={5} emptyText="No rules yet" />
+              <TableState loading={isLoading} empty={!data?.length} colSpan={5} emptyText={t('rules.empty')} />
               {data?.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="pl-4">
+                  <TableCell className="ps-4">
                     v{r.version}{' '}
                     {r.isActive ? (
-                      <Badge variant="brand" className="ml-1">
-                        Active
+                      <Badge variant="brand" className="ms-1">
+                        {t('status.active')}
                       </Badge>
                     ) : null}
                   </TableCell>
                   <TableCell>
-                    {amount(r.spendAmount)} {scope.currency} = {r.pointsPerSpend} pt
+                    {t('rules.short', { amount: amount(r.spendAmount), currency: scope.currency, n: r.pointsPerSpend })}
                   </TableCell>
                   <TableCell>{Number(r.minPurchase) > 0 ? `${amount(r.minPurchase)} ${scope.currency}` : '—'}</TableCell>
                   <TableCell>{r.maxPointsPerPurchase ?? '—'}</TableCell>
-                  <TableCell className="pr-4">{dayjs(r.createdAt).format('D MMM YYYY, HH:mm')}</TableCell>
+                  <TableCell className="pe-4">{dayjs(r.createdAt).format('D MMM YYYY, HH:mm')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

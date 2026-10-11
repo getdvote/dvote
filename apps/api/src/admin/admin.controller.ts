@@ -10,6 +10,8 @@ import { QrSourcesQueryDto, QrSourcesResponseDto, QrStatsService } from './qr-st
 import {
   AdminMeResponseDto,
   AdminUserDetailDto,
+  AdminUserEventsPageDto,
+  ListUserEventsQueryDto,
   AdminUserListDto,
   ListUsersQueryDto,
   OverviewResponseDto,
@@ -59,6 +61,14 @@ export class AdminController {
   @ApiNotFoundResponse({ description: 'user_not_found' })
   getUser(@Param('id', ParseUuidPipe) id: string): Promise<AdminUserDetailDto> {
     return this.admin.getUser(id);
+  }
+
+  /** One customer's point history, a page at a time (newest first). */
+  @Get('users/:id/events')
+  @ApiOkResponse({ type: AdminUserEventsPageDto })
+  @ApiNotFoundResponse({ description: 'user_not_found' })
+  userEvents(@Param('id', ParseUuidPipe) id: string, @Query() q: ListUserEventsQueryDto): Promise<AdminUserEventsPageDto> {
+    return this.admin.listUserEvents(id, q.page ?? 1, q.pageSize ?? 10);
   }
 
   /** Block or unblock a customer. */

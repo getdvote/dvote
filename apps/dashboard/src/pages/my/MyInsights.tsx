@@ -16,24 +16,27 @@ import { PeriodPicker, rangeText, usePeriod } from '../../components/PeriodFilte
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi, type InsightsKpis } from '../../lib/api';
 import { cn } from '@/lib/utils';
+import { t } from '../../i18n';
 
 type Metric = 'sales' | 'visits';
 
-const chartConfig = {
-  current: { label: 'This period', color: 'var(--chart-1)' },
-  previous: { label: 'Previous period', color: 'var(--muted-foreground)' },
-} satisfies ChartConfig;
+const chartConfig = () =>
+  ({
+    current: { label: t('insights.thisPeriod'), color: 'var(--chart-1)' },
+    previous: { label: t('insights.previousPeriod'), color: 'var(--muted-foreground)' },
+  }) satisfies ChartConfig;
 
 /** How each number is defined: shown on hover of its dotted label. */
-const KPIS: { key: keyof InsightsKpis; label: string; help: string; format: 'money' | 'count' | 'percent' | 'ratio' }[] = [
-  { key: 'sales', label: 'Sales with dvote', help: 'The sum of the bills staff scanned to give points.', format: 'money' },
-  { key: 'visits', label: 'Visits', help: 'Collects: each bill scanned for points counts as one visit.', format: 'count' },
-  { key: 'avgBill', label: 'Average bill', help: 'Sales with dvote divided by visits.', format: 'money' },
-  { key: 'customers', label: 'Customers', help: 'Different customers who collected points in the period.', format: 'count' },
-  { key: 'newCustomers', label: 'New customers', help: 'Customers whose first ever visit here was in the period.', format: 'count' },
-  { key: 'repeatRate', label: 'Repeat rate', help: 'Share of customers who came back at least twice in the period.', format: 'percent' },
-  { key: 'visitsPerCustomer', label: 'Visits per customer', help: 'Visits divided by customers.', format: 'ratio' },
-  { key: 'rewardsRedeemed', label: 'Rewards given', help: 'Rewards customers redeemed with their points in the period.', format: 'count' },
+type KpiKey = 'sales' | 'visits' | 'avgBill' | 'customers' | 'newCustomers' | 'repeatRate' | 'visitsPerCustomer' | 'rewardsRedeemed';
+const KPIS: { key: KpiKey & keyof InsightsKpis; format: 'money' | 'count' | 'percent' | 'ratio' }[] = [
+  { key: 'sales', format: 'money' },
+  { key: 'visits', format: 'count' },
+  { key: 'avgBill', format: 'money' },
+  { key: 'customers', format: 'count' },
+  { key: 'newCustomers', format: 'count' },
+  { key: 'repeatRate', format: 'percent' },
+  { key: 'visitsPerCustomer', format: 'ratio' },
+  { key: 'rewardsRedeemed', format: 'count' },
 ];
 
 /**
@@ -73,21 +76,21 @@ export function MyInsights() {
   return (
     <>
       <PageHeader
-        title="Insights"
-        subtitle={`How your loyalty program is doing at ${branchOnly ? (me.branch?.name ?? 'your branch') : vendor.name}. Counts only: dvote never shows who your customers are.`}
+        title={t('nav.insights')}
+        subtitle={t('insights.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
       />
       <PeriodPicker state={period}>
         <SelectFilter
-          label="Compare with"
-          allLabel="vs previous period"
+          label={t('insights.compareWith')}
+          allLabel={t('insights.vsPrevious')}
           value={compare === 'previous' ? 'all' : compare}
           onChange={(v) => setCompare(v === 'all' ? 'previous' : 'none')}
-          options={[{ value: 'none', label: 'No comparison' }]}
+          options={[{ value: 'none', label: t('insights.noComparison') }]}
         />
         {branchOnly ? null : (
           <SelectFilter
-            label="Branch"
-            allLabel="All branches"
+            label={t('common.branch')}
+            allLabel={t('common.allBranches')}
             value={branchId}
             onChange={setBranchId}
             options={branches?.map((b) => ({ value: b.id, label: b.name }))}
@@ -96,10 +99,10 @@ export function MyInsights() {
       </PeriodPicker>
       {data?.previousRange ? (
         <p className="-mt-2 mb-4 text-sm text-muted-foreground">
-          {rangeText(data.range)} compared with {rangeText(data.previousRange)}
+          {t('insights.comparedWith', { range: rangeText(data.range), previous: rangeText(data.previousRange) })}
         </p>
       ) : null}
-      {!from || !to ? <p className="mb-4 text-sm text-muted-foreground">Pick both dates to see your numbers.</p> : null}
+      {!from || !to ? <p className="mb-4 text-sm text-muted-foreground">{t('insights.pickDates')}</p> : null}
       <ErrorAlert error={error} className="mb-4" />
 
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -109,10 +112,10 @@ export function MyInsights() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span tabIndex={0} className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none focus-visible:text-foreground">
-                    {k.label}
+                    {t(`insights.kpi.${k.key}`)}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-60">{k.help}</TooltipContent>
+                <TooltipContent className="max-w-60">{t(`insights.help.${k.key}`)}</TooltipContent>
               </Tooltip>
               {isLoading || !data ? (
                 <Skeleton className="mt-2 h-8 w-24" />
@@ -130,18 +133,18 @@ export function MyInsights() {
       <Card className="mb-5">
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>{metric === 'sales' ? 'Sales with dvote' : 'Visits'} per day</CardTitle>
+            <CardTitle>{metric === 'sales' ? t('insights.salesPerDay') : t('insights.visitsPerDay')}</CardTitle>
             <CardDescription>
               {data ? rangeText(data.range) : ''}
-              {comparing ? `, dashed: ${rangeText(data!.previousRange!)}` : ''}
+              {comparing ? `, ${t('insights.dashed', { range: rangeText(data!.previousRange!) })}` : ''}
             </CardDescription>
           </div>
-          <ToggleGroup type="single" variant="outline" value={metric} onValueChange={(v) => v && setMetric(v as Metric)} aria-label="Chart metric">
+          <ToggleGroup type="single" variant="outline" value={metric} onValueChange={(v) => v && setMetric(v as Metric)} aria-label={t('insights.chartMetric')}>
             <ToggleGroupItem value="sales" className="h-8 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
-              Sales
+              {t('insights.sales')}
             </ToggleGroupItem>
             <ToggleGroupItem value="visits" className="h-8 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
-              Visits
+              {t('insights.kpi.visits')}
             </ToggleGroupItem>
           </ToggleGroup>
         </CardHeader>
@@ -149,7 +152,7 @@ export function MyInsights() {
           {!chart ? (
             <Skeleton className="h-[280px] w-full" />
           ) : (
-            <ChartContainer config={chartConfig} className="aspect-auto h-[280px] w-full">
+            <ChartContainer config={chartConfig()} className="aspect-auto h-[280px] w-full">
               <AreaChart data={chart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="insights-fill" x1="0" y1="0" x2="0" y2="1">
@@ -172,33 +175,33 @@ export function MyInsights() {
       {data?.branches.length ? (
         <Card className="gap-0 py-0">
           <CardHeader className="py-4">
-            <CardTitle>By branch</CardTitle>
+            <CardTitle>{t('insights.byBranch')}</CardTitle>
           </CardHeader>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Branch</TableHead>
-                <TableHead className="text-right">Sales with dvote</TableHead>
-                <TableHead className="text-right">Visits</TableHead>
-                <TableHead className="text-right">Customers</TableHead>
-                <TableHead className="pr-6 text-right">Average bill</TableHead>
+                <TableHead className="ps-6">{t('common.branch')}</TableHead>
+                <TableHead className="text-end">{t('insights.kpi.sales')}</TableHead>
+                <TableHead className="text-end">{t('insights.kpi.visits')}</TableHead>
+                <TableHead className="text-end">{t('insights.kpi.customers')}</TableHead>
+                <TableHead className="pe-6 text-end">{t('insights.kpi.avgBill')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.branches.map((b) => (
                 <TableRow key={b.id}>
-                  <TableCell className="pl-6 font-semibold">{b.name}</TableCell>
-                  <TableCell className="text-right tabular-nums">{money(b.sales)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{num(b.visits)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{num(b.customers)}</TableCell>
-                  <TableCell className="pr-6 text-right tabular-nums">{b.visits ? money(b.avgBill) : '—'}</TableCell>
+                  <TableCell className="ps-6 font-semibold">{b.name}</TableCell>
+                  <TableCell className="text-end tabular-nums">{money(b.sales)}</TableCell>
+                  <TableCell className="text-end tabular-nums">{num(b.visits)}</TableCell>
+                  <TableCell className="text-end tabular-nums">{num(b.customers)}</TableCell>
+                  <TableCell className="pe-6 text-end tabular-nums">{b.visits ? money(b.avgBill) : '—'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
       ) : null}
-      {data ? <p className="mt-3 text-xs text-muted-foreground">Updated {dayjs(data.updatedAt).format('HH:mm')}. Days are Cairo days.</p> : null}
+      {data ? <p className="mt-3 text-xs text-muted-foreground">{t('insights.updated', { time: dayjs(data.updatedAt).format('HH:mm') })}</p> : null}
     </>
   );
 }
@@ -206,7 +209,7 @@ export function MyInsights() {
 /** "+12% vs previous" (green up / red down), or a dash when the previous period had nothing to compare with. */
 function Delta({ current, previous }: { current: number; previous: number }) {
   if (!previous) {
-    return <div className="mt-1 text-xs text-muted-foreground">{current ? 'No earlier data to compare' : '— vs previous'}</div>;
+    return <div className="mt-1 text-xs text-muted-foreground">{current ? t('insights.noEarlier') : `— ${t('insights.vsPreviousShort')}`}</div>;
   }
   const pct = Math.round(((current - previous) / previous) * 100);
   const up = pct >= 0;
@@ -215,10 +218,12 @@ function Delta({ current, previous }: { current: number; previous: number }) {
     <div className="mt-1 flex items-center gap-1 text-xs">
       <span className={cn('inline-flex items-center gap-0.5 font-semibold', pct === 0 ? 'text-muted-foreground' : up ? 'text-success' : 'text-destructive')}>
         {pct === 0 ? null : <Icon className="size-3.5" />}
-        {pct > 0 ? '+' : ''}
-        {pct}%
+        <span dir="ltr">
+          {pct > 0 ? '+' : ''}
+          {pct}%
+        </span>
       </span>
-      <span className="text-muted-foreground">vs previous</span>
+      <span className="text-muted-foreground">{t('insights.vsPreviousShort')}</span>
     </div>
   );
 }

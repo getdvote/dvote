@@ -6,6 +6,8 @@ import { reverseKey } from './point-adjust';
 import {
   AdminMeResponseDto,
   AdminUserDetailDto,
+  AdminUserEventDto,
+  AdminUserEventsPageDto,
   AdminUserListDto,
   AdminUserListItemDto,
   ListUsersQueryDto,
@@ -154,27 +156,8 @@ export class AdminService {
         include: { vendors: { select: { name: true, logo_url: true } } },
         orderBy: { last_activity_at: 'desc' },
       }),
-      this.prisma.point_events.findMany({
-        where: { cards: { user_id: id } },
-        include: {
-          vendors: { select: { name: true } },
-          branches: { select: { name: true } },
-          rewards: { select: { name: true } },
-          platform_admins: { select: { name: true } },
-        },
-        orderBy: { created_at: 'desc' },
-        take: 30,
-      }),
+      this.userEvents(id, 0, 10),
     ]);
-    // Collects already undone by an admin (their reversal row has key reverse:<id>).
-    const reversed = new Set(
-      (
-        await this.prisma.point_events.findMany({
-          where: { idempotency_key: { in: events.filter((e) => e.type === 'earn').map((e) => reverseKey(e.id)) } },
-          select: { idempotency_key: true },
-        })
-      ).map((r) => r.idempotency_key.slice('reverse:'.length)),
-    );
 
     return {
       ...listItem(user),
@@ -189,21 +172,57 @@ export class AdminService {
         lifetimePoints: c.lifetime_points,
         lastActivityAt: c.last_activity_at.toISOString(),
       })),
-      events: events.map((e) => ({
-        id: e.id,
-        cardId: e.card_id,
-        reversed: reversed.has(e.id),
-        adminName: e.platform_admins?.name ?? null,
-        type: e.type,
-        delta: e.delta,
-        vendorName: e.vendors.name,
-        branchName: e.branches?.name ?? null,
-        purchaseAmount: e.purchase_amount === null ? null : fromMinor(toMinor(e.purchase_amount)),
-        rewardName: e.rewards?.name ?? null,
-        reason: e.reason,
-        createdAt: e.created_at.toISOString(),
-      })),
+      events,
     };
+  }
+
+  /** One page of a customer's point events, newest first (all shops). */
+  async listUserEvents(id: string, page = 1, pageSize = 10): Promise<AdminUserEventsPageDto> {
+    const found = await this.prisma.users.findUnique({ where: { id }, select: { id: true } });
+    if (!found) throw new NotFoundException({ code: 'user_not_found' });
+    const [items, total] = await Promise.all([
+      this.userEvents(id, (page - 1) * pageSize, pageSize),
+      this.prisma.point_events.count({ where: { cards: { user_id: id } } }),
+    ]);
+    return { items, total, page, pageSize };
+  }
+
+  private async userEvents(userId: string, skip: number, take: number): Promise<AdminUserEventDto[]> {
+    const events = await this.prisma.point_events.findMany({
+      where: { cards: { user_id: userId } },
+      include: {
+        vendors: { select: { name: true } },
+        branches: { select: { name: true } },
+        rewards: { select: { name: true } },
+        platform_admins: { select: { name: true } },
+      },
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      skip,
+      take,
+    });
+    // Collects already undone by an admin (their reversal row has key reverse:<id>).
+    const reversed = new Set(
+      (
+        await this.prisma.point_events.findMany({
+          where: { idempotency_key: { in: events.filter((e) => e.type === 'earn').map((e) => reverseKey(e.id)) } },
+          select: { idempotency_key: true },
+        })
+      ).map((k) => k.idempotency_key.slice('reverse:'.length)),
+    );
+    return events.map((e) => ({
+      id: e.id,
+      cardId: e.card_id,
+      reversed: reversed.has(e.id),
+      adminName: e.platform_admins?.name ?? null,
+      type: e.type,
+      delta: e.delta,
+      vendorName: e.vendors.name,
+      branchName: e.branches?.name ?? null,
+      purchaseAmount: e.purchase_amount === null ? null : fromMinor(toMinor(e.purchase_amount)),
+      rewardName: e.rewards?.name ?? null,
+      reason: e.reason,
+      createdAt: e.created_at.toISOString(),
+    }));
   }
 
   /** Block (the customer can no longer use the app or collect) or unblock. */

@@ -3,6 +3,7 @@ import { initial } from './PageHeader';
 import { DvoteLogo } from './DvoteLogo';
 import type { CardDesign } from '../lib/cardDesigns';
 import { cn } from '@/lib/utils';
+import { t } from '../i18n';
 
 /**
  * A loyalty card as customers see it in the app: the design's gradient and pattern, the
@@ -24,7 +25,7 @@ export function CardPreview({
   const tint = design.ink === '#FFFFFF' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   return (
     <div
-      className={cn('relative aspect-[1.6] w-full overflow-hidden rounded-2xl p-4 text-left', className)}
+      className={cn('relative aspect-[1.6] w-full overflow-hidden rounded-2xl p-4 text-start', className)}
       style={{ background: `linear-gradient(135deg, ${design.colors[0]}, ${design.colors[1]})`, color: design.ink }}
     >
       <Pattern design={design} tint={tint} />
@@ -39,7 +40,7 @@ export function CardPreview({
         <span className="truncate text-sm font-bold">{name}</span>
       </div>
       <div className="relative mt-[12%] text-2xl font-extrabold tracking-wide tabular-nums">
-        {points.toLocaleString('en-US')} <span className="text-sm font-semibold">pts</span>
+        {points.toLocaleString('en-US')} <span className="text-sm font-semibold">{t('branding.pts')}</span>
       </div>
     </div>
   );
@@ -51,8 +52,8 @@ function Pattern({ design, tint }: { design: CardDesign; tint: string }) {
     case 'circles':
       return (
         <div style={layer}>
-          <div className="absolute -top-[45%] -right-[20%] aspect-square w-[70%] rounded-full" style={{ background: tint }} />
-          <div className="absolute -right-[2%] -bottom-[40%] aspect-square w-[42%] rounded-full" style={{ background: tint }} />
+          <div className="absolute -top-[45%] -end-[20%] aspect-square w-[70%] rounded-full" style={{ background: tint }} />
+          <div className="absolute -end-[2%] -bottom-[40%] aspect-square w-[42%] rounded-full" style={{ background: tint }} />
         </div>
       );
     case 'stripes':
@@ -70,7 +71,7 @@ function Pattern({ design, tint }: { design: CardDesign; tint: string }) {
       );
     default:
       return (
-        <div className="pointer-events-none absolute -top-[6%] -right-[16%]">
+        <div className="pointer-events-none absolute -top-[6%] -end-[16%]">
           <DvoteLogo height={150} wordmark={false} color={tint} />
         </div>
       );

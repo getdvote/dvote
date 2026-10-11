@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '../../components/PageHeader';
+import { t } from '../../i18n';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { BranchesTab } from '../vendor/BranchesTab';
 import { ImagesTab } from '../vendor/ImagesTab';
@@ -20,12 +21,12 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
   );
 }
 
-const readOnly = (canEdit: boolean, text: string) => (canEdit ? text : `${text} Only your merchant admin can change it.`);
+const readOnly = (canEdit: boolean, text: string) => (canEdit ? text : `${text} ${t('sections.onlyAdmin')}`);
 
 export function MyBranches() {
   const scope = useMyScope();
   return (
-    <Section title="Branches" subtitle={readOnly(scope.can.editVendor, 'Your shops, as customers see them.')}>
+    <Section title={t('nav.branches')} subtitle={readOnly(scope.can.editVendor, t('sections.branches'))}>
       <BranchesTab scope={scope} />
     </Section>
   );
@@ -34,7 +35,7 @@ export function MyBranches() {
 export function MyRule() {
   const scope = useMyScope();
   return (
-    <Section title="Points rule" subtitle={readOnly(scope.can.editVendor, 'How many points a bill earns.')}>
+    <Section title={t('nav.rule')} subtitle={readOnly(scope.can.editVendor, t('sections.rule'))}>
       <RulesTab scope={scope} />
     </Section>
   );
@@ -43,7 +44,7 @@ export function MyRule() {
 export function MyRewards() {
   const scope = useMyScope();
   return (
-    <Section title="Rewards" subtitle={readOnly(scope.can.editVendor, 'What customers can get with their points.')}>
+    <Section title={t('nav.rewards')} subtitle={readOnly(scope.can.editVendor, t('sections.rewards'))}>
       <RewardsTab scope={scope} />
     </Section>
   );
@@ -53,8 +54,8 @@ export function MyImages() {
   const scope = useMyScope();
   return (
     <Section
-      title="Menu"
-      subtitle={scope.can.editVendor ? 'Menu pages shown on your shop page in the dvote app. Branch photos are on the Branches page.' : 'Your menu as customers see it. Branch photos are on the Branches page.'}
+      title={t('nav.menu')}
+      subtitle={scope.can.editVendor ? t('sections.menuEdit') : t('sections.menuView')}
     >
       <ImagesTab scope={scope} />
     </Section>
@@ -65,7 +66,7 @@ export function MyStaff() {
   const me = useMe();
   const scope = useMyScope();
   return (
-    <Section title="Staff" subtitle={me.role === 'vendor_admin' ? 'Everyone working at your shops.' : `The team at ${me.branch?.name ?? 'your branch'}.`}>
+    <Section title={t('nav.staff')} subtitle={me.role === 'vendor_admin' ? t('sections.staffAll') : t('sections.staffBranch', { branch: me.branch?.name ?? '' })}>
       <StaffTab scope={scope} selfId={me.id} />
     </Section>
   );

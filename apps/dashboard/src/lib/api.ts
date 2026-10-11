@@ -1,5 +1,6 @@
 import type { CityKey } from './cities';
 import { config } from './config';
+import { errorText, t } from '../i18n';
 import { supabase } from './supabase';
 
 /**
@@ -253,6 +254,8 @@ export interface UserDetail extends UserListItem {
   }[];
 }
 
+export type UserEvent = UserDetail['events'][number];
+
 /** Result of an admin point correction (one new adjust row in the ledger). */
 export interface AdjustResult {
   pointEventId: string;
@@ -360,6 +363,8 @@ export interface AttentionItem {
   title: string;
   detail: string | null;
   action: { label: string; to: string };
+  /** Names, counts and times in the text, for wording it in the dashboard language. */
+  params?: Record<string, string | number>;
 }
 
 export type CustomerSegment = 'new' | 'returning' | 'regular' | 'at_risk' | 'no_visits';
@@ -438,40 +443,6 @@ export class ApiError extends Error {
   }
 }
 
-const MESSAGES: Record<string, string> = {
-  network: "Can't reach the dvote API. Is it running?",
-  not_admin: 'This account is not a dvote platform admin.',
-  admin_disabled: 'This admin account is disabled.',
-  mfa_required: 'Two-factor sign-in is required.',
-  token_expired: 'Your session expired. Sign in again.',
-  invalid_token: 'Sign in again.',
-  missing_token: 'Sign in again.',
-  vendor_not_found: 'This merchant no longer exists.',
-  currency_locked: "The currency can't change once the merchant has a points rule.",
-  email_taken: 'This email is already used by another staff account.',
-  account_already_staff: 'This account already works at a merchant.',
-  email_rate_limited: 'Too many invite emails were sent. Try again in a while.',
-  too_many_images: 'Limit reached: delete an image first.',
-  unsupported_image: 'Use a JPG, PNG, WebP or HEIC image.',
-  file_too_large: 'The image must be under 10 MB.',
-  location_incomplete: 'Pick a place on the map, or clear both coordinates.',
-  hours_incomplete: 'Set both the opening and closing time, or leave both empty.',
-  hours_invalid: 'Opening and closing time can\'t be the same.',
-  hours_overlap: 'Two opening times on the same day overlap. Only the last one of a day can run past midnight.',
-  too_many_slots: 'At most 3 opening times a day.',
-  until_in_past: 'Pick a time in the future.',
-  customer_not_found: 'This customer is not available in your selected merchant or branch.',
-  range_invalid: 'Pick a valid start and end date.',
-  range_too_long: 'Pick at most a year.',
-  until_too_far: 'That is too far ahead. For a long closure, close the branch instead.',
-  not_staff: 'This account has no access to the dvote dashboard.',
-  staff_disabled: 'This account is disabled. Ask your merchant admin.',
-  vendor_suspended: 'This shop is suspended on dvote. Contact dvote support.',
-  branch_closed: 'Your branch is closed.',
-  forbidden_role: "Your role can't do this.",
-  forbidden_branch: 'That belongs to another branch.',
-  cannot_modify_self: "You can't change your own account here.",
-};
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
@@ -490,14 +461,14 @@ async function call<T>(method: Method, path: string, body?: unknown): Promise<T>
       body: isForm ? body : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'network', MESSAGES.network);
+    throw new ApiError(0, 'network', errorText('network') ?? 'Network error');
   }
   if (res.status === 204) return undefined as T;
   const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string | string[] };
   if (!res.ok) {
     const code = json.code ?? `http_${res.status}`;
     const server = Array.isArray(json.message) ? json.message.join(', ') : json.message;
-    throw new ApiError(res.status, code, MESSAGES[code] ?? server ?? 'Something went wrong.');
+    throw new ApiError(res.status, code, errorText(code) ?? server ?? t('common.somethingWrong'));
   }
   return json as T;
 }
@@ -568,6 +539,8 @@ export const api = {
     call<Page<UserListItem>>('GET', `/api/admin/users${qs(q)}`),
   user: (id: string) => call<UserDetail>('GET', `/api/admin/users/${id}`),
   setUserStatus: (id: string, status: UserStatus) => call<UserDetail>('PATCH', `/api/admin/users/${id}`, { status }),
+  userEvents: (id: string, page: number, pageSize = 10) =>
+    call<{ items: UserEvent[]; total: number; page: number; pageSize: number }>('GET', `/api/admin/users/${id}/events?page=${page}&pageSize=${pageSize}`),
   /** Add (positive) or take away (negative) points on one card, with a reason. */
   adjustCard: (cardId: string, body: { delta: number; reason: string; idempotencyKey: string }) =>
     call<AdjustResult>('POST', `/api/admin/cards/${cardId}/adjust`, body),

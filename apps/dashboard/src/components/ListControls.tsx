@@ -3,19 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { t } from '../i18n';
 
 /** Search box with a magnifier and a clear button. */
 export function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <div className="relative w-full max-w-xs">
-      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-9 pr-8 pl-9" aria-label={placeholder} />
+      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-9 ps-9 pe-8" aria-label={placeholder} />
       {value ? (
         <Button
           variant="ghost"
           size="icon-xs"
-          className="absolute top-1/2 right-1.5 -translate-y-1/2 text-muted-foreground"
-          aria-label="Clear search"
+          className="absolute end-1.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          aria-label={t('common.clearSearch')}
           onClick={() => onChange('')}
         >
           <X />
@@ -41,7 +42,7 @@ export function StatusFilter<T extends string>({
       variant="outline"
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
-      aria-label="Filter by status"
+      aria-label={t('common.filterByStatus')}
     >
       {options.map((o) => (
         <ToggleGroupItem key={o.value} value={o.value} className="h-9 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
@@ -58,14 +59,12 @@ export function Pager({ page, pageSize, total, onChange }: { page: number; pageS
   if (pages <= 1) return null;
   return (
     <div className="flex items-center justify-end gap-2 border-t px-4 py-3 text-sm text-muted-foreground">
-      <span className="mr-2">
-        Page {page} of {pages}
-      </span>
-      <Button variant="outline" size="icon-sm" aria-label="Previous page" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-        <ChevronLeft />
+      <span className="me-2">{t('common.pageOf', { page, pages })}</span>
+      <Button variant="outline" size="icon-sm" aria-label={t('common.previousPage')} disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        <ChevronLeft className="rtl:rotate-180" />
       </Button>
-      <Button variant="outline" size="icon-sm" aria-label="Next page" disabled={page >= pages} onClick={() => onChange(page + 1)}>
-        <ChevronRight />
+      <Button variant="outline" size="icon-sm" aria-label={t('common.nextPage')} disabled={page >= pages} onClick={() => onChange(page + 1)}>
+        <ChevronRight className="rtl:rotate-180" />
       </Button>
     </div>
   );

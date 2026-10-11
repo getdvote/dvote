@@ -16,6 +16,7 @@ import type { VendorScope } from '../../lib/scope';
 import { IMAGE_ACCEPT } from './ImagesTab';
 import { RewardAvailability } from './RewardAvailability';
 import { TabToolbar } from './TabToolbar';
+import { t } from '../../i18n';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts/order, archive / restore. */
 export function RewardsTab({ scope }: { scope: VendorScope }) {
@@ -37,7 +38,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
     mutationFn: (r: Reward) => scope.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
-      toast.success(r.status === 'active' ? `${r.name} restored` : `${r.name} archived`);
+      toast.success(r.status === 'active' ? t('rewards.restoredToast', { name: r.name }) : t('rewards.archivedToast', { name: r.name }));
     },
     onError: (e) => void toast.error(errorMessage(e)),
   });
@@ -47,13 +48,13 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
       <TabToolbar
         hint={
           scope.soldOut
-            ? "Ran out of something? Mark it sold out at a branch: staff there can't give it, and customers see where it's sold out. Archived rewards can't be redeemed."
-            : "Archived rewards can't be redeemed. A new price applies to future redemptions only."
+            ? t('rewards.hintSoldOut')
+            : t('rewards.hint')
         }
       >
         {scope.can.editVendor ? (
           <Button onClick={() => setEditing('new')}>
-            <Plus /> Add reward
+            <Plus /> {t('rewards.add')}
           </Button>
         ) : null}
       </TabToolbar>
@@ -62,36 +63,40 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-14 pl-4">#</TableHead>
-              <TableHead className="w-20">Photo</TableHead>
-              <TableHead>Reward</TableHead>
-              <TableHead className="text-right">Cost</TableHead>
-              {scope.soldOut ? <TableHead>Availability</TableHead> : null}
-              <TableHead>Status</TableHead>
-              <TableHead className="pr-4" />
+              <TableHead className="w-14 ps-4">#</TableHead>
+              <TableHead className="w-20">{t('rewards.photo')}</TableHead>
+              <TableHead>{t('rewards.reward')}</TableHead>
+              <TableHead className="text-end">{t('rewards.cost')}</TableHead>
+              {scope.soldOut ? <TableHead>{t('rewards.availability')}</TableHead> : null}
+              <TableHead>{t('common.status')}</TableHead>
+              <TableHead className="pe-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyText="No rewards yet" />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyText={t('rewards.empty')} />
             {data?.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="pl-4 text-muted-foreground tabular-nums">{r.sortOrder}</TableCell>
+                <TableCell className="ps-4 text-muted-foreground tabular-nums">{r.sortOrder}</TableCell>
                 <TableCell>
                   <RewardPhoto scope={scope} reward={r} />
                 </TableCell>
                 <TableCell className="whitespace-normal">
-                  <span className="font-semibold">{r.name}</span>
-                  {/* the page is LTR: a physical left margin, since ms-* on a dir="rtl" span lands on its right */}
-                  {r.nameAr ? (
-                    <span dir="rtl" className="ml-2.5 text-muted-foreground">
-                      {r.nameAr}
+                  {/* both names side by side (a flex gap works whatever the page and span directions) */}
+                  <span className="inline-flex flex-wrap items-baseline gap-x-2.5">
+                    <span dir="ltr" className="font-semibold">
+                      {r.name}
                     </span>
-                  ) : (
-                    <span className="ml-2.5 text-xs text-warning">No Arabic name</span>
-                  )}
+                    {r.nameAr ? (
+                      <span dir="rtl" className="text-muted-foreground">
+                        {r.nameAr}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-warning">{t('rewards.noArabic')}</span>
+                    )}
+                  </span>
                   {r.description ? <div className="text-xs text-muted-foreground">{r.description}</div> : null}
                 </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">{r.pointsCost.toLocaleString()} pts</TableCell>
+                <TableCell className="text-end font-semibold tabular-nums">{t('common.pts', { n: r.pointsCost })}</TableCell>
                 {scope.soldOut ? (
                   <TableCell>
                     {r.status === 'active' && soldOut && branches ? (
@@ -104,10 +109,10 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
                 <TableCell>
                   <StatusTag status={r.status} />
                 </TableCell>
-                <TableCell className="pr-4">
+                <TableCell className="pe-4">
                   <div className={scope.can.editVendor ? 'flex justify-end gap-2' : 'hidden'}>
                     <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
-                      Edit
+                      {t('common.edit')}
                     </Button>
                     <Button
                       size="sm"
@@ -115,7 +120,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
                       disabled={toggle.isPending && toggle.variables?.id === r.id}
                       onClick={() => toggle.mutate(r)}
                     >
-                      {r.status === 'active' ? 'Archive' : 'Restore'}
+                      {r.status === 'active' ? t('rewards.archive') : t('rewards.restore')}
                     </Button>
                   </div>
                 </TableCell>
@@ -139,12 +144,12 @@ function RewardPhoto({ scope, reward }: { scope: VendorScope; reward: Reward }) 
   };
   const upload = useMutation({
     mutationFn: (f: File) => scope.uploadRewardImage(reward.id, f),
-    onSuccess: () => done(`Photo saved for ${reward.name}`),
+    onSuccess: () => done(t('rewards.photoSaved', { name: reward.name })),
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const remove = useMutation({
     mutationFn: () => scope.removeRewardImage(reward.id),
-    onSuccess: () => done('Photo removed'),
+    onSuccess: () => done(t('rewards.photoRemoved')),
     onError: (e) => void toast.error(errorMessage(e)),
   });
   const busy = upload.isPending || remove.isPending;
@@ -155,7 +160,7 @@ function RewardPhoto({ scope, reward }: { scope: VendorScope; reward: Reward }) 
       <button
         type="button"
         disabled={!canEdit || busy}
-        title={canEdit ? (reward.imageUrl ? 'Replace photo' : 'Add photo') : undefined}
+        title={canEdit ? (reward.imageUrl ? t('rewards.replacePhoto') : t('rewards.addPhoto')) : undefined}
         onClick={() => input.current?.click()}
         className="flex size-14 items-center justify-center overflow-hidden rounded-lg border bg-muted text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 enabled:cursor-pointer enabled:hover:border-primary"
       >
@@ -172,9 +177,9 @@ function RewardPhoto({ scope, reward }: { scope: VendorScope; reward: Reward }) 
       {canEdit && reward.imageUrl && !busy ? (
         <button
           type="button"
-          aria-label="Remove photo"
+          aria-label={t('rewards.removePhoto')}
           onClick={() => remove.mutate()}
-          className="absolute -top-1.5 -right-1.5 hidden size-5 items-center justify-center rounded-full border bg-card text-destructive shadow-sm group-hover:flex"
+          className="absolute -top-1.5 -end-1.5 hidden size-5 items-center justify-center rounded-full border bg-card text-destructive shadow-sm group-hover:flex"
         >
           <X className="size-3" />
         </button>
@@ -202,7 +207,7 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
     mutationFn: (body: Partial<Reward>) => (isNew ? scope.createReward(body) : scope.updateReward(current!.id, body)),
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
-      toast.success(isNew ? `${r.name} added` : 'Saved');
+      toast.success(isNew ? t('rewards.addedToast', { name: r.name }) : t('common.saved'));
       onClose();
     },
   });
@@ -218,7 +223,7 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
     >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isNew ? 'Add reward' : 'Edit reward'}</DialogTitle>
+          <DialogTitle>{isNew ? t('rewards.add') : t('rewards.edit')}</DialogTitle>
         </DialogHeader>
         <form
           id="reward-form"
@@ -237,16 +242,16 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
             });
           }}
         >
-          <Field label="Name (English)" htmlFor="reward-name">
-            <Input id="reward-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="Free coffee" autoFocus />
+          <Field label={t('rewards.nameEn')} htmlFor="reward-name">
+            <Input id="reward-name" name="name" dir="ltr" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="Free coffee" autoFocus />
           </Field>
-          <Field label="Name (Arabic)" htmlFor="reward-name-ar">
+          <Field label={t('rewards.nameAr')} htmlFor="reward-name-ar">
             <Input id="reward-name-ar" name="nameAr" dir="rtl" maxLength={120} defaultValue={current?.nameAr ?? ''} placeholder="قهوة مجانية" />
           </Field>
-          <Field label="Description (English)" htmlFor="reward-desc">
-            <Textarea id="reward-desc" name="description" rows={2} maxLength={500} defaultValue={current?.description ?? ''} placeholder="Any coffee, any size" />
+          <Field label={t('rewards.descEn')} htmlFor="reward-desc">
+            <Textarea id="reward-desc" name="description" dir="ltr" rows={2} maxLength={500} defaultValue={current?.description ?? ''} placeholder="Any coffee, any size" />
           </Field>
-          <Field label="Description (Arabic)" htmlFor="reward-desc-ar">
+          <Field label={t('rewards.descAr')} htmlFor="reward-desc-ar">
             <Textarea
               id="reward-desc-ar"
               name="descriptionAr"
@@ -257,21 +262,21 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
               placeholder="أي قهوة، أي حجم"
             />
           </Field>
-          <Field label="Cost (points)" htmlFor="reward-cost">
+          <Field label={t('rewards.costLabel')} htmlFor="reward-cost">
             <Input id="reward-cost" name="pointsCost" type="number" required min={1} max={1000000} step={1} defaultValue={current?.pointsCost} />
           </Field>
-          <Field label="Display order" htmlFor="reward-order" hint="Lower shows first">
-            <Input id="reward-order" name="sortOrder" type="number" min={0} max={10000} step={1} defaultValue={current?.sortOrder ?? ''} placeholder="Last" />
+          <Field label={t('rewards.order')} htmlFor="reward-order" hint={t('rewards.orderHint')}>
+            <Input id="reward-order" name="sortOrder" type="number" min={0} max={10000} step={1} defaultValue={current?.sortOrder ?? ''} placeholder={t('rewards.last')} />
           </Field>
           <ErrorAlert error={save.error} className="sm:col-span-2" />
         </form>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="reward-form" disabled={save.isPending}>
             {save.isPending ? <Loader2 className="animate-spin" /> : null}
-            {isNew ? 'Add reward' : 'Save'}
+            {isNew ? t('rewards.add') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

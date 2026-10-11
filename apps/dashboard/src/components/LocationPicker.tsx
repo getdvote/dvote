@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { t } from '../i18n';
 import { cityFromNames, type CityKey } from '../lib/cities';
 
 export interface LatLng {
@@ -128,9 +129,9 @@ export function LocationPicker({
       });
       const rows = (await res.json()) as { display_name: string; lat: string; lon: string }[];
       setResults(rows.map((r) => ({ name: r.display_name, at: { lat: Number(r.lat), lng: Number(r.lon) } })));
-      if (!rows.length) setProblem('No place found. Try another name, or click the map.');
+      if (!rows.length) setProblem(t('map.noPlace'));
     } catch {
-      setProblem("Couldn't search right now. Paste a Google Maps link or click the map instead.");
+      setProblem(t('map.searchFailed'));
     } finally {
       setSearching(false);
     }
@@ -143,17 +144,17 @@ export function LocationPicker({
     if (p) {
       choose(p);
     } else if (/goo\.gl|maps\.app/.test(text)) {
-      setProblem('Short links have no coordinates: open the link in your browser, then copy the full address from the address bar.');
+      setProblem(t('map.shortLink'));
     } else {
-      setProblem("That link has no coordinates. In Google Maps, open the place and copy the link from the address bar.");
+      setProblem(t('map.noCoords'));
     }
   }
 
   function locateMe() {
-    if (!navigator.geolocation) return setProblem("This browser can't share its location.");
+    if (!navigator.geolocation) return setProblem(t('map.noGeo'));
     navigator.geolocation.getCurrentPosition(
       (pos) => choose({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setProblem('Location permission was refused.'),
+      () => setProblem(t('map.refused')),
       { enableHighAccuracy: true, timeout: 10_000 },
     );
   }
@@ -162,7 +163,7 @@ export function LocationPicker({
     <div className="grid gap-2.5">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -172,15 +173,15 @@ export function LocationPicker({
                 void search();
               }
             }}
-            placeholder="Search a place or address"
-            className="pl-9"
-            aria-label="Search a place"
+            placeholder={t('map.searchPlaceholder')}
+            className="ps-9"
+            aria-label={t('map.searchLabel')}
           />
         </div>
         <Button type="button" variant="outline" onClick={() => void search()} disabled={searching}>
-          {searching ? <Loader2 className="animate-spin" /> : 'Search'}
+          {searching ? <Loader2 className="animate-spin" /> : t('common.search')}
         </Button>
-        <Button type="button" variant="outline" size="icon" title="Use my current location" aria-label="Use my current location" onClick={locateMe}>
+        <Button type="button" variant="outline" size="icon" title={t('map.myLocation')} aria-label={t('map.myLocation')} onClick={locateMe}>
           <Crosshair />
         </Button>
       </div>
@@ -191,7 +192,7 @@ export function LocationPicker({
             <li key={i}>
               <button
                 type="button"
-                className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
+                className="flex w-full items-start gap-2 px-3 py-2 text-start hover:bg-muted"
                 onClick={() => {
                   choose(r.at);
                   setResults(null);
@@ -206,8 +207,8 @@ export function LocationPicker({
       ) : null}
 
       <div className="relative">
-        <Link2 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={link} onChange={(e) => applyLink(e.target.value)} placeholder="…or paste a Google Maps link" className="pl-9" aria-label="Google Maps link" />
+        <Link2 className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input value={link} onChange={(e) => applyLink(e.target.value)} placeholder={t('map.linkPlaceholder')} className="ps-9" dir="ltr" aria-label={t('map.linkLabel')} />
       </div>
 
       <div className="h-64 overflow-hidden rounded-lg border">
@@ -228,15 +229,17 @@ export function LocationPicker({
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         {value ? (
           <span className="text-muted-foreground tabular-nums">
-            <MapPin className="mr-1 inline size-3.5 text-primary" />
-            {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+            <MapPin className="me-1 inline size-3.5 text-primary" />
+            <span dir="ltr">
+              {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+            </span>
           </span>
         ) : (
-          <span className="text-muted-foreground">No location yet: click the map where the shop is.</span>
+          <span className="text-muted-foreground">{t('map.none')}</span>
         )}
         {value ? (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
-            <X /> Clear location
+            <X /> {t('map.clear')}
           </Button>
         ) : null}
       </div>

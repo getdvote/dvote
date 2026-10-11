@@ -1,3 +1,4 @@
+import { getLanguage } from '../i18n';
 /**
  * Cities a branch can be in (Egypt): the key is what the API stores. `aka` = other spellings
  * OpenStreetMap uses, for filling the city from a map pin.
@@ -61,7 +62,17 @@ export type CityKey = (typeof CITIES)[number]['key'];
 /** Cities A–Z for the picker. */
 export const CITIES_AZ = [...CITIES].sort((a, b) => a.en.localeCompare(b.en));
 
-export const cityName = (key: string | null) => CITIES.find((c) => c.key === key)?.en ?? null;
+/** Sorted by the name in the dashboard language. */
+export const citiesSorted = () =>
+  getLanguage() === 'ar' ? [...CITIES].sort((a, b) => a.ar.localeCompare(b.ar, 'ar')) : CITIES_AZ;
+
+/** The city's name in the dashboard language. */
+export const cityName = (key: string | null) => {
+  const c = CITIES.find((x) => x.key === key);
+  return c ? (getLanguage() === 'ar' ? c.ar : c.en) : null;
+};
+/** The city's name in the dashboard language, from a list entry. */
+export const cityLabel = (c: { en: string; ar: string }) => (getLanguage() === 'ar' ? c.ar : c.en);
 
 /**
  * "El-Mansoura City" → "mansoura": lower case, no article ("al", "el", and OSM's sun-letter

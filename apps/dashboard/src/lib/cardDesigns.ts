@@ -1,4 +1,5 @@
 import type { VendorCategory } from './api';
+import { t } from '../i18n';
 
 /**
  * The 10 loyalty-card designs a vendor picks from (vendors.card_design 1-10). The customer app
@@ -45,4 +46,8 @@ export const VENDOR_CATEGORIES: { value: VendorCategory; label: string }[] = [
   { value: 'juice_bar', label: 'Juice bar' },
 ];
 
-export const categoryLabel = (c: VendorCategory | null) => VENDOR_CATEGORIES.find((x) => x.value === c)?.label ?? null;
+/** The category in the dashboard language (the English labels above are the fallback). */
+export const categoryLabel = (c: VendorCategory | null) => (c ? t(`categories.${c}`) : null);
+
+/** A design's name in the dashboard language. */
+export const designName = (d: CardDesign) => t(`designs.d${d.id}` as 'designs.d1');

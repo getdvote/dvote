@@ -16,7 +16,8 @@ import { WeeklyHoursEditor } from '../../components/WeeklyHoursEditor';
 import { TableState } from '../../components/TableState';
 import { errorMessage, type Branch, type HoursSlot } from '../../lib/api';
 import { hoursSummary } from '../../lib/hours';
-import { CITIES_AZ, cityName, type CityKey } from '../../lib/cities';
+import { cityLabel, cityName, citiesSorted, type CityKey } from '../../lib/cities';
+import { t } from '../../i18n';
 import type { VendorScope } from '../../lib/scope';
 import { BranchNow } from './BranchNow';
 import { BranchPhotos, StagedBranchPhotos } from './ImagesTab';
@@ -38,17 +39,17 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
     onSuccess: (b) => {
       void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
       void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
-      toast.success(b.status === 'active' ? `${b.name} reopened` : `${b.name} closed`);
+      toast.success(b.status === 'active' ? t('branches.reopenedToast', { name: b.name }) : t('branches.closedToast', { name: b.name }));
     },
     onError: (e) => void toast.error(errorMessage(e)),
   });
 
   return (
     <>
-      <TabToolbar hint="Customers see open branches on the shop page, with directions.">
+      <TabToolbar hint={t('branches.hint')}>
         {scope.can.editVendor ? (
           <Button onClick={() => setEditing('new')}>
-            <Plus /> Add branch
+            <Plus /> {t('branches.add')}
           </Button>
         ) : null}
       </TabToolbar>
@@ -57,20 +58,20 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-4">Branch</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Map</TableHead>
-              <TableHead>Photos</TableHead>
-              <TableHead>Now</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="pr-4" />
+              <TableHead className="ps-4">{t('common.branch')}</TableHead>
+              <TableHead>{t('branches.address')}</TableHead>
+              <TableHead>{t('branches.map')}</TableHead>
+              <TableHead>{t('branches.photos')}</TableHead>
+              <TableHead>{t('branches.now')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
+              <TableHead className="pe-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={7} emptyText="No branches yet" />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={7} emptyText={t('branches.empty')} />
             {data?.map((b) => (
               <TableRow key={b.id}>
-                <TableCell className="pl-4">
+                <TableCell className="ps-4">
                   <div className="font-semibold">{b.name}</div>
                   {hoursSummary(b.hours) ? <div className="text-xs text-muted-foreground tabular-nums">{hoursSummary(b.hours)}</div> : null}
                 </TableCell>
@@ -85,10 +86,10 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 text-primary hover:underline"
                     >
-                      <MapPin className="size-3.5" /> {b.lat.toFixed(4)}, {b.lng.toFixed(4)}
+                      <MapPin className="size-3.5" /> <span dir="ltr">{b.lat.toFixed(4)}, {b.lng.toFixed(4)}</span>
                     </a>
                   ) : (
-                    <span className="text-muted-foreground">Not set</span>
+                    <span className="text-muted-foreground">{t('branches.notSet')}</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -102,10 +103,10 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
                 <TableCell>
                   <StatusTag status={b.status} />
                 </TableCell>
-                <TableCell className="pr-4">
+                <TableCell className="pe-4">
                   <div className={scope.can.editVendor ? 'flex justify-end gap-2' : 'hidden'}>
                     <Button size="sm" variant="outline" onClick={() => setEditing(b)}>
-                      Edit
+                      {t('common.edit')}
                     </Button>
                     <Button
                       size="sm"
@@ -113,7 +114,7 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
                       disabled={toggle.isPending && toggle.variables?.id === b.id}
                       onClick={() => toggle.mutate(b)}
                     >
-                      {b.status === 'active' ? 'Close' : 'Reopen'}
+                      {b.status === 'active' ? t('branches.close') : t('branches.reopen')}
                     </Button>
                   </div>
                 </TableCell>
@@ -126,8 +127,8 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
       <Dialog open={photosOf !== null} onOpenChange={(o) => !o && setPhotosOf(null)}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{photosOf?.name} · photos</DialogTitle>
-            <DialogDescription>Shown on the shop page in the app, with the branch's directions.</DialogDescription>
+            <DialogTitle>{t('branches.photosOf', { name: photosOf?.name ?? '' })}</DialogTitle>
+            <DialogDescription>{t('branches.photosText')}</DialogDescription>
           </DialogHeader>
           {photosOf ? <BranchPhotos scope={scope} branchId={photosOf.id} /> : null}
         </DialogContent>
@@ -175,8 +176,8 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
       void qc.invalidateQueries({ queryKey: ['branches', scope.key] });
       void qc.invalidateQueries({ queryKey: ['vendor', scope.key] });
       void qc.invalidateQueries({ queryKey: ['images', scope.key] });
-      toast.success(isNew ? `${branch.name} added` : 'Saved');
-      if (failed) toast.error(`${failed} photo${failed > 1 ? 's' : ''} didn't upload. Add ${failed > 1 ? 'them' : 'it'} from the branch's Photos.`);
+      toast.success(isNew ? t('branches.addedToast', { name: branch.name }) : t('common.saved'));
+      if (failed) toast.error(t('branches.photosFailed', { count: failed }));
       onClose();
     },
   });
@@ -192,7 +193,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
     >
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isNew ? 'Add branch' : 'Edit branch'}</DialogTitle>
+          <DialogTitle>{isNew ? t('branches.add') : t('branches.edit')}</DialogTitle>
         </DialogHeader>
         <form
           id="branch-form"
@@ -210,11 +211,11 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
             });
           }}
         >
-          <Field label="Branch name" htmlFor="branch-name">
-            <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="e.g. Joy Corner Smouha" autoFocus />
+          <Field label={t('branches.name')} htmlFor="branch-name">
+            <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder={t('branches.namePlaceholder')} autoFocus />
           </Field>
           <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
-            <Field label="Address" htmlFor="branch-address">
+            <Field label={t('branches.address')} htmlFor="branch-address">
               <Textarea
                 id="branch-address"
                 name="address"
@@ -222,19 +223,19 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
                 maxLength={500}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street and area, e.g. 14 Victor Emmanuel St, Smouha"
+                placeholder={t('branches.addressPlaceholder')}
               />
             </Field>
-            <Field label="City" htmlFor="branch-city">
+            <Field label={t('branches.city')} htmlFor="branch-city">
               <Select value={city ?? NO_CITY} onValueChange={(v) => setCity(v === NO_CITY ? null : (v as CityKey))}>
                 <SelectTrigger id="branch-city" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value={NO_CITY}>Not set</SelectItem>
-                  {CITIES_AZ.map((c) => (
+                  <SelectItem value={NO_CITY}>{t('branches.notSet')}</SelectItem>
+                  {citiesSorted().map((c) => (
                     <SelectItem key={c.key} value={c.key}>
-                      {c.en}
+                      {cityLabel(c)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -243,22 +244,22 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
           </div>
           <WeeklyHoursEditor value={hours} onChange={setHours} />
           <div className="grid gap-2">
-            <span className="text-sm font-medium">Location on the map</span>
+            <span className="text-sm font-medium">{t('branches.location')}</span>
             <LocationPicker value={location} onChange={setLocation} onAddress={fillAddress} />
           </div>
           <div className="grid gap-2">
-            <span className="text-sm font-medium">Photos</span>
+            <span className="text-sm font-medium">{t('branches.photos')}</span>
             {current ? <BranchPhotos scope={scope} branchId={current.id} /> : <StagedBranchPhotos files={newPhotos} onChange={setNewPhotos} />}
           </div>
           <ErrorAlert error={save.error} />
         </form>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="branch-form" disabled={save.isPending}>
             {save.isPending ? <Loader2 className="animate-spin" /> : null}
-            {isNew ? 'Add branch' : 'Save'}
+            {isNew ? t('branches.add') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

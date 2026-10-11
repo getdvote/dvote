@@ -103,6 +103,15 @@ describe('Admin point corrections: adjust a card, undo a mistyped collect (e2e)'
     };
     expect(detail.events.find((e) => e.id === wrong)?.reversed).toBe(true);
     expect(detail.events.find((e) => e.type === 'adjust')?.adminName).toBe(`Adj ${run}`);
+
+    // History a page at a time: 3 rows (2 collects + the undo), 2 per page.
+    const p1 = (await as('admin', 'get', `/api/admin/users/${userId}/events?page=1&pageSize=2`).expect(200)).body;
+    const p2 = (await as('admin', 'get', `/api/admin/users/${userId}/events?page=2&pageSize=2`).expect(200)).body;
+    expect(p1).toMatchObject({ total: 3, page: 1, pageSize: 2 });
+    expect(p1.items).toHaveLength(2);
+    expect(p2.items).toHaveLength(1);
+    expect(p1.items[0].type).toBe('adjust');
+    await as('admin', 'get', `/api/admin/users/${userId}/events?pageSize=51`).expect(400);
   });
 
   it('adjust: add / take points with a reason; never below 0; same key = applied once', async () => {

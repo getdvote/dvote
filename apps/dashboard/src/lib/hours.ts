@@ -1,21 +1,26 @@
 import dayjs from 'dayjs';
 import type { Branch, HoursSlot } from './api';
+import { t } from '../i18n';
 
 /** Egypt's week starts on Saturday: rows are shown in this order (0 = Sunday). */
 export const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5];
-export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** Day name in the dashboard language (0 = Sunday). */
+export const dayName = (day: number) => t(`days.d${day}` as `days.d0`);
 export const MAX_SLOTS_PER_DAY = 3;
 
 const minutes = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3, 5));
-const span = (s: HoursSlot) => `${s.opensAt}–${s.closesAt}`;
+/** "09:00–23:00", kept left-to-right inside Arabic text (Unicode left-to-right isolate). */
+const LRI = String.fromCharCode(0x2066);
+const PDI = String.fromCharCode(0x2069);
+const span = (s: HoursSlot) => `${LRI}${s.opensAt}–${s.closesAt}${PDI}`;
 
 /** One line for a table cell: "Every day 09:00–23:00", or today's slots when days differ. */
 export function hoursSummary(hours: HoursSlot[] | null, now = dayjs()): string | null {
   if (!hours?.length) return null;
   const byDay = WEEK_ORDER.map((d) => hours.filter((s) => s.day === d).map(span).join(', '));
-  if (byDay.every((d) => d && d === byDay[0])) return `Every day ${byDay[0]}`;
+  if (byDay.every((d) => d && d === byDay[0])) return t('hours.everyDay', { hours: byDay[0] });
   const today = hours.filter((s) => s.day === now.day());
-  return today.length ? `Today ${today.map(span).join(', ')}` : 'Closed today';
+  return today.length ? t('hours.today', { hours: today.map(span).join(', ') }) : t('hours.closedToday');
 }
 
 export type BranchState = 'open' | 'closed' | 'paused' | 'unknown';
@@ -39,9 +44,4 @@ export function branchState(b: Pick<Branch, 'hours' | 'pausedUntil'>, now = dayj
   return open ? 'open' : 'closed';
 }
 
-export const STATE_LABEL: Record<BranchState, string> = {
-  open: 'Open now',
-  closed: 'Closed now',
-  paused: 'Temporarily closed',
-  unknown: 'No hours set',
-};
+export const stateLabel = (state: BranchState) => t(`hours.state.${state}`);

@@ -23,6 +23,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { DvoteLogo } from '../components/DvoteLogo';
 import { initial } from '../components/PageHeader';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { LanguageToggle } from '../components/LanguageToggle';
+import { t, useEnglishOnly, useI18n } from '../i18n';
 import { useAuth } from '../lib/auth';
 
 export interface NavItem {
@@ -40,6 +42,7 @@ const NAV: NavItem[] = [
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
+  useEnglishOnly();
   const { admin } = useAuth();
   return (
     <SideLayout nav={NAV} badge="ADMIN" person={{ name: admin?.name ?? '', email: admin?.email ?? '' }}>
@@ -55,6 +58,7 @@ export function SideLayout({
   top,
   headerExtra,
   person,
+  languageSwitch,
   children,
 }: {
   nav: NavItem[];
@@ -64,15 +68,18 @@ export function SideLayout({
   /** Shown under the logo (e.g. the vendor's logo and name). */
   top?: ReactNode;
   person: { name: string; email: string };
+  /** Show the English / Arabic switch (merchant pages are translated; admin pages are English). */
+  languageSwitch?: boolean;
   children: ReactNode;
 }) {
   const { signOut } = useAuth();
+  const { rtl } = useI18n();
   const { pathname } = useLocation();
   const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar side={rtl ? 'right' : 'left'}>
         <SidebarHeader className="px-4 pt-6 pb-5">
           <div className="flex items-center gap-2.5">
             <DvoteLogo height={30} className="text-primary" />
@@ -112,20 +119,21 @@ export function SideLayout({
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => void signOut()}>
-                  <LogOut />
+                <Button variant="ghost" size="icon" aria-label={t('common.signOut')} onClick={() => void signOut()}>
+                  <LogOut className="rtl:rotate-180" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Sign out</TooltipContent>
+              <TooltipContent>{t('common.signOut')}</TooltipContent>
             </Tooltip>
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="bg-background">
+      <SidebarInset className="min-w-0 bg-background">
         <header className="flex h-14 items-center gap-2 px-4 md:px-8">
           <SidebarTrigger />
           <div className="flex-1" />
           {headerExtra}
+          {languageSwitch ? <LanguageToggle /> : null}
           <ThemeToggle />
         </header>
         <main className="mx-auto w-full max-w-7xl px-4 pb-12 md:px-8">{children}</main>

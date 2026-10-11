@@ -10,6 +10,7 @@ import { ConfirmAction } from '../../components/ConfirmAction';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { errorMessage, type VendorImage } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
+import { t } from '../../i18n';
 
 export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 
@@ -29,8 +30,8 @@ export function ImagesTab({ scope }: { scope: VendorScope }) {
     <div className="grid gap-8">
       <ErrorAlert error={error} />
       <Section
-        title="Menu pages"
-        hint={`Up to ${MAX_MENU_IMAGES} pages, shown in this order. Portrait photos of the printed menu work best.`}
+        title={t('images.menuPages')}
+        hint={t('images.menuHint', { max: MAX_MENU_IMAGES })}
         scope={scope}
         kind="menu"
         max={MAX_MENU_IMAGES}
@@ -50,7 +51,7 @@ export function BranchPhotos({ scope, branchId }: { scope: VendorScope; branchId
     <div className="grid gap-4">
       <ErrorAlert error={error} />
       <Section
-        hint={canEdit ? `Up to ${MAX_BRANCH_PHOTOS} photos per branch.` : 'Only this branch\x27s manager or the merchant admin can change these.'}
+        hint={canEdit ? t('images.branchHint', { max: MAX_BRANCH_PHOTOS }) : t('images.branchReadOnly')}
         scope={scope}
         kind="branch_photo"
         max={MAX_BRANCH_PHOTOS}
@@ -76,9 +77,9 @@ export function StagedBranchPhotos({ files, onChange }: { files: File[]; onChang
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Up to {MAX_BRANCH_PHOTOS} photos. They upload when you add the branch.</p>
+        <p className="text-sm text-muted-foreground">{t('images.stagedHint', { max: MAX_BRANCH_PHOTOS })}</p>
         <Button type="button" variant="outline" disabled={room <= 0} onClick={() => fileInput.current?.click()}>
-          <Upload /> Upload
+          <Upload /> {t('images.upload')}
         </Button>
         <input
           ref={fileInput}
@@ -88,7 +89,7 @@ export function StagedBranchPhotos({ files, onChange }: { files: File[]; onChang
           hidden
           onChange={(e) => {
             const picked = Array.from(e.target.files ?? []);
-            if (picked.length > room) toast.error(`Only ${MAX_BRANCH_PHOTOS} allowed: keeping the first ${room}.`);
+            if (picked.length > room) toast.error(t('images.onlyKeeping', { max: MAX_BRANCH_PHOTOS, n: room }));
             onChange([...files, ...picked.slice(0, room)]);
             e.target.value = '';
           }}
@@ -100,7 +101,7 @@ export function StagedBranchPhotos({ files, onChange }: { files: File[]; onChang
             <EmptyMedia variant="icon">
               <ImageIcon />
             </EmptyMedia>
-            <EmptyDescription>No photos yet</EmptyDescription>
+            <EmptyDescription>{t('images.noPhotos')}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -115,7 +116,7 @@ export function StagedBranchPhotos({ files, onChange }: { files: File[]; onChang
                   size="icon-sm"
                   variant="outline"
                   className="bg-card"
-                  aria-label="Remove photo"
+                  aria-label={t('rewards.removePhoto')}
                   onClick={() => onChange(files.filter((_, j) => j !== i))}
                 >
                   <X />
@@ -160,7 +161,7 @@ function Section({
     mutationFn: (file: File) => scope.uploadImage(file, kind, branchId),
     onSuccess: () => {
       refresh();
-      toast.success('Uploaded');
+      toast.success(t('images.uploaded'));
     },
     onError: (e) => void toast.error(errorMessage(e)),
   });
@@ -168,7 +169,7 @@ function Section({
     mutationFn: (id: string) => scope.deleteImage(id),
     onSuccess: () => {
       refresh();
-      toast.success('Deleted');
+      toast.success(t('images.deleted'));
     },
     onError: (e) => void toast.error(errorMessage(e)),
   });
@@ -193,10 +194,10 @@ function Section({
               type="button"
               variant="outline"
               disabled={upload.isPending || loading || room <= 0}
-              title={room <= 0 ? `Limit of ${max} reached: delete one to upload another` : undefined}
+              title={room <= 0 ? t('images.limit', { max }) : undefined}
               onClick={() => fileInput.current?.click()}
             >
-              {upload.isPending ? <Loader2 className="animate-spin" /> : <Upload />} Upload
+              {upload.isPending ? <Loader2 className="animate-spin" /> : <Upload />} {t('images.upload')}
             </Button>
             <input
               ref={fileInput}
@@ -206,7 +207,7 @@ function Section({
               hidden
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
-                if (files.length > room) toast.error(`Only ${max} allowed: uploading the first ${room}.`);
+                if (files.length > room) toast.error(t('images.onlyUploading', { max, n: room }));
                 for (const file of files.slice(0, room)) upload.mutate(file);
                 e.target.value = '';
               }}
@@ -226,7 +227,7 @@ function Section({
             <EmptyMedia variant="icon">
               <ImageIcon />
             </EmptyMedia>
-            <EmptyDescription>Nothing uploaded yet</EmptyDescription>
+            <EmptyDescription>{t('images.nothing')}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -237,7 +238,7 @@ function Section({
                 type="button"
                 className={`${size} overflow-hidden rounded-xl bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50`}
                 onClick={() => setViewing(i)}
-                aria-label={`View image ${i + 1}`}
+                aria-label={t('images.view', { n: i + 1 })}
               >
                 <img src={img.url} alt="" className="size-full object-cover transition-transform group-hover:scale-[1.02]" />
               </button>
@@ -245,12 +246,12 @@ function Section({
                 <span className="rounded-full bg-black/60 px-2 py-px text-xs text-white">{i + 1}</span>
                 {canEdit ? (
                 <ConfirmAction
-                  title="Delete this image?"
-                  description="It is removed from the shop page and can't be recovered."
-                  actionLabel="Delete"
+                  title={t('images.deleteTitle')}
+                  description={t('images.deleteText')}
+                  actionLabel={t('common.delete')}
                   onConfirm={() => remove.mutateAsync(img.id)}
                   trigger={
-                    <Button type="button" size="icon-sm" variant="outline" className="pointer-events-auto bg-card text-destructive hover:text-destructive" aria-label="Delete image">
+                    <Button type="button" size="icon-sm" variant="outline" className="pointer-events-auto bg-card text-destructive hover:text-destructive" aria-label={t('images.deleteImage')}>
                       <Trash2 />
                     </Button>
                   }
@@ -275,22 +276,24 @@ function ImageViewer({ images, index, onChange }: { images: VendorImage[]; index
       <DialogContent
         className="max-w-[calc(100%-2rem)] bg-transparent p-0 ring-0 sm:max-w-3xl"
         onKeyDown={(e) => {
-          if (e.key === 'ArrowRight') go(1);
-          if (e.key === 'ArrowLeft') go(-1);
+          // arrows follow the reading direction
+          const rtl = document.documentElement.dir === 'rtl';
+          if (e.key === 'ArrowRight') go(rtl ? -1 : 1);
+          if (e.key === 'ArrowLeft') go(rtl ? 1 : -1);
         }}
       >
-        <DialogTitle className="sr-only">Image {index !== null ? index + 1 : ''}</DialogTitle>
+        <DialogTitle className="sr-only">{t('images.view', { n: index !== null ? index + 1 : '' })}</DialogTitle>
         {img ? <img src={img.url} alt="" className="max-h-[85vh] w-full rounded-xl object-contain" /> : null}
         {images.length > 1 ? (
           <div className="flex items-center justify-center gap-3">
-            <Button variant="secondary" size="icon" aria-label="Previous image" onClick={() => go(-1)}>
-              <ChevronLeft />
+            <Button variant="secondary" size="icon" aria-label={t('images.previous')} onClick={() => go(-1)}>
+              <ChevronLeft className="rtl:rotate-180" />
             </Button>
             <span className="text-sm text-white tabular-nums">
               {(index ?? 0) + 1} / {images.length}
             </span>
-            <Button variant="secondary" size="icon" aria-label="Next image" onClick={() => go(1)}>
-              <ChevronRight />
+            <Button variant="secondary" size="icon" aria-label={t('images.next')} onClick={() => go(1)}>
+              <ChevronRight className="rtl:rotate-180" />
             </Button>
           </div>
         ) : null}
