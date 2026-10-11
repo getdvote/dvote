@@ -18,6 +18,7 @@ import {
   RedeemResponseDto,
   PreviewScanResponseDto,
 } from './dto/scan-response.dto';
+import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
 import { ScansService } from './scans.service';
 
 /** Used by the staff app after scanning a customer's QR. All staff roles. */
@@ -27,6 +28,7 @@ import { ScansService } from './scans.service';
   description: 'missing_token | invalid_token | token_expired',
 })
 @UseGuards(StaffAuthGuard)
+@UserLimit(LIMITS.scans)
 @Controller('vendor/scans')
 export class ScansController {
   constructor(private readonly scans: ScansService) {}

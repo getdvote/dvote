@@ -418,6 +418,7 @@ export const en = {
     qr_not_found: 'This QR code was not found. Get a new one.',
     feedback_not_configured: "Feedback isn't available yet. Please try again later.",
     vendor_not_found: 'This shop is not on dvote right now.',
+    rate_limited: 'Too many tries. Please wait a minute and try again.',
     insufficient_points: "You don't have enough points for this reward yet.",
     reward_unavailable: 'This reward is no longer available.',
     reward_sold_out: 'This reward is sold out at every branch right now. Try again later.',

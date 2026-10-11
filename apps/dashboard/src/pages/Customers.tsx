@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Ban, CircleCheck, Loader2 } from 'lucide-react';
+import { Ban, CircleCheck, Loader2, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmAction } from '../components/ConfirmAction';
+import { PointsCorrectionDialog, type Correction } from '../components/PointsCorrection';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { Pager, SearchInput, StatusFilter } from '../components/ListControls';
 import { initial, num, PageHeader } from '../components/PageHeader';
@@ -119,6 +120,7 @@ const EVENT: Record<string, { label: string; variant: 'success' | 'warning' | 'b
 function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
   const qc = useQueryClient();
   const { data: u, isLoading } = useQuery({ queryKey: ['user', id], queryFn: () => api.user(id!), enabled: !!id });
+  const [correction, setCorrection] = useState<Correction | null>(null);
 
   const setStatus = useMutation({
     mutationFn: (status: UserStatus) => api.setUserStatus(id!, status),
@@ -198,7 +200,7 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
                 ) : (
                   <ul className="divide-y">
                     {u.cards.map((c) => (
-                      <li key={c.vendorName} className="flex items-center gap-3 py-3">
+                      <li key={c.id} className="flex items-center gap-3 py-3">
                         <Avatar className="size-9">
                           <AvatarImage src={c.vendorLogoUrl ?? undefined} alt="" />
                           <AvatarFallback>{initial(c.vendorName)}</AvatarFallback>
@@ -210,6 +212,14 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
                           </div>
                         </div>
                         <span className="font-semibold tabular-nums">{num(c.balance)} pts</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Add or take away points"
+                          onClick={() => setCorrection({ kind: 'card', cardId: c.id, vendorName: c.vendorName, balance: c.balance })}
+                        >
+                          <SlidersHorizontal /> Adjust
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -227,25 +237,38 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
                     {u.events.map((e, i) => {
                       const t = EVENT[e.type] ?? EVENT.adjust;
                       return (
-                        <li key={i} className="flex items-center gap-3 py-2.5">
+                        <li key={e.id ?? i} className="flex items-center gap-3 py-2.5">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2 text-sm">
                               <Badge variant={t.variant}>{t.label}</Badge>
+                              {e.reversed && <Badge variant="outline">Undone</Badge>}
                               <span>
                                 {e.vendorName}
                                 {e.branchName ? ` · ${e.branchName}` : ''}
                               </span>
                             </div>
                             <div className="mt-0.5 text-xs text-muted-foreground">
-                              {[e.purchaseAmount ? `Bill ${e.purchaseAmount}` : null, e.rewardName, e.reason, dayjs(e.createdAt).format('D MMM YYYY, HH:mm')]
+                              {[e.purchaseAmount ? `Bill ${e.purchaseAmount}` : null, e.rewardName, e.reason, e.adminName ? `by ${e.adminName}` : null, dayjs(e.createdAt).format('D MMM YYYY, HH:mm')]
                                 .filter(Boolean)
                                 .join(' · ')}
                             </div>
                           </div>
-                          <span className={cn('font-semibold tabular-nums', e.delta > 0 && 'text-success')}>
+                          <span className={cn('font-semibold tabular-nums', e.delta > 0 && 'text-success', e.reversed && 'text-muted-foreground line-through')}>
                             {e.delta > 0 ? '+' : ''}
                             {num(e.delta)}
                           </span>
+                          {e.type === 'earn' && !e.reversed && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8"
+                              title="Undo this collect (mistyped bill)"
+                              aria-label="Undo this collect"
+                              onClick={() => setCorrection({ kind: 'undo', eventId: e.id, vendorName: e.vendorName, points: e.delta, bill: e.purchaseAmount })}
+                            >
+                              <Undo2 />
+                            </Button>
+                          )}
                         </li>
                       );
                     })}
@@ -256,6 +279,7 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
           )}
         </div>
       </SheetContent>
+      {id && <PointsCorrectionDialog userId={id} target={correction} onClose={() => setCorrection(null)} />}
     </Sheet>
   );
 }

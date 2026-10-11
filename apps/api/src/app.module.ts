@@ -20,6 +20,7 @@ import { ReportsModule } from './reports/vendor-summary';
 import { LiveModule } from './live/live.module';
 import { SystemModule } from './system/system.module';
 import { FraudFlagsModule } from './fraud-flags/fraud-flags';
+import { RateLimitModule } from './rate-limit/rate-limit';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FraudFlagsModule } from './fraud-flags/fraud-flags';
       cache: true,
       validate: validateEnv,
     }),
+    RateLimitModule,
     PrismaModule,
     LiveModule,
     SystemModule,

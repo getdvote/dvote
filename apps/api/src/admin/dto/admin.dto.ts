@@ -122,6 +122,9 @@ export class AdminUserCardDto {
 
 export class AdminUserEventDto {
   @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) cardId: string;
+  @ApiProperty({ description: 'A collect already undone by an admin' }) reversed: boolean;
+  @ApiProperty({ type: String, nullable: true, description: 'Admin who made an adjust row' }) adminName: string | null;
   @ApiProperty({ enum: ['earn', 'redeem', 'adjust'] }) type: 'earn' | 'redeem' | 'adjust';
   @ApiProperty() delta: number;
   @ApiProperty() vendorName: string;

@@ -237,6 +237,11 @@ export interface UserDetail extends UserListItem {
   }[];
   events: {
     id: string;
+    cardId: string;
+    /** A collect an admin already undid. */
+    reversed: boolean;
+    /** The admin who made an adjust row. */
+    adminName: string | null;
     type: 'earn' | 'redeem' | 'adjust';
     delta: number;
     vendorName: string;
@@ -246,6 +251,17 @@ export interface UserDetail extends UserListItem {
     reason: string | null;
     createdAt: string;
   }[];
+}
+
+/** Result of an admin point correction (one new adjust row in the ledger). */
+export interface AdjustResult {
+  pointEventId: string;
+  cardId: string;
+  delta: number;
+  cardBalance: number;
+  lifetimePoints: number;
+  reason: string;
+  at: string;
 }
 
 /** The signed-in vendor account (GET /api/vendor/staff/me). */
@@ -552,6 +568,11 @@ export const api = {
     call<Page<UserListItem>>('GET', `/api/admin/users${qs(q)}`),
   user: (id: string) => call<UserDetail>('GET', `/api/admin/users/${id}`),
   setUserStatus: (id: string, status: UserStatus) => call<UserDetail>('PATCH', `/api/admin/users/${id}`, { status }),
+  /** Add (positive) or take away (negative) points on one card, with a reason. */
+  adjustCard: (cardId: string, body: { delta: number; reason: string; idempotencyKey: string }) =>
+    call<AdjustResult>('POST', `/api/admin/cards/${cardId}/adjust`, body),
+  /** Undo a mistyped collect: takes back exactly the points it gave. */
+  reverseEvent: (eventId: string, reason: string) => call<AdjustResult>('POST', `/api/admin/point-events/${eventId}/reverse`, { reason }),
 };
 
 /**

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
-import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiConflictResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 import { AdminApi } from '../auth/admin-api.decorator';
 import { CurrentAdmin } from '../auth/current-admin.decorator';
 import type { AdminContext } from '../auth/platform-admin.guard';
 import { ParseUuidPipe } from '../common/uuid';
 import { AdminService } from './admin.service';
+import { AdjustCardDto, AdjustResultDto, PointAdjustService, ReversePointEventDto } from './point-adjust';
 import { QrSourcesQueryDto, QrSourcesResponseDto, QrStatsService } from './qr-stats';
 import {
   AdminMeResponseDto,
@@ -21,6 +22,7 @@ export class AdminController {
   constructor(
     private readonly admin: AdminService,
     private readonly qrStats: QrStatsService,
+    private readonly points: PointAdjustService,
   ) {}
 
   /** The signed-in platform admin (the dashboard calls this after sign-in). */
@@ -65,5 +67,33 @@ export class AdminController {
   @ApiNotFoundResponse({ description: 'user_not_found' })
   setUserStatus(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateUserStatusDto): Promise<AdminUserDetailDto> {
     return this.admin.setUserStatus(id, dto.status);
+  }
+
+  /** Correct a card: add or take away points with a reason (a new "adjust" ledger row). */
+  @Post('cards/:id/adjust')
+  @HttpCode(200)
+  @ApiOkResponse({ type: AdjustResultDto })
+  @ApiNotFoundResponse({ description: 'card_not_found' })
+  @ApiConflictResponse({ description: 'insufficient_points (balance would go below 0), idempotency_key_reused' })
+  adjustCard(
+    @CurrentAdmin() ctx: AdminContext,
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() dto: AdjustCardDto,
+  ): Promise<AdjustResultDto> {
+    return this.points.adjust(ctx.adminId, id, dto);
+  }
+
+  /** Undo a mistyped collect: takes back exactly the points it gave (once per collect). */
+  @Post('point-events/:id/reverse')
+  @HttpCode(200)
+  @ApiOkResponse({ type: AdjustResultDto })
+  @ApiNotFoundResponse({ description: 'point_event_not_found' })
+  @ApiConflictResponse({ description: 'not_reversible (not a collect), already_reversed, insufficient_points (already spent)' })
+  reverseEvent(
+    @CurrentAdmin() ctx: AdminContext,
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() dto: ReversePointEventDto,
+  ): Promise<AdjustResultDto> {
+    return this.points.reverse(ctx.adminId, id, dto);
   }
 }

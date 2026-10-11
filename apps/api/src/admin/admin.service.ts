@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
+import { reverseKey } from './point-adjust';
 import {
   AdminMeResponseDto,
   AdminUserDetailDto,
@@ -159,11 +160,21 @@ export class AdminService {
           vendors: { select: { name: true } },
           branches: { select: { name: true } },
           rewards: { select: { name: true } },
+          platform_admins: { select: { name: true } },
         },
         orderBy: { created_at: 'desc' },
         take: 30,
       }),
     ]);
+    // Collects already undone by an admin (their reversal row has key reverse:<id>).
+    const reversed = new Set(
+      (
+        await this.prisma.point_events.findMany({
+          where: { idempotency_key: { in: events.filter((e) => e.type === 'earn').map((e) => reverseKey(e.id)) } },
+          select: { idempotency_key: true },
+        })
+      ).map((r) => r.idempotency_key.slice('reverse:'.length)),
+    );
 
     return {
       ...listItem(user),
@@ -180,6 +191,9 @@ export class AdminService {
       })),
       events: events.map((e) => ({
         id: e.id,
+        cardId: e.card_id,
+        reversed: reversed.has(e.id),
+        adminName: e.platform_admins?.name ?? null,
         type: e.type,
         delta: e.delta,
         vendorName: e.vendors.name,

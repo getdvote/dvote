@@ -92,6 +92,36 @@ export class Env {
   @IsString()
   FEEDBACK_SHEET_SECRET?: string;
 
+  /** Flood protection (429 rate_limited). Default on; e2e tests turn it off except their own test. */
+  @IsBoolean()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.RATE_LIMIT_ENABLED;
+    return typeof raw === 'string' ? raw.trim().toLowerCase() !== 'false' : true;
+  })
+  RATE_LIMIT_ENABLED: boolean = true;
+
+  /** Requests per minute from one IP address (many phones can share one mobile-network IP). */
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  RATE_LIMIT_IP_PER_MIN: number = 600;
+
+  /** Requests per minute from one signed-in user (some endpoints are stricter). */
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  RATE_LIMIT_USER_PER_MIN: number = 120;
+
+  /**
+   * Behind Cloudflare / a load balancer: how many proxies to trust for the client IP
+   * (Express "trust proxy", e.g. 1 or 2). Unset = connect directly, use the socket address.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  TRUST_PROXY?: number;
+
   /** Comma-separated list of allowed origins; unset = CORS disabled. */
   @IsOptional()
   @IsString()
