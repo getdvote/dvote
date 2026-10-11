@@ -407,6 +407,15 @@ export const en = {
     desserts: 'Desserts',
     juice_bar: 'Juice bar',
   },
+  widgets: {
+    pointsTitle: "My points",
+    pointsEmpty: "Collect points at a shop to see them here.",
+    signIn: "Sign in to dvote to see your points.",
+    pts: "pts",
+    updated: "Updated {time}",
+    qrTitle: "Collect points",
+    qrSubtitle: "Tap to show my QR",
+  },
   errors: {
     network: "Can't reach dvote right now. Check your connection and try again.",
     user_blocked: 'Your account is blocked. Please contact dvote support.',

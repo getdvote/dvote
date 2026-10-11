@@ -41,7 +41,62 @@
           "isAndroidBackgroundLocationEnabled": false,
           "isIosBackgroundLocationEnabled": false
         }
-      ]
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "DvotePoints",
+              "displayName": "My points",
+              "description": "Your points at your top 3 shops.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ]
+              }
+            },
+            {
+              "name": "DvoteQr",
+              "displayName": "Collect points",
+              "description": "Tap to show your dvote QR at the counter.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "DvotePoints",
+              "label": "My points",
+              "description": "Your points at your top 3 shops.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "DvoteQr",
+              "label": "Collect points",
+              "description": "Tap to show your dvote QR at the counter.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2
+            }
+          ]
+        }
+      ],
+      "./plugins/with-androidx-work-fix"
     ],
     "scheme": "dvote",
     "platforms": [

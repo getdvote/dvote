@@ -3,7 +3,7 @@ import QrCodeIcon from '@hugeicons/core-free-icons/QrCodeIcon';
 import Tick02Icon from '@hugeicons/core-free-icons/Tick02Icon';
 import WifiDisconnected01Icon from '@hugeicons/core-free-icons/WifiDisconnected01Icon';
 import { Icon } from '../components/Icon';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,7 +47,27 @@ type Phase =
  * the phone first), was replaced, or couldn't be made, the code gives way to a "Regenerate my
  * QR code" button.
  */
+/**
+ * Opened from the home-screen widget (dvote://qr) the app may start right here: wait for the
+ * stored sign-in, and send a signed-out customer to the welcome screen instead.
+ */
 export default function Qr() {
+  const { loading, session } = useSession();
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
+        <ActivityIndicator color={theme.text} />
+      </View>
+    );
+  }
+  if (!session) return <Redirect href="/welcome" />;
+  return <QrScreen />;
+}
+
+/** Back where the customer came from, or (opened from the widget) to My cards. */
+const close = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/cards'));
+
+function QrScreen() {
   const { purpose, rewardId, rewardName, pointsCost, vendorId, vendorName, logoUrl, cardDesign } = useLocalSearchParams<{
     /** 'redeem' (with rewardId): a reward QR from the reward sheet; otherwise a collect QR */
     purpose?: 'collect' | 'redeem';
@@ -152,7 +172,7 @@ export default function Qr() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
-          onPress={() => router.back()}
+          onPress={close}
           style={({ pressed }) => [styles.close, pressed && { opacity: 0.6 }]}
           hitSlop={8}
         >
@@ -374,7 +394,7 @@ function Done({ result }: { result: QrCollectResult | null }) {
         {result ? (
           <PrimaryButton title={t('qr.viewCard')} onPress={() => router.replace(`/card/${result.cardId}`)} />
         ) : null}
-        <PillButton title={t('common.done')} onPress={() => router.back()} />
+        <PillButton title={t('common.done')} onPress={close} />
       </View>
     </View>
   );
@@ -407,7 +427,7 @@ function RedeemDone({ result }: { result: QrRedeemResult }) {
       </View>
       <View style={styles.footer}>
         <PrimaryButton title={t('qr.viewCard')} onPress={() => router.replace(`/card/${result.cardId}`)} />
-        <PillButton title={t('common.done')} onPress={() => router.back()} />
+        <PillButton title={t('common.done')} onPress={close} />
       </View>
     </View>
   );

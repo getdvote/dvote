@@ -482,6 +482,15 @@ export const ar: Dictionary = {
     desserts: 'حلويات',
     juice_bar: 'محل عصائر',
   },
+  widgets: {
+    pointsTitle: "نقاطي",
+    pointsEmpty: "اجمع النقاط في أي متجر لتظهر هنا.",
+    signIn: "سجّل الدخول إلى dvote لرؤية نقاطك.",
+    pts: "نقطة",
+    updated: "آخر تحديث {time}",
+    qrTitle: "اجمع النقاط",
+    qrSubtitle: "اضغط لعرض رمزي",
+  },
   errors: {
     network: 'لا يمكن الوصول إلى dvote الآن. تحقق من اتصالك وحاول مرة أخرى.',
     user_blocked: 'تم حظر حسابك. تواصل مع دعم dvote.',
