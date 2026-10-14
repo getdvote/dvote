@@ -1,4 +1,4 @@
-import { api, vendorApi, type AccountStatus, type Branch, type PointRule, type Reward, type SoldOut, type Staff, type StaffMe, type StaffRole, type VendorImage } from './api';
+import { api, vendorApi, type AccountStatus, type Branch, type PointRule, type Reward, type RewardBody, type SoldOut, type Staff, type StaffMe, type StaffRole, type VendorImage } from './api';
 
 type RuleBody = { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null };
 
@@ -27,8 +27,8 @@ export interface VendorScope {
   publishRule: (body: RuleBody) => Promise<PointRule>;
   deactivateRule: () => Promise<void>;
   rewards: () => Promise<Reward[]>;
-  createReward: (body: Partial<Reward>) => Promise<Reward>;
-  updateReward: (id: string, body: Partial<Reward>) => Promise<Reward>;
+  createReward: (body: RewardBody) => Promise<Reward>;
+  updateReward: (id: string, body: RewardBody) => Promise<Reward>;
   uploadRewardImage: (id: string, f: File) => Promise<Reward>;
   removeRewardImage: (id: string) => Promise<Reward>;
   images: () => Promise<VendorImage[]>;

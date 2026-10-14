@@ -177,6 +177,7 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 | Date | Decision |
 |---|---|
+| 2026-10-14 | Reward retail value (optional normal selling price, merchant currency) and estimated give-back rate on Insights (retail value is entered in reward forms): retail value / (points cost × spend amount / points per spend). Uses the active rule; rounding, minimum bills and caps can increase actual spend. Migration 15 applied to cloud; local deploy blocked because the configured `postgres` role is missing. |
 | 2026-10-10 | **Vendors are called "merchants" in every app's text** (dashboard, staff app, customer app). Code, API routes and database keep `vendor`. |
 | 2026-10-10 | **Merchant Insights page**: sales through dvote, visits, average bill, customers (new / returning), repeat rate and rewards for any period vs the one before, per branch. Counts only. |
 | 2026-10-10 | **Dashboard home "Needs your attention"**: what stops customers today (no rule, no rewards, branch closed, sold out), unusual activity (a card collecting > 3× a day, a cashier far above their usual, a bill > 5× the branch average) and missing setup, each with the action that fixes it. Unusual activity only points, never blocks. |

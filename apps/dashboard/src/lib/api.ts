@@ -177,10 +177,13 @@ export interface Reward {
   descriptionAr: string | null;
   imageUrl: string | null;
   pointsCost: number;
+  retailValue: string | null;
   status: RewardStatus;
   sortOrder: number;
   createdAt: string;
 }
+
+export type RewardBody = Omit<Partial<Reward>, 'retailValue'> & { retailValue?: number | null };
 
 /** A reward sold out at one open branch right now (until: back on sale at; null = until turned back on). */
 export interface SoldOut {
@@ -354,9 +357,6 @@ export interface RedemptionPage extends Page<RedemptionItem> {
   byReward: { rewardId: string; name: string; imageUrl: string | null; status: RewardStatus; count: number; points: number }[];
 }
 
-/** One "needs your attention" item on the dashboard home (GET /api/vendor/attention). */
-export interface AttentionItem {
-  key: string;
 export type GoLiveStep = 'logo' | 'banner' | 'rule' | 'reward' | 'branch_hours' | 'staff' | 'test_scan';
 /** Go-live checklist for a new merchant (GET /api/vendor/go-live, merchant admin only). */
 export interface GoLive {
@@ -370,6 +370,9 @@ export interface GoLive {
   firstScanAt: string | null;
 }
 
+/** One "needs your attention" item on the dashboard home (GET /api/vendor/attention). */
+export interface AttentionItem {
+  key: string;
   /** now = affects customers / operations today; setup = profile still incomplete */
   group: 'now' | 'setup';
   tone: 'critical' | 'warning' | 'info';
@@ -445,9 +448,6 @@ export interface Insights {
   updatedAt: string;
 }
 
-/** An error from the API with its stable `code` (e.g. mfa_required). */
-export class ApiError extends Error {
-  constructor(
 /** Per reward: given in the period, customers who can afford it or are close now (GET /api/vendor/reward-performance). Counts only. */
 export interface RewardPerformance {
   range: { from: string; to: string };
@@ -478,6 +478,9 @@ export interface RewardPerformance {
   updatedAt: string;
 }
 
+/** An error from the API with its stable `code` (e.g. mfa_required). */
+export class ApiError extends Error {
+  constructor(
     readonly status: number,
     readonly code: string,
     message: string,
@@ -565,8 +568,8 @@ export const api = {
   deactivateRule: (vendorId: string) => call<void>('DELETE', `/api/admin/vendors/${vendorId}/point-rules/active`),
 
   rewards: (vendorId: string) => call<Reward[]>('GET', `/api/admin/vendors/${vendorId}/rewards`),
-  createReward: (vendorId: string, body: Partial<Reward>) => call<Reward>('POST', `/api/admin/vendors/${vendorId}/rewards`, body),
-  updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/admin/rewards/${id}`, body),
+  createReward: (vendorId: string, body: RewardBody) => call<Reward>('POST', `/api/admin/vendors/${vendorId}/rewards`, body),
+  updateReward: (id: string, body: RewardBody) => call<Reward>('PATCH', `/api/admin/rewards/${id}`, body),
   uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/admin/rewards/${id}/image`, file(f)),
   removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/admin/rewards/${id}/image`),
 
@@ -602,14 +605,14 @@ export const vendorApi = {
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
   summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
   attention: () => call<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
+  goLive: () => call<GoLive>('GET', '/api/vendor/go-live'),
   insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
     call<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
-  redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
-  goLive: () => call<GoLive>('GET', '/api/vendor/go-live'),
-  events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
-
   rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>
     call<RewardPerformance>('GET', `/api/vendor/reward-performance${qs({ ...q })}`),
+  redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
+  events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
+
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
   updateProfile: (body: { name?: string; contactEmail?: string | null } & Partial<VendorBranding>) =>
     call<Vendor>('PATCH', '/api/vendor/profile', body),
@@ -630,8 +633,8 @@ export const vendorApi = {
   deactivateRule: () => call<void>('DELETE', '/api/vendor/point-rules/active'),
 
   rewards: () => call<Reward[]>('GET', '/api/vendor/rewards'),
-  createReward: (body: Partial<Reward>) => call<Reward>('POST', '/api/vendor/rewards', body),
-  updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
+  createReward: (body: RewardBody) => call<Reward>('POST', '/api/vendor/rewards', body),
+  updateReward: (id: string, body: RewardBody) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
   uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/vendor/rewards/${id}/image`, file(f)),
   removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/vendor/rewards/${id}/image`),
   soldOuts: () => call<SoldOut[]>('GET', '/api/vendor/rewards/sold-out'),

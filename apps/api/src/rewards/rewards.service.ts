@@ -36,6 +36,7 @@ export class RewardsService {
         description: blankToNull(dto.description) ?? null,
         description_ar: blankToNull(dto.descriptionAr) ?? null,
         points_cost: dto.pointsCost,
+        retail_value: dto.retailValue,
         sort_order: dto.sortOrder ?? (last._max.sort_order ?? 0) + 1,
       },
     });
@@ -52,6 +53,7 @@ export class RewardsService {
         description: blankToNull(dto.description),
         description_ar: blankToNull(dto.descriptionAr),
         points_cost: dto.pointsCost,
+        retail_value: dto.retailValue,
         sort_order: dto.sortOrder,
         status: dto.status,
       },

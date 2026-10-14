@@ -18,6 +18,7 @@ import { vendorApi, type InsightsKpis } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
 import { RewardPerformance } from './RewardPerformance';
+import { GiveBackRates } from './give-back-rates';
 
 type Metric = 'sales' | 'visits';
 
@@ -173,6 +174,8 @@ export function MyInsights() {
           )}
         </CardContent>
       </Card>
+
+      <GiveBackRates scope={scope} />
 
       <RewardPerformance query={query} money={money} />
 

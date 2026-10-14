@@ -377,6 +377,15 @@ export const ar: Dictionary = {
     location: "الموقع على الخريطة",
   },
   rewards: {
+    retailValue: "سعر البيع ({currency})",
+    retailHint: "سعر البيع المعتاد للمكافأة، وليس تكلفتها عليك. اختياري.",
+    giveBackScope: "المكافآت وقاعدة النقاط النشطة حاليًا، في جميع الفروع. لا تعتمد على الفترة المحددة.",
+    giveBack: "نسبة العائد للعميل",
+    giveBackHint: "تقدير حسب قاعدة النقاط الحالية. التقريب والحد الأدنى للفاتورة وسقف النقاط قد تزيد الإنفاق الفعلي. هذه قيمة المكافأة وليست استردادًا نقديًا.",
+    addRetail: "أضف سعر البيع لعرض النسبة.",
+    needsRule: "فعّل قاعدة نقاط لعرض النسبة.",
+    percentBack: "عائد حوالي {rate}%",
+    spendForReward: "{points} نقطة ≈ إنفاق {amount} {currency}",
     restoredToast: "تمت استعادة {name}",
     archivedToast: "تمت أرشفة {name}",
     hintSoldOut: "نفد شيء ما؟ حدده كنافد في فرع: لن يستطيع الموظفون هناك منحه، ويرى العملاء أين نفد. المكافآت المؤرشفة لا يمكن استبدالها.",
@@ -595,14 +604,6 @@ export const ar: Dictionary = {
     updated: "آخر تحديث {time}. الأيام بتوقيت القاهرة.",
     noEarlier: "لا توجد بيانات سابقة للمقارنة",
     vsPreviousShort: "مقارنة بالسابق",
-  },
-  customers: {
-    segments: {
-      new: {
-        label: "جدد",
-        description: "أول شراء خلال آخر 30 يومًا.",
-      },
-      returning: {
     rewards: {
       title: "أداء المكافآت",
       description: "المكافآت المقدمة {range}. الأرصدة حتى الآن، في كل الفروع.",
@@ -632,6 +633,14 @@ export const ar: Dictionary = {
         closeReward: "عملاء لديهم 80–99% من تكلفة هذه المكافأة الآن.",
       },
     },
+  },
+  customers: {
+    segments: {
+      new: {
+        label: "جدد",
+        description: "أول شراء خلال آخر 30 يومًا.",
+      },
+      returning: {
         label: "عائدون",
         description: "أول شراء منذ أكثر من 30 يومًا؛ زار مؤخرًا بأقل من 5 مشتريات في 90 يومًا.",
       },

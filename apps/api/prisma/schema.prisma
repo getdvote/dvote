@@ -324,6 +324,7 @@ model rewards {
   name_ar          String?            @db.VarChar(120)
   description_ar   String?            @db.VarChar(500)
   image_path       String?            @db.VarChar(300)
+  retail_value     Decimal?           @db.Decimal(12, 2)
   point_events     point_events[]
   qr_codes         qr_codes[]
   redemptions      redemptions[]

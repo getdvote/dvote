@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import type { rewards } from '../../generated/prisma/client.js';
 import { reward_status } from '../../generated/prisma/enums.js';
 
@@ -35,6 +35,14 @@ export class CreateRewardDto {
   @Min(1)
   @Max(1000000)
   pointsCost: number;
+
+  @ApiPropertyOptional({ example: 70, nullable: true, description: 'Normal selling price in merchant currency; null clears it' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(99999999.99)
+  retailValue?: number | null;
 
   @ApiPropertyOptional({ example: 1, description: 'Display order (low first)' })
   @IsOptional()
@@ -82,6 +90,9 @@ export class RewardResponseDto {
   @ApiProperty({ example: 300 })
   pointsCost: number;
 
+  @ApiProperty({ type: String, nullable: true, example: '70.00' })
+  retailValue: string | null;
+
   @ApiProperty({ enum: reward_status, enumName: 'RewardStatus' })
   status: reward_status;
 
@@ -101,6 +112,7 @@ export class RewardResponseDto {
       descriptionAr: r.description_ar,
       imageUrl: r.image_url,
       pointsCost: r.points_cost,
+      retailValue: r.retail_value?.toFixed(2) ?? null,
       status: r.status,
       sortOrder: r.sort_order,
       createdAt: r.created_at.toISOString(),

@@ -381,6 +381,15 @@ export const en = {
     location: "Location on the map",
   },
   rewards: {
+    retailValue: "Retail value ({currency})",
+    retailHint: "Normal selling price of this reward, not your cost. Optional.",
+    giveBackScope: "Current active rewards and earning rule, across all branches. Independent of the selected date range.",
+    giveBack: "Give-back rate",
+    giveBackHint: "Estimate using the active earning rule. Bill rounding, minimum purchases and point caps can increase actual spend. This is reward value, not cash back.",
+    addRetail: "Add a retail value to see the rate.",
+    needsRule: "Publish an earning rule to see the rate.",
+    percentBack: "About {rate}% back",
+    spendForReward: "{points} pts ≈ {amount} {currency} spent",
     restoredToast: "{name} restored",
     archivedToast: "{name} archived",
     hintSoldOut: "Ran out of something? Mark it sold out at a branch: staff there can't give it, and customers see where it's sold out. Archived rewards can't be redeemed.",
@@ -599,14 +608,6 @@ export const en = {
     updated: "Updated {time}. Days are Cairo days.",
     noEarlier: "No earlier data to compare",
     vsPreviousShort: "vs previous",
-  },
-  customers: {
-    segments: {
-      new: {
-        label: "New",
-        description: "First purchase in the last 30 days.",
-      },
-      returning: {
     rewards: {
       title: "Reward performance",
       description: "Rewards given {range}. Balances are as of now, across all branches.",
@@ -636,6 +637,14 @@ export const en = {
         closeReward: "Customers with 80–99% of this reward's cost now.",
       },
     },
+  },
+  customers: {
+    segments: {
+      new: {
+        label: "New",
+        description: "First purchase in the last 30 days.",
+      },
+      returning: {
         label: "Returning",
         description: "First purchase over 30 days ago; visited recently, with fewer than 5 purchases in 90 days.",
       },
