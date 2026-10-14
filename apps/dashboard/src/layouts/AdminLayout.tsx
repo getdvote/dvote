@@ -1,5 +1,5 @@
-import { ChartColumn, LayoutDashboard, LogOut, Server, Store, Users } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
+import { ChartColumn, ChevronRight, LayoutDashboard, LogOut, Server, Store, Users } from 'lucide-react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
@@ -31,6 +34,8 @@ export interface NavItem {
   to: string;
   icon: ComponentType;
   label: string;
+  /** Section heading; items with the same group sit together under it (none = top section). */
+  group?: string;
 }
 
 const NAV: NavItem[] = [
@@ -48,6 +53,70 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     <SideLayout nav={NAV} badge="ADMIN" person={{ name: admin?.name ?? '', email: admin?.email ?? '' }}>
       {children}
     </SideLayout>
+  );
+}
+
+/** Nav items split into sections by `group`, keeping their order (the first section has no heading). */
+function sections(nav: NavItem[]) {
+  const out: { group?: string; items: NavItem[] }[] = [];
+  for (const n of nav) {
+    const s = out.find((x) => x.group === n.group);
+    if (s) s.items.push(n);
+    else out.push({ group: n.group, items: [n] });
+  }
+  return out;
+}
+
+/**
+ * One entry of the sidebar tree: a page, or a branch (`group`) that opens and closes like a
+ * folder when clicked (▶ closed, ▼ open), its pages indented under it on a guide line. A branch
+ * opens by itself when one of its pages is shown, and remembers open/closed in this browser.
+ */
+function NavBranch({ group, items, isActive }: { group: string; items: NavItem[]; isActive: (to: string) => boolean }) {
+  const holdsCurrent = items.some((n) => isActive(n.to));
+  const key = `dvote-nav-open:${items[0].to}`;
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  // landing on one of its pages (link, back button) opens the branch
+  useEffect(() => {
+    if (holdsCurrent) setOpen(true);
+  }, [holdsCurrent]);
+  const toggle = () => {
+    setOpen((o) => {
+      try {
+        localStorage.setItem(key, o ? '0' : '1');
+      } catch {
+        // private mode: just not remembered
+      }
+      return !o;
+    });
+  };
+  const id = `nav-${key.replace(/W/g, '')}`;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton size='lg' className='h-10 font-medium' onClick={toggle} aria-expanded={open} aria-controls={id} isActive={!open && holdsCurrent}>
+        <ChevronRight className={`text-primary transition-transform duration-200 ${open ? 'rotate-90' : 'rtl:rotate-180'}`} />
+        <span>{group}</span>
+      </SidebarMenuButton>
+      <SidebarMenuSub id={id} hidden={!open} className='ms-5 me-0 translate-x-0 gap-0.5 border-s border-l-0 ps-2 pe-0 rtl:border-r-0'>
+        {items.map((n) => (
+          <SidebarMenuSubItem key={n.to}>
+            <SidebarMenuSubButton asChild isActive={isActive(n.to)} className='h-9 translate-x-0 font-medium'>
+              <NavLink to={n.to}>
+                <n.icon />
+                <span>{n.label}</span>
+              </NavLink>
+            </SidebarMenuSubButton>
+          </SidebarMenuSubItem>
+        ))}
+      </SidebarMenuSub>
+    </SidebarMenuItem>
   );
 }
 
@@ -93,16 +162,22 @@ export function SideLayout({
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
-                {nav.map((n) => (
-                  <SidebarMenuItem key={n.to}>
-                    <SidebarMenuButton asChild isActive={isActive(n.to)} size="lg" className="h-10 font-medium">
-                      <NavLink to={n.to}>
-                        <n.icon />
-                        <span>{n.label}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {sections(nav).map((sec) =>
+                  sec.group ? (
+                    <NavBranch key={sec.group} group={sec.group} items={sec.items} isActive={isActive} />
+                  ) : (
+                    sec.items.map((n) => (
+                      <SidebarMenuItem key={n.to}>
+                        <SidebarMenuButton asChild isActive={isActive(n.to)} size="lg" className="h-10 font-medium">
+                          <NavLink to={n.to}>
+                            <n.icon />
+                            <span>{n.label}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))
+                  ),
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

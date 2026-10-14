@@ -62,11 +62,25 @@ const DvoteQr = (props: QrProps, environment: WidgetEnvironment) => {
   'widget';
   const small = environment.widgetFamily === 'systemSmall';
   return (
-    <VStack spacing={8} modifiers={[containerBackground('#6155F5', 'widget'), widgetURL(props.link)]}>
+    <VStack spacing={5} modifiers={[containerBackground('#5A4DEB', 'widget'), widgetURL(props.link)]}>
       <Spacer />
-      <Image systemName="qrcode" color="#FFFFFF" size={small ? 54 : 64} />
-      <Text modifiers={[font({ weight: 'bold', size: 15 }), foregroundStyle('#FFFFFF'), lineLimit(1)]}>{props.labels.title}</Text>
-      <Text modifiers={[font({ size: 12 }), foregroundStyle('#E4E1FF'), lineLimit(2)]}>{props.labels.subtitle}</Text>
+      <VStack modifiers={[padding({ all: 8 }), background('#FFFFFF'), cornerRadius(16)]}>
+        <Image systemName="qrcode.viewfinder" color="#6155F5" size={small ? 48 : 56} />
+      </VStack>
+      <Text modifiers={[font({ weight: 'heavy', size: 18 }), foregroundStyle('#FFFFFF'), lineLimit(1)]}>{props.labels.title}</Text>
+      <Text modifiers={[font({ size: 11 }), foregroundStyle('#E4E1FF'), lineLimit(1)]}>{props.labels.subtitle}</Text>
+      <Text
+        modifiers={[
+          font({ weight: 'bold', size: 10 }),
+          foregroundStyle('#FFFFFF'),
+          padding({ horizontal: 10, vertical: 3 }),
+          background('#7B6CFF'),
+          cornerRadius(10),
+          lineLimit(1),
+        ]}
+      >
+        {props.labels.badge}
+      </Text>
       <Spacer />
     </VStack>
   );

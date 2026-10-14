@@ -11,7 +11,7 @@ import { TableState } from '../../components/TableState';
 import { useMe, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi } from '../../lib/api';
 import { OverviewSkeleton, Stat } from '../Overview';
-import { GoLiveChecklist } from './GoLiveChecklist';
+import { GoLiveChecklist, useGoLivePending } from './GoLiveChecklist';
 import { NeedsAttention } from './NeedsAttention';
 import { t } from '../../i18n';
 
@@ -27,6 +27,8 @@ export function MyHome() {
   const vendor = useMyVendor();
   const { data, isLoading, error } = useQuery({ queryKey: ['summary', 'me'], queryFn: vendorApi.summary, refetchInterval: 60_000 });
   const branchOnly = me.role !== 'vendor_admin';
+  // while the go-live steps show, setup tips live there instead of twice
+  const goLivePending = useGoLivePending(!branchOnly);
 
   return (
     <>
@@ -36,7 +38,7 @@ export function MyHome() {
       />
       {branchOnly ? null : <GoLiveChecklist className="mb-5" />}
       <div className="mb-5">
-        <NeedsAttention />
+        <NeedsAttention hideSetup={goLivePending} />
       </div>
       <ErrorAlert error={error} className="mb-4" />
       {isLoading || !data ? (
