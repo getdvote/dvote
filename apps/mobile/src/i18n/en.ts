@@ -413,8 +413,9 @@ export const en = {
     signIn: "Sign in to dvote to see your points.",
     pts: "pts",
     updated: "Updated {time}",
-    qrTitle: "Collect points",
-    qrSubtitle: "Tap to show my QR",
+    qrTitle: "Scan me!",
+    qrSubtitle: "Show it at the counter",
+    qrBadge: "Tap · earn points",
   },
   errors: {
     network: "Can't reach dvote right now. Check your connection and try again.",

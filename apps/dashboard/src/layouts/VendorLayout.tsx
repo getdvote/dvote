@@ -52,16 +52,18 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const isAdmin = me.role === 'vendor_admin';
   const nav: NavItem[] = [
     { to: '/', icon: LayoutDashboard, label: t('nav.overview') },
-    { to: '/customers', icon: Users, label: t('nav.customers') },
-    { to: '/insights', icon: ChartLine, label: t('nav.insights') },
-    { to: '/activity', icon: ReceiptText, label: t('nav.activity') },
-    { to: '/branches', icon: Store, label: t('nav.branches') },
-    { to: '/rule', icon: Crown, label: t('nav.rule') },
-    { to: '/rewards', icon: Gift, label: t('nav.rewards') },
-    { to: '/redemptions', icon: HandHeart, label: t('nav.redemptions') },
-    { to: '/menu', icon: BookOpen, label: t('nav.menu') },
-    { to: '/staff', icon: Users, label: t('nav.staff') },
-    ...(isAdmin ? [{ to: '/profile', icon: Settings, label: t('nav.profile') }] : []),
+    // How the shop is doing: customers and reports.
+    { to: '/customers', icon: Users, label: t('nav.customers'), group: t('nav.insightsGroup') },
+    { to: '/insights', icon: ChartLine, label: t('nav.insights'), group: t('nav.insightsGroup') },
+    { to: '/activity', icon: ReceiptText, label: t('nav.activity'), group: t('nav.insightsGroup') },
+    { to: '/redemptions', icon: HandHeart, label: t('nav.redemptions'), group: t('nav.insightsGroup') },
+    // Everything about setting up the shop itself, together under one heading.
+    ...(isAdmin ? [{ to: '/profile', icon: Settings, label: t('nav.profile'), group: t('nav.shopGroup') }] : []),
+    { to: '/branches', icon: Store, label: t('nav.branches'), group: t('nav.shopGroup') },
+    { to: '/menu', icon: BookOpen, label: t('nav.menu'), group: t('nav.shopGroup') },
+    { to: '/staff', icon: Users, label: t('nav.staff'), group: t('nav.shopGroup') },
+    { to: '/rewards', icon: Gift, label: t('nav.rewards'), group: t('nav.shopGroup') },
+    { to: '/rule', icon: Crown, label: t('nav.rule'), group: t('nav.shopGroup') },
   ];
 
   return (

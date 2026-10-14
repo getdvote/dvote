@@ -488,8 +488,9 @@ export const ar: Dictionary = {
     signIn: "سجّل الدخول إلى dvote لرؤية نقاطك.",
     pts: "نقطة",
     updated: "آخر تحديث {time}",
-    qrTitle: "اجمع النقاط",
-    qrSubtitle: "اضغط لعرض رمزي",
+    qrTitle: "امسحني!",
+    qrSubtitle: "اعرضه عند الكاشير",
+    qrBadge: "اضغط · اكسب النقاط",
   },
   errors: {
     network: 'لا يمكن الوصول إلى dvote الآن. تحقق من اتصالك وحاول مرة أخرى.',

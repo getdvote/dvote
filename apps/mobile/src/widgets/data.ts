@@ -25,7 +25,7 @@ export interface PointsSnapshot {
 }
 
 export interface QrSnapshot {
-  labels: { title: string; subtitle: string };
+  labels: { title: string; subtitle: string; badge: string };
 }
 
 /** Deep links the widgets open (Expo Router routes; scheme from app.json). */
@@ -59,7 +59,9 @@ export function pointsSnapshot(cards: Card[] | null): PointsSnapshot {
   };
 }
 
-export const qrSnapshot = (): QrSnapshot => ({ labels: { title: t('widgets.qrTitle'), subtitle: t('widgets.qrSubtitle') } });
+export const qrSnapshot = (): QrSnapshot => ({
+  labels: { title: t('widgets.qrTitle'), subtitle: t('widgets.qrSubtitle'), badge: t('widgets.qrBadge') },
+});
 
 export async function savePoints(s: PointsSnapshot) {
   await AsyncStorage.setItem(KEY, JSON.stringify(s)).catch(() => undefined);
@@ -88,7 +90,8 @@ export async function saveQr(s: QrSnapshot) {
 export async function loadQr(): Promise<QrSnapshot> {
   const raw = await AsyncStorage.getItem(QR_KEY).catch(() => null);
   try {
-    return raw ? (JSON.parse(raw) as QrSnapshot) : qrSnapshot();
+    const saved = raw ? (JSON.parse(raw) as QrSnapshot) : null;
+    return saved?.labels?.badge ? saved : qrSnapshot(); // saved before the redesign: fresh texts
   } catch {
     return qrSnapshot();
   }
