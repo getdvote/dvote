@@ -435,6 +435,36 @@ export interface Insights {
 /** An error from the API with its stable `code` (e.g. mfa_required). */
 export class ApiError extends Error {
   constructor(
+/** Per reward: given in the period, customers who can afford it or are close now (GET /api/vendor/reward-performance). Counts only. */
+export interface RewardPerformance {
+  range: { from: string; to: string };
+  /** Balances are merchant-wide: merchant admin only (null for a branch manager). */
+  held: {
+    points: number;
+    customers: number;
+    /** points at the active rule (what customers would spend to earn them); null without a rule */
+    worth: string | null;
+    rate: { spendAmount: string; pointsPerSpend: number } | null;
+    readyToRedeem: number;
+    closeToReward: number;
+  } | null;
+  /** Active rewards, plus archived ones given in the period; most given first. */
+  rewards: {
+    rewardId: string;
+    name: string;
+    imageUrl: string | null;
+    status: 'active' | 'archived';
+    pointsCost: number;
+    redemptions: number;
+    pointsRedeemed: number;
+    customers: number;
+    /** null for a branch manager */
+    canAfford: number | null;
+    close: number | null;
+  }[];
+  updatedAt: string;
+}
+
     readonly status: number,
     readonly code: string,
     message: string,
@@ -564,6 +594,8 @@ export const vendorApi = {
   redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
   events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
+  rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>
+    call<RewardPerformance>('GET', `/api/vendor/reward-performance${qs({ ...q })}`),
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
   updateProfile: (body: { name?: string; contactEmail?: string | null } & Partial<VendorBranding>) =>
     call<Vendor>('PATCH', '/api/vendor/profile', body),
