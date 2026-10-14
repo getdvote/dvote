@@ -357,6 +357,19 @@ export interface RedemptionPage extends Page<RedemptionItem> {
 /** One "needs your attention" item on the dashboard home (GET /api/vendor/attention). */
 export interface AttentionItem {
   key: string;
+export type GoLiveStep = 'logo' | 'banner' | 'rule' | 'reward' | 'branch_hours' | 'staff' | 'test_scan';
+/** Go-live checklist for a new merchant (GET /api/vendor/go-live, merchant admin only). */
+export interface GoLive {
+  /** In the order to do them; `to` is the dashboard path. */
+  steps: { key: GoLiveStep; done: boolean; to: string }[];
+  done: number;
+  total: number;
+  live: boolean;
+  /** Active rewards, and how many have a photo / an Arabic name. */
+  rewards: { active: number; withPhoto: number; withArabic: number };
+  firstScanAt: string | null;
+}
+
   /** now = affects customers / operations today; setup = profile still incomplete */
   group: 'now' | 'setup';
   tone: 'critical' | 'warning' | 'info';
@@ -592,6 +605,7 @@ export const vendorApi = {
   insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
     call<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
   redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
+  goLive: () => call<GoLive>('GET', '/api/vendor/go-live'),
   events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
   rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>

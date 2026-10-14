@@ -126,6 +126,25 @@ export const en = {
     currencyHint: 'Set by dvote. Contact support to change it.',
     branding: 'Branding',
   },
+  goLive: {
+    title: "Get ready to go live",
+    subtitle: "{done} of {total} done. Finish these so customers can find you, earn and redeem.",
+    progress: "Go-live progress",
+    open: "Open",
+    doneLabel: "Done",
+    steps: {
+      logo: { title: "Upload your logo", hint: "Shown on your shop page and on customers' loyalty cards." },
+      banner: { title: "Add a banner", hint: "The big photo at the top of your shop page in the app." },
+      rule: { title: "Set your points rule", hint: "How many points customers earn for what they spend." },
+      reward: { title: "Add a first reward with a photo and Arabic name", hint: "Something customers can save up for." },
+      branch_hours: { title: "Add a branch with opening hours", hint: "So customers know when to come by." },
+      staff: { title: "Invite your staff", hint: "Each cashier gets their own sign-in for the staff app." },
+      test_scan: { title: "Do a test scan", hint: "Sign in to the staff app and scan a collect QR from the customer app, with a small bill." },
+    },
+    reward: {
+      missing: "None of your {count} active rewards has both yet ({photo} with a photo, {arabic} with an Arabic name).",
+    },
+  },
   attention: {
     title: "Needs your attention",
     all: "All {n}",

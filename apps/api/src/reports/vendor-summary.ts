@@ -10,6 +10,7 @@ import { VendorActivityController, VendorActivityService } from './vendor-activi
 import { VendorAttentionController, VendorAttentionService } from './vendor-attention';
 import { VendorInsightsController, VendorInsightsService } from './vendor-insights';
 import { VendorRewardPerformanceController, VendorRewardPerformanceService } from './vendor-reward-performance';
+import { VendorGoLiveController, VendorGoLiveService } from './vendor-go-live';
 import { VendorRedemptionsController, VendorRedemptionsService } from './vendor-redemptions';
 
 const TZ = 'Africa/Cairo';
@@ -124,10 +125,10 @@ export class VendorSummaryController {
   }
 }
 
-/** Reports for the vendor dashboard (/api/vendor/summary, /api/vendor/events, /api/vendor/redemptions, /api/vendor/attention, /api/vendor/insights, /api/vendor/reward-performance). */
+/** Reports for the vendor dashboard (/api/vendor/summary, /api/vendor/events, /api/vendor/redemptions, /api/vendor/attention, /api/vendor/insights, /api/vendor/reward-performance, /api/vendor/go-live). */
 @Module({
   imports: [AuthModule],
-  controllers: [VendorSummaryController, VendorActivityController, VendorRedemptionsController, VendorAttentionController, VendorInsightsController, VendorRewardPerformanceController],
-  providers: [VendorSummaryService, VendorActivityService, VendorRedemptionsService, VendorAttentionService, VendorInsightsService, VendorRewardPerformanceService],
+  controllers: [VendorSummaryController, VendorActivityController, VendorRedemptionsController, VendorAttentionController, VendorInsightsController, VendorRewardPerformanceController, VendorGoLiveController],
+  providers: [VendorSummaryService, VendorActivityService, VendorRedemptionsService, VendorAttentionService, VendorInsightsService, VendorRewardPerformanceService, VendorGoLiveService],
 })
 export class ReportsModule {}
