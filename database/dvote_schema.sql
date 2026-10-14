@@ -157,6 +157,7 @@ CREATE TABLE rewards (
     image_url    varchar(500),
     image_path   varchar(300),                -- uploaded photo in Storage bucket "vendors" (<vendorId>/rewards/…)
     points_cost  int           NOT NULL CHECK (points_cost > 0),
+    retail_value numeric(12,2) CHECK (retail_value > 0 AND retail_value <= 99999999.99),
     status       reward_status NOT NULL DEFAULT 'active',
     sort_order   int           NOT NULL DEFAULT 0,
     created_at   timestamptz   NOT NULL DEFAULT now(),

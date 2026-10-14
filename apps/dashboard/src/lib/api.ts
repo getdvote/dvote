@@ -177,10 +177,13 @@ export interface Reward {
   descriptionAr: string | null;
   imageUrl: string | null;
   pointsCost: number;
+  retailValue: string | null;
   status: RewardStatus;
   sortOrder: number;
   createdAt: string;
 }
+
+export type RewardBody = Omit<Partial<Reward>, 'retailValue'> & { retailValue?: number | null };
 
 /** A reward sold out at one open branch right now (until: back on sale at; null = until turned back on). */
 export interface SoldOut {
@@ -354,6 +357,19 @@ export interface RedemptionPage extends Page<RedemptionItem> {
   byReward: { rewardId: string; name: string; imageUrl: string | null; status: RewardStatus; count: number; points: number }[];
 }
 
+export type GoLiveStep = 'logo' | 'banner' | 'rule' | 'reward' | 'branch_hours' | 'staff' | 'test_scan';
+/** Go-live checklist for a new merchant (GET /api/vendor/go-live, merchant admin only). */
+export interface GoLive {
+  /** In the order to do them; `to` is the dashboard path. */
+  steps: { key: GoLiveStep; done: boolean; to: string }[];
+  done: number;
+  total: number;
+  live: boolean;
+  /** Active rewards, and how many have a photo / an Arabic name. */
+  rewards: { active: number; withPhoto: number; withArabic: number };
+  firstScanAt: string | null;
+}
+
 /** One "needs your attention" item on the dashboard home (GET /api/vendor/attention). */
 export interface AttentionItem {
   key: string;
@@ -429,6 +445,36 @@ export interface Insights {
   days: { date: string; sales: string; visits: number; previousSales: string | null; previousVisits: number | null }[];
   /** Merchant admin, all branches only. */
   branches: { id: string; name: string; sales: string; visits: number; customers: number; avgBill: string }[];
+  updatedAt: string;
+}
+
+/** Per reward: given in the period, customers who can afford it or are close now (GET /api/vendor/reward-performance). Counts only. */
+export interface RewardPerformance {
+  range: { from: string; to: string };
+  /** Balances are merchant-wide: merchant admin only (null for a branch manager). */
+  held: {
+    points: number;
+    customers: number;
+    /** points at the active rule (what customers would spend to earn them); null without a rule */
+    worth: string | null;
+    rate: { spendAmount: string; pointsPerSpend: number } | null;
+    readyToRedeem: number;
+    closeToReward: number;
+  } | null;
+  /** Active rewards, plus archived ones given in the period; most given first. */
+  rewards: {
+    rewardId: string;
+    name: string;
+    imageUrl: string | null;
+    status: 'active' | 'archived';
+    pointsCost: number;
+    redemptions: number;
+    pointsRedeemed: number;
+    customers: number;
+    /** null for a branch manager */
+    canAfford: number | null;
+    close: number | null;
+  }[];
   updatedAt: string;
 }
 
@@ -522,8 +568,8 @@ export const api = {
   deactivateRule: (vendorId: string) => call<void>('DELETE', `/api/admin/vendors/${vendorId}/point-rules/active`),
 
   rewards: (vendorId: string) => call<Reward[]>('GET', `/api/admin/vendors/${vendorId}/rewards`),
-  createReward: (vendorId: string, body: Partial<Reward>) => call<Reward>('POST', `/api/admin/vendors/${vendorId}/rewards`, body),
-  updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/admin/rewards/${id}`, body),
+  createReward: (vendorId: string, body: RewardBody) => call<Reward>('POST', `/api/admin/vendors/${vendorId}/rewards`, body),
+  updateReward: (id: string, body: RewardBody) => call<Reward>('PATCH', `/api/admin/rewards/${id}`, body),
   uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/admin/rewards/${id}/image`, file(f)),
   removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/admin/rewards/${id}/image`),
 
@@ -559,8 +605,11 @@ export const vendorApi = {
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
   summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
   attention: () => call<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
+  goLive: () => call<GoLive>('GET', '/api/vendor/go-live'),
   insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
     call<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
+  rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>
+    call<RewardPerformance>('GET', `/api/vendor/reward-performance${qs({ ...q })}`),
   redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
   events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
@@ -584,8 +633,8 @@ export const vendorApi = {
   deactivateRule: () => call<void>('DELETE', '/api/vendor/point-rules/active'),
 
   rewards: () => call<Reward[]>('GET', '/api/vendor/rewards'),
-  createReward: (body: Partial<Reward>) => call<Reward>('POST', '/api/vendor/rewards', body),
-  updateReward: (id: string, body: Partial<Reward>) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
+  createReward: (body: RewardBody) => call<Reward>('POST', '/api/vendor/rewards', body),
+  updateReward: (id: string, body: RewardBody) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
   uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/vendor/rewards/${id}/image`, file(f)),
   removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/vendor/rewards/${id}/image`),
   soldOuts: () => call<SoldOut[]>('GET', '/api/vendor/rewards/sold-out'),

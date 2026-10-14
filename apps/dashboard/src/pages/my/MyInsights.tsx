@@ -17,6 +17,8 @@ import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi, type InsightsKpis } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
+import { RewardPerformance } from './RewardPerformance';
+import { GiveBackRates } from './give-back-rates';
 
 type Metric = 'sales' | 'visits';
 
@@ -41,7 +43,8 @@ const KPIS: { key: KpiKey & keyof InsightsKpis; format: 'money' | 'count' | 'per
 
 /**
  * Loyalty performance: sales through dvote, visits, average bill, customers (new / returning),
- * rewards, for a period and the one just before it. Counts only, never who the customers are.
+ * rewards, for a period and the one just before it; then how each reward performs. Counts only,
+ * never who the customers are.
  */
 export function MyInsights() {
   const me = useMe();
@@ -171,6 +174,10 @@ export function MyInsights() {
           )}
         </CardContent>
       </Card>
+
+      <GiveBackRates scope={scope} />
+
+      <RewardPerformance query={query} money={money} />
 
       {data?.branches.length ? (
         <Card className="gap-0 py-0">

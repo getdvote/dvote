@@ -154,7 +154,7 @@ export function MyRedemptions() {
   );
 }
 
-function Thumb({ src }: { src: string | null }) {
+export function Thumb({ src }: { src: string | null }) {
   return (
     <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted text-muted-foreground">
       {src ? <img src={src} alt="" className="size-full object-cover" /> : <Gift className="size-4" />}

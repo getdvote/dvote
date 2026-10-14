@@ -11,6 +11,7 @@ import { TableState } from '../../components/TableState';
 import { useMe, useMyVendor } from '../../layouts/VendorLayout';
 import { vendorApi } from '../../lib/api';
 import { OverviewSkeleton, Stat } from '../Overview';
+import { GoLiveChecklist } from './GoLiveChecklist';
 import { NeedsAttention } from './NeedsAttention';
 import { t } from '../../i18n';
 
@@ -33,6 +34,7 @@ export function MyHome() {
         title={t('home.hi', { name: me.name.split(' ')[0] })}
         subtitle={t('home.today', { shop: (branchOnly ? me.branch?.name : vendor.name) ?? '', date: dayjs().format('dddd D MMMM') })}
       />
+      {branchOnly ? null : <GoLiveChecklist className="mb-5" />}
       <div className="mb-5">
         <NeedsAttention />
       </div>

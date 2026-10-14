@@ -11,7 +11,7 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field, optionalNumber } from '../../components/Field';
 import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
-import { errorMessage, type Reward } from '../../lib/api';
+import { errorMessage, type Reward, type RewardBody } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
 import { IMAGE_ACCEPT } from './ImagesTab';
 import { RewardAvailability } from './RewardAvailability';
@@ -129,7 +129,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
           </TableBody>
         </Table>
       </div>
-      <RewardDialog scope={scope} reward={editing} onClose={() => setEditing(null)} />
+      <RewardDialog key={editing === 'new' ? 'new' : editing?.id ?? 'closed'} scope={scope} reward={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
@@ -203,8 +203,9 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
   const qc = useQueryClient();
   const isNew = reward === 'new';
   const current = reward && reward !== 'new' ? reward : null;
+  const [retail, setRetail] = useState(current?.retailValue ?? '');
   const save = useMutation({
-    mutationFn: (body: Partial<Reward>) => (isNew ? scope.createReward(body) : scope.updateReward(current!.id, body)),
+    mutationFn: (body: RewardBody) => (isNew ? scope.createReward(body) : scope.updateReward(current!.id, body)),
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ['rewards', scope.key] });
       toast.success(isNew ? t('rewards.addedToast', { name: r.name }) : t('common.saved'));
@@ -238,6 +239,7 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
               description: text('description'),
               descriptionAr: text('descriptionAr'),
               pointsCost: Number(f.get('pointsCost')),
+              retailValue: String(f.get('retailValue')).trim() ? Number(f.get('retailValue')) : null,
               sortOrder: optionalNumber(f.get('sortOrder')),
             });
           }}
@@ -264,6 +266,9 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
           </Field>
           <Field label={t('rewards.costLabel')} htmlFor="reward-cost">
             <Input id="reward-cost" name="pointsCost" type="number" required min={1} max={1000000} step={1} defaultValue={current?.pointsCost} />
+          </Field>
+          <Field label={t('rewards.retailValue', { currency: scope.currency })} htmlFor="reward-retail" hint={t('rewards.retailHint')}>
+            <Input id="reward-retail" name="retailValue" type="number" min={0.01} max={99999999.99} step={0.01} value={retail} onChange={(e) => setRetail(e.target.value)} />
           </Field>
           <Field label={t('rewards.order')} htmlFor="reward-order" hint={t('rewards.orderHint')}>
             <Input id="reward-order" name="sortOrder" type="number" min={0} max={10000} step={1} defaultValue={current?.sortOrder ?? ''} placeholder={t('rewards.last')} />
