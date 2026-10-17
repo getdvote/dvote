@@ -85,18 +85,46 @@ React 19 + Vite + Tailwind v4 (no shadcn; own small components in `src/component
 
 ### Built — Google Wallet button (2026-10-17, `src/wallet/`)
 
+**Automatic Wallet logos (2026-10-17):** `storage/wallet-logo.ts` produces a 720×720 opaque WebP,
+preserving the logo aspect ratio and using the quantized dominant visible edge colour for padding
+(white if all edges are transparent). `WalletLogoService.ensure` creates/reuses the immutable
+`-wallet-v1.webp` sibling of an uploaded `logo_path`. Admin and merchant uploads generate both
+files before committing the logo row; replace/remove/PATCH external URL clean up both. Google
+save/sync payloads use the derivative; original logo URLs for other clients are unchanged. Older
+uploads are generated lazily from our own Storage, never fetched from arbitrary external URLs.
+API startup reconciles all linked passes so existing cards receive the fix without re-uploading.
+Tests cover portrait/landscape padding pixels, transparency, upload/delete lifecycle and sync.
+
+**Google Wallet synchronization (2026-10-17):** `GoogleWalletService` handles post-commit change
+notices from `LiveService.cardsChanged` (collect/redeem/admin adjust/undo) and `vendorChanged`
+(dashboard branding writes). A serialized background worker PATCHes the existing loyalty object
+with the latest balance/name/state and its class with colour/logo/banner/name. No alert notification
+is requested. Failed or unsaved (404) objects remain pending. Startup and 60-second reconciliation
+page through linked cards whose `pass_updated_at` is missing/older than card or merchant updates.
+The checkpoint is conditional on the observed balance and merchant version, so concurrent changes
+are retried; Google failures never fail the points transaction. No migration needed. Google uses
+its native layout: selected card colour, logo and banner are supported; web gradients/patterns are
+not reproduced. Configure `WALLET_DEFAULT_LOGO_URL` to replace a removed merchant logo (Google
+requires a program logo; absent a fallback, the previous logo is retained). Apple issuing/updating
+and lock-screen notifications remain pending. Tests mock all Google requests with throwaway keys.
+
+Google class PATCHes must include `reviewStatus: UNDER_REVIEW` even for approved classes; omitting
+it caused live `400 invalidResource`. The shared branding payload includes it for save and sync,
+and the mock Google endpoint rejects PATCHes missing it.
+
 **Wallet collect scanning (2026-10-17):** the staff scanner accepts `dvote:c1:`. ScansService validates
 the hashed card token, enforces the scanning merchant, and supports preview + collect with the existing
 amount, branch, blocked-user and receipt checks. Each visit uses a fresh idempotency key; retries
 return the same event (scoped to card and staff). Wallet codes remain reusable, and ledger rows use
-`scan_source=wallet_card` with no one-time QR row. Wallet reward selection/redeem, pass balance
-updates and notifications remain pending. Collect + existing redeem integration suites: 46 tests pass.
+`scan_source=wallet_card` with no one-time QR row. Wallet reward selection/redeem and notifications
+remain pending. Google pass synchronization is built above. Collect + existing redeem integration suites: 46 tests pass.
 
 - `GET /api/public/cards/{publicId}/google-wallet` → `{saveUrl}` (`https://pay.google.com/gp/v/save/<jwt>`), JWT signed RS256 with the service-account key (`jose`). It carries a **LoyaltyClass per merchant** (`<issuer>.vendor-<vendorId>`: name, logo or `WALLET_DEFAULT_LOGO_URL`, first colour of the card design) and a **LoyaltyObject per card** (`<issuer>.card-<publicId>`: points, cardholder, short code, QR). Google creates them when the customer saves. Errors: 404 `card_not_found`, 503 `wallet_not_configured`.
 - **Card QR** `dvote:c1:<secret>`: secret = 128 bits of HMAC-SHA256(`WALLET_TOKEN_SECRET`, card id) (`wallet/card-token.ts`), so it can be rebuilt; `cards.token_hash` = its SHA-256 and `google_object_id` are saved when the link is made. **Never change `WALLET_TOKEN_SECRET` once passes exist.**
 - Env (optional; unset = 503): `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_KEY_FILE` (service-account JSON in git-ignored `apps/api/.secrets/`), `WALLET_TOKEN_SECRET` (≥ 32 chars), `WALLET_DEFAULT_LOGO_URL`.
 - Web: the card page button fetches the link and opens it; Apple button stays off ("coming soon"). Test: `test/google-wallet.e2e-spec.ts` (throwaway RSA key, `test/helpers/google-wallet-env.ts`).
-- **Not yet:** pass balance updates after collect/redeem (REST PATCH of the object), staff scanning `dvote:c1:`.
+- **Built:** wallet collect scanning and automatic Google pass balance/branding updates (see above).
+- **Not yet:** staff-selected wallet redemptions, Apple passes and notification messages.
 
 ### Customer app while paused (`apps/mobile`)
 
@@ -115,7 +143,7 @@ updates and notifications remain pending. Collect + existing redeem integration 
 
 0. **Public address:** the domain is **`dvote.app`** and each merchant's page is **`dvote.app/<merchant-slug>`** (e.g. `dvote.app/joy-corner`); this is what the NFC tag and the printed QR at the till open (a branch can add `?b=<branch>`). The other pages hang under it (e.g. `dvote.app/joy-corner/join`, `dvote.app/c/<card-id>`). Reference product: tappi (`thetappi.com`), same logic.
 
-1. **Name + mobile only (final, 2026-10-17, replaces the email version below):** the join form asks only **name + Egyptian mobile** (no email, no "how did you hear", no 14+ tick, no separate "get it back" page). The **mobile is the customer key**: a known mobile with the same name (any case/spacing) returns the same card; a known mobile with another name → 409 `details_mismatch`; a new mobile creates the customer. The API still accepts optional `email`, `heardFrom`, `ageConfirmed`. The card page asks `GET /api/public/cards/{publicId}/wallet-status` → `{google, apple}` (Google: the pass object exists at Google = the customer saved it; Apple: a `wallet_registrations` row) and hides the add buttons once the card is in a wallet; otherwise one button by device (iPhone → Apple, Android → Google). No unique index on `users.phone` yet (app users may share old numbers): the oldest row with that phone wins.
+1. **Name + mobile only (final, 2026-10-17, replaces the email version below):** the join form asks only **name + Egyptian mobile** (no email, no "how did you hear", no 14+ tick, no separate "get it back" page). The **mobile is the customer key**: a known mobile returns the same customer regardless of the entered name (the saved name is preserved); it opens the existing card for this merchant or creates one if needed. A new mobile creates the customer and card. No email/OTP for now (explicit user decision). The API still accepts optional `email`, `heardFrom`, `ageConfirmed`. The card page asks `GET /api/public/cards/{publicId}/wallet-status` → `{google, apple}` (Google: the pass object exists at Google = the customer saved it; Apple: a `wallet_registrations` row) and hides the add buttons once the card is in a wallet; otherwise one button by device (iPhone → Apple, Android → Google). No unique index on `users.phone` yet (app users may share old numbers): the oldest row with that phone wins.
 1. **No email verification (final, 2026-10-17):** the customer types name, email, mobile and ticks 14+; the card is made at once — no code, no sign-in, no Supabase on the public site (an email code and "Continue with Google" were built and removed the same day at the user's request). **Email + mobile identify the customer:** a known email must come with the same mobile number (else 409 `details_mismatch`, revealing nothing), and then joining again returns the same card ("get it back" = email + mobile). Consequence: emails may be mistyped or fake; `users.email_verified_at` stays NULL for web customers. Add Cloudflare Turnstile on the join form before launch (anyone can post it).
 2. **Phone number is required** (for SMS / WhatsApp messages later); **Egyptian mobile numbers only** for now (`01` + 9 digits, stored as `+201…`).
 3. **Merchants may see their customers' email and phone** (dashboard Customers page). This replaces the earlier "contact details stay private" rule for merchant views; the join form says so ("How your data is used").

@@ -49,7 +49,7 @@ export const en = {
     haveCard: 'Already have a card? Get it back',
   },
   join: {
-    subtitle: 'Type your name and mobile. Already have a card? Use the same ones to open it.',
+    subtitle: 'Type your name and mobile. Already have a card? Use the same mobile number to open it.',
     email: 'Email',
     emailPlaceholder: 'you@example.com',
     name: 'Your name',

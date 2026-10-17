@@ -46,7 +46,7 @@ export const ar: Dictionary = {
     haveCard: 'لديك بطاقة بالفعل؟ استرجعها',
   },
   join: {
-    subtitle: 'اكتب اسمك ورقم موبايلك. لديك بطاقة؟ اكتب نفس الاسم والرقم لفتحها.',
+    subtitle: 'اكتب اسمك ورقم موبايلك. لديك بطاقة؟ استخدم نفس رقم الموبايل لفتحها.',
     email: 'البريد الإلكتروني',
     emailPlaceholder: 'you@example.com',
     name: 'اسمك',

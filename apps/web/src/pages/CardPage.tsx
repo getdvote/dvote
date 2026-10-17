@@ -1,4 +1,4 @@
-import { Check, Copy } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
@@ -21,7 +21,6 @@ export function CardPage() {
   const [showOther, setShowOther] = useState(false);
   const [adding, setAdding] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [inWallet, setInWallet] = useState<{ google: boolean; apple: boolean } | null>(null);
   const device = platform();
 
@@ -122,28 +121,6 @@ export function CardPage() {
       ) : null}
 
       <p className="mt-6 text-center text-[15px] font-medium">{t('card.atTill')}</p>
-
-      <div className="mt-6 rounded-3xl border border-line p-4">
-        <p className="text-[14px] text-muted">{t('card.keepLink')}</p>
-        <div className="mt-2 flex items-center gap-2">
-          <code dir="ltr" className="min-w-0 flex-1 truncate rounded-xl bg-canvas px-3 py-2 text-[13px]">
-            {link}
-          </code>
-          <button
-            type="button"
-            onClick={() => {
-              void navigator.clipboard?.writeText(link).then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              });
-            }}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-[14px] font-medium hover:bg-canvas"
-          >
-            {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
-            {copied ? t('card.copied') : t('card.copy')}
-          </button>
-        </div>
-      </div>
 
       <div className="mt-5 text-center">
         <Link to={`/${card.vendor.slug}`} className="text-[15px] text-brand underline-offset-4 hover:underline">

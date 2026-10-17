@@ -1,5 +1,10 @@
 import 'dotenv/config';
 
+// Wallet tests explicitly install throwaway credentials and mock Google HTTP calls.
+// Other integration tests must never update real customer passes using local .env keys.
+process.env.GOOGLE_WALLET_ISSUER_ID = '';
+process.env.GOOGLE_WALLET_KEY_FILE = '';
+
 // E2E tests write and delete rows (cleanup needs a superuser), so they only ever run against
 // a local database: TEST_DATABASE_URL when set (DATABASE_URL may point at the cloud database).
 if (process.env.TEST_DATABASE_URL) process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;

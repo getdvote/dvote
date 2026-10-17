@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import { Prisma, type users } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
@@ -15,7 +15,6 @@ const shortCode = () => {
   const part = () => Array.from({ length: 3 }, () => CODE_CHARS[randomInt(CODE_CHARS.length)]).join('');
   return `${part()}-${part()}`;
 };
-const sameName = (n: string) => n.trim().replace(/\s+/g, ' ').toLowerCase();
 const isUniqueViolation = (err: unknown) => err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 
 const cardInclude = {
@@ -28,7 +27,7 @@ type CardRow = Prisma.cardsGetPayload<{ include: typeof cardInclude }>;
  * The public side of joining a merchant (dvote.app/<slug>): the venue page data, joining
  * (creates the customer's card for that merchant, balance 0) and the card page.
  *
- * No sign-in (decided 2026-10-17): the customer is the email + mobile typed on the form.
+ * No sign-in (decided 2026-10-17): the customer is identified by the normalized mobile number.
  */
 @Injectable()
 export class PublicJoinService {
@@ -95,9 +94,8 @@ export class PublicJoinService {
 
   /**
    * Join a merchant from the form (no sign-in, decided 2026-10-17): name + Egyptian mobile. The
-   * mobile is the customer key: a known mobile must come with the same name (any letter case or
-   * spacing; otherwise anyone typing a number could see that card) and then joining again returns
-   * the same card. A new mobile creates the customer.
+   * mobile is the customer key: an existing mobile returns the same customer regardless of
+   * the entered name. A new mobile creates the customer; an existing name is never overwritten.
    */
   async join(slug: string, dto: JoinVendorDto): Promise<JoinResultDto> {
     const vendor = await this.prisma.vendors.findUnique({ where: { slug }, select: { id: true, status: true } });
@@ -156,10 +154,6 @@ export class PublicJoinService {
   private async customer(name: string, phone: string, dto: JoinVendorDto): Promise<users> {
     const known = await this.prisma.users.findFirst({ where: { phone }, orderBy: { created_at: 'asc' } });
     if (known) {
-      if (known.name && sameName(known.name) !== sameName(name)) {
-        // never say which part is wrong: the number alone must not reveal anything
-        throw new ConflictException({ code: 'details_mismatch', message: 'This mobile number is already used with another name.' });
-      }
       if (known.status === 'blocked') throw new ForbiddenException({ code: 'user_blocked' });
       if (known.name) return known;
       return this.prisma.users.update({ where: { id: known.id }, data: { name } });
