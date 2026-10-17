@@ -55,7 +55,11 @@ export class StaffService {
   /** The signed-in staff member plus their vendor, branch(es) and active point rule. */
   async me(ctx: StaffContext): Promise<StaffMeResponseDto> {
     const [staff, vendor, branches, rule] = await Promise.all([
-      this.get(ctx, ctx.staffId),
+      ctx.adminId
+        ? this.prisma.platform_admins.findUniqueOrThrow({
+            where: { id: ctx.adminId },
+          })
+        : this.get(ctx, ctx.staffId),
       this.prisma.vendors.findUniqueOrThrow({ where: { id: ctx.vendorId } }),
       this.prisma.branches.findMany({
         where: {
@@ -71,7 +75,15 @@ export class StaffService {
       }),
     ]);
     return {
-      ...StaffResponseDto.from(staff),
+      id: staff.id,
+      vendorId: ctx.vendorId,
+      branchId: ctx.branchId,
+      name: staff.name,
+      email: staff.email,
+      role: 'role' in staff ? staff.role : 'vendor_admin',
+      status: staff.status,
+      createdAt: staff.created_at.toISOString(),
+      updatedAt: staff.updated_at.toISOString(),
       vendor: {
         id: vendor.id,
         name: vendor.name,
@@ -107,6 +119,7 @@ export class StaffService {
     ctx: StaffContext,
     dto: CreateStaffDto,
   ): Promise<{ staff: staff_users; invited: boolean }> {
+    if (ctx.adminId) return this.createForVendor(ctx.vendorId, dto);
     let branchId = dto.branchId ?? null;
     if (ctx.role === 'branch_manager') {
       if (dto.role !== 'staff') {
@@ -168,10 +181,18 @@ export class StaffService {
     }
 
     if (role === 'vendor_admin' && target.role !== 'vendor_admin') {
-      return this.prisma.$transaction(async tx => {
+      return this.prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM vendors WHERE id=${ctx.vendorId}::uuid FOR UPDATE`;
         await this.assertSingleAdmin(tx, ctx.vendorId, target.id);
-        return tx.staff_users.update({ where: { id: target.id }, data: { name: dto.name, role, branch_id: branchId, status: dto.status } });
+        return tx.staff_users.update({
+          where: { id: target.id },
+          data: {
+            name: dto.name,
+            role,
+            branch_id: branchId,
+            status: dto.status,
+          },
+        });
       });
     }
     return this.prisma.staff_users.update({
@@ -182,7 +203,10 @@ export class StaffService {
 
   /** Platform admin: every staff account of a vendor (admins first, then by name). */
   async listForVendor(vendorId: string): Promise<staff_users[]> {
-    const vendor = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
+    const vendor = await this.prisma.vendors.findUnique({
+      where: { id: vendorId },
+      select: { id: true },
+    });
     if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
     return this.prisma.staff_users.findMany({
       where: { vendor_id: vendorId },
@@ -191,10 +215,19 @@ export class StaffService {
   }
 
   /** Platform admin: rename, or disable / re-enable a staff account (soft delete). */
-  async adminUpdate(id: string, dto: Pick<UpdateStaffDto, 'name' | 'status'>): Promise<staff_users> {
-    const found = await this.prisma.staff_users.findUnique({ where: { id }, select: { id: true } });
+  async adminUpdate(
+    id: string,
+    dto: Pick<UpdateStaffDto, 'name' | 'status'>,
+  ): Promise<staff_users> {
+    const found = await this.prisma.staff_users.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     if (!found) throw new NotFoundException({ code: 'staff_not_found' });
-    return this.prisma.staff_users.update({ where: { id }, data: { name: dto.name, status: dto.status } });
+    return this.prisma.staff_users.update({
+      where: { id },
+      data: { name: dto.name, status: dto.status },
+    });
   }
 
   /**
@@ -219,14 +252,27 @@ export class StaffService {
   }
 
   /** Platform onboarding: the first team member owns the shop; later invites choose a role. */
-  async createForVendor(vendorId: string, dto: CreateStaffDto): Promise<{ staff: staff_users; invited: boolean }> {
-    const vendor = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
+  async createForVendor(
+    vendorId: string,
+    dto: CreateStaffDto,
+  ): Promise<{ staff: staff_users; invited: boolean }> {
+    const vendor = await this.prisma.vendors.findUnique({
+      where: { id: vendorId },
+      select: { id: true },
+    });
     if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
-    const first = await this.prisma.staff_users.count({ where: { vendor_id: vendorId } }) === 0;
+    const first =
+      (await this.prisma.staff_users.count({
+        where: { vendor_id: vendorId },
+      })) === 0;
     const role = first ? 'vendor_admin' : dto.role;
-    const branchId = first ? null : dto.branchId ?? null;
+    const branchId = first ? null : (dto.branchId ?? null);
     await this.assertRoleBranch(vendorId, role, branchId);
-    return this.insert(vendorId, { name: dto.name, email: dto.email, role, branchId }, true);
+    return this.insert(
+      vendorId,
+      { name: dto.name, email: dto.email, role, branchId },
+      true,
+    );
   }
 
   /** Links (or invites) the Supabase account, then creates the staff row. */
@@ -246,27 +292,41 @@ export class StaffService {
       select: { id: true },
     });
     if (taken) throw new ConflictException({ code: 'email_taken' });
-    if (s.role === 'vendor_admin') await this.assertSingleAdmin(this.prisma, vendorId);
+    if (s.role === 'vendor_admin')
+      await this.assertSingleAdmin(this.prisma, vendorId);
 
     const account = await this.authAdmin.inviteUser(s.email);
 
     try {
       const data = {
-          vendor_id: vendorId,
-          branch_id: s.branchId,
-          name: s.name,
-          email: s.email,
-          role: s.role,
-          auth_user_id: account.authUserId,
+        vendor_id: vendorId,
+        branch_id: s.branchId,
+        name: s.name,
+        email: s.email,
+        role: s.role,
+        auth_user_id: account.authUserId,
       };
-      const staff = firstStaffIsAdmin || s.role === 'vendor_admin' ? await this.prisma.$transaction(async tx => {
-        // Serialize first-member decisions for concurrent platform invitations.
-        await tx.$queryRaw`SELECT id FROM vendors WHERE id=${vendorId}::uuid FOR UPDATE`;
-        const first = await tx.staff_users.count({ where: { vendor_id: vendorId } }) === 0;
-        const role = firstStaffIsAdmin && first ? 'vendor_admin' : s.role;
-        if (role === 'vendor_admin') await this.assertSingleAdmin(tx, vendorId);
-        return tx.staff_users.create({ data: { ...data, role, ...(role === 'vendor_admin' ? { branch_id: null } : {}) } });
-      }) : await this.prisma.staff_users.create({ data });
+      const staff =
+        firstStaffIsAdmin || s.role === 'vendor_admin'
+          ? await this.prisma.$transaction(async (tx) => {
+              // Serialize first-member decisions for concurrent platform invitations.
+              await tx.$queryRaw`SELECT id FROM vendors WHERE id=${vendorId}::uuid FOR UPDATE`;
+              const first =
+                (await tx.staff_users.count({
+                  where: { vendor_id: vendorId },
+                })) === 0;
+              const role = firstStaffIsAdmin && first ? 'vendor_admin' : s.role;
+              if (role === 'vendor_admin')
+                await this.assertSingleAdmin(tx, vendorId);
+              return tx.staff_users.create({
+                data: {
+                  ...data,
+                  role,
+                  ...(role === 'vendor_admin' ? { branch_id: null } : {}),
+                },
+              });
+            })
+          : await this.prisma.staff_users.create({ data });
       return { staff, invited: !account.existing };
     } catch (err) {
       if (
@@ -274,7 +334,11 @@ export class StaffService {
         err.code === 'P2002'
       ) {
         const target = JSON.stringify(err.meta ?? {});
-        if (target.includes('vendor_id') || target.includes('staff_users_one_admin_uq')) throw new ConflictException({ code: 'vendor_admin_exists' });
+        if (
+          target.includes('vendor_id') ||
+          target.includes('staff_users_one_admin_uq')
+        )
+          throw new ConflictException({ code: 'vendor_admin_exists' });
         throw new ConflictException({
           code: target.includes('auth_user_id')
             ? 'account_already_staff'
@@ -286,8 +350,20 @@ export class StaffService {
   }
 
   /** Disabled owners still occupy this role; re-enable the existing account instead. */
-  private async assertSingleAdmin(db: Prisma.TransactionClient, vendorId: string, exceptId?: string) {
-    if (await db.staff_users.count({ where: { vendor_id: vendorId, role: 'vendor_admin', ...(exceptId ? { id: { not: exceptId } } : {}) } })) {
+  private async assertSingleAdmin(
+    db: Prisma.TransactionClient,
+    vendorId: string,
+    exceptId?: string,
+  ) {
+    if (
+      await db.staff_users.count({
+        where: {
+          vendor_id: vendorId,
+          role: 'vendor_admin',
+          ...(exceptId ? { id: { not: exceptId } } : {}),
+        },
+      })
+    ) {
       throw new ConflictException({ code: 'vendor_admin_exists' });
     }
   }

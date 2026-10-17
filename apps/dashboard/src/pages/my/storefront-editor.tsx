@@ -1,3 +1,4 @@
+import { useVendorApi, useWorkspace } from '../../lib/vendor-workspace';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AddCircleIcon as Plus,
@@ -17,7 +18,8 @@ import {
   WiFiRouterIcon,
 } from '@solar-icons/react/linear';
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
+import { WorkspaceLink as Link } from '../../lib/vendor-workspace';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,7 +34,7 @@ import { Field } from '../../components/Field';
 import { IPhoneMockup } from '../../components/IPhoneMockup';
 import { initial } from '../../components/PageHeader';
 import { useMyScope, useMyVendor } from '../../layouts/VendorLayout';
-import { errorMessage, vendorApi, type Storefront, type StorefrontSection, type Vendor } from '../../lib/api';
+import { errorMessage, type Storefront, type StorefrontSection, type Vendor } from '../../lib/api';
 import { config } from '../../lib/config';
 import { LOYALTY_LABELS, newSection, SECTION_TYPES, WIFI_SECURITY } from '../../lib/storefront';
 import { t } from '../../i18n';
@@ -59,9 +61,13 @@ export const storefrontUrl = (vendor: Vendor, branchId?: string) =>
  * can get its own copy. Changes save on their own and the phone reloads after each save.
  */
 export function StorefrontEditor() {
+  const vendorApi = useVendorApi();
   const vendor = useMyVendor();
   const qc = useQueryClient();
-  const { data, error, isPending } = useQuery({ queryKey: ['storefront'], queryFn: vendorApi.storefront });
+  const { data, error, isPending } = useQuery({
+    queryKey: ['storefront'],
+    queryFn: vendorApi.storefront,
+  });
   const [scope, setScope] = useState<string>(SHOP);
   const [previewKey, setPreviewKey] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
@@ -89,7 +95,9 @@ export function StorefrontEditor() {
           {vendor.logoUrl ? (
             <img src={vendor.logoUrl} alt="" className="size-12 shrink-0 rounded-xl border object-cover" />
           ) : (
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-semibold">{initial(vendor.name)}</span>
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-semibold">
+              {initial(vendor.name)}
+            </span>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -97,7 +105,13 @@ export function StorefrontEditor() {
               <SaveStatus />
             </div>
             {url ? (
-              <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate py-0.5 text-sm text-muted-foreground hover:text-foreground hover:underline">
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                dir="ltr"
+                className="block truncate py-0.5 text-sm text-muted-foreground hover:text-foreground hover:underline"
+              >
                 {url.replace(/^https?:\/\//, '')}
               </a>
             ) : (
@@ -167,14 +181,29 @@ export function StorefrontEditor() {
                 branch.storefront ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
                     {t('storefront.branchOwn', { branch: branch.name })}
-                    <Button variant="outline" size="sm" disabled={save.isPending} onClick={() => save.mutate({ branchId: branch.id, storefront: null })}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={save.isPending}
+                      onClick={() => save.mutate({ branchId: branch.id, storefront: null })}
+                    >
                       <Refresh /> {t('storefront.useShop')}
                     </Button>
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed p-3 text-sm">
                     <span className="text-muted-foreground">{t('storefront.branchUsesShop', { branch: branch.name })}</span>
-                    <Button size="sm" disabled={save.isPending || !data} onClick={() => data && save.mutate({ branchId: branch.id, storefront: data.shop })}>
+                    <Button
+                      size="sm"
+                      disabled={save.isPending || !data}
+                      onClick={() =>
+                        data &&
+                        save.mutate({
+                          branchId: branch.id,
+                          storefront: data.shop,
+                        })
+                      }
+                    >
                       {t('storefront.customize')}
                     </Button>
                   </div>
@@ -198,6 +227,7 @@ export function StorefrontEditor() {
 /** Under the phone, like the footer of the page itself: Preview (the live page) | Change style. */
 function PreviewFooter({ url, onNavigate }: { url: string | null; onNavigate?: () => void }) {
   const navigate = useNavigate();
+  const workspace = useWorkspace();
   const link =
     'rounded-md px-1 py-1 text-sm font-medium text-muted-foreground transition-colors duration-100 ease-linear hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
   return (
@@ -213,7 +243,7 @@ function PreviewFooter({ url, onNavigate }: { url: string | null; onNavigate?: (
         className={link}
         onClick={() => {
           onNavigate?.();
-          navigate('/settings?tab=branding');
+          navigate(`/settings?tab=branding${workspace ? `&vendor=${workspace.me.vendorId}` : ''}`);
         }}
       >
         {t('storefront.changeStyle')}
@@ -254,7 +284,11 @@ function SectionsEditor({ value, onChange }: { value: Storefront; onChange: (s: 
     [next[i], next[i + by]] = [next[i + by], next[i]];
     commit(next);
   };
-  const patch = (i: number, s: StorefrontSection, later = false) => commit(sections.map((x, j) => (j === i ? s : x)), later);
+  const patch = (i: number, s: StorefrontSection, later = false) =>
+    commit(
+      sections.map((x, j) => (j === i ? s : x)),
+      later,
+    );
 
   return (
     <div className="grid gap-3">
@@ -269,9 +303,7 @@ function SectionsEditor({ value, onChange }: { value: Storefront; onChange: (s: 
                   <Icon className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold">
-                    {t(`storefront.sections.${s.type}.title`)}
-                  </h3>
+                  <h3 className="font-semibold">{t(`storefront.sections.${s.type}.title`)}</h3>
                   <p className="text-sm text-muted-foreground">{t(`storefront.sections.${s.type}.hint`)}</p>
                 </div>
                 <Badge variant={core ? 'outline' : 'success'}>{core ? t('storefront.alwaysShown') : t('storefront.shown')}</Badge>
@@ -282,7 +314,13 @@ function SectionsEditor({ value, onChange }: { value: Storefront; onChange: (s: 
               <Button variant="ghost" size="icon-sm" disabled={i === 0} aria-label={t('storefront.moveUp')} onClick={() => move(i, -1)}>
                 <ArrowUp />
               </Button>
-              <Button variant="ghost" size="icon-sm" disabled={i === sections.length - 1} aria-label={t('storefront.moveDown')} onClick={() => move(i, 1)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={i === sections.length - 1}
+                aria-label={t('storefront.moveDown')}
+                onClick={() => move(i, 1)}
+              >
                 <ArrowDown />
               </Button>
               {core ? null : (
@@ -440,9 +478,7 @@ export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean;
   }, []);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="w-auto max-w-none justify-items-center gap-5 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&>[data-slot=dialog-close]]:hidden"
-      >
+      <DialogContent className="w-auto max-w-none justify-items-center gap-5 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&>[data-slot=dialog-close]]:hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>{t('storefront.preview')}</DialogTitle>
           <DialogDescription>{t('storefront.subtitle')}</DialogDescription>
@@ -456,24 +492,67 @@ export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean;
   );
 }
 
-function FeedbackSettings({ section, onChange }: { section: Extract<StorefrontSection, { type: 'feedback' }>; onChange: (s: StorefrontSection) => void }) {
+function FeedbackSettings({
+  section,
+  onChange,
+}: {
+  section: Extract<StorefrontSection, { type: 'feedback' }>;
+  onChange: (s: StorefrontSection) => void;
+}) {
   const [en, setEn] = useState(section.placeholder?.en ?? '');
   const [ar, setAr] = useState(section.placeholder?.ar ?? '');
   const both = !!en.trim() && !!ar.trim();
   const empty = !en.trim() && !ar.trim();
   const changed = en.trim() !== (section.placeholder?.en ?? '') || ar.trim() !== (section.placeholder?.ar ?? '');
-  return <div className="grid gap-4">
-    <p className="text-sm text-muted-foreground">{t('feedback.placeholderHint')}</p>
-    <Field label={t('feedback.placeholderEn')} htmlFor="feedback-placeholder-en">
-      <Input id="feedback-placeholder-en" dir="ltr" maxLength={300} value={en} placeholder={t('feedback.defaultEn')} onChange={e => setEn(e.target.value)} />
-    </Field>
-    <Field label={t('feedback.placeholderAr')} htmlFor="feedback-placeholder-ar">
-      <Input id="feedback-placeholder-ar" dir="rtl" maxLength={300} value={ar} placeholder={t('feedback.defaultAr')} onChange={e => setAr(e.target.value)} />
-    </Field>
-    {!both && !empty ? <p role="status" className="text-sm text-destructive">{t('feedback.bothRequired')}</p> : null}
-    <div className="flex flex-wrap gap-2">
-      <Button variant="outline" disabled={!changed || (!both && !empty)} onClick={() => onChange(both ? { type: 'feedback', placeholder: { en: en.trim(), ar: ar.trim() } } : { type: 'feedback' })}>{t('feedback.savePlaceholder')}</Button>
-      <Button variant="outline" asChild><Link to="/feedback">{t('feedback.view')}</Link></Button>
+  return (
+    <div className="grid gap-4">
+      <p className="text-sm text-muted-foreground">{t('feedback.placeholderHint')}</p>
+      <Field label={t('feedback.placeholderEn')} htmlFor="feedback-placeholder-en">
+        <Input
+          id="feedback-placeholder-en"
+          dir="ltr"
+          maxLength={300}
+          value={en}
+          placeholder={t('feedback.defaultEn')}
+          onChange={(e) => setEn(e.target.value)}
+        />
+      </Field>
+      <Field label={t('feedback.placeholderAr')} htmlFor="feedback-placeholder-ar">
+        <Input
+          id="feedback-placeholder-ar"
+          dir="rtl"
+          maxLength={300}
+          value={ar}
+          placeholder={t('feedback.defaultAr')}
+          onChange={(e) => setAr(e.target.value)}
+        />
+      </Field>
+      {!both && !empty ? (
+        <p role="status" className="text-sm text-destructive">
+          {t('feedback.bothRequired')}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          disabled={!changed || (!both && !empty)}
+          onClick={() =>
+            onChange(
+              both
+                ? {
+                    type: 'feedback',
+                    placeholder: { en: en.trim(), ar: ar.trim() },
+                  }
+                : { type: 'feedback' },
+            )
+          }
+        >
+          {t('feedback.savePlaceholder')}
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/feedback">{t('feedback.view')}</Link>
+        </Button>
+      </div>
     </div>
-  </div>;
+  );
 }

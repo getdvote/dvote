@@ -1,3 +1,4 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { GiftIcon as Gift, CloseIcon as X } from '@solar-icons/react/linear';
@@ -13,7 +14,7 @@ import { num, PageHeader } from '../../components/PageHeader';
 import { PeriodPicker, Total, usePeriod } from '../../components/PeriodFilter';
 import { TableState } from '../../components/TableState';
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
-import { vendorApi, type RedemptionPage } from '../../lib/api';
+import { type RedemptionPage } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
 
@@ -22,6 +23,7 @@ const ALL = 'all';
 
 /** Rewards given at my shops (a tab of the Rewards page when `embedded`): what customers pick, where, and who handed it over. Customers show as a card code. */
 export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
+  const vendorApi = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
   const vendor = useMyVendor();
@@ -47,8 +49,15 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
     placeholderData: (prev) => prev,
     refetchInterval: 60_000,
   });
-  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: !branchOnly });
-  const { data: staff } = useQuery({ queryKey: ['staff', scope.key], queryFn: () => scope.staff() });
+  const { data: branches } = useQuery({
+    queryKey: ['branches', scope.key],
+    queryFn: () => scope.branches(),
+    enabled: !branchOnly,
+  });
+  const { data: staff } = useQuery({
+    queryKey: ['staff', scope.key],
+    queryFn: () => scope.staff(),
+  });
 
   // any filter change starts again at page 1
   const reset = (set: (v: string) => void) => (v: string) => {
@@ -64,12 +73,16 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
     <>
       {embedded ? (
         <p className="mb-4 text-sm text-muted-foreground">
-          {t('redemptions.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+          {t('redemptions.subtitle', {
+            shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name,
+          })}
         </p>
       ) : (
         <PageHeader
           title={t('nav.redemptions')}
-          subtitle={t('redemptions.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+          subtitle={t('redemptions.subtitle', {
+            shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name,
+          })}
         />
       )}
       <PeriodPicker state={period} onChange={() => setPage(1)} />
@@ -91,7 +104,10 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
               allLabel={t('redemptions.allRewards')}
               value={rewardId}
               onChange={reset(setRewardId)}
-              options={data?.byReward.map((r) => ({ value: r.rewardId, label: r.name }))}
+              options={data?.byReward.map((r) => ({
+                value: r.rewardId,
+                label: r.name,
+              }))}
             />
             {branchOnly ? null : (
               <SelectFilter
@@ -153,9 +169,7 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
           <Pager page={page} pageSize={PAGE_SIZE} total={data?.total ?? 0} onChange={setPage} />
         </Card>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        {t('redemptions.footnote', { shop: vendor.name })}
-      </p>
+      <p className="mt-3 text-xs text-muted-foreground">{t('redemptions.footnote', { shop: vendor.name })}</p>
     </>
   );
 }

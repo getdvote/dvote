@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import type { StaffContext } from '../auth/staff-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,7 +21,12 @@ import {
   SegmentPreviewResultDto,
   UpdateCustomerSegmentDto,
 } from './customer.dto';
-import { checkRules, rulesSql, SEGMENT_SQL, type SegmentRule } from './segments';
+import {
+  checkRules,
+  rulesSql,
+  SEGMENT_SQL,
+  type SegmentRule,
+} from './segments';
 
 type CustomerRow = {
   id: string;
@@ -60,7 +69,11 @@ const mapCustomer = (r: CustomerRow): MerchantCustomerDto => ({
   name: r.name,
   segment: r.segment,
   customSegment: r.custom_segment_id
-    ? { id: r.custom_segment_id, name: r.custom_segment_name!, manual: !!r.custom_manual }
+    ? {
+        id: r.custom_segment_id,
+        name: r.custom_segment_name!,
+        manual: !!r.custom_manual,
+      }
     : null,
   firstVisitAt: r.first_visit?.toISOString() ?? null,
   lastVisitAt: r.last_visit?.toISOString() ?? null,
@@ -82,7 +95,9 @@ const mapSegment = (s: SegmentRow, count: number): CustomSegmentDto => ({
   sortOrder: s.sort_order,
   count,
 });
-const repeatable = { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead };
+const repeatable = {
+  isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+};
 
 @Injectable()
 export class MerchantCustomersService {
@@ -90,7 +105,7 @@ export class MerchantCustomersService {
 
   /** The same classification as Customers, projected to card IDs for a broadcast snapshot. */
   async broadcastAudience(ctx: StaffContext, q: CustomerListQuery) {
-    return this.prisma.$transaction(async tx => {
+    return this.prisma.$transaction(async (tx) => {
       if (q.customSegment) await this.segmentOr404(tx, ctx, q.customSegment);
       const segments = await this.segments(tx, ctx.vendorId);
       return tx.$queryRaw<{ id: string; google_object_id: string | null }[]>`
@@ -127,9 +142,12 @@ export class MerchantCustomersService {
     opts: { branchId?: string; cardId?: string; contact?: boolean } = {},
   ) {
     const { branchId, cardId, contact } = opts;
-    const manualFirst = segments.map((s) => Prisma.sql`WHEN ${s.id}::uuid = ANY(inc) THEN ${s.id}::uuid`);
+    const manualFirst = segments.map(
+      (s) => Prisma.sql`WHEN ${s.id}::uuid = ANY(inc) THEN ${s.id}::uuid`,
+    );
     const byRules = segments.map(
-      (s) => Prisma.sql`WHEN NOT ${s.id}::uuid = ANY(exc) AND ${rulesSql(s.match, s.rules)} THEN ${s.id}::uuid`,
+      (s) =>
+        Prisma.sql`WHEN NOT ${s.id}::uuid = ANY(exc) AND ${rulesSql(s.match, s.rules)} THEN ${s.id}::uuid`,
     );
     const custom = segments.length
       ? Prisma.sql`CASE ${Prisma.join([...manualFirst, ...byRules], ' ')} END`
@@ -240,8 +258,16 @@ export class MerchantCustomersService {
         page,
         pageSize,
         customersTotal: sum(() => true),
-        segments: SEGMENTS.map((key) => ({ key, count: sum((c) => c.segment === key) })),
-        customSegments: segments.map((s) => mapSegment(s, sum((c) => c.custom === s.id))),
+        segments: SEGMENTS.map((key) => ({
+          key,
+          count: sum((c) => c.segment === key),
+        })),
+        customSegments: segments.map((s) =>
+          mapSegment(
+            s,
+            sum((c) => c.custom === s.id),
+          ),
+        ),
         asOf: clock.day,
       };
     }, repeatable);
@@ -293,8 +319,7 @@ export class MerchantCustomersService {
           id: e.id,
           type: e.type,
           points: e.delta,
-          amount:
-            e.purchase_amount === null ? null : money(e.purchase_amount),
+          amount: e.purchase_amount === null ? null : money(e.purchase_amount),
           branchName: e.branches?.name ?? null,
           rewardName: e.redemptions?.reward_name ?? null,
           createdAt: e.created_at.toISOString(),
@@ -304,7 +329,10 @@ export class MerchantCustomersService {
   }
 
   /** Every customer matching the list filters, with email and phone (merchant admins only). */
-  async export(ctx: StaffContext, q: CustomerListQuery): Promise<CustomerExportDto> {
+  async export(
+    ctx: StaffContext,
+    q: CustomerListQuery,
+  ): Promise<CustomerExportDto> {
     return this.prisma.$transaction(async (tx) => {
       const segments = await this.segments(tx, ctx.vendorId);
       const rows = await tx.$queryRaw<ContactRow[]>`
@@ -336,7 +364,10 @@ export class MerchantCustomersService {
     return s;
   }
 
-  private async withCount(ctx: StaffContext, id: string): Promise<CustomSegmentDto> {
+  private async withCount(
+    ctx: StaffContext,
+    id: string,
+  ): Promise<CustomSegmentDto> {
     const list = await this.list(ctx, { pageSize: 1 });
     const s = list.customSegments.find((x) => x.id === id);
     if (!s) throw new NotFoundException({ code: 'segment_not_found' });
@@ -345,13 +376,19 @@ export class MerchantCustomersService {
 
   /** 409 segment_name_taken on the active-name unique index. */
   private nameTaken(e: unknown): never {
-    const meta = e instanceof Prisma.PrismaClientKnownRequestError ? JSON.stringify(e.meta ?? {}) : '';
+    const meta =
+      e instanceof Prisma.PrismaClientKnownRequestError
+        ? JSON.stringify(e.meta ?? {})
+        : '';
     if (`${String(e)} ${meta}`.includes('customer_segments_name_uq'))
       throw new ConflictException({ code: 'segment_name_taken' });
     throw e;
   }
 
-  async createSegment(ctx: StaffContext, dto: CreateCustomerSegmentDto): Promise<CustomSegmentDto> {
+  async createSegment(
+    ctx: StaffContext,
+    dto: CreateCustomerSegmentDto,
+  ): Promise<CustomSegmentDto> {
     const rules = checkRules(dto.rules ?? []);
     let id: string;
     try {
@@ -360,7 +397,7 @@ export class MerchantCustomersService {
         VALUES (${ctx.vendorId}::uuid, ${dto.name}, ${dto.description ?? null}, ${dto.match ?? 'all'},
           ${JSON.stringify(rules)}::jsonb,
           (SELECT coalesce(max(sort_order) + 1, 0) FROM customer_segments WHERE vendor_id = ${ctx.vendorId}::uuid),
-          ${ctx.staffId}::uuid)
+          ${ctx.adminId ? null : ctx.staffId}::uuid)
         RETURNING id`;
     } catch (e) {
       this.nameTaken(e);
@@ -368,7 +405,11 @@ export class MerchantCustomersService {
     return this.withCount(ctx, id);
   }
 
-  async updateSegment(ctx: StaffContext, id: string, dto: UpdateCustomerSegmentDto): Promise<CustomSegmentDto> {
+  async updateSegment(
+    ctx: StaffContext,
+    id: string,
+    dto: UpdateCustomerSegmentDto,
+  ): Promise<CustomSegmentDto> {
     const s = await this.segmentOr404(this.prisma, ctx, id);
     const rules = dto.rules ? checkRules(dto.rules) : s.rules;
     try {
@@ -395,7 +436,10 @@ export class MerchantCustomersService {
   }
 
   /** How many customers the rules match now (the "N customers" line while building a segment). */
-  async previewSegment(ctx: StaffContext, dto: SegmentPreviewDto): Promise<SegmentPreviewResultDto> {
+  async previewSegment(
+    ctx: StaffContext,
+    dto: SegmentPreviewDto,
+  ): Promise<SegmentPreviewResultDto> {
     const rules = checkRules(dto.rules);
     const branchId = this.branch(ctx, dto.branchId);
     const [r] = await this.prisma.$queryRaw<{ n: bigint; total: bigint }[]>`
@@ -408,30 +452,44 @@ export class MerchantCustomersService {
    * Adds a customer to a segment by hand. A customer has one custom segment, so this also
    * drops their other hand-made additions; a "removed by hand" mark on this segment is lifted.
    */
-  async addMember(ctx: StaffContext, segmentId: string, cardId: string): Promise<void> {
+  async addMember(
+    ctx: StaffContext,
+    segmentId: string,
+    cardId: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.segmentOr404(tx, ctx, segmentId);
-      const card = await tx.cards.findFirst({ where: { id: cardId, vendor_id: ctx.vendorId }, select: { id: true } });
+      const card = await tx.cards.findFirst({
+        where: { id: cardId, vendor_id: ctx.vendorId },
+        select: { id: true },
+      });
       if (!card) throw new NotFoundException({ code: 'customer_not_found' });
       await tx.$executeRaw`
         DELETE FROM customer_segment_members
         WHERE vendor_id = ${ctx.vendorId}::uuid AND card_id = ${cardId}::uuid AND included AND segment_id <> ${segmentId}::uuid`;
       await tx.$executeRaw`
         INSERT INTO customer_segment_members (segment_id, card_id, vendor_id, included, set_by_staff_id)
-        VALUES (${segmentId}::uuid, ${cardId}::uuid, ${ctx.vendorId}::uuid, true, ${ctx.staffId}::uuid)
+        VALUES (${segmentId}::uuid, ${cardId}::uuid, ${ctx.vendorId}::uuid, true, ${ctx.adminId ? null : ctx.staffId}::uuid)
         ON CONFLICT (segment_id, card_id) DO UPDATE SET included = true, set_by_staff_id = EXCLUDED.set_by_staff_id`;
     });
   }
 
   /** Takes a customer out of a segment by hand: stays out even if the rules match. */
-  async removeMember(ctx: StaffContext, segmentId: string, cardId: string): Promise<void> {
+  async removeMember(
+    ctx: StaffContext,
+    segmentId: string,
+    cardId: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.segmentOr404(tx, ctx, segmentId);
-      const card = await tx.cards.findFirst({ where: { id: cardId, vendor_id: ctx.vendorId }, select: { id: true } });
+      const card = await tx.cards.findFirst({
+        where: { id: cardId, vendor_id: ctx.vendorId },
+        select: { id: true },
+      });
       if (!card) throw new NotFoundException({ code: 'customer_not_found' });
       await tx.$executeRaw`
         INSERT INTO customer_segment_members (segment_id, card_id, vendor_id, included, set_by_staff_id)
-        VALUES (${segmentId}::uuid, ${cardId}::uuid, ${ctx.vendorId}::uuid, false, ${ctx.staffId}::uuid)
+        VALUES (${segmentId}::uuid, ${cardId}::uuid, ${ctx.vendorId}::uuid, false, ${ctx.adminId ? null : ctx.staffId}::uuid)
         ON CONFLICT (segment_id, card_id) DO UPDATE SET included = false, set_by_staff_id = EXCLUDED.set_by_staff_id`;
     });
   }

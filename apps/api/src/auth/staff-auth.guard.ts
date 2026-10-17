@@ -18,6 +18,8 @@ import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
  * every query with it (vendorId always, branchId for branch roles).
  */
 export interface StaffContext {
+  /** Set only by the MFA-protected platform workspace guard, never by staff requests. */
+  adminId?: string;
   staffId: string;
   vendorId: string;
   /** null for vendor_admin (vendor-wide). */

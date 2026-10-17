@@ -1,6 +1,14 @@
-import { Link } from 'react-router';
+import { useVendorApi } from '../../lib/vendor-workspace';
+import { WorkspaceLink as Link } from '../../lib/vendor-workspace';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarcodeScanIcon as BarcodeScan, CameraIcon as Camera, CheckCircleIcon as CheckCircle2, GiftIcon as Gift, LoaderIcon as Loader2, ScannerIcon as ScanLine } from '@solar-icons/react/linear';
+import {
+  BarcodeScanIcon as BarcodeScan,
+  CameraIcon as Camera,
+  CheckCircleIcon as CheckCircle2,
+  GiftIcon as Gift,
+  LoaderIcon as Loader2,
+  ScannerIcon as ScanLine,
+} from '@solar-icons/react/linear';
 import { useEffect, useRef, useState, type ComponentType, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +24,7 @@ import { CameraBlockedHelp, useCameraGranted } from '../../components/camera-hel
 import { QrScanner, type CameraProblem } from '../../components/QrScanner';
 import { errorText, t } from '../../i18n';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
-import { ApiError, errorMessage, vendorApi, type RedeemPreview, type StaffMe, type WalletCardPreview } from '../../lib/api';
+import { ApiError, errorMessage, type RedeemPreview, type StaffMe, type WalletCardPreview } from '../../lib/api';
 import { branchState, OPENING_HOURS, stateLabel, type BranchState } from '../../lib/hours';
 
 const QR_PREFIXES = ['dvote:q1:', 'dvote:c1:'];
@@ -58,6 +66,7 @@ const money = (v: string) => v.replace(/\.00$/, '');
  * a merchant admin picks the branch they are working at (remembered in this browser).
  */
 export function MyTill() {
+  const vendorApi = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
   const qc = useQueryClient();
@@ -82,9 +91,18 @@ export function MyTill() {
   const mustPick = !me.branch && me.branches.length > 1;
   const ready = !!branchId;
 
-  const { data: today } = useQuery({ queryKey: ['scans', 'today'], queryFn: vendorApi.scansToday, refetchInterval: 60_000 });
+  const { data: today } = useQuery({
+    queryKey: ['scans', 'today'],
+    queryFn: vendorApi.scansToday,
+    refetchInterval: 60_000,
+  });
   // Open / closed for the branch (the branches list is for managers and admins only).
-  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: OPENING_HOURS && me.role !== 'staff', refetchInterval: 60_000 });
+  const { data: branches } = useQuery({
+    queryKey: ['branches', scope.key],
+    queryFn: () => scope.branches(),
+    enabled: OPENING_HOURS && me.role !== 'staff',
+    refetchInterval: 60_000,
+  });
   const branch = branches?.find((b) => b.id === branchId);
   // hours switched off: no open / closed badge (the shared branches cache would still fill `branch`)
   const state = OPENING_HOURS && branch ? branchState(branch) : null;
@@ -137,17 +155,35 @@ export function MyTill() {
       </button>
 
       <div className="mt-4 grid gap-4">
-        <Tile icon={Gift} title={t('till.redeem')} hint={t('till.redeemHint')} disabled={!ready} onClick={() => setStep({ kind: 'scan', rewardOnly: true })} />
+        <Tile
+          icon={Gift}
+          title={t('till.redeem')}
+          hint={t('till.redeemHint')}
+          disabled={!ready}
+          onClick={() => setStep({ kind: 'scan', rewardOnly: true })}
+        />
       </div>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
         {me.activeRule
-          ? t('till.rule', { spend: money(me.activeRule.spendAmount), currency: me.vendor.currency, points: me.activeRule.pointsPerSpend })
+          ? t('till.rule', {
+              spend: money(me.activeRule.spendAmount),
+              currency: me.vendor.currency,
+              points: me.activeRule.pointsPerSpend,
+            })
           : t('till.noRule')}
       </p>
 
-      <Link to={`/activity?period=today&staff=${me.id}`} className="mt-10 block rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <div className="font-medium">{t('till.today', { collects: num(today?.collects ?? 0), redemptions: num(today?.redemptions ?? 0) })}</div>
+      <Link
+        to={`/activity?period=today&staff=${me.id}`}
+        className="mt-10 block rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <div className="font-medium">
+          {t('till.today', {
+            collects: num(today?.collects ?? 0),
+            redemptions: num(today?.redemptions ?? 0),
+          })}
+        </div>
         <div className="text-sm text-muted-foreground">{t('till.todayBy')}</div>
       </Link>
 
@@ -160,7 +196,19 @@ export function MyTill() {
   );
 }
 
-function Tile({ icon: Icon, title, hint, disabled, onClick }: { icon: ComponentType<{ className?: string }>; title: string; hint: string; disabled: boolean; onClick: () => void }) {
+function Tile({
+  icon: Icon,
+  title,
+  hint,
+  disabled,
+  onClick,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  hint: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -175,7 +223,12 @@ function Tile({ icon: Icon, title, hint, disabled, onClick }: { icon: ComponentT
   );
 }
 
-const TONE: Record<BranchState, 'success' | 'warning' | 'muted'> = { open: 'success', paused: 'warning', closed: 'muted', unknown: 'muted' };
+const TONE: Record<BranchState, 'success' | 'warning' | 'muted'> = {
+  open: 'success',
+  paused: 'warning',
+  closed: 'muted',
+  unknown: 'muted',
+};
 
 function StateBadge({ state }: { state: BranchState }) {
   return (
@@ -187,25 +240,53 @@ function StateBadge({ state }: { state: BranchState }) {
 }
 
 /** The dialog's content for one step. Each step is its own mount (key = kind), so state starts fresh. */
-function TillFlow({ step, setStep, me, branchId, onDone }: { step: Step; setStep: (s: Step | null) => void; me: StaffMe; branchId: string | null; onDone: () => void }) {
+function TillFlow({
+  step,
+  setStep,
+  me,
+  branchId,
+  onDone,
+}: {
+  step: Step;
+  setStep: (s: Step | null) => void;
+  me: StaffMe;
+  branchId: string | null;
+  onDone: () => void;
+}) {
   // Vendor admins have no branch of their own: send the one picked on the till.
   const sendBranch = me.branch ? undefined : (branchId ?? undefined);
   switch (step.kind) {
     case 'scan':
       return <ScanStep step={step} setStep={setStep} branchId={sendBranch} />;
     case 'amount':
-      return <AmountStep code={step.code} rule={me.activeRule} currency={me.vendor.currency} branchId={sendBranch} setStep={setStep} onDone={onDone} />;
+      return (
+        <AmountStep code={step.code} rule={me.activeRule} currency={me.vendor.currency} branchId={sendBranch} setStep={setStep} onDone={onDone} />
+      );
     case 'walletRewards':
       return <WalletRewardsStep code={step.code} wallet={step.wallet} setStep={setStep} />;
     case 'redeem':
       return <RedeemStep code={step.code} preview={step.preview} branchId={sendBranch} setStep={setStep} onDone={onDone} />;
     case 'collected':
       return (
-        <Result title={t('till.granted', { n: num(step.points) })} detail={t('till.grantedFor', { amount: money(step.amount), currency: step.currency })} onNext={() => setStep(null)} />
+        <Result
+          title={t('till.granted', { n: num(step.points) })}
+          detail={t('till.grantedFor', {
+            amount: money(step.amount),
+            currency: step.currency,
+          })}
+          onNext={() => setStep(null)}
+        />
       );
     case 'given':
       return (
-        <Result title={t('till.given', { reward: step.reward })} detail={t('till.givenDetail', { n: num(step.points), balance: num(step.balance) })} onNext={() => setStep(null)} />
+        <Result
+          title={t('till.given', { reward: step.reward })}
+          detail={t('till.givenDetail', {
+            n: num(step.points),
+            balance: num(step.balance),
+          })}
+          onNext={() => setStep(null)}
+        />
       );
   }
 }
@@ -219,6 +300,7 @@ const FULL_CODE = /^dvote:(q1|c1):[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url,
  * camera at the till) or the computer's camera. The scanner "types" into a field that keeps focus.
  */
 function ScanStep({ step, setStep, branchId }: { step: Extract<Step, { kind: 'scan' }>; setStep: (s: Step) => void; branchId?: string }) {
+  const vendorApi = useVendorApi();
   const [mode, setMode] = useState<ScanMode>('scanner');
   const [typed, setTyped] = useState('');
   const [checking, setChecking] = useState(false);
@@ -236,7 +318,7 @@ function ScanStep({ step, setStep, branchId }: { step: Extract<Step, { kind: 'sc
   async function check(raw: string) {
     const code = raw.trim();
     if (busy.current || !code || code === lastBad.current) return;
-    if (!QR_PREFIXES.some(prefix => code.startsWith(prefix))) {
+    if (!QR_PREFIXES.some((prefix) => code.startsWith(prefix))) {
       lastBad.current = code;
       setError(t('till.notDvote'));
       return;
@@ -331,7 +413,17 @@ function ScanStep({ step, setStep, branchId }: { step: Extract<Step, { kind: 'sc
  * (a stray click elsewhere in the dialog gives it back), Enter checks the code, and so does a
  * complete code arriving without Enter. Typing by hand works the same way.
  */
-function ScannerInput({ value, checking, onChange, onSubmit }: { value: string; checking: boolean; onChange: (v: string) => void; onSubmit: (v: string) => void }) {
+function ScannerInput({
+  value,
+  checking,
+  onChange,
+  onSubmit,
+}: {
+  value: string;
+  checking: boolean;
+  onChange: (v: string) => void;
+  onSubmit: (v: string) => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [focused, setFocused] = useState(true);
 
@@ -415,6 +507,7 @@ function AmountStep({
   setStep: (s: Step) => void;
   onDone: () => void;
 }) {
+  const vendorApi = useVendorApi();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -429,9 +522,19 @@ function AmountStep({
     setBusy(true);
     setError(null);
     try {
-      const r = await vendorApi.collect({ code, amount: minor / 100, branchId, idempotencyKey });
+      const r = await vendorApi.collect({
+        code,
+        amount: minor / 100,
+        branchId,
+        idempotencyKey,
+      });
       onDone();
-      setStep({ kind: 'collected', points: r.pointsAdded, amount: r.purchaseAmount, currency: r.currency });
+      setStep({
+        kind: 'collected',
+        points: r.pointsAdded,
+        amount: r.purchaseAmount,
+        currency: r.currency,
+      });
     } catch (err) {
       setError(err);
       setBusy(false);
@@ -442,7 +545,15 @@ function AmountStep({
     <form onSubmit={grant} className="grid gap-4">
       <DialogHeader>
         <DialogTitle>{t('till.amountTitle')}</DialogTitle>
-        {rule ? <DialogDescription>{t('till.rule', { spend: money(rule.spendAmount), currency, points: rule.pointsPerSpend })}</DialogDescription> : null}
+        {rule ? (
+          <DialogDescription>
+            {t('till.rule', {
+              spend: money(rule.spendAmount),
+              currency,
+              points: rule.pointsPerSpend,
+            })}
+          </DialogDescription>
+        ) : null}
       </DialogHeader>
       <div className="relative">
         <Input
@@ -465,32 +576,63 @@ function AmountStep({
       ) : null}
       <ErrorAlert error={error} />
       <div data-mobile-dialog-actions className="grid">
-      <Button type="submit" size="lg" disabled={busy || !minor}>
-        {busy ? <Loader2 className="animate-spin" /> : null}
-        {t('till.grant')}
-      </Button>
+        <Button type="submit" size="lg" disabled={busy || !minor}>
+          {busy ? <Loader2 className="animate-spin" /> : null}
+          {t('till.grant')}
+        </Button>
       </div>
     </form>
   );
 }
 
 function WalletRewardsStep({ code, wallet, setStep }: { code: string; wallet: WalletCardPreview; setStep: (s: Step) => void }) {
-  return <>
-    <DialogHeader><DialogTitle>{t('till.chooseReward')}</DialogTitle><DialogDescription>{wallet.customerName ?? t('till.someone')} · {t('till.points', { n: num(wallet.balance) })}</DialogDescription></DialogHeader>
-    <div className="grid max-h-[55vh] gap-3 overflow-y-auto">
-      {!wallet.rewards.length && <p className="text-sm text-muted-foreground">{t('till.noRewards')}</p>}
-      {wallet.rewards.map(reward => <div key={reward.rewardId} className="flex items-center gap-3 rounded-xl border p-3">
-        {reward.rewardImageUrl && <img src={reward.rewardImageUrl} alt="" className="size-14 rounded-lg object-cover" />}
-        <div className="min-w-0 flex-1"><p className="font-medium">{reward.rewardName}</p>{reward.rewardNameAr && <p dir="rtl" className="text-sm text-muted-foreground">{reward.rewardNameAr}</p>}<p className="text-sm">{t('till.points', { n: num(reward.pointsCost) })}</p>
-          {!reward.usable && <p className="text-xs text-muted-foreground">{errorText(reward.reason ?? 'insufficient_points')}</p>}
-        </div>
-        <Button disabled={!reward.usable} onClick={() => setStep({ kind: 'redeem', code, preview: reward })}>{t('till.redeemChoice')}</Button>
-      </div>)}
-    </div>
-  </>;
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{t('till.chooseReward')}</DialogTitle>
+        <DialogDescription>
+          {wallet.customerName ?? t('till.someone')} · {t('till.points', { n: num(wallet.balance) })}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid max-h-[55vh] gap-3 overflow-y-auto">
+        {!wallet.rewards.length && <p className="text-sm text-muted-foreground">{t('till.noRewards')}</p>}
+        {wallet.rewards.map((reward) => (
+          <div key={reward.rewardId} className="flex items-center gap-3 rounded-xl border p-3">
+            {reward.rewardImageUrl && <img src={reward.rewardImageUrl} alt="" className="size-14 rounded-lg object-cover" />}
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{reward.rewardName}</p>
+              {reward.rewardNameAr && (
+                <p dir="rtl" className="text-sm text-muted-foreground">
+                  {reward.rewardNameAr}
+                </p>
+              )}
+              <p className="text-sm">{t('till.points', { n: num(reward.pointsCost) })}</p>
+              {!reward.usable && <p className="text-xs text-muted-foreground">{errorText(reward.reason ?? 'insufficient_points')}</p>}
+            </div>
+            <Button disabled={!reward.usable} onClick={() => setStep({ kind: 'redeem', code, preview: reward })}>
+              {t('till.redeemChoice')}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
-function RedeemStep({ code, preview: p, branchId, setStep, onDone }: { code: string; preview: RedeemPreview; branchId?: string; setStep: (s: Step) => void; onDone: () => void }) {
+function RedeemStep({
+  code,
+  preview: p,
+  branchId,
+  setStep,
+  onDone,
+}: {
+  code: string;
+  preview: RedeemPreview;
+  branchId?: string;
+  setStep: (s: Step) => void;
+  onDone: () => void;
+}) {
+  const vendorApi = useVendorApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   // One key per confirmation: a retry never takes points twice.
@@ -500,9 +642,20 @@ function RedeemStep({ code, preview: p, branchId, setStep, onDone }: { code: str
     setBusy(true);
     setError(null);
     try {
-      const r = await vendorApi.redeem({ code, rewardId: p.rewardId, expectedPointsCost: p.pointsCost, branchId, idempotencyKey });
+      const r = await vendorApi.redeem({
+        code,
+        rewardId: p.rewardId,
+        expectedPointsCost: p.pointsCost,
+        branchId,
+        idempotencyKey,
+      });
       onDone();
-      setStep({ kind: 'given', reward: r.rewardName, points: r.pointsRedeemed, balance: r.cardBalance });
+      setStep({
+        kind: 'given',
+        reward: r.rewardName,
+        points: r.pointsRedeemed,
+        balance: r.cardBalance,
+      });
     } catch (err) {
       setError(err);
       setBusy(false);
@@ -541,18 +694,32 @@ function RedeemStep({ code, preview: p, branchId, setStep, onDone }: { code: str
       </div>
       <ErrorAlert error={error} />
       <div data-mobile-dialog-actions className="grid">
-      <Button size="lg" onClick={() => void give()} disabled={busy}>
-        {busy ? <Loader2 className="animate-spin" /> : null}
-        {t('till.give')}
-      </Button>
-      {code.startsWith('dvote:c1:') && <Button variant="ghost" disabled={busy} onClick={async () => {
-        setBusy(true); setError(null);
-        try {
-          const fresh = await vendorApi.scanPreview(code, 'redeem', branchId);
-          if (!fresh.usable || !fresh.wallet) throw new ApiError(409, fresh.reason ?? 'qr_invalid', errorText(fresh.reason ?? 'qr_invalid') ?? t('common.somethingWrong'));
-          setStep({ kind: 'walletRewards', code, wallet: fresh.wallet });
-        } catch (err) { setError(err); } finally { setBusy(false); }
-      }}>{t('till.chooseReward')}</Button>}
+        <Button size="lg" onClick={() => void give()} disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : null}
+          {t('till.give')}
+        </Button>
+        {code.startsWith('dvote:c1:') && (
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                const fresh = await vendorApi.scanPreview(code, 'redeem', branchId);
+                if (!fresh.usable || !fresh.wallet)
+                  throw new ApiError(409, fresh.reason ?? 'qr_invalid', errorText(fresh.reason ?? 'qr_invalid') ?? t('common.somethingWrong'));
+                setStep({ kind: 'walletRewards', code, wallet: fresh.wallet });
+              } catch (err) {
+                setError(err);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t('till.chooseReward')}
+          </Button>
+        )}
       </div>
     </>
   );
@@ -565,9 +732,9 @@ function Result({ title, detail, onNext }: { title: string; detail: string; onNe
       <DialogTitle className="text-2xl">{title}</DialogTitle>
       <DialogDescription>{detail}</DialogDescription>
       <div data-mobile-dialog-actions className="grid">
-      <Button className="mt-3 w-full" size="lg" autoFocus onClick={onNext}>
-        {t('till.next')}
-      </Button>
+        <Button className="mt-3 w-full" size="lg" autoFocus onClick={onNext}>
+          {t('till.next')}
+        </Button>
       </div>
     </div>
   );

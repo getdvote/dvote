@@ -335,3 +335,35 @@ LocationPicker uses a taller rounded map panel, softened OSM tile colors, theme-
 
 ### Automatic light/dark branch maps (2026-10-17)
 All embedded maps currently use the shared dashboard LocationPicker (admin/merchant Add and Edit branch forms). Replaced its Leaflet renderer with a lazy-loaded MapLibre BranchMap using OpenFreeMap's OpenMapTiles-derived Positron style in light mode and Dark Matter-derived dark style in dark mode. useTheme.resolvedTheme follows explicit light/dark and system preference; setStyle preserves camera/pin. No API key or added provider account. Provider/data attribution comes from the vector source (OpenFreeMap/OpenMapTiles/OpenStreetMap). Removed the previous raster color filter; controls and pin use dashboard theme colors. Vite worker is explicitly bundled per OpenFreeMap's quick start. Click/drag, search, link, geolocation and resize behavior are retained. WebGL failure shows localized guidance so search/link can still set coordinates. Other apps have outbound Google Maps directions links, not embedded map previews. Dashboard build passes and both style/TileJSON endpoints returned HTTP 200.
+
+## Platform-wide merchant operations (2026-10-18)
+
+The platform admin dashboard now includes merchant operations that were previously only available to merchant accounts. All-merchants views support search and pagination; choose a merchant to open its complete editor/workflow. Existing platform Customers, Statistics, merchant support Feedback and System pages remain separate.
+
+| Merchant feature | Platform-admin entry |
+| --- | --- |
+| Home, onboarding, attention | Merchant overview (/merchant-home), choose merchant |
+| Storefront, menu, branding | Storefronts (/storefront), Merchant settings (/settings) |
+| Branches, pause/resume, photos | Branches (/branches) |
+| Card design and earning rule | Loyalty cards & points (/card) |
+| Rewards, sold-out controls, redemption history | Rewards (/rewards), Redemptions (/redemptions) |
+| Customers, built-in/custom segments, CSV export | Customer segments (/members) |
+| Segmented Wallet messages and nearby settings | Broadcast (/broadcast) |
+| Ledger activity, reports and patterns | Activity (/activity), Insights (/insights) |
+| Customer-to-merchant feedback | Customer feedback (/customer-feedback) |
+| Team invitations, enable/disable, role/branch/name edits | Merchant teams (/team) |
+| Collect/redeem Wallet or one-time QR | Till (/scan); merchant and active branch required |
+| Store kits | /kit (same existing Coming soon content) |
+| Platform-admin operation history | Admin action log (/audit) |
+
+API: GET /api/admin/workspace/:section supplies the cross-merchant listings. /api/admin/vendors/:workspaceVendorId/workspace/... reuses the validated merchant controllers with PlatformAdminGuard + an explicit merchant scope. It requires the real platform admin identity and MFA; it never logs in as, creates, or borrows a merchant staff account. Scoped dashboard requests use createVendorApi(prefix), VendorWorkspaceProvider and an isolated TanStack Query cache per merchant. Internal links preserve the merchant query parameter.
+
+Migration 28_admin_workspace is applied locally and on Supabase; the lockdown script was refreshed. Collect/redeem ledgers use point_events.created_by for the platform admin and null staff_id; QR usage, redemptions and Wallet notification outboxes have explicit admin actor columns and exclusive actor checks. All other scoped writes have admin_actions intent/result records (actor, merchant, method, path, outcome; no request bodies or secrets). Merchant business constraints still apply: one merchant admin, tenant/branch boundaries, available reward, sufficient balance, idempotency and ledger consistency. Suspended merchants can be inspected/configured but cannot run till transactions.
+
+Verification: local API integration tests cover every global/scoped read, admin/MFA denial, cross-merchant writes, segment membership, sold-out controls, team edits, one-time QR attribution, Wallet collect/redeem idempotency, ledger totals, and redemption notification actor. UI tests exercise every global/selected-merchant route with mocked services, plus merchant selection; no real broadcasts are sent by tests.
+
+**Admin workspace UUID fix (2026-10-18):** use the shared UUID_PATTERN (PostgreSQL-compatible) in AdminWorkspaceGuard. Joy Corner’s seeded version/variant-zero UUID must work on Insights and all other workspace pages; class-validator isUUID rejects it. Local integration coverage now uses a random seed-style merchant UUID and checks malformed/missing IDs still return 404.
+
+**Admin workspace navigation fix (2026-10-18):** merchant selection is owned by the vendor URL query parameter. Clicking a sidebar page (including the current Till page) clears selection and returns to All merchants. Shared merchant tabs/filters use useWorkspaceSearchParams to retain vendor explicitly, instead of an effect restoring stale selection after navigation.
+
+**Admin sidebar sections (2026-10-18):** Overview and Till stay at the top. The admin menu now mirrors the merchant dashboard’s Management, Loyalty and Workspace groups, plus Platform for merchant support, the admin action log and System. Each page has an appropriate linear icon and matching active duotone icon; all existing routes are retained.

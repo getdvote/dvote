@@ -1,6 +1,42 @@
+import { WORKSPACE_PAGES } from '../lib/workspace-pages';
 import { useContentMotion } from '../hooks/use-content-motion';
-import { WidgetIcon as LayoutDashboardActive, ShopIcon as StoreActive, UsersGroupRoundedIcon as UsersActive, ChartIcon as ChartColumnActive, ChatRoundLikeIcon as FeedbackActive, ServerIcon as ServerActive } from '@solar-icons/react/bold-duotone';
-import { ArrowRightUpIcon as ArrowUpRight, ChartIcon as ChartColumn, ChatRoundLikeIcon as FeedbackIcon, ChevronsUpDownIcon as ChevronsUpDown, GlobeIcon, WidgetIcon as LayoutDashboard, LogoutIcon as LogOut, ServerIcon as Server, ShopIcon as Store, Sun2Icon as SunMoon, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
+import {
+  WidgetIcon as LayoutDashboardActive,
+  ShopIcon as StoreActive,
+  UsersGroupRoundedIcon as UsersActive,
+  ChartIcon as ChartColumnActive,
+  ChatRoundLikeIcon as FeedbackActive,
+  ServerIcon as ServerActive,
+  ScannerIcon as ScannerActive,
+  MapPointIcon as MapPinActive,
+  CardIcon as CardActive,
+  GiftIcon as GiftActive,
+  SmartphoneVibrationIcon as BroadcastActive,
+  BillListIcon as ActivityActive,
+  SettingsIcon as SettingsActive,
+  BoxIcon as KitActive,
+} from '@solar-icons/react/bold-duotone';
+import {
+  ArrowRightUpIcon as ArrowUpRight,
+  ChartIcon as ChartColumn,
+  ChatRoundLikeIcon as FeedbackIcon,
+  ChevronsUpDownIcon as ChevronsUpDown,
+  GlobeIcon,
+  WidgetIcon as LayoutDashboard,
+  LogoutIcon as LogOut,
+  ServerIcon as Server,
+  ScannerIcon as Scanner,
+  MapPointIcon as MapPin,
+  CardIcon as Card,
+  GiftIcon as Gift,
+  SmartphoneVibrationIcon as Broadcast,
+  BillListIcon as Activity,
+  SettingsIcon as Settings,
+  BoxIcon as Kit,
+  ShopIcon as Store,
+  Sun2Icon as SunMoon,
+  UsersGroupRoundedIcon as Users,
+} from '@solar-icons/react/linear';
 import { Fragment, useState, useRef, type ComponentType, type ReactNode } from 'react';
 import { MotionConfig, motion } from 'motion/react';
 import { NavLink, useLocation } from 'react-router';
@@ -47,16 +83,45 @@ export interface NavItem {
   /** Section heading; items with the same group sit together under it (none = top section). */
   group?: string;
   /** A small button at the end of the row (e.g. preview), hidden when the sidebar is collapsed. */
-  action?: { icon: ComponentType<{ className?: string }>; label: string; onClick: () => void };
+  action?: {
+    icon: ComponentType<{ className?: string }>;
+    label: string;
+    onClick: () => void;
+  };
+}
+
+/** Merchant sections mirror the merchant dashboard; platform tools have their own group. */
+function workspaceNav(section: string, icon: ComponentType, activeIcon: ComponentType, group?: string): NavItem {
+  return { to: `/${section}`, label: WORKSPACE_PAGES.find(page => page.section === section)!.label, icon, activeIcon, group };
 }
 
 const NAV: NavItem[] = [
   { to: '/', icon: LayoutDashboard, activeIcon: LayoutDashboardActive, label: 'Overview' },
-  { to: '/merchants', icon: Store, activeIcon: StoreActive, label: 'Merchants' },
-  { to: '/customers', icon: Users, activeIcon: UsersActive, label: 'Customers' },
-  { to: '/statistics', icon: ChartColumn, activeIcon: ChartColumnActive, label: 'Statistics' },
-  { to: '/feedback', icon: FeedbackIcon, activeIcon: FeedbackActive, label: 'Feedback' },
-  { to: '/system', icon: Server, activeIcon: ServerActive, label: 'System' },
+  workspaceNav('scan', Scanner, ScannerActive),
+
+  { to: '/merchants', icon: Store, activeIcon: StoreActive, label: 'Merchants', group: 'Management' },
+  workspaceNav('merchant-home', LayoutDashboard, LayoutDashboardActive, 'Management'),
+  workspaceNav('storefront', Store, StoreActive, 'Management'),
+  workspaceNav('branches', MapPin, MapPinActive, 'Management'),
+  workspaceNav('customer-feedback', FeedbackIcon, FeedbackActive, 'Management'),
+  workspaceNav('team', Users, UsersActive, 'Management'),
+  workspaceNav('settings', Settings, SettingsActive, 'Management'),
+  workspaceNav('kit', Kit, KitActive, 'Management'),
+
+  workspaceNav('card', Card, CardActive, 'Loyalty'),
+  workspaceNav('rewards', Gift, GiftActive, 'Loyalty'),
+  workspaceNav('redemptions', Activity, ActivityActive, 'Loyalty'),
+  workspaceNav('broadcast', Broadcast, BroadcastActive, 'Loyalty'),
+
+  workspaceNav('insights', ChartColumn, ChartColumnActive, 'Workspace'),
+  { to: '/customers', icon: Users, activeIcon: UsersActive, label: 'Customers', group: 'Workspace' },
+  workspaceNav('members', Users, UsersActive, 'Workspace'),
+  workspaceNav('activity', Activity, ActivityActive, 'Workspace'),
+  { to: '/statistics', icon: ChartColumn, activeIcon: ChartColumnActive, label: 'Statistics', group: 'Workspace' },
+
+  { to: '/feedback', icon: FeedbackIcon, activeIcon: FeedbackActive, label: 'Merchant support', group: 'Platform' },
+  workspaceNav('audit', Activity, ActivityActive, 'Platform'),
+  { to: '/system', icon: Server, activeIcon: ServerActive, label: 'System', group: 'Platform' },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -104,7 +169,11 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                     <motion.span
                       data-pill
                       layoutId="nav-active"
-                      transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }}
+                      transition={{
+                        type: 'spring',
+                        bounce: 0.15,
+                        duration: 0.35,
+                      }}
                       className="absolute inset-0 rounded-md bg-sidebar-accent"
                     />
                   ) : null}
@@ -152,7 +221,12 @@ export function SideLayout({
   /** Dashboard role badge (e.g. ADMIN). */
   badge?: string;
   /** The top of the sidebar: whose dashboard this is. */
-  identity: { name: string; subtitle: string; imageUrl?: string | null; extra?: ReactNode };
+  identity: {
+    name: string;
+    subtitle: string;
+    imageUrl?: string | null;
+    extra?: ReactNode;
+  };
   /** More rows in the account menu, after the account pages (e.g. storefront preview, get help). */
   menuLinks?: MenuLink[];
   /** Rendered beside the layout (e.g. dialogs those menu rows open). */
@@ -194,7 +268,14 @@ export function SideLayout({
             ))}
           </SidebarContent>
           <SidebarFooter className="gap-2 px-2 pb-3">
-            <ProfileMenu identity={identity} accountNav={accountNav} menuLinks={menuLinks} badge={badge} languageSwitch={languageSwitch} isActive={isActive} />
+            <ProfileMenu
+              identity={identity}
+              accountNav={accountNav}
+              menuLinks={menuLinks}
+              badge={badge}
+              languageSwitch={languageSwitch}
+              isActive={isActive}
+            />
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden bg-card md:border md:shadow-xs">
@@ -204,18 +285,18 @@ export function SideLayout({
             <DvoteLogo height={22} className="text-foreground" />
           </header>
           <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain motion-safe:scroll-smooth">
-          <div className="mx-auto w-full max-w-7xl px-4 pb-12 md:px-8 md:pt-8">
-            {/* each page settles in: a short fade and rise when it opens */}
-            <motion.div
-              data-page-content
-              key={pathname.split('/')[1]}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              {children}
-            </motion.div>
-          </div>
+            <div className="mx-auto w-full max-w-7xl px-4 pb-12 md:px-8 md:pt-8">
+              {/* each page settles in: a short fade and rise when it opens */}
+              <motion.div
+                data-page-content
+                key={pathname.split('/')[1]}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+              >
+                {children}
+              </motion.div>
+            </div>
           </div>
         </SidebarInset>
         {overlays}
@@ -231,7 +312,10 @@ function CollapseButton({ rtl }: { rtl: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <SidebarTrigger data-expanded={state === 'expanded'} className="sidebar-collapse-toggle ms-auto hidden text-muted-foreground md:inline-flex group-data-[collapsible=icon]:ms-0 rtl:rotate-180" />
+        <SidebarTrigger
+          data-expanded={state === 'expanded'}
+          className="sidebar-collapse-toggle ms-auto hidden text-muted-foreground md:inline-flex group-data-[collapsible=icon]:ms-0 rtl:rotate-180"
+        />
       </TooltipTrigger>
       <TooltipContent side={rtl ? 'left' : 'right'} className="gap-2">
         {state === 'expanded' ? t('nav.collapse') : t('nav.expand')}
@@ -243,7 +327,16 @@ function CollapseButton({ rtl }: { rtl: boolean }) {
   );
 }
 
-function IdentityRow({ identity }: { identity: { name: string; subtitle: string; imageUrl?: string | null; extra?: ReactNode } }) {
+function IdentityRow({
+  identity,
+}: {
+  identity: {
+    name: string;
+    subtitle: string;
+    imageUrl?: string | null;
+    extra?: ReactNode;
+  };
+}) {
   return (
     <>
       <Avatar className="size-10 rounded-lg after:rounded-lg">
@@ -277,7 +370,12 @@ function ProfileMenu({
   languageSwitch,
   isActive,
 }: {
-  identity: { name: string; subtitle: string; imageUrl?: string | null; extra?: ReactNode };
+  identity: {
+    name: string;
+    subtitle: string;
+    imageUrl?: string | null;
+    extra?: ReactNode;
+  };
   accountNav?: NavItem[];
   menuLinks?: MenuLink[];
   badge?: string;

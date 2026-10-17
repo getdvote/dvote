@@ -6,7 +6,7 @@ import {
   UsersGroupRoundedIcon,
 } from '@solar-icons/react/linear';
 import type { ComponentType } from 'react';
-import { useSearchParams } from 'react-router';
+import { useWorkspaceSearchParams as useSearchParams } from '../../lib/vendor-workspace';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

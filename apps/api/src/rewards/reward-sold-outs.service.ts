@@ -30,10 +30,20 @@ export async function isSoldOut(
 }
 
 /** Sold out at every open branch of the vendor right now (nowhere to redeem it). */
-export async function isSoldOutEverywhere(prisma: PrismaService, rewardId: string, vendorId: string): Promise<boolean> {
+export async function isSoldOutEverywhere(
+  prisma: PrismaService,
+  rewardId: string,
+  vendorId: string,
+): Promise<boolean> {
   const [open, out] = await Promise.all([
     prisma.branches.count({ where: { vendor_id: vendorId, status: 'active' } }),
-    prisma.reward_sold_outs.count({ where: { reward_id: rewardId, branches: { status: 'active' }, ...activeSoldOut() } }),
+    prisma.reward_sold_outs.count({
+      where: {
+        reward_id: rewardId,
+        branches: { status: 'active' },
+        ...activeSoldOut(),
+      },
+    }),
   ]);
   return open > 0 && out >= open;
 }
@@ -100,9 +110,12 @@ export class RewardSoldOutsService {
             reward_id: rewardId,
             branch_id: b,
             sold_out_until: end,
-            set_by_staff_id: ctx.staffId,
+            set_by_staff_id: ctx.adminId ? null : ctx.staffId,
           },
-          update: { sold_out_until: end, set_by_staff_id: ctx.staffId },
+          update: {
+            sold_out_until: end,
+            set_by_staff_id: ctx.adminId ? null : ctx.staffId,
+          },
         }),
       ),
     );
@@ -124,7 +137,10 @@ export class RewardSoldOutsService {
         branch_id: { in: branches },
         ...activeSoldOut(),
       },
-      data: { sold_out_until: new Date(), set_by_staff_id: ctx.staffId },
+      data: {
+        sold_out_until: new Date(),
+        set_by_staff_id: ctx.adminId ? null : ctx.staffId,
+      },
     });
     return this.list(ctx.vendorId, rewardId);
   }

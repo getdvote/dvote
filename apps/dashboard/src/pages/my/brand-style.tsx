@@ -1,3 +1,4 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircleIcon as CheckCircle, LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { useEffect, useRef, useState } from 'react';
@@ -9,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { Field } from '../../components/Field';
 import { initial } from '../../components/PageHeader';
 import { useMyVendor } from '../../layouts/VendorLayout';
-import { errorMessage, vendorApi, type PageStyle, type Vendor } from '../../lib/api';
+import { errorMessage, type PageStyle, type Vendor } from '../../lib/api';
 import { cardDesign } from '../../lib/cardDesigns';
 import { BRAND_FONTS, loadFonts, PAGE_STYLES } from '../../lib/storefront';
 import { t } from '../../i18n';
@@ -22,6 +23,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
  * settings. Saves on its own; the customer page (and the Storefront preview) follow.
  */
 export function BrandStyleEditor() {
+  const vendorApi = useVendorApi();
   const vendor = useMyVendor();
   const qc = useQueryClient();
   const save = useMutation({
@@ -95,7 +97,6 @@ export function BrandStyleEditor() {
             />
           </CardContent>
         </Card>
-
       </div>
     </div>
   );
@@ -214,7 +215,12 @@ function StyleMock({
         </span>
       ) : style === 'branded' ? (
         <span className="flex h-full flex-col">
-          <span className="flex flex-col items-center gap-1 px-3 pt-4 pb-6" style={{ background: `linear-gradient(160deg, ${primary}, ${secondary})` }}>
+          <span
+            className="flex flex-col items-center gap-1 px-3 pt-4 pb-6"
+            style={{
+              background: `linear-gradient(160deg, ${primary}, ${secondary})`,
+            }}
+          >
             {logo('size-8')}
             <span className="truncate text-[9px] font-semibold tracking-widest text-white uppercase" style={{ fontFamily: font }}>
               {name}

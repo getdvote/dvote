@@ -1,3 +1,5 @@
+import { AdminWorkspace } from './pages/AdminWorkspace';
+import { WORKSPACE_PAGES } from './lib/workspace-pages';
 import { LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { createBrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { SetPassword } from './pages/SetPassword';
@@ -55,6 +57,9 @@ function Shell() {
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/system" element={<System />} />
+          {WORKSPACE_PAGES.map((p) => (
+            <Route key={p.section} path={`/${p.section}`} element={<AdminWorkspace section={p.section} />} />
+          ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>

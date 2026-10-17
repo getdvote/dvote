@@ -10,8 +10,12 @@ import { RewardsService } from './rewards.service';
 /** Reward catalogue (/api/admin/vendors/{id}/rewards, /api/admin/rewards/{id}); and /api/vendor/rewards for the vendor dashboard. */
 @Module({
   imports: [AuthModule, StorageModule],
-  controllers: [AdminRewardsController, VendorRewardsController, AppRewardsController],
+  controllers: [
+    AdminRewardsController,
+    VendorRewardsController,
+    AppRewardsController,
+  ],
   providers: [RewardsService, RewardSoldOutsService],
-  exports: [RewardsService],
+  exports: [RewardsService, RewardSoldOutsService],
 })
 export class RewardsModule {}
