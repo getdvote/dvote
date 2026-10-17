@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 const alertVariants = cva(
-  "group/alert relative grid w-full items-center gap-0.5 rounded-2xl border bg-card p-4 animate-in fade-in-0 slide-in-from-top-1 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] *:[svg]:animate-in *:[svg]:zoom-in-50 *:[svg]:duration-500 text-start text-sm shadow-xs has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pe-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-3 *:[svg]:row-span-2 *:[svg]:size-8! *:[svg]:rounded-full *:[svg]:bg-muted *:[svg]:p-2 *:[svg]:ring-4 *:[svg]:ring-muted/50",
+  "group/alert relative grid w-full items-center gap-0.5 rounded-2xl border bg-card p-4 animate-in fade-in-0 slide-in-from-top-1 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] *:[svg]:animate-in *:[svg]:zoom-in-50 *:[svg]:duration-500 text-start text-sm shadow-xs has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pe-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-3 has-data-[slot=alert-title]:*:[svg]:row-span-2 *:[svg]:self-center *:[svg]:size-8! *:[svg]:rounded-full *:[svg]:bg-muted *:[svg]:p-2 *:[svg]:ring-4 *:[svg]:ring-muted/50",
   {
     variants: {
       variant: {

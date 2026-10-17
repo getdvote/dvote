@@ -126,7 +126,7 @@ export function PeriodPicker({ state, onChange, children }: { state: ReturnType<
             <AltArrowDownIcon className="text-muted-foreground" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[calc(100vw-1.5rem)] max-w-max gap-0 overflow-hidden p-0">
+        <PopoverContent align="start" className="max-h-(--radix-popover-content-available-height) w-[calc(100vw-1.5rem)] max-w-max gap-0 overflow-x-hidden overflow-y-auto p-0">
           <div className="flex flex-col sm:flex-row">
             <div className="flex gap-1 overflow-x-auto border-b p-2 sm:w-40 sm:flex-col sm:overflow-visible sm:border-e sm:border-b-0">
               {PRESETS.map((p) => (

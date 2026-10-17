@@ -87,7 +87,7 @@ export function VenuePage() {
   const { vendor, colors, font } = brand;
 
   const rows = (
-    <div className={cx('grid gap-3', vendor.style.pageStyle === 'playful' && 'px-1 [&>*:nth-child(odd)]:rotate-1 [&>*:nth-child(even)]:-rotate-1 [&>*]:shadow-sm')}>
+    <div className={cx('grid grid-cols-1 gap-3', vendor.style.pageStyle === 'playful' && 'px-1 [&>*:nth-child(odd)]:rotate-1 [&>*:nth-child(even)]:-rotate-1 [&>*]:shadow-sm')}>
       {vendor.sections.map((s) => (
         <SectionRow key={s.type} section={s} brand={brand} />
       ))}
@@ -237,7 +237,7 @@ function WifiCard({ ssid, password, brand }: { ssid: string; password: string; b
       setTimeout(() => setCopied(false), 2000);
     });
   return (
-    <div className="grid gap-3 rounded-2xl border border-line bg-white p-3.5">
+    <div className="grid grid-cols-1 gap-3 rounded-2xl border border-line bg-white p-3.5">
       <div className="flex items-center gap-3">
         <Mark icon={Wifi} colors={brand.colors} />
         <span className="min-w-0 flex-1">
@@ -251,7 +251,7 @@ function WifiCard({ ssid, password, brand }: { ssid: string; password: string; b
       </div>
       {password ? (
         <>
-          <p className="rounded-xl border border-line px-4 py-3 text-center font-mono text-[16px]" dir="ltr">
+          <p className="rounded-xl border border-line px-4 py-3 text-center font-mono text-[16px] break-all" dir="ltr">
             {password}
           </p>
           <button
@@ -284,7 +284,7 @@ export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branche
   return (
     <Page>
       <header className="-mt-2 mb-6">
-        <Link to={`/${vendor.slug}${q}`} className="-ms-1 inline-flex items-center gap-1 rounded-lg px-1 py-1 text-[15px] font-medium text-muted hover:text-ink">
+        <Link to={`/${vendor.slug}${q}`} className="-ms-1 inline-flex max-w-full items-center gap-1 rounded-lg px-1 py-1 text-[15px] font-medium text-muted hover:text-ink">
           <ChevronLeft className="size-5 rtl:rotate-180" />
           <Logo vendor={vendor} colors={colors} size="size-6 rounded-md text-xs" />
           <span className="truncate">{vendor.name}</span>
@@ -316,11 +316,12 @@ export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branche
       ) : kind === 'menu' ? (
         <MenuPages images={vendor.menu} />
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3">
           {vendor.branches.map((b) => (
-            <li key={b.id} className="flex items-center gap-3 rounded-2xl border border-line p-3.5">
+            // on narrow phones Directions wraps under the address instead of squeezing it
+            <li key={b.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-line p-3.5">
               <Mark icon={MapPin} colors={colors} />
-              <span className="min-w-0 flex-1">
+              <span className="min-w-40 flex-1">
                 <span className="block text-[16px] font-semibold">{b.name}</span>
                 {b.address ? <span className="block text-[14px] text-muted">{b.address}</span> : null}
               </span>
@@ -329,7 +330,7 @@ export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branche
                   href={b.mapsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[14px] font-semibold"
+                  className="ms-auto flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[14px] font-semibold"
                   style={{ background: `${colors.primary}2e`, color: colors.accent }}
                 >
                   <Navigation className="size-4" /> {t('venue.directions')}
@@ -349,7 +350,7 @@ function MenuPages({ images }: { images: string[] }) {
   const alt = (i: number) => t('venue.menuPage', { n: i + 1 });
   return (
     <>
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {images.map((url, i) => (
           <button
             key={url}

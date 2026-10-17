@@ -15,11 +15,11 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
         {children}
       </main>
       <footer className="mt-6 flex items-center gap-4 text-sm text-muted">
-        <Link to="/" className="flex items-center gap-1.5 hover:text-ink">
+        <Link to="/" className="flex items-center gap-1.5 py-2 hover:text-ink">
           {t('common.poweredBy')} <DvoteMark />
         </Link>
         <span aria-hidden className="text-line">|</span>
-        <button type="button" className="hover:text-ink" onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}>
+        <button type="button" className="py-2 hover:text-ink" onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}>
           {t('common.switchLanguage')}
         </button>
       </footer>

@@ -84,7 +84,7 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
                       href={`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                      className="inline-flex items-center gap-1 py-0.5 text-primary hover:underline"
                     >
                       <MapPin className="size-3.5" /> <span dir="ltr">{b.lat.toFixed(4)}, {b.lng.toFixed(4)}</span>
                     </a>
@@ -214,42 +214,41 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
             });
           }}
         >
-          <Field label={t('branches.name')} htmlFor="branch-name">
-            <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder={t('branches.namePlaceholder')} autoFocus />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
-            <Field label={t('branches.address')} htmlFor="branch-address">
-              <Textarea
-                id="branch-address"
-                name="address"
-                rows={2}
-                maxLength={500}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={t('branches.addressPlaceholder')}
-              />
-            </Field>
-            <Field label={t('branches.city')} htmlFor="branch-city">
-              <Select value={city ?? NO_CITY} onValueChange={(v) => setCity(v === NO_CITY ? null : (v as CityKey))}>
-                <SelectTrigger id="branch-city" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  <SelectItem value={NO_CITY}>{t('branches.notSet')}</SelectItem>
-                  {citiesSorted().map((c) => (
-                    <SelectItem key={c.key} value={c.key}>
-                      {cityLabel(c)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-          {OPENING_HOURS ? <WeeklyHoursEditor value={hours} onChange={setHours} /> : null}
+          {/* map first: picking the place fills the address and city below */}
           <div className="grid gap-2">
             <span className="text-sm font-medium">{t('branches.location')}</span>
             <LocationPicker value={location} onChange={setLocation} onAddress={fillAddress} />
           </div>
+          <Field label={t('branches.name')} htmlFor="branch-name">
+            <Input id="branch-name" name="name" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder={t('branches.namePlaceholder')} />
+          </Field>
+          <Field label={t('branches.address')} htmlFor="branch-address">
+            <Textarea
+              id="branch-address"
+              name="address"
+              rows={2}
+              maxLength={500}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={t('branches.addressPlaceholder')}
+            />
+          </Field>
+          <Field label={t('branches.city')} htmlFor="branch-city">
+            <Select value={city ?? NO_CITY} onValueChange={(v) => setCity(v === NO_CITY ? null : (v as CityKey))}>
+              <SelectTrigger id="branch-city" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value={NO_CITY}>{t('branches.notSet')}</SelectItem>
+                {citiesSorted().map((c) => (
+                  <SelectItem key={c.key} value={c.key}>
+                    {cityLabel(c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          {OPENING_HOURS ? <WeeklyHoursEditor value={hours} onChange={setHours} /> : null}
           <div className="grid gap-2">
             <span className="text-sm font-medium">{t('branches.photos')}</span>
             {current ? <BranchPhotos scope={scope} branchId={current.id} /> : <StagedBranchPhotos files={newPhotos} onChange={setNewPhotos} />}

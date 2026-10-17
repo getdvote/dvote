@@ -37,7 +37,7 @@ export function MyFeedback() {
                       <a
                         href={`tel:${f.phone}`}
                         dir="ltr"
-                        className="block text-sm text-muted-foreground"
+                        className="block py-0.5 text-sm text-muted-foreground"
                       >
                         {f.phone}
                       </a>
