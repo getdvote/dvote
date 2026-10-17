@@ -15,7 +15,7 @@ import {
   WalletIcon,
   WiFiRouterIcon,
 } from '@solar-icons/react/linear';
-import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -32,9 +32,8 @@ import { IPhoneMockup } from '../../components/IPhoneMockup';
 import { initial } from '../../components/PageHeader';
 import { useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { errorMessage, vendorApi, type Storefront, type StorefrontSection, type Vendor } from '../../lib/api';
-import { cardDesign } from '../../lib/cardDesigns';
 import { config } from '../../lib/config';
-import { BRAND_FONTS, loadFonts, LOYALTY_LABELS, newSection, SECTION_TYPES, WIFI_SECURITY } from '../../lib/storefront';
+import { LOYALTY_LABELS, newSection, SECTION_TYPES, WIFI_SECURITY } from '../../lib/storefront';
 import { t } from '../../i18n';
 import { ImagesTab } from '../vendor/ImagesTab';
 
@@ -47,27 +46,6 @@ const ICONS: Record<StorefrontSection['type'], ComponentType<{ className?: strin
   branches: MapPointIcon,
   wifi: WiFiRouterIcon,
 };
-
-/** Readable text on a #rrggbb background. */
-function inkOn(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170 ? '#1c1c1e' : '#ffffff';
-}
-
-/** Merchant branding for the customer preview and brand-style editor. */
-export function useBrand(vendor: Vendor) {
-  const design = cardDesign(vendor.id, vendor.cardDesign);
-  const primary = vendor.brandPrimary ?? design.colors[0];
-  const font = vendor.brandFont ? `"${BRAND_FONTS[vendor.brandFont]}", var(--font-sans)` : undefined;
-  useEffect(() => loadFonts(Object.values(BRAND_FONTS)), []);
-  const vars = {
-    '--primary': primary,
-    '--primary-foreground': inkOn(primary),
-    '--ring': primary,
-    '--brand-soft': `color-mix(in oklab, ${primary} 12%, var(--card))`,
-  } as CSSProperties;
-  return { primary, font, vars };
-}
 
 export const storefrontUrl = (vendor: Vendor, branchId?: string) =>
   vendor.slug ? `${config.webUrl}/${vendor.slug}${branchId ? `?b=${branchId}` : ''}` : null;
@@ -101,47 +79,47 @@ export function StorefrontEditor() {
 
   return (
     <div className="grid gap-6">
-      {/* the shop, as its page shows it */}
-      <Card className="gap-4 p-4 sm:p-5">
-        <div className="flex min-w-0 items-center gap-4">
+      {/* the shop and its page address, with the ways to share it */}
+      <Card className="flex-row flex-wrap items-center gap-4 p-4 sm:p-5">
         {vendor.logoUrl ? (
-          <img src={vendor.logoUrl} alt="" className="size-14 shrink-0 rounded-2xl object-cover shadow-sm" />
+          <img src={vendor.logoUrl} alt="" className="size-12 shrink-0 rounded-xl border object-cover" />
         ) : (
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground">
-            {initial(vendor.name)}
-          </span>
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-semibold">{initial(vendor.name)}</span>
         )}
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold">
-            {vendor.name}
-          </h2>
+        <div className="min-w-0 flex-1 basis-48">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate font-semibold">{vendor.name}</h2>
+            <SaveStatus />
+          </div>
           {url ? (
-            <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground">
+            <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground hover:underline">
               {url.replace(/^https?:\/\//, '')}
             </a>
           ) : (
             <p className="text-sm text-muted-foreground">{t('storefront.noSlug')}</p>
           )}
         </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <SaveStatus />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" disabled={!url} onClick={async () => {
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!url}
+            onClick={() => {
               if (!url) return;
-              try {
-                await navigator.clipboard.writeText(url);
-                toast.success(t('storefront.linkCopied'));
-              } catch {
-                toast.error(t('storefront.copyFailed'));
-              }
-            }}>
-              <CopyIcon /> {t('storefront.copyLink')}
-            </Button>
-            <Button variant="outline" disabled>
-              <QrCodeIcon /> {t('storefront.getQr')} <Badge variant="outline">{t('common.soon')}</Badge>
-            </Button>
-          </div>
+              navigator.clipboard.writeText(url).then(
+                () => toast.success(t('storefront.linkCopied')),
+                () => toast.error(t('storefront.copyFailed')),
+              );
+            }}
+          >
+            <CopyIcon /> {t('storefront.copyLink')}
+          </Button>
+          <Button variant="outline" size="sm" disabled>
+            <QrCodeIcon /> {t('storefront.getQr')}
+            <Badge variant="outline" className="ms-0.5">
+              {t('common.soon')}
+            </Badge>
+          </Button>
         </div>
       </Card>
 
@@ -436,7 +414,6 @@ function MenuDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
 /** The eye button next to Storefront in the sidebar: the live page in an iPhone, over everything. */
 export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const vendor = useMyVendor();
-  const brand = useBrand(vendor);
   const url = storefrontUrl(vendor);
   // fit the phone in the window (screen ratio 393 × 852, plus room for the footer)
   const [width, setWidth] = useState(300);
@@ -449,7 +426,6 @@ export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        style={brand.vars}
         className="w-auto max-w-none justify-items-center gap-5 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&>[data-slot=dialog-close]]:hidden"
       >
         <DialogHeader className="sr-only">
