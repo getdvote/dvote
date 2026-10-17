@@ -84,6 +84,7 @@ export function CardPage() {
         </p>
       ) : (
       <div className="mt-6 grid justify-items-center gap-3">
+        <p className="text-center text-[14px] text-muted">{t('card.addWithButtons')}</p>
         {device === 'ios' ? apple : device === 'android' ? google : (
           <>
             {apple}
@@ -105,12 +106,19 @@ export function CardPage() {
       )}
 
       {device === 'other' && !inWallet?.google && !inWallet?.apple ? (
+        <>
+        <div className="mt-6 flex items-center gap-4 text-sm text-muted">
+          <span className="h-px flex-1 bg-line" />
+          <span>{t('card.or')}</span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
         <div className="mt-6 flex flex-col items-center gap-3 rounded-3xl bg-canvas p-5 text-center">
           <div className="rounded-2xl bg-white p-3">
             <QRCodeSVG value={link} size={140} />
           </div>
           <p className="text-[14px] text-muted">{t('card.openOnPhone')}</p>
         </div>
+        </>
       ) : null}
 
       <p className="mt-6 text-center text-[15px] font-medium">{t('card.atTill')}</p>
@@ -146,40 +154,21 @@ export function CardPage() {
   );
 }
 
-/** The wallet badges. No onClick = not available yet (Apple: needs the paid Apple account). */
+/** Official supplied badges; Apple stays disabled until pass issuance is available. */
 function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google'; onClick?: () => void; busy?: boolean }) {
   return (
     <button
       type="button"
       disabled={!onClick || busy}
+      aria-busy={busy || undefined}
       onClick={onClick}
-      className="inline-flex h-13 min-w-64 items-center justify-center gap-3 rounded-2xl bg-black px-6 text-[16px] font-semibold text-white transition hover:bg-black/85 disabled:opacity-60"
+      className="inline-flex max-w-full items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {kind === 'apple' ? <AppleWalletIcon /> : <GoogleWalletIcon />}
-      {kind === 'apple' ? t('card.addApple') : t('card.addGoogle')}
+      <img
+        src={`/wallet/add-to-${kind}-wallet.svg`}
+        alt={kind === 'apple' ? t('card.addApple') : t('card.addGoogle')}
+        className="h-14 max-w-full w-auto"
+      />
     </button>
-  );
-}
-
-function AppleWalletIcon() {
-  return (
-    <svg viewBox="0 0 28 22" className="h-5 w-6" aria-hidden>
-      <rect x="1" y="1" width="26" height="20" rx="4" fill="#fff" />
-      <rect x="3" y="4" width="22" height="3" rx="1" fill="#2DAAE1" />
-      <rect x="3" y="7" width="22" height="3" rx="1" fill="#F3B029" />
-      <rect x="3" y="10" width="22" height="3" rx="1" fill="#F37D24" />
-      <rect x="3" y="13" width="22" height="3" rx="1" fill="#E3344B" />
-    </svg>
-  );
-}
-
-function GoogleWalletIcon() {
-  return (
-    <svg viewBox="0 0 28 22" className="h-5 w-6" aria-hidden>
-      <rect x="1" y="2" width="26" height="6" rx="2" fill="#4285F4" />
-      <rect x="1" y="7" width="26" height="6" rx="2" fill="#34A853" />
-      <rect x="1" y="12" width="26" height="6" rx="2" fill="#FBBC04" />
-      <rect x="1" y="16" width="26" height="4" rx="2" fill="#EA4335" />
-    </svg>
   );
 }
