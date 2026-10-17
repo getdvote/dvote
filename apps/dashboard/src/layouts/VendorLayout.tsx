@@ -1,6 +1,6 @@
-import { HomeIcon as HouseActive, ScannerIcon as ScanLineActive, ShopIcon as StoreActive, MapPointIcon as MapPinActive, ChatSquareWarningIcon as MessageSquareWarningActive, CardIcon as CreditCardActive, GiftIcon as GiftActive, SmartphoneVibrationIcon as MegaphoneActive, GraphUpIcon as ChartLineActive, UsersGroupRoundedIcon as UsersActive, BillListIcon as ReceiptTextActive, BoxIcon as KitActive, SettingsIcon as SettingsActive } from '@solar-icons/react/bold-duotone';
+import { HomeIcon as HouseActive, ScannerIcon as ScanLineActive, ShopIcon as StoreActive, MapPointIcon as MapPinActive, ChatSquareWarningIcon as MessageSquareWarningActive, CardIcon as CreditCardActive, GiftIcon as GiftActive, SmartphoneVibrationIcon as MegaphoneActive, GraphUpIcon as ChartLineActive, UsersGroupRoundedIcon as UsersActive, BillListIcon as ReceiptTextActive, SettingsIcon as SettingsActive } from '@solar-icons/react/bold-duotone';
 import { useQuery } from '@tanstack/react-query';
-import { BoxIcon as KitIcon, GraphUpIcon as ChartLine, QuestionCircleIcon as CircleHelp, SmartphoneVibrationIcon as Megaphone, MapPointIcon as MapPin, ChatSquareWarningIcon as MessageSquareWarning, CardIcon as CreditCard, GiftIcon as Gift, HomeIcon as House, BillListIcon as ReceiptText, ScannerIcon as ScanLine, SettingsIcon as Settings, ShopIcon as Store, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
+import { GraphUpIcon as ChartLine, QuestionCircleIcon as CircleHelp, SmartphoneVibrationIcon as Megaphone, MapPointIcon as MapPin, ChatSquareWarningIcon as MessageSquareWarning, CardIcon as CreditCard, GiftIcon as Gift, HomeIcon as House, BillListIcon as ReceiptText, ScannerIcon as ScanLine, SettingsIcon as Settings, ShopIcon as Store, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ContactDvote } from '../components/ContactDvote';
@@ -90,7 +90,6 @@ export function VendorLayout({ children }: { children: ReactNode }) {
     { to: '/insights', icon: ChartLine, activeIcon: ChartLineActive, label: t('nav.insights'), group: t('nav.workspaceGroup') },
     { to: '/customers', icon: Users, activeIcon: UsersActive, label: t('nav.customers'), group: t('nav.workspaceGroup') },
     { to: '/activity', icon: ReceiptText, activeIcon: ReceiptTextActive, label: t('nav.activity'), group: t('nav.workspaceGroup') },
-    { to: '/kit', icon: KitIcon, activeIcon: KitActive, label: t('nav.storeIds'), group: t('nav.workspaceGroup') },
   ];
   // In the profile menu (the shop card at the top of the sidebar).
   // the team lives in Settings → Team

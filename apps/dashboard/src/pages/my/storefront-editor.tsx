@@ -37,6 +37,7 @@ import { config } from '../../lib/config';
 import { LOYALTY_LABELS, newSection, SECTION_TYPES, WIFI_SECURITY } from '../../lib/storefront';
 import { t } from '../../i18n';
 import { ImagesTab } from '../vendor/ImagesTab';
+import { QrPosterDialog } from './qr-poster-dialog';
 
 const SHOP = 'shop';
 const SAVE_KEY = ['storefront', 'save'];
@@ -63,6 +64,7 @@ export function StorefrontEditor() {
   const { data, error, isPending } = useQuery({ queryKey: ['storefront'], queryFn: vendorApi.storefront });
   const [scope, setScope] = useState<string>(SHOP);
   const [previewKey, setPreviewKey] = useState(0);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const branch = scope === SHOP ? null : data?.branches.find((b) => b.id === scope);
   const current: Storefront | null = !data ? null : scope === SHOP ? data.shop : (branch?.storefront ?? null);
@@ -118,14 +120,21 @@ export function StorefrontEditor() {
           >
             <CopyIcon /> {t('storefront.copyLink')}
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" disabled={!url} onClick={() => setQrOpen(true)}>
             <QrCodeIcon /> {t('storefront.getQr')}
-            <Badge variant="outline" className="ms-0.5">
-              {t('common.soon')}
-            </Badge>
           </Button>
         </div>
       </Card>
+      {url && qrOpen ? (
+        <QrPosterDialog
+          open
+          onOpenChange={setQrOpen}
+          vendor={vendor}
+          branches={data?.branches ?? []}
+          initialBranchId={branchId}
+          urlFor={(id) => storefrontUrl(vendor, id)}
+        />
+      ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="grid justify-items-center gap-5 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1">
