@@ -324,7 +324,7 @@ function UsernameEditor({ vendor }: { vendor: Vendor }) {
             maxLength={50}
             value={value}
             disabled={save.isPending}
-            onChange={(e) => setValue(e.target.value.toLowerCase())}
+            onChange={(e) => setValue(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
             aria-invalid={!valid || undefined}
           />
           <Button
