@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, type users } from '../generated/prisma/client.js';
 import type { SupabaseClaims } from '../auth/supabase-jwt.verifier';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,34 +18,48 @@ export class UsersService {
    * Returns the customer linked to this Supabase account, creating it on the first visit.
    * Supabase already links Google/Facebook logins with the same verified email
    * into one auth user, so one `sub` = one customer here.
+   *
+   * One customer per email (wallet join, 2026-10-17): if someone already joined a merchant from
+   * the web with this email (a customer row without a Supabase account), the sign-in is linked
+   * to that row, so the app shows the same cards. Supabase only issues tokens for confirmed
+   * emails (and Google/Facebook ones), so the email in the token can be trusted. An email that
+   * already belongs to another login is not copied: that customer is created without one.
    */
   async findOrCreateFromAuth(claims: SupabaseClaims): Promise<users> {
-    const existing = await this.prisma.users.findUnique({
-      where: { auth_user_id: claims.sub },
-    });
+    const bySub = () => this.prisma.users.findUnique({ where: { auth_user_id: claims.sub } });
+    const existing = await bySub();
     if (existing) return existing;
 
     const meta = claims.user_metadata ?? {};
-    try {
-      return await this.prisma.users.create({
-        data: {
-          auth_user_id: claims.sub,
-          name: clip(meta.full_name ?? meta.name, 120),
-          email: clip(claims.email, 255),
-          avatar_url: clip(meta.avatar_url ?? meta.picture, 500),
-        },
-      });
-    } catch (err) {
-      // Two first requests raced: the other one created the row.
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
-        return this.prisma.users.findUniqueOrThrow({
-          where: { auth_user_id: claims.sub },
-        });
+    const name = clip(meta.full_name ?? meta.name, 120);
+    const avatar = clip(meta.avatar_url ?? meta.picture, 500);
+    let email = clip(claims.email, 255);
+
+    if (email) {
+      const owner = await this.prisma.users.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+      if (owner && !owner.auth_user_id) {
+        try {
+          return await this.prisma.users.update({
+            where: { id: owner.id },
+            data: { auth_user_id: claims.sub, name: owner.name ?? name, avatar_url: owner.avatar_url ?? avatar },
+          });
+        } catch (err) {
+          if (!isUniqueViolation(err)) throw err;
+          const raced = await bySub(); // another first request linked it
+          if (raced) return raced;
+        }
       }
-      throw err;
+      if (owner) email = null; // the email belongs to another login: don't copy it
+    }
+
+    try {
+      return await this.prisma.users.create({ data: { auth_user_id: claims.sub, name, email, avatar_url: avatar } });
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      // Two first requests raced (the other one created the row), or the email was just taken.
+      const raced = await bySub();
+      if (raced) return raced;
+      return this.prisma.users.create({ data: { auth_user_id: claims.sub, name, email: null, avatar_url: avatar } });
     }
   }
 
@@ -106,8 +120,16 @@ export class UsersService {
     });
   }
 
-  updateProfile(id: string, dto: UpdateUserDto): Promise<users> {
+  async updateProfile(id: string, dto: UpdateUserDto): Promise<users> {
     const { birthDate, ...rest } = dto;
+    if (rest.email) {
+      // one customer per email (unique, any case)
+      const taken = await this.prisma.users.findFirst({
+        where: { email: { equals: rest.email, mode: 'insensitive' }, id: { not: id } },
+        select: { id: true },
+      });
+      if (taken) throw new ConflictException({ code: 'email_taken', message: 'This email is used by another customer.' });
+    }
     return this.prisma.users.update({
       where: { id },
       data: {
@@ -120,6 +142,8 @@ export class UsersService {
     });
   }
 }
+
+const isUniqueViolation = (err: unknown) => err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 
 /** Provider data can exceed our column sizes; empty strings become NULL. */
 function clip(value: string | undefined, max: number): string | null {

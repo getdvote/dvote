@@ -8,6 +8,7 @@ dvote/
 │   ├── api/          # NestJS + Prisma backend (active)
 │   ├── dashboard/    # React vendor + admin dashboard (not scaffolded yet)
 │   ├── mobile/       # ARCHIVED at git tag customer-app-v1 (customer app paused 2026-10-17)
+│   ├── web/          # public site dvote.app: join a merchant, card page (React + Vite)
 │   └── staff/        # React Native (Expo) staff scanner app (not scaffolded yet)
 ├── packages/
 │   └── api-client/   # generated TS client from OpenAPI (not generated yet)

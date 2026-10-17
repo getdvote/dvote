@@ -16,6 +16,8 @@
     "staff:start:clear": "npm --prefix apps/staff run start -- --clear",
     "storage:setup": "npm --prefix apps/api run storage:setup",
     "dashboard:install": "npm --prefix apps/dashboard install",
-    "dashboard:dev": "npm --prefix apps/dashboard run dev"
+    "dashboard:dev": "npm --prefix apps/dashboard run dev",
+    "web:install": "npm --prefix apps/web install",
+    "web:dev": "npm --prefix apps/web run dev"
   }
 }

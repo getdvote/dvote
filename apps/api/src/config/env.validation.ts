@@ -9,6 +9,7 @@ import {
   IsUrl,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -91,6 +92,34 @@ export class Env {
   @IsOptional()
   @IsString()
   FEEDBACK_SHEET_SECRET?: string;
+
+  /**
+   * Google Wallet (loyalty passes): the Issuer ID from the Google Pay & Wallet Console and the
+   * path to the Google Cloud service-account key (JSON) that signs "Add to Google Wallet" links.
+   * Both unset = the button answers 503 wallet_not_configured.
+   */
+  @IsOptional()
+  @IsString()
+  GOOGLE_WALLET_ISSUER_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_WALLET_KEY_FILE?: string;
+
+  /**
+   * Secret for the card QR on the wallet passes: each card's code is derived from it, so the
+   * same code can be put on the pass again later. At least 32 characters; never change it once
+   * passes are issued (every printed QR would stop working).
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  WALLET_TOKEN_SECRET?: string;
+
+  /** Logo on the Google pass for a merchant without its own logo (public https image). */
+  @IsOptional()
+  @IsString()
+  WALLET_DEFAULT_LOGO_URL?: string;
 
   /** Flood protection (429 rate_limited). Default on; e2e tests turn it off except their own test. */
   @IsBoolean()
