@@ -1,5 +1,6 @@
 import { LoaderIcon as Loader2 } from '@solar-icons/react/linear';
-import { createBrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { createBrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
+import { SetPassword } from './pages/SetPassword';
 import { AdminLayout } from './layouts/AdminLayout';
 import { VendorLayout } from './layouts/VendorLayout';
 import { useAuth } from './lib/auth';
@@ -32,6 +33,8 @@ import { Vendors } from './pages/Vendors';
  */
 function Shell() {
   const { status, admin, staff } = useAuth();
+  const location = useLocation();
+  if (location.pathname === '/set-password') return <SetPassword />;
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">

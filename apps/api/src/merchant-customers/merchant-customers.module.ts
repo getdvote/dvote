@@ -125,5 +125,6 @@ export class CustomerSegmentsController {
   imports: [AuthModule],
   controllers: [MerchantCustomersController, CustomerSegmentsController],
   providers: [MerchantCustomersService],
+  exports: [MerchantCustomersService],
 })
 export class MerchantCustomersModule {}

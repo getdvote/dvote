@@ -85,6 +85,28 @@ React 19 + Vite + Tailwind v4 (no shadcn; own small components in `src/component
 
 ### Built — Google Wallet button (2026-10-17, `src/wallet/`)
 
+**Broadcasts (2026-10-17):** `src/broadcasts/broadcasts.ts`, migration `24_wallet_broadcasts`
+(local + cloud; lockdown re-run; schema mirrored and Prisma refreshed). `/api/vendor/broadcasts`
+(merchant admin only): POST `preview` accepts customer segment/customSegment/branchId/search;
+POST root adds title/body/idempotencyKey and snapshots the matching linked cards into recipient
+rows; GET root shows 30 recent campaigns and per-status counts. Reuses Customers' exact segment
+classification, including manual custom membership, while excluding blocked customers. Worker
+claims pending recipients with SKIP LOCKED, rechecks customer/vendor/card eligibility, caps sends
+at 3 per card per rolling 24h, and calls Google per-object `addMessage` with `TEXT_AND_NOTIFY`.
+Google GET checks saved/hasUsers and duplicate message IDs first; removes only our own oldest
+broadcast when the ten-message limit is reached. A provider/network error is marked uncertain,
+never blindly resent; interrupted claims become uncertain after 2 minutes. Google acceptance is
+not delivery confirmation. POST retries use the same campaign idempotency key. No emails/SMS.
+Dashboard `MyMessages` is fully EN/AR: audience preview, composition, explicit send confirmation,
+result history, Google availability and Apple-pending explanation. Branch filter means historical
+branch activity, not current location. Only vendor_admin gets sending/settings APIs.
+
+GET/PATCH `/broadcasts/nearby` reads/sets `vendors.wallet_nearby_enabled` (default false).
+Google class save/sync includes `merchantLocations` for up to 10 active branches with map pins,
+ordered by branch UUID; disabling clears the array. Google controls nearby notification wording,
+radius/dwell/timing; customer must enable Wallet notifications and precise always-on location.
+No customer location data is returned to the merchant. Apple issuing/APNs/PassKit remain pending.
+
 **Automatic Wallet logos (2026-10-17):** `storage/wallet-logo.ts` produces a 720×720 opaque WebP,
 preserving the logo aspect ratio and using the quantized dominant visible edge colour for padding
 (white if all edges are transparent). `WalletLogoService.ensure` creates/reuses the immutable

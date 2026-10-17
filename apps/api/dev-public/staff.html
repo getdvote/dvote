@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>dvote staff test</title>
+<script>
+  // Preserve existing emailed local links, but let the dashboard handle password setup.
+  // The fragment stays in the browser; it is never sent to an API or logged.
+  const inviteFragment = new URLSearchParams(location.hash.slice(1));
+  if (['invite', 'recovery'].includes(inviteFragment.get('type')) || inviteFragment.has('access_token') || inviteFragment.has('error')) {
+    location.replace(`${location.protocol}//${location.hostname}:5173/set-password${location.search}${location.hash}`);
+  }
+</script>
 <!--
   TEMPORARY dev page: staff sign-in (email + password, or Google) and the
   /api/vendor/* endpoints, until the React dashboard exists. Also the landing page
