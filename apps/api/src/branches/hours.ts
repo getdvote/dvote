@@ -1,5 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 
+/**
+ * Opening hours and "temporarily closed" are hidden for now (decided 2026-10-17): the customer
+ * shop page returns no hours / pause, the go-live step only needs an open branch, and the
+ * "needs your attention" items about them are skipped. The data and the branch endpoints stay.
+ * OPENING_HOURS_ENABLED=true turns it back on (the e2e tests run with it on).
+ */
+export const openingHoursEnabled = () => process.env.OPENING_HOURS_ENABLED === 'true';
+
 /** One opening slot: weekday 0-6 (0 = Sunday), "HH:MM" 24-hour, branch-local. */
 export interface HoursSlot {
   day: number;

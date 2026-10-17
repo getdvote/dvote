@@ -274,6 +274,65 @@ export interface AdjustResult {
 export interface StaffMe extends Staff {
   vendor: { id: string; name: string; logoUrl: string | null; currency: string };
   branch: { id: string; name: string } | null;
+  /** Active branches this account can work at (all of them for a merchant admin). */
+  branches: { id: string; name: string }[];
+  activeRule: {
+    version: number;
+    spendAmount: string;
+    pointsPerSpend: number;
+    minPurchase: string;
+    maxPointsPerPurchase: number | null;
+  } | null;
+}
+
+/** GET /api/vendor/insights/patterns: fixed windows, not the page's date range. */
+export interface VendorPatterns {
+  /** Last 365 days, most visit days then most spent. */
+  topMembers: { customerRef: string; name: string | null; visits: number; points: number; rewards: number; spent: string; lastSeen: string }[];
+  /** Last 12 weeks, Cairo time; day 0 = Sunday. Only hours with activity. */
+  busiestHours: { day: number; hour: number; count: number }[];
+  /** Last 6 months, oldest first; returned[k-1] = share seen again k months later (null = not yet). */
+  cohorts: { month: string; size: number; returned: (number | null)[] }[];
+  updatedAt: string;
+}
+
+/** POST /api/vendor/scans/preview: what a scanned customer QR is. Changes nothing. */
+export interface ScanPreview {
+  purpose: 'collect' | 'redeem';
+  usable: boolean;
+  reason: string | null;
+  expiresAt: string;
+  redeem?: RedeemPreview | null;
+}
+
+export interface RedeemPreview {
+  rewardId: string;
+  rewardName: string;
+  rewardNameAr: string | null;
+  rewardDescription: string | null;
+  rewardImageUrl: string | null;
+  pointsCost: number;
+  customerName: string | null;
+  balance: number;
+  balanceAfter: number;
+}
+
+export interface CollectResult {
+  pointEventId: string;
+  pointsAdded: number;
+  purchaseAmount: string;
+  currency: string;
+  branchName: string;
+  at: string;
+}
+
+export interface RedeemResult {
+  redemptionId: string;
+  rewardName: string;
+  pointsRedeemed: number;
+  cardBalance: number;
+  branchName: string;
+  at: string;
 }
 
 export interface VendorSummary {
@@ -603,7 +662,7 @@ export const vendorApi = {
   customer: (id: string, q: { branchId?: string; page?: number; pageSize?: number }) =>
     call<MerchantCustomerDetail>('GET', `/api/vendor/customers/${encodeURIComponent(id)}${qs({ ...q })}`),
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
-  summary: () => call<VendorSummary>('GET', '/api/vendor/summary'),
+  summary: (q: { branchId?: string } = {}) => call<VendorSummary>('GET', `/api/vendor/summary${qs({ ...q })}`),
   attention: () => call<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
   goLive: () => call<GoLive>('GET', '/api/vendor/go-live'),
   insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
@@ -648,6 +707,14 @@ export const vendorApi = {
   uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) =>
     call<VendorImage>('POST', '/api/vendor/images', file(f, { kind, branchId })),
   deleteImage: (id: string) => call<void>('DELETE', `/api/vendor/images/${id}`),
+
+  /** The till: the same scan calls as the staff app. */
+  scanPreview: (code: string) => call<ScanPreview>('POST', '/api/vendor/scans/preview', { code }),
+  collect: (body: { code: string; amount: number; branchId?: string; idempotencyKey: string }) =>
+    call<CollectResult>('POST', '/api/vendor/scans/collect', body),
+  redeem: (body: { code: string; branchId?: string; idempotencyKey: string }) => call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
+  patterns: (q: { branchId?: string }) => call<VendorPatterns>('GET', `/api/vendor/insights/patterns${qs({ ...q })}`),
+  scansToday: () => call<{ collects: number; redemptions: number }>('GET', '/api/vendor/scans/today'),
 
   staff: () => call<Staff[]>('GET', '/api/vendor/staff'),
   inviteStaff: (body: { name: string; email: string; role: StaffRole; branchId?: string }) =>

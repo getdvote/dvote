@@ -18,6 +18,7 @@ import {
   CollectResponseDto,
   PreviewScanResponseDto,
   RedeemResponseDto,
+  ScansTodayResponseDto,
 } from './dto/scan-response.dto';
 
 /** The ledger row + names needed to describe a collect result. */
@@ -40,6 +41,17 @@ export class ScansService {
     private readonly prisma: PrismaService,
     private readonly live: LiveService,
   ) {}
+
+  /** What this staff member did today (Cairo time): collects and rewards given. */
+  async today(ctx: StaffContext): Promise<ScansTodayResponseDto> {
+    const [row] = await this.prisma.$queryRaw<{ collects: bigint; redemptions: bigint }[]>`
+      SELECT count(*) FILTER (WHERE type = 'earn')   AS collects,
+             count(*) FILTER (WHERE type = 'redeem') AS redemptions
+      FROM point_events
+      WHERE vendor_id = ${ctx.vendorId}::uuid AND staff_id = ${ctx.staffId}::uuid
+        AND (created_at AT TIME ZONE 'Africa/Cairo')::date = (now() AT TIME ZONE 'Africa/Cairo')::date`;
+    return { collects: Number(row?.collects ?? 0), redemptions: Number(row?.redemptions ?? 0) };
+  }
 
   /** What the scanned QR is and whether this staff member can use it. Changes nothing. */
   async preview(

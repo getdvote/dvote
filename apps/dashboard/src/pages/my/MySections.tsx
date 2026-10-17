@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
+import { useSearchParams } from 'react-router';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '../../components/PageHeader';
 import { t } from '../../i18n';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { BranchesTab } from '../vendor/BranchesTab';
-import { ImagesTab } from '../vendor/ImagesTab';
 import { RewardsTab } from '../vendor/RewardsTab';
-import { RulesTab } from '../vendor/RulesTab';
 import { StaffTab } from '../vendor/StaffTab';
+import { MyRedemptions } from './MyRedemptions';
 
 /** The same tabs the platform admin uses, fed with my vendor's scope (/api/vendor only). */
 function Section({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
@@ -32,33 +33,31 @@ export function MyBranches() {
   );
 }
 
-export function MyRule() {
-  const scope = useMyScope();
-  return (
-    <Section title={t('nav.rule')} subtitle={readOnly(scope.can.editVendor, t('sections.rule'))}>
-      <RulesTab scope={scope} />
-    </Section>
-  );
-}
-
+/** Rewards: the catalogue, and the rewards given (?tab=redemptions), on one page. */
 export function MyRewards() {
   const scope = useMyScope();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'redemptions' ? 'redemptions' : 'rewards';
   return (
-    <Section title={t('nav.rewards')} subtitle={readOnly(scope.can.editVendor, t('sections.rewards'))}>
-      <RewardsTab scope={scope} />
-    </Section>
-  );
-}
-
-export function MyImages() {
-  const scope = useMyScope();
-  return (
-    <Section
-      title={t('nav.menu')}
-      subtitle={scope.can.editVendor ? t('sections.menuEdit') : t('sections.menuView')}
-    >
-      <ImagesTab scope={scope} />
-    </Section>
+    <>
+      <PageHeader title={t('nav.rewards')} subtitle={readOnly(scope.can.editVendor, t('sections.rewards'))} />
+      <Tabs value={tab} onValueChange={(v) => setParams(v === 'redemptions' ? { tab: v } : {}, { replace: true })}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="rewards">{t('nav.rewards')}</TabsTrigger>
+          <TabsTrigger value="redemptions">{t('nav.redemptions')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="rewards">
+          <Card>
+            <CardContent>
+              <RewardsTab scope={scope} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="redemptions">
+          <MyRedemptions embedded />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }
 

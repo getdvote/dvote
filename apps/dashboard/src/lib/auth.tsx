@@ -8,7 +8,7 @@ import { supabase } from './supabase';
  * with ADMIN_MFA_REQUIRED=false (local development).
  *
  * The same screen signs in vendor accounts (vendor admins and branch managers, from
- * /api/vendor/staff/me): they see only their own vendor. Plain staff use the staff app.
+ * /api/vendor/staff/me): they see only their own vendor. Plain staff get the Till page only.
  *
  *   signedOut → (password) → mfaVerify (has an authenticator) ──code──┐
  *                          → mfaEnroll (none yet: scan a QR) ──code──┤→ ready
@@ -55,11 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resolveVendor = useCallback(async () => {
     try {
       const me = await vendorApi.me();
-      if (me.role === 'staff') {
-        setNotice('Staff accounts use the dvote staff app. The dashboard is for merchant admins and branch managers.');
-        await signOut();
-        return;
-      }
       setStaff(me);
       setNotice(null);
       setStatus('ready');

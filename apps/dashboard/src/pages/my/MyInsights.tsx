@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRightDownIcon as ArrowDownRight, ArrowRightUpIcon as ArrowUpRight, CheckIcon as Check, WidgetIcon as LayoutDashboard, RestartIcon as RotateCcw } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,9 @@ import { vendorApi, type InsightsKpis } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
 import { RewardPerformance } from './RewardPerformance';
-import { GiveBackRates } from './give-back-rates';
+import { InsightsPattern } from './InsightsPatterns';
+import { CustomLayout, useCustomLayout, type LayoutSection } from '../../components/CustomLayout';
+import { Button } from '@/components/ui/button';
 
 type Metric = 'sales' | 'visits';
 
@@ -55,6 +57,7 @@ export function MyInsights() {
   const [compare, setCompare] = useState<'previous' | 'none'>('previous');
   const [branchId, setBranchId] = useState('all');
   const [metric, setMetric] = useState<Metric>('sales');
+  const layout = useCustomLayout('dvote-insights-layout');
 
   const { from, to } = period.dates;
   const query = { from: from!, to: to!, compare, branchId: branchOnly || branchId === 'all' ? undefined : branchId };
@@ -76,11 +79,171 @@ export function MyInsights() {
   }));
   const comparing = !!data?.previousRange;
 
+  const sections: LayoutSection[] = [
+    {
+      key: 'kpis',
+      title: t('layout.sections.kpis'),
+      min: 'half',
+      node: (
+        <div className="grid gap-4 @md:grid-cols-2 @4xl:grid-cols-4">
+          {KPIS.map((k) => (
+            <Card key={k.key} className="gap-0 py-4">
+              <CardContent className="px-5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      tabIndex={0}
+                      className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none focus-visible:text-foreground"
+                    >
+                      {t(`insights.kpi.${k.key}`)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-60">{t(`insights.help.${k.key}`)}</TooltipContent>
+                </Tooltip>
+                {isLoading || !data ? (
+                  <Skeleton className="mt-2 h-8 w-24" />
+                ) : (
+                  <>
+                    <div className="mt-1 text-2xl font-bold tracking-tight tabular-nums">{show(data.current[k.key], k.format)}</div>
+                    {data.previous ? <Delta current={Number(data.current[k.key])} previous={Number(data.previous[k.key])} /> : null}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'chart',
+      title: t('layout.sections.chart'),
+      min: 'half',
+      node: (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{metric === 'sales' ? t('insights.salesPerDay') : t('insights.visitsPerDay')}</CardTitle>
+              <CardDescription>
+                {data ? rangeText(data.range) : ''}
+                {comparing ? `, ${t('insights.dashed', { range: rangeText(data!.previousRange!) })}` : ''}
+              </CardDescription>
+            </div>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={metric}
+              onValueChange={(v) => v && setMetric(v as Metric)}
+              aria-label={t('insights.chartMetric')}
+            >
+              <ToggleGroupItem value="sales" className="h-8 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
+                {t('insights.sales')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="visits" className="h-8 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
+                {t('insights.kpi.visits')}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </CardHeader>
+          <CardContent>
+            {!chart ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : (
+              <ChartContainer config={chartConfig()} className="aspect-auto h-[280px] w-full">
+                <AreaChart data={chart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="insights-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-current)" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="var(--color-current)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(d: string) => dayjs(d).format('D MMM')}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={24}
+                  />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={56} tickFormatter={(v: number) => num(v)} />
+                  <ChartTooltip content={<ChartTooltipContent labelFormatter={(d) => dayjs(String(d)).format('dddd D MMM')} />} />
+                  <Area type="monotone" dataKey="current" stroke="var(--color-current)" strokeWidth={2.5} fill="url(#insights-fill)" />
+                  {comparing ? (
+                    <Line type="monotone" dataKey="previous" stroke="var(--color-previous)" strokeDasharray="4 4" strokeWidth={1.5} dot={false} />
+                  ) : null}
+                </AreaChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    },
+    { key: 'top', title: t('insights.patterns.topTitle'), min: 'half', node: <InsightsPattern which="top" branchId={query.branchId} money={money} /> },
+    {
+      key: 'hours',
+      title: t('insights.patterns.hoursTitle'),
+      min: 'twoThirds',
+      node: <InsightsPattern which="hours" branchId={query.branchId} money={money} />,
+    },
+    { key: 'back', title: t('insights.patterns.backTitle'), min: 'twoThirds', node: <InsightsPattern which="back" branchId={query.branchId} money={money} /> },
+    { key: 'rewards', title: t('insights.rewards.title'), min: 'half', node: <RewardPerformance query={query} money={money} /> },
+    ...(data?.branches.length
+      ? [
+          {
+            key: 'branches',
+            title: t('insights.byBranch'),
+            min: 'half' as const,
+            node: (
+              <Card className="gap-0 py-0">
+                <CardHeader className="py-4">
+                  <CardTitle>{t('insights.byBranch')}</CardTitle>
+                </CardHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="ps-6">{t('common.branch')}</TableHead>
+                      <TableHead className="text-end">{t('insights.kpi.sales')}</TableHead>
+                      <TableHead className="text-end">{t('insights.kpi.visits')}</TableHead>
+                      <TableHead className="text-end">{t('insights.kpi.customers')}</TableHead>
+                      <TableHead className="pe-6 text-end">{t('insights.kpi.avgBill')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.branches.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="ps-6 font-semibold">{b.name}</TableCell>
+                        <TableCell className="text-end tabular-nums">{money(b.sales)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{num(b.visits)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{num(b.customers)}</TableCell>
+                        <TableCell className="pe-6 text-end tabular-nums">{b.visits ? money(b.avgBill) : '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            ),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <>
       <PageHeader
         title={t('nav.insights')}
         subtitle={t('insights.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+        extra={
+          <div className="flex items-center gap-2">
+            {layout.editing && layout.saved ? (
+              <Button variant="ghost" onClick={layout.reset}>
+                <RotateCcw /> {t('layout.reset')}
+              </Button>
+            ) : null}
+            <Button variant={layout.editing ? 'default' : 'outline'} onClick={() => layout.setEditing(!layout.editing)}>
+              {layout.editing ? <Check /> : <LayoutDashboard />}
+              {layout.editing ? t('layout.done') : t('layout.customize')}
+            </Button>
+          </div>
+        }
       />
       <PeriodPicker state={period}>
         <SelectFilter
@@ -108,106 +271,7 @@ export function MyInsights() {
       {!from || !to ? <p className="mb-4 text-sm text-muted-foreground">{t('insights.pickDates')}</p> : null}
       <ErrorAlert error={error} className="mb-4" />
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {KPIS.map((k) => (
-          <Card key={k.key} className="gap-0 py-4">
-            <CardContent className="px-5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0} className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none focus-visible:text-foreground">
-                    {t(`insights.kpi.${k.key}`)}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-60">{t(`insights.help.${k.key}`)}</TooltipContent>
-              </Tooltip>
-              {isLoading || !data ? (
-                <Skeleton className="mt-2 h-8 w-24" />
-              ) : (
-                <>
-                  <div className="mt-1 text-2xl font-bold tracking-tight tabular-nums">{show(data.current[k.key], k.format)}</div>
-                  {data.previous ? <Delta current={Number(data.current[k.key])} previous={Number(data.previous[k.key])} /> : null}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="mb-5">
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle>{metric === 'sales' ? t('insights.salesPerDay') : t('insights.visitsPerDay')}</CardTitle>
-            <CardDescription>
-              {data ? rangeText(data.range) : ''}
-              {comparing ? `, ${t('insights.dashed', { range: rangeText(data!.previousRange!) })}` : ''}
-            </CardDescription>
-          </div>
-          <ToggleGroup type="single" variant="outline" value={metric} onValueChange={(v) => v && setMetric(v as Metric)} aria-label={t('insights.chartMetric')}>
-            <ToggleGroupItem value="sales" className="h-8 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
-              {t('insights.sales')}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="visits" className="h-8 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
-              {t('insights.kpi.visits')}
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </CardHeader>
-        <CardContent>
-          {!chart ? (
-            <Skeleton className="h-[280px] w-full" />
-          ) : (
-            <ChartContainer config={chartConfig()} className="aspect-auto h-[280px] w-full">
-              <AreaChart data={chart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="insights-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-current)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="var(--color-current)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="date" tickFormatter={(d: string) => dayjs(d).format('D MMM')} tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={56} tickFormatter={(v: number) => num(v)} />
-                <ChartTooltip content={<ChartTooltipContent labelFormatter={(d) => dayjs(String(d)).format('dddd D MMM')} />} />
-                <Area type="monotone" dataKey="current" stroke="var(--color-current)" strokeWidth={2.5} fill="url(#insights-fill)" />
-                {comparing ? <Line type="monotone" dataKey="previous" stroke="var(--color-previous)" strokeDasharray="4 4" strokeWidth={1.5} dot={false} /> : null}
-              </AreaChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      <GiveBackRates scope={scope} />
-
-      <RewardPerformance query={query} money={money} />
-
-      {data?.branches.length ? (
-        <Card className="gap-0 py-0">
-          <CardHeader className="py-4">
-            <CardTitle>{t('insights.byBranch')}</CardTitle>
-          </CardHeader>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="ps-6">{t('common.branch')}</TableHead>
-                <TableHead className="text-end">{t('insights.kpi.sales')}</TableHead>
-                <TableHead className="text-end">{t('insights.kpi.visits')}</TableHead>
-                <TableHead className="text-end">{t('insights.kpi.customers')}</TableHead>
-                <TableHead className="pe-6 text-end">{t('insights.kpi.avgBill')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.branches.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell className="ps-6 font-semibold">{b.name}</TableCell>
-                  <TableCell className="text-end tabular-nums">{money(b.sales)}</TableCell>
-                  <TableCell className="text-end tabular-nums">{num(b.visits)}</TableCell>
-                  <TableCell className="text-end tabular-nums">{num(b.customers)}</TableCell>
-                  <TableCell className="pe-6 text-end tabular-nums">{b.visits ? money(b.avgBill) : '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      ) : null}
+      <CustomLayout sections={sections} layout={layout} />
       {data ? <p className="mt-3 text-xs text-muted-foreground">{t('insights.updated', { time: dayjs(data.updatedAt).format('HH:mm') })}</p> : null}
     </>
   );

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Ban, Camera, CircleCheck, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeftIcon as ArrowLeft, ForbiddenCircleIcon as Ban, CameraIcon as Camera, CheckCircleIcon as CircleCheck, LoaderIcon as Loader2, PenIcon as Pencil, TrashBinTrashIcon as Trash2 } from '@solar-icons/react/linear';
 import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';

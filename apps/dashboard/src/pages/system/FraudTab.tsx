@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Ban, Check, Loader2, Play, RotateCcw, ShieldAlert, X } from 'lucide-react';
+import { ForbiddenCircleIcon as Ban, CheckIcon as Check, LoaderIcon as Loader2, PlayIcon as Play, RestartIcon as RotateCcw, ShieldWarningIcon as ShieldAlert, CloseIcon as X } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';

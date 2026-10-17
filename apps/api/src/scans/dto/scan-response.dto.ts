@@ -85,3 +85,9 @@ export class CollectResponseDto {
   @ApiProperty()
   at: string;
 }
+
+/** The till's running tally: what the signed-in staff member did today (Cairo time). */
+export class ScansTodayResponseDto {
+  @ApiProperty({ example: 12, description: 'Points collects by me today' }) collects: number;
+  @ApiProperty({ example: 2, description: 'Rewards given by me today' }) redemptions: number;
+}

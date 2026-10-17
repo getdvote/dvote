@@ -4,7 +4,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { VendorApi } from '../auth/vendor-api.decorator';
-import { activePause, readWeek } from '../branches/hours';
+import { activePause, openingHoursEnabled, readWeek } from '../branches/hours';
 import { PrismaService } from '../prisma/prisma.service';
 import { activeSoldOut } from '../rewards/reward-sold-outs.service';
 
@@ -21,7 +21,7 @@ type Tone = 'critical' | 'warning' | 'info';
 
 class AttentionActionDto {
   @ApiProperty({ example: 'Set the points rule' }) label: string;
-  @ApiProperty({ example: '/rule', description: 'Dashboard path' }) to: string;
+  @ApiProperty({ example: '/card', description: 'Dashboard path' }) to: string;
 }
 
 class AttentionItemDto {
@@ -122,8 +122,8 @@ export class VendorAttentionService {
         detail:
           'There is no active points rule, so staff can’t give points at any branch.',
         action: admin
-          ? { label: 'Set the points rule', to: '/rule' }
-          : { label: 'See the points rule', to: '/rule' },
+          ? { label: 'Set the points rule', to: '/card' }
+          : { label: 'See the points rule', to: '/card' },
       });
     }
     if (!rewards.length) {
@@ -140,7 +140,7 @@ export class VendorAttentionService {
       });
     }
     for (const b of branches) {
-      const until = activePause(b.paused_until);
+      const until = openingHoursEnabled() ? activePause(b.paused_until) : null;
       if (until) {
         add({
           key: `branch_paused:${b.id}`,
@@ -202,7 +202,7 @@ export class VendorAttentionService {
     }
     const noHours = branches.filter((b) => !readWeek(b.weekly_hours)?.length);
     const noMap = branches.filter((b) => b.lat === null || b.lng === null);
-    if (admin && noHours.length) {
+    if (admin && noHours.length && openingHoursEnabled()) {
       add({
         key: 'branches_no_hours',
         group: 'setup',
@@ -244,7 +244,7 @@ export class VendorAttentionService {
         tone: 'info',
         title: `Your shop has no ${missing}`,
         detail: 'They make your shop page and cards in the app look like you.',
-        action: { label: 'Open shop profile', to: '/profile' },
+        action: { label: 'Open storefront', to: '/storefront' },
         params: { missing: !vendor.logo_url && !vendor.banner_url ? 'both' : !vendor.logo_url ? 'logo' : 'banner' },
       });
     }

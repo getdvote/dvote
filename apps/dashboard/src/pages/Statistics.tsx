@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { QrCode, RefreshCw, Store } from "lucide-react";
+import { QrCodeIcon as QrCode, RefreshIcon as RefreshCw, ShopIcon as Store } from '@solar-icons/react/linear';
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -42,7 +42,7 @@ import { api } from "../lib/api";
  * mode has its own steps, not a flip. Identity is never colour alone: legend, labels, icons.
  */
 const COLORS =
-  "[--qr-master:#6155f5] [--qr-shop:#22a35a] dark:[--qr-master:oklch(0.64_0.19_279.3)] dark:[--qr-shop:oklch(0.66_0.15_152.6)]";
+  "[--qr-master:var(--chart-1)] [--qr-shop:#22a35a] dark:[--qr-master:var(--chart-1)] dark:[--qr-shop:oklch(0.66_0.15_152.6)]";
 
 const chartConfig = {
   master: { label: "Master QR", color: "var(--qr-master)" },

@@ -1,6 +1,6 @@
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Crosshair, Link2, Loader2, MapPin, Search, X } from 'lucide-react';
+import { GpsIcon as Crosshair, LinkIcon as Link2, LoaderIcon as Loader2, MapPointIcon as MapPin, MagnifierIcon as Search, CloseIcon as X } from '@solar-icons/react/linear';
 import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { Button } from '@/components/ui/button';

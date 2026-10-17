@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { fromMinor, toMinor, type DecimalLike } from '../points/points';
 import { activeSoldOut } from '../rewards/reward-sold-outs.service';
-import { activePause, readWeek } from '../branches/hours';
+import { activePause, openingHoursEnabled, readWeek } from '../branches/hours';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUCKETS, StorageService } from '../storage/storage.service';
 import { MAX_BRANCH_PHOTOS } from '../vendor-images/vendor-images.service';
@@ -209,10 +209,11 @@ export class VendorPageService {
         city: b.city,
         lat: b.lat === null ? null : Number(b.lat),
         lng: b.lng === null ? null : Number(b.lng),
-        opensAt: b.opens_at,
-        closesAt: b.closes_at,
-        hours: readWeek(b.weekly_hours),
-        pausedUntil: activePause(b.paused_until),
+        // hidden while opening hours are off (see openingHoursEnabled)
+        opensAt: openingHoursEnabled() ? b.opens_at : null,
+        closesAt: openingHoursEnabled() ? b.closes_at : null,
+        hours: openingHoursEnabled() ? readWeek(b.weekly_hours) : null,
+        pausedUntil: openingHoursEnabled() ? activePause(b.paused_until) : null,
         photos: vendor.vendor_images
           .filter((i) => i.kind === 'branch_photo' && i.branch_id === b.id)
           .slice(0, MAX_BRANCH_PHOTOS) // branches from before the limit may have more

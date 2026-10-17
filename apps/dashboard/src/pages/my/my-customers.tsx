@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, LockKeyhole, UsersRound } from "lucide-react";
+import { ArrowRightUpIcon as ArrowUpRight, LockIcon as LockKeyhole, UsersGroupTwoRoundedIcon as UsersRound } from '@solar-icons/react/linear';
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -41,9 +42,9 @@ import {
   vendorApi,
   type CustomerSegment,
   type MerchantCustomer,
+  type MerchantCustomerList,
   type MerchantCustomerQuery,
 } from "../../lib/api";
-import { cn } from "@/lib/utils";
 import { localeOf, t } from "../../i18n";
 
 const SEGMENTS: {
@@ -86,6 +87,84 @@ const displayName = (c: MerchantCustomer) =>
 function SegmentBadge({ segment }: { segment: CustomerSegment }) {
   const s = SEGMENTS.find((item) => item.key === segment)!;
   return <Badge variant={s.variant}>{segmentLabel(s.key)}</Badge>;
+}
+
+/**
+ * Every segment as a list (like Shopify's): name and what it means, how many customers and their
+ * share. A row opens the Customers tab filtered to it. Segments are built in and automatic;
+ * counts cover the selected branch, not search or filters.
+ */
+function Segmentation({
+  data,
+  count,
+  onSee,
+}: {
+  data: MerchantCustomerList | undefined;
+  count: (key: CustomerSegment) => number;
+  onSee: (key: CustomerSegment) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const total = data?.customersTotal ?? 0;
+  const q = query.trim().toLowerCase();
+  const rows = SEGMENTS.filter((s) => !q || `${segmentLabel(s.key)} ${segmentText(s.key)}`.toLowerCase().includes(q));
+  return (
+    <>
+      <Card className="gap-0 py-0">
+        <div className="border-b p-3">
+          <SearchInput value={query} onChange={setQuery} placeholder={t("customers.searchSegments")} />
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="ps-4">{t("customers.segmentName")}</TableHead>
+                <TableHead className="text-end">{t("customers.tabList")}</TableHead>
+                <TableHead className="text-end">{t("customers.shareOf")}</TableHead>
+                <TableHead>{t("customers.createdBy")}</TableHead>
+                <TableHead className="pe-4" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((s) => {
+                const n = count(s.key);
+                return (
+                  <TableRow
+                    key={s.key}
+                    tabIndex={0}
+                    className="cursor-pointer"
+                    onClick={() => onSee(s.key)}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSee(s.key))}
+                  >
+                    <TableCell className="ps-4 whitespace-normal">
+                      <div className="font-medium">{segmentLabel(s.key)}</div>
+                      <div className="text-xs text-muted-foreground">{segmentText(s.key)}</div>
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">{data ? num(n) : <Skeleton className="ms-auto h-4 w-8" />}</TableCell>
+                    <TableCell className="text-end tabular-nums">{data ? `${total ? Math.round((n / total) * 100) : 0}%` : null}</TableCell>
+                    <TableCell className="text-muted-foreground">{t("customers.automatic")}</TableCell>
+                    <TableCell className="pe-4 text-end">
+                      <ArrowUpRight className="ms-auto size-4 text-muted-foreground rtl:-scale-x-100" aria-hidden />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {!rows.length ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                    {t("customers.noSegments")}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+      <p className="mt-4 text-xs text-muted-foreground">
+        {data ? `${t("customers.segmentsTotal", { count: total })} ` : null}
+        {t("customers.footnote")}
+      </p>
+    </>
+  );
 }
 
 /** Merchant customer directory. URL state preserves filters, paging and the open profile. */
@@ -140,6 +219,23 @@ export function MyCustomers() {
   };
   const count = (key: CustomerSegment) =>
     data?.segments.find((s) => s.key === key)?.count ?? 0;
+  const view = params.get("view") === "segmentation" ? "segmentation" : "customers";
+  const showView = (v: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (v === "segmentation") next.set("view", v);
+      else next.delete("view");
+      return next;
+    });
+  /** From Segmentation: the list, filtered to one segment. */
+  const seeSegment = (key: CustomerSegment) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("view");
+      next.delete("page");
+      next.set("segment", key);
+      return next;
+    });
 
   return (
     <>
@@ -161,6 +257,15 @@ export function MyCustomers() {
           />
         )}
       </div>
+      <Tabs value={view} onValueChange={showView}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="customers">{t("customers.tabList")}</TabsTrigger>
+          <TabsTrigger value="segmentation">{t("customers.tabSegments")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="segmentation">
+          <Segmentation data={data} count={count} onSee={seeSegment} />
+        </TabsContent>
+        <TabsContent value="customers">
       <ErrorAlert error={error} className="mb-4" />
       {error ? (
         <Button variant="outline" onClick={() => void refetch()}>
@@ -168,83 +273,25 @@ export function MyCustomers() {
         </Button>
       ) : (
         <>
-          <div
-            className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label={t("customers.segmentsLabel")}
-          >
-            {SEGMENTS.slice(0, 4).map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                aria-pressed={segment === s.key}
-                onClick={() =>
-                  set("segment", segment === s.key ? undefined : s.key)
-                }
-                className={cn(
-                  "rounded-xl border bg-card p-4 text-start transition-colors duration-100 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  segment === s.key && "border-primary bg-accent",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{segmentLabel(s.key)}</span>
-                  <ArrowUpRight
-                    className="size-4 text-muted-foreground rtl:-scale-x-100"
-                    aria-hidden
-                  />
-                </div>
-                <div className="my-2 flex items-baseline gap-2">
-                  {data ? (
-                    <>
-                      <span className="text-3xl font-semibold tabular-nums">
-                        {num(count(s.key))}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {t("customers.percentOf", {
-                          n: data.customersTotal
-                            ? Math.round(
-                                (count(s.key) / data.customersTotal) * 100,
-                              )
-                            : 0,
-                        })}
-                      </span>
-                    </>
-                  ) : (
-                    <Skeleton className="h-9 w-20" />
-                  )}
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {segmentText(s.key)}
-                </p>
-              </button>
-            ))}
-          </div>
           <Card className="gap-0 py-0">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={!segment ? "secondary" : "ghost"}
-                  aria-pressed={!segment}
-                  onClick={() => set("segment")}
-                >
-                  <UsersRound /> {t("customers.all")}{" "}
-                  {data && (
-                    <Badge variant="outline">{num(data.customersTotal)}</Badge>
-                  )}
-                </Button>
-                {(count("no_visits") > 0 || segment === "no_visits") && (
-                  <Button
-                    variant={segment === "no_visits" ? "secondary" : "ghost"}
-                    onClick={() => set("segment", "no_visits")}
-                  >
-                    {segmentLabel("no_visits")} ({count("no_visits")})
-                  </Button>
-                )}
-                {segment && segment !== "no_visits" && (
-                  <Badge variant="brand">
-                    {segmentLabel(segment)}
-                  </Badge>
-                )}
-              </div>
+              <Select value={segment ?? "all"} onValueChange={(v) => set("segment", v === "all" ? undefined : v)}>
+                <SelectTrigger aria-label={t("customers.segment")} className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t("customers.all")}
+                    {data ? ` (${num(data.customersTotal)})` : ""}
+                  </SelectItem>
+                  {SEGMENTS.map((x) => (
+                    <SelectItem key={x.key} value={x.key}>
+                      {segmentLabel(x.key)}
+                      {data ? ` (${num(count(x.key))})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
                 {data
                   ? t("customers.matching", { n: data.total })
@@ -399,11 +446,13 @@ export function MyCustomers() {
       <p className="mt-2 text-xs text-muted-foreground">
         {t("customers.footnote")}
       </p>
+        </TabsContent>
+      </Tabs>
       <Sheet
         open={!!customerId}
         onOpenChange={(open) => !open && set("customer", undefined, false)}
       >
-        <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
+        <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=left]:w-full data-[side=right]:sm:max-w-xl data-[side=left]:sm:max-w-xl">
           {customerId && (
             <CustomerProfile
               key={`${customerId}:${branchId ?? ""}`}
