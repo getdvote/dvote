@@ -10,6 +10,24 @@
 > - Repo: `github.com/getdvote/dvote` — work happens on `develop`; merging needs Karim's approval.
 > - **This file contains no secrets.** Keys and passwords live only in each app's `.env` (never committed).
 
+> **Invitation password setup (2026-10-17):** dashboard `/set-password` handles Supabase invitation
+> and recovery sessions with EN/AR password + confirmation fields, no manual publishable key.
+> Existing local invite links to `/dev/staff.html` forward their browser-only fragment to the
+> dashboard on port 5173. An expired/used link offers a fresh password email (user clicks to send).
+> Local recovery uses the existing API dev callback; deployed invites must configure
+> `STAFF_INVITE_REDIRECT_URL` and Supabase Redirect URLs to the public dashboard `/set-password`.
+
+> **Broadcast + nearby reminders (2026-10-17):** Broadcast is now a merchant-admin feature:
+> choose all customers, a built-in or custom segment and optional branch activity filter; preview,
+> compose a plain-text message, confirm, then see pending/accepted/skipped/failed/uncertain results.
+> Google Wallet only for now. Audience is snapshotted; blocked customers and unsaved passes are
+> skipped. Three notification attempts per card per rolling 24 hours; uncertain sends are not
+> automatically repeated. No real broadcasts were sent while testing. Nearby reminders are a
+> separate opt-in setting: open branch map pins (up to 10) are sent to Google, which controls
+> proximity/timing/text; Wallet requires precise always-on location permission. It is not live
+> customer-location targeting. Migration 24 applied locally/cloud, Data API lockdown re-run.
+> Apple notifications still require Apple pass issuance/certificates and the PassKit service.
+
 > **Automatic Wallet logos (2026-10-17):** admin/merchant logo uploads create an additional opaque
 > 720×720 WebP (`<original-uuid>-wallet-v1.webp`) with the intact artwork centred and empty sides
 > filled from the dominant visible edge colour (white fallback for transparent edges). Google uses
@@ -27,6 +45,8 @@
 > `dvote:c1:` wallet card QRs as well as the app's `dvote:q1:` codes. Wallet collects are reusable
 > across visits, merchant-scoped, idempotent per submission and recorded with `scan_source=wallet_card`.
 > Wallet redemption selection and notifications remain pending.
+> Dashboard Till (`MyTill.tsx`) also accepts both `dvote:q1:` and `dvote:c1:`; its separate
+> client-side prefix check was corrected on 2026-10-17 after the staff-app fix.
 >
 > **Google Wallet sync (2026-10-17):** saved passes receive the latest points after collects,
 > redemptions and admin corrections, plus merchant colour, logo and banner after dashboard changes.

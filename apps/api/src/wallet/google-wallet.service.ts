@@ -61,6 +61,36 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     return !!this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) && !!this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
   }
 
+  get enabled(): boolean { return this.configured; }
+
+  /** Per-card messages keep a segmented broadcast off every other customer's pass. */
+  async notifyCard(objectId: string, messageId: string, title: string, body: string): Promise<{ status: 'accepted' | 'skipped' | 'failed'; reason: string | null }> {
+    const issuer = this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true });
+    if (!this.configured || !objectId.startsWith(`${issuer}.`)) return { status: 'failed', reason: 'wallet_not_configured' };
+    const url = `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${encodeURIComponent(objectId)}`;
+    const headers = { Authorization: `Bearer ${await this.accessToken()}`, 'Content-Type': 'application/json' };
+    const existing = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) });
+    if (existing.status === 404) return { status: 'skipped', reason: 'not_saved' };
+    if (!existing.ok) throw await googleFailure('Google Wallet message lookup', existing);
+    const pass = await existing.json() as { hasUsers?: boolean; messages?: { id?: string }[] };
+    if (pass.hasUsers === false) return { status: 'skipped', reason: 'not_saved' };
+    if (pass.messages?.some(m => m.id === messageId)) return { status: 'accepted', reason: null };
+    // Google stores at most ten messages on a pass. Remove only our oldest broadcasts.
+    const messages = pass.messages ?? [];
+    if (messages.length >= 10) {
+      const index = messages.findIndex(m => m.id?.startsWith('dvote-broadcast-'));
+      if (index < 0) return { status: 'failed', reason: 'message_limit' };
+      await this.patch('loyaltyObject', objectId, { messages: messages.filter((_, i) => i !== index) });
+    }
+    const response = await fetch(`${url}/addMessage`, {
+      method: 'POST', headers, signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ message: { id: messageId, header: title, body, messageType: 'TEXT_AND_NOTIFY' } }),
+    });
+    if (response.status === 429) return { status: 'skipped', reason: 'google_quota' };
+    if (!response.ok) throw await googleFailure('Google Wallet addMessage', response);
+    return { status: 'accepted', reason: null };
+  }
+
   onApplicationBootstrap(): void {
     if (!this.configured) return;
     this.timer = setInterval(() => void this.reconcile(), 60_000);
@@ -170,9 +200,14 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     return true;
   }
 
-  private async branding(v: { id: string; name: string; logo_url: string | null; logo_path: string | null; banner_url: string | null; card_design: number | null }) {
+  private async branding(v: { id: string; name: string; logo_url: string | null; logo_path: string | null; banner_url: string | null; card_design: number | null; wallet_nearby_enabled?: boolean }) {
     const logo = v.logo_path ? await this.walletLogos.ensure(v.logo_path) : v.logo_url ?? this.config.get('WALLET_DEFAULT_LOGO_URL', { infer: true });
+    const branches = v.wallet_nearby_enabled ? await this.prisma.branches.findMany({
+      where: { vendor_id: v.id, status: 'active', lat: { not: null }, lng: { not: null } },
+      select: { lat: true, lng: true }, orderBy: { id: 'asc' }, take: 10,
+    }) : [];
     return {
+      merchantLocations: branches.map(b => ({ latitude: Number(b.lat), longitude: Number(b.lng) })),
       // Required even when PATCHing an already approved class.
       reviewStatus: 'UNDER_REVIEW',
       issuerName: v.name, programName: `${v.name} loyalty`,

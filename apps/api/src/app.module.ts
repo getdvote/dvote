@@ -24,6 +24,7 @@ import { SystemModule } from './system/system.module';
 import { FraudFlagsModule } from './fraud-flags/fraud-flags';
 import { RateLimitModule } from './rate-limit/rate-limit';
 import { PublicJoinModule } from './public-join/public-join.module';
+import { BroadcastsModule } from './broadcasts/broadcasts';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { PublicJoinModule } from './public-join/public-join.module';
     MerchantCustomersModule,
     StorefrontModule,
     PublicJoinModule,
+    BroadcastsModule,
   ],
 })
 export class AppModule {}

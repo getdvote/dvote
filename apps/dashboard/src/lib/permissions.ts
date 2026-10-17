@@ -9,7 +9,7 @@ export const PERMISSION_GROUPS = [
   { key: 'till', items: [{ key: 'scan' }, { key: 'collect' }, { key: 'redeem' }] },
   { key: 'rewards', items: [{ key: 'manageRewards' }, { key: 'soldOut' }] },
   { key: 'members', items: [{ key: 'viewCustomers' }, { key: 'viewPhone' }, { key: 'segments' }] },
-  { key: 'programs', items: [{ key: 'manageCard' }, { key: 'manageMenu' }, { key: 'manageMessages', soon: true }] },
+  { key: 'programs', items: [{ key: 'manageCard' }, { key: 'manageMenu' }, { key: 'manageMessages' }] },
   { key: 'insight', items: [{ key: 'viewAnalytics' }, { key: 'exportCustomers' }] },
   {
     key: 'operations',
