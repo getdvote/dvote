@@ -1,18 +1,90 @@
 # dvote — Loyalty Platform
 
-Spend-based loyalty points and vendor rewards for coffee shops, collected and redeemed with **one-time QR codes**.
+Spend-based loyalty points and vendor rewards for coffee shops. **Since 2026-10-17 customers get a Google/Apple Wallet pass from a web page (no app install)**; see "Direction change" below. The paused customer app uses **one-time QR codes**.
 Each vendor sets a **point rule** (e.g. every 10 EGP = 1 point) and a **reward catalogue** priced in points (e.g. free coffee 300, free cheesecake 500, coffee + cheesecake 750). The customer shows a QR in the app; vendor staff scan it in the staff app and enter the receipt total (collect) or confirm the reward (redeem); the backend decides and records everything.
 
-Four clients:
+Clients:
 
 | Client | Users | Purpose |
 |---|---|---|
-| Customer app (React Native + Expo, iOS + Android) | Customers | Sign in, see cards (points per vendor), browse vendors + rewards, show collect / redeem QR |
+| **Public web site + wallet pass** (to build, `apps/web`) | Customers | Open from the NFC tag / QR at the till, join a merchant, add the loyalty card to Google or Apple Wallet; the pass shows points + the QR staff scan |
+| Customer app (React Native + Expo, iOS + Android) — **paused 2026-10-17** | Customers | Kept in the repo for a later release: sign in, cards, shops, collect / redeem QR, home-screen widgets |
 | Staff app (React Native + Expo, separate app) | Staff, branch managers, vendor admins | Scan customer QR, enter receipt total, confirm redemptions |
 | Vendor dashboard (React, web) | Vendor admins, branch managers | Branches, staff, point rule, rewards, reports |
 | Admin dashboard (React, web) | Platform admins | All vendors, onboarding, support, point corrections, fraud review |
 
+**Read "Direction change (decided 2026-10-17)" below first: it overrides the customer-app parts of this file.**
+
 **Business + status handoff: [`DVOTE_BRIEF.md`](DVOTE_BRIEF.md)** (read it first; keep it updated). Full spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; source `docs/src/documentation.html`, rebuild with `node docs/src/build-pdf.mjs`). Database source of truth: `database/dvote_schema.sql`.
+
+---
+
+## Direction change (decided 2026-10-17): wallet passes instead of a customer app
+
+**Why:** asking a walk-in customer to install an app just to collect coffee points is a hard sell. Customers now get their loyalty card as a **Google Wallet / Apple Wallet pass** from a web page; no app install. The customer app (`apps/mobile`) is **paused, not deleted** (see below). Reference product the user showed: tappi (`thetappi.com`): venue page, join form, wallet pass with points + QR.
+
+### Customer journey (target)
+
+1. At each merchant's till there is an **NFC tag and a printed QR** (one per branch). Both just hold a URL: `https://dvote.app/<vendor-slug>` (+ `?b=<branch>`) (plain NFC NDEF URL: no Apple/Google NFC pass certification needed).
+2. The phone opens the **venue page** (mobile first, works on laptop): merchant logo + name, buttons **Loyalty card** (main), Menu, and later Leave a review (Google), Message us, Wi-Fi password.
+3. **Join form** (`dvote.app/<vendor-slug>/join`): name*, email*, mobile phone, "How did you hear about us?" (optional), "I'm 14 or older" checkbox, link "How your data is used", button **Get my loyalty card**, and **Already have a card? Get it back** (sends the card link to the email again).
+4. **"You're enrolled!"**: a preview of the card (merchant colours/logo, points 0, cardholder name, short code like `CZW-QNM`) and the wallet button **for the customer's phone only**: iPhone/iPad (Safari user agent) → **Add to Apple Wallet**; Android → **Add to Google Wallet**; desktop/unknown → both, plus "open this page on your phone" (QR of the page). A small "Use the other wallet" link stays as a fallback (detection can be wrong).
+5. The pass lives in the wallet: **merchant branding, points balance, cardholder name, short code, and a QR**. At the till the cashier scans that QR in the staff app. After every collect/redeem the **pass updates itself** with the new balance (and can show a notification).
+
+### What changes per app
+
+| App | Change |
+|---|---|
+| **New `apps/web`** (to build) | Public, mobile-first site: venue page, join form, enrolled page with the wallet button, "get it back" page, privacy page. English + Arabic (RTL), same rules as the dashboard i18n. Stack like the dashboard (React + Vite + Tailwind + shadcn), deployed as a static site; talks only to `/api/public/*`. |
+| **`apps/api`** | New public join API, wallet pass issuing (Google + Apple), Apple PassKit web service, pass updates after every balance change, staff scans accept the wallet card QR, staff-side redeem. Details below. |
+| **`apps/staff`** | Scanner reads the **wallet card QR** too. Collect: unchanged (type the bill). **Redeem is started by staff**: after scanning the card, staff see the customer's name, balance and the rewards they can afford, pick one, confirm. |
+| **`apps/dashboard`** | Per merchant/branch: the join link, a printable **QR poster** and the NFC tag URL; wallet card look (uses the existing logo, banner and card colours); join source stats (NFC vs QR, "how did you hear"). Customers page shows the customer email and phone (decided 2026-10-17). |
+| **`apps/mobile`** (customer app) | **Paused**: kept in the repo, not released. See "Customer app while paused". |
+
+### Backend changes (planned)
+
+- **Public API `/api/public/*`** (no sign-in; rate limited hard per IP; Cloudflare Turnstile captcha on join): `GET /vendors/{slug}` (venue page data: logo, name, colours, menu link, rule summary, rewards), `POST /vendors/{slug}/join {name, email, phone?, heardFrom?, ageConfirmed, branchId?, source: nfc|qr|link}` → creates or reuses the customer and the **card for that merchant** (balance 0) and returns `{cardId, shortCode, googleSaveUrl, appleUrl}`, `POST /cards/recover {email, vendorSlug}` (emails the card link; never says whether the email exists), `GET /cards/{publicId}` (the enrolled page, by an unguessable id).
+- **Google Wallet** (Wallet API, free issuer account in the Google Pay & Wallet Console, service-account key in `.env`): one **LoyaltyClass per merchant** (logo, colours, name) and one **LoyaltyObject per card** (points, cardholder, barcode). "Add to Google Wallet" = a signed JWT save link. After a balance change: `PATCH` the object (updates within seconds).
+- **Apple Wallet** (PassKit): a signed `.pkpass` per card (`storeCard` style), signed with a **Pass Type ID certificate** from the **paid Apple Developer account** (same blocker as Apple sign-in). Updates use Apple's **PassKit web service** that the API must expose: `POST|DELETE /v1/devices/{deviceLibraryId}/registrations/{passTypeId}/{serial}`, `GET /v1/devices/{deviceLibraryId}/registrations/{passTypeId}?passesUpdatedSince`, `GET /v1/passes/{passTypeId}/{serial}` (latest pass), `POST /v1/log`; after a balance change the API sends an **APNs push** to the registered devices, which then download the new pass.
+- **New `wallet` module** (`src/wallet/`): builds Google objects and Apple passes from the card + vendor branding, keeps them in sync. It replaces the customer-app live `cards` notice as the "balance changed" hook: collect, redeem, admin adjust/undo all call `wallet.cardChanged(cardId)` (after commit, never inside the transaction; failures retried, never undo points).
+- **Scans accept the wallet card QR**: new code format `dvote:c1:<card token>` (128-bit, only its SHA-256 stored, like QR codes). `POST /scans/preview` tells apart a one-time app QR (`dvote:q1:`) and a card QR; for a card it returns the customer's first name, balance and affordable rewards. Collect: same checks and one transaction as today. Redeem: `POST /scans/redeem {code, rewardId, branchId?, idempotencyKey}` (staff choose the reward).
+- **Security trade-off:** a wallet QR is **static** (it can't change every 5 minutes like the app QR), so a screenshot can be reused. Mitigations: staff see the cardholder's name on every scan; idempotency + duplicate-receipt checks stay; fraud flags (too many collects) stay; the card token can be **rotated** from the dashboard/admin (old pass stops working, the wallet gets the new one); Google Wallet's rotating-barcode option can be added later (Apple has no equivalent).
+- **Business rules that change:** rule 5 ("cards are created on the first purchase") becomes **"a card is created when the customer joins a merchant (balance 0)"**; rule 8 (one-time QR) stays for the app, and card QRs follow the rules above. Everything else (points per merchant, server decides, ledger, rounding, tenant scoping) is unchanged.
+
+### Database changes (planned migration)
+
+- `vendors`: `slug` (unique, for the join URL), optional wallet look overrides (otherwise logo, banner and card design are reused), optional venue links (menu link, Google review URL, Wi-Fi name/password).
+- `users`: customers can exist **without** a Supabase account (`auth_user_id` is already nullable); add `email_verified_at` (if we verify), `heard_from`, `age_confirmed_at`, `marketing_consent`; one customer per email (unique, lower-case) so one person joining several merchants is one user with several cards.
+- `cards`: `public_id` (unguessable id for the card page and the Apple serial), `token_hash` (the card QR secret, SHA-256), `short_code` (e.g. `CZW-QNM`, unique per merchant), `joined_via` (nfc/qr/link), `joined_branch_id`, `google_object_id`, `apple_auth_token` (PassKit web-service token), `pass_updated_at`.
+- **New `wallet_registrations`**: Apple devices registered for a card (`device_library_id`, `push_token`, card), for the PassKit web service.
+- `point_events`: the CHECKs require `qr_code_id` for earn/redeem; card scans have no `qr_codes` row, so add `card_scan` (or a `source` column: `app_qr` / `wallet_card`) and relax the CHECK to "a QR **or** a card scan". The one-event-per-QR index stays for app QRs.
+- `qr_codes`: unchanged (still used by the paused app).
+- Re-run `database/supabase_lockdown.sql` after the migration (new table).
+
+### Customer app while paused (`apps/mobile`)
+
+- **Archived:** the folder was removed on 2026-10-17 and saved at git tag **`customer-app-v1`** (commit `d2deec3`, the whole app incl. widgets). Restore: `git checkout customer-app-v1 -- apps/mobile`, then `npm install` in `apps/mobile` (and `npx expo run:android` for a dev build). The tag must be pushed to GitHub (`git push origin customer-app-v1`) so the team has it.
+- **The API side stays:** `/api/app/*` endpoints, live `cards` notices and their tests remain in `apps/api` and keep passing.
+- **Make it compatible later:** when it ships, a customer signs in with the same email and the app shows the **same cards** (cards belong to the user, not to the app). The app keeps its one-time QR (more secure); staff scanning stays one scanner for both. Add "Add to Wallet" inside the app then.
+- **Don't spend time on:** app-only features (widgets polish, push to the app). Live `cards` notices stay in the API for the app, next to the wallet updates.
+
+### Accounts and costs needed before launch
+
+- **Google Pay & Wallet Console** issuer account (free) + Google Cloud service account; test passes work at once, **publishing needs Google's approval** of the pass design.
+- **Apple Developer Program** ($99/yr): Pass Type ID certificate + APNs key. Without it there is **no Apple Wallet**, so iPhone users would get only the web card page until then.
+- A public domain + HTTPS for the web site and the API (Apple requires HTTPS for the PassKit web service); Cloudflare in front (see the deploy reminder).
+
+### Decided 2026-10-17
+
+0. **Public address:** the domain is **`dvote.app`** and each merchant's page is **`dvote.app/<merchant-slug>`** (e.g. `dvote.app/joy-corner`); this is what the NFC tag and the printed QR at the till open (a branch can add `?b=<branch>`). The other pages hang under it (e.g. `dvote.app/joy-corner/join`, `dvote.app/c/<card-id>`). Reference product: tappi (`thetappi.com`), same logic.
+
+1. **Email must be confirmed** before the card is issued (proves it is the right person): the join form sends a one-time code; the card and the wallet button appear only after it is entered.
+2. **Phone number is required** (for SMS / WhatsApp messages later); **Egyptian mobile numbers only** for now (`01` + 9 digits, stored as `+201…`).
+3. **Merchants may see their customers' email and phone** (dashboard Customers page). This replaces the earlier "contact details stay private" rule for merchant views; the join form says so ("How your data is used").
+
+### Still open
+
+- **Wallet notifications** (lock-screen messages from the pass, e.g. "You can now redeem a free coffee"): **later**, not in the first version (decided 2026-10-17: small steps first). The pass still updates its points after every scan.
 
 ---
 
@@ -32,7 +104,7 @@ Four clients:
 
 ## Repo layout (monorepo)
 
-`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` is the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). **Languages: English (default) + Arabic** — see "Customer app localization" below. `apps/dashboard` is the **admin dashboard** (React 19 + Vite + Tailwind v4 + shadcn/ui (Radix, Lucide icons, Sonner toasts) + TanStack Query + Recharts + React Router 7, port 5173; light + dark theme via the `dark` class (`src/lib/theme.tsx`, tokens in `src/styles.css`); add components with `npx shadcn@latest add <name>` into `src/components/ui`; own `package.json`/`.env` with `VITE_*` public values; the API needs `http://localhost:5173` in `CORS_ORIGINS`). It is also the **vendor dashboard** (built 2026-10-09; **users see vendors as "merchants"** since 2026-10-10: UI text and the admin route `/merchants` only, code/API/DB keep `vendor`): one sign-in screen; a platform admin gets the admin pages, a `vendor_admin`/`branch_manager` (from `GET /api/vendor/staff/me`) gets only their own vendor (plain `staff` is refused: staff app). The vendor/branch/rule/reward/image/staff screens are shared via a `VendorScope` (`src/lib/scope.ts`): `adminScope(id)` calls `/api/admin/vendors/{id}/…`, `myVendorScope(me)` calls `/api/vendor/…` with no vendor id (the API takes it from the token). Branch locations are picked on a map (`components/LocationPicker.tsx`: Leaflet + OpenStreetMap tiles, place search via OSM Nominatim, paste a Google Maps link, use my location, drag the pin), never typed. Branch photos live on the Branches page (Photos button per branch); the Menu tab has menu pages only. Rewards have a photo column. Unknown URLs redirect to `/`. Vendor top bar: WhatsApp "Contact dvote" button marked Soon (does nothing yet). **Branding** (`components/BrandingPanel.tsx`; admin: vendor's Branding tab, vendor admin: Shop profile page): category, banner upload, and the loyalty-card design picker (10 designs in `lib/cardDesigns.ts` = `CARD_DESIGNS` in `apps/mobile/src/lib/theme.ts`: gradient + ink + pattern petals/circles/stripes/dots; keep both lists identical). `api-client` is still a placeholder. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, `mobile:*` (no npm workspaces yet; add them when the other packages get a `package.json`).
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` (customer app) is **archived 2026-10-17**: removed from the working tree, saved at git tag `customer-app-v1` (restore with `git checkout customer-app-v1 -- apps/mobile`, then `npm install` in it). Sections below that mention `apps/mobile` describe that archived app. It was the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). **Languages: English (default) + Arabic** — see "Customer app localization" below. `apps/dashboard` is the **admin dashboard** (React 19 + Vite + Tailwind v4 + shadcn/ui (Radix, Lucide icons, Sonner toasts) + TanStack Query + Recharts + React Router 7, port 5173; light + dark theme via the `dark` class (`src/lib/theme.tsx`, tokens in `src/styles.css`); add components with `npx shadcn@latest add <name>` into `src/components/ui`; own `package.json`/`.env` with `VITE_*` public values; the API needs `http://localhost:5173` in `CORS_ORIGINS`). It is also the **vendor dashboard** (built 2026-10-09; **users see vendors as "merchants"** since 2026-10-10: UI text and the admin route `/merchants` only, code/API/DB keep `vendor`): one sign-in screen; a platform admin gets the admin pages, a `vendor_admin`/`branch_manager` (from `GET /api/vendor/staff/me`) gets only their own vendor (plain `staff` is refused: staff app). The vendor/branch/rule/reward/image/staff screens are shared via a `VendorScope` (`src/lib/scope.ts`): `adminScope(id)` calls `/api/admin/vendors/{id}/…`, `myVendorScope(me)` calls `/api/vendor/…` with no vendor id (the API takes it from the token). Branch locations are picked on a map (`components/LocationPicker.tsx`: Leaflet + OpenStreetMap tiles, place search via OSM Nominatim, paste a Google Maps link, use my location, drag the pin), never typed. Branch photos live on the Branches page (Photos button per branch); the Menu tab has menu pages only. Rewards have a photo column. Unknown URLs redirect to `/`. Vendor top bar: WhatsApp "Contact dvote" button marked Soon (does nothing yet). **Branding** (`components/BrandingPanel.tsx`; admin: vendor's Branding tab, vendor admin: Shop profile page): category, banner upload, and the loyalty-card design picker (10 designs in `lib/cardDesigns.ts` = `CARD_DESIGNS` in `apps/mobile/src/lib/theme.ts`: gradient + ink + pattern petals/circles/stripes/dots; keep both lists identical). `api-client` is still a placeholder. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, (the `mobile:*` scripts were removed with the archive; no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
@@ -44,7 +116,7 @@ dvote/
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
-│   ├── mobile/                # React Native (Expo) customer app — iOS/Android (in progress)
+│   ├── mobile/                # ARCHIVED (git tag customer-app-v1): React Native customer app
 │   └── staff/                 # React Native (Expo) staff scanner app — web + native (built)
 └── packages/
     └── api-client/            # generated TS client from OpenAPI

@@ -2,13 +2,21 @@
 
 > **Read this first.** A self-contained summary of the dvote business, product, technical setup,
 > current status and working agreements, written so a new Claude session (or person) can pick up
-> the project cold. Last updated **2026-10-08**.
+> the project cold. Last updated **2026-10-17**.
 >
 > - Technical rules for coding live in [`CLAUDE.md`](CLAUDE.md) (loaded automatically by Claude Code in this repo).
 > - Full original spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; partly outdated, see §9).
 > - Database source of truth: `database/dvote_schema.sql`.
 > - Repo: `github.com/getdvote/dvote` — work happens on `develop`; merging needs Karim's approval.
 > - **This file contains no secrets.** Keys and passwords live only in each app's `.env` (never committed).
+
+> **⚠ Direction change 2026-10-17 — wallet passes instead of a customer app.** Customers no longer
+> install an app. At the till an **NFC tag / QR** opens a mobile web page; the customer types name,
+> email and phone and gets a **loyalty card for that merchant as a Google Wallet (Android) or Apple
+> Wallet (iPhone) pass**, showing their points and a QR the cashier scans with the staff app. The pass
+> updates itself after every collect / redeem. The customer app is **paused, not deleted** (it may ship
+> later and will show the same cards). Sections below still describe the app flow; the full new plan
+> (journey, backend, database, open questions) is in [`CLAUDE.md`](CLAUDE.md) → "Direction change".
 
 ---
 
@@ -177,6 +185,8 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 
 | Date | Decision |
 |---|---|
+| 2026-10-17 | **Customer app archived** at git tag `customer-app-v1` (folder `apps/mobile` removed from `develop`; restore with `git checkout customer-app-v1 -- apps/mobile`). Public address **`dvote.app/<merchant-slug>`** (e.g. `dvote.app/joy-corner`). Join requires a **confirmed email** and an **Egyptian mobile number**; **merchants can see customer email + phone**. Wallet notifications later. |
+| 2026-10-17 | **Wallet passes instead of the customer app.** NFC tag + QR at each till → mobile web join page (name, email, phone, "how did you hear", 14+) → loyalty card per merchant added to **Google Wallet on Android / Apple Wallet on iPhone** (button chosen by the phone, the other kept as a small fallback). The pass shows points, name, short code and a **static card QR** that staff scan; it updates after every balance change. Staff now start redemptions (scan card → pick reward). Cards are created when the customer joins (balance 0), not on the first purchase. Customer app paused, kept for later. Needs: Google Wallet issuer account (free), Apple Developer account ($99/yr) for Apple Wallet, a public domain. Reference: tappi. |
 | 2026-10-14 | Reward retail value (optional normal selling price, merchant currency) and estimated give-back rate on Insights (retail value is entered in reward forms): retail value / (points cost × spend amount / points per spend). Uses the active rule; rounding, minimum bills and caps can increase actual spend. Migration 15 applied to cloud; local deploy blocked because the configured `postgres` role is missing. |
 | 2026-10-10 | **Vendors are called "merchants" in every app's text** (dashboard, staff app, customer app). Code, API routes and database keep `vendor`. |
 | 2026-10-10 | **Merchant Insights page**: sales through dvote, visits, average bill, customers (new / returning), repeat rate and rewards for any period vs the one before, per branch. Counts only. |
