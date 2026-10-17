@@ -191,6 +191,7 @@ export class VendorActivityService {
         include: {
           branches: { select: { id: true, name: true } },
           staff_users: { select: { id: true, name: true } },
+          platform_admins: { select: { id: true, name: true } },
           redemptions: { select: { reward_id: true, reward_name: true } },
         },
       }),
@@ -217,7 +218,7 @@ export class VendorActivityService {
           : null,
         staff: e.staff_users
           ? { id: e.staff_users.id, name: e.staff_users.name }
-          : null,
+          : e.platform_admins ? { id: e.platform_admins.id, name: `dvote admin · ${e.platform_admins.name}` } : null,
         reward: e.redemptions
           ? { id: e.redemptions.reward_id, name: e.redemptions.reward_name }
           : null,

@@ -1,10 +1,6 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useQuery, useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  CameraIcon as Camera,
-  CheckCircleIcon as CheckCircle,
-  LoaderIcon as Loader2,
-  TrashBinTrashIcon as Trash2,
-} from '@solar-icons/react/linear';
+import { CameraIcon as Camera, CheckCircleIcon as CheckCircle, LoaderIcon as Loader2, TrashBinTrashIcon as Trash2 } from '@solar-icons/react/linear';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -17,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Field } from '../../components/Field';
 import { initial, PageHeader } from '../../components/PageHeader';
 import { useMyVendor } from '../../layouts/VendorLayout';
-import { errorMessage, vendorApi, type Vendor, type VendorCategory } from '../../lib/api';
+import { errorMessage, type Vendor, type VendorCategory } from '../../lib/api';
 import { categoryLabel, VENDOR_CATEGORIES } from '../../lib/cardDesigns';
 import { formatEgyptianMobile, toEgyptianMobile } from '../../lib/phone';
 import { IMAGE_ACCEPT } from '../vendor/ImagesTab';
@@ -34,7 +30,7 @@ const NONE = 'none';
 export function MyProfile() {
   const [params] = useSearchParams();
   // old links to the Branding tab that used to be here
-  if (params.get('tab') === 'branding') return <Navigate to="/settings?tab=branding" replace />;
+  if (params.get('tab') === 'branding') return <Navigate to={`/settings?${params.toString()}`} replace />;
 
   return (
     <>
@@ -46,6 +42,7 @@ export function MyProfile() {
 
 /** The shop profile (Settings → Branding): cover (banner) + logo on top, the details form below. */
 export function ProfileEditor() {
+  const vendorApi = useVendorApi();
   const vendor = useMyVendor();
   const qc = useQueryClient();
   const logoInput = useRef<HTMLInputElement>(null);
@@ -55,8 +52,16 @@ export function ProfileEditor() {
   };
   const fail = (e: unknown) => void toast.error(errorMessage(e));
 
-  const logo = useMutation({ mutationFn: vendorApi.uploadLogo, onSuccess: done(t('profile.logoUpdated')), onError: fail });
-  const removeLogo = useMutation({ mutationFn: vendorApi.removeLogo, onSuccess: done(t('profile.logoRemoved')), onError: fail });
+  const logo = useMutation({
+    mutationFn: vendorApi.uploadLogo,
+    onSuccess: done(t('profile.logoUpdated')),
+    onError: fail,
+  });
+  const removeLogo = useMutation({
+    mutationFn: vendorApi.removeLogo,
+    onSuccess: done(t('profile.logoRemoved')),
+    onError: fail,
+  });
   const category = categoryLabel(vendor.category);
 
   return (
@@ -121,7 +126,12 @@ export function ProfileEditor() {
 const AUTOSAVE = ['vendor-profile', 'autosave'];
 const AUTOSAVE_DELAY = 800; // ms after the last keystroke
 
-type Details = { name: string; contactEmail: string | null; contactPhone: string | null; category: VendorCategory | null };
+type Details = {
+  name: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  category: VendorCategory | null;
+};
 type DetailField = keyof Details;
 
 /** "Saving…" while an autosave runs, then "All changes saved". */
@@ -141,6 +151,7 @@ function SaveStatus() {
  * and only when it changed and is valid.
  */
 function DetailsForm({ vendor }: { vendor: Vendor }) {
+  const vendorApi = useVendorApi();
   const qc = useQueryClient();
   const [category, setCategory] = useState<string>(vendor.category ?? NONE);
   const [phoneError, setPhoneError] = useState(false);
@@ -179,10 +190,11 @@ function DetailsForm({ vendor }: { vendor: Vendor }) {
     run();
   };
   useEffect(
-    () => () => Object.values(waiting.current).forEach((w) => {
-      window.clearTimeout(w.timer);
-      w.run();
-    }),
+    () => () =>
+      Object.values(waiting.current).forEach((w) => {
+        window.clearTimeout(w.timer);
+        w.run();
+      }),
     [],
   );
 
@@ -279,23 +291,18 @@ function DetailsForm({ vendor }: { vendor: Vendor }) {
 }
 
 function UsernameEditor({ vendor }: { vendor: Vendor }) {
+  const vendorApi = useVendorApi();
   const qc = useQueryClient();
   const [value, setValue] = useState(vendor.slug);
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const timer = setTimeout(
-      () => setDebounced(value.trim().toLowerCase()),
-      350,
-    );
+    const timer = setTimeout(() => setDebounced(value.trim().toLowerCase()), 350);
     return () => clearTimeout(timer);
   }, [value]);
   const username = value.trim().toLowerCase();
-  const valid =
-    /^[a-z0-9]+(-[a-z0-9]+)*$/.test(username) &&
-    username.length >= 2 &&
-    username.length <= 50;
+  const valid = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(username) && username.length >= 2 && username.length <= 50;
   const check = useQuery({
-    queryKey: ["username-availability", vendor.id, debounced],
+    queryKey: ['username-availability', vendor.id, debounced],
     queryFn: () => vendorApi.usernameAvailability(debounced),
     enabled: valid && debounced === username,
     staleTime: 0,
@@ -303,19 +310,15 @@ function UsernameEditor({ vendor }: { vendor: Vendor }) {
   const save = useMutation({
     mutationFn: vendorApi.reserveUsername,
     onSuccess: (v) => {
-      qc.setQueryData(["vendor", "me"], v);
+      qc.setQueryData(['vendor', 'me'], v);
       setValue(v.slug);
-      toast.success(t("profile.usernameSaved"));
+      toast.success(t('profile.usernameSaved'));
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
   return (
     <div className="mt-6 border-t pt-6">
-      <Field
-        label={t("profile.username")}
-        htmlFor="storefront-username"
-        hint={t("profile.usernameHint")}
-      >
+      <Field label={t('profile.username')} htmlFor="storefront-username" hint={t('profile.usernameHint')}>
         <div className="flex flex-wrap gap-2">
           <Input
             id="storefront-username"
@@ -324,7 +327,7 @@ function UsernameEditor({ vendor }: { vendor: Vendor }) {
             maxLength={50}
             value={value}
             disabled={save.isPending}
-            onChange={(e) => setValue(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+            onChange={(e) => setValue(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
             aria-invalid={!valid || undefined}
           />
           <Button
@@ -341,7 +344,7 @@ function UsernameEditor({ vendor }: { vendor: Vendor }) {
             }
             onClick={() => save.mutate(username)}
           >
-            {t("profile.reserveUsername")}
+            {t('profile.reserveUsername')}
           </Button>
         </div>
         <p dir="ltr" className="break-all text-sm text-muted-foreground">
@@ -349,14 +352,14 @@ function UsernameEditor({ vendor }: { vendor: Vendor }) {
         </p>
         <p role="status" className="text-sm text-muted-foreground">
           {!valid
-            ? t("profile.usernameFormat")
+            ? t('profile.usernameFormat')
             : check.isError
               ? errorMessage(check.error)
               : debounced !== username || check.isFetching
-                ? t("profile.checkingUsername")
+                ? t('profile.checkingUsername')
                 : check.data?.available
-                  ? t("profile.usernameAvailable")
-                  : t("profile.usernameTaken")}
+                  ? t('profile.usernameAvailable')
+                  : t('profile.usernameTaken')}
         </p>
       </Field>
     </div>

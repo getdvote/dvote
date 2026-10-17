@@ -1,14 +1,16 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardDesignPicker } from '../../components/BrandingPanel';
 import { PageHeader } from '../../components/PageHeader';
 import { t } from '../../i18n';
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
-import { vendorApi } from '../../lib/api';
+
 import { RulesTab } from '../vendor/RulesTab';
 
 /** The loyalty card itself: how it looks in the customer app, and how many points a bill earns. */
 export function MyCard() {
+  const vendorApi = useVendorApi();
   const me = useMe();
   const vendor = useMyVendor();
   const scope = useMyScope();

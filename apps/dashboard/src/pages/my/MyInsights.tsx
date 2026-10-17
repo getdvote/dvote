@@ -1,6 +1,13 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ArrowRightDownIcon as ArrowDownRight, ArrowRightUpIcon as ArrowUpRight, CheckIcon as Check, WidgetIcon as LayoutDashboard, RestartIcon as RotateCcw } from '@solar-icons/react/linear';
+import {
+  ArrowRightDownIcon as ArrowDownRight,
+  ArrowRightUpIcon as ArrowUpRight,
+  CheckIcon as Check,
+  WidgetIcon as LayoutDashboard,
+  RestartIcon as RotateCcw,
+} from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +21,7 @@ import { SelectFilter } from '../../components/ListControls';
 import { num, PageHeader } from '../../components/PageHeader';
 import { PeriodPicker, rangeText, usePeriod } from '../../components/PeriodFilter';
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
-import { vendorApi, type InsightsKpis } from '../../lib/api';
+import { type InsightsKpis } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
 import { RewardPerformance } from './RewardPerformance';
@@ -27,12 +34,18 @@ type Metric = 'sales' | 'visits';
 const chartConfig = () =>
   ({
     current: { label: t('insights.thisPeriod'), color: 'var(--chart-1)' },
-    previous: { label: t('insights.previousPeriod'), color: 'var(--muted-foreground)' },
+    previous: {
+      label: t('insights.previousPeriod'),
+      color: 'var(--muted-foreground)',
+    },
   }) satisfies ChartConfig;
 
 /** How each number is defined: shown on hover of its dotted label. */
 type KpiKey = 'sales' | 'visits' | 'avgBill' | 'customers' | 'newCustomers' | 'repeatRate' | 'visitsPerCustomer' | 'rewardsRedeemed';
-const KPIS: { key: KpiKey & keyof InsightsKpis; format: 'money' | 'count' | 'percent' | 'ratio' }[] = [
+const KPIS: {
+  key: KpiKey & keyof InsightsKpis;
+  format: 'money' | 'count' | 'percent' | 'ratio';
+}[] = [
   { key: 'sales', format: 'money' },
   { key: 'visits', format: 'count' },
   { key: 'avgBill', format: 'money' },
@@ -49,6 +62,7 @@ const KPIS: { key: KpiKey & keyof InsightsKpis; format: 'money' | 'count' | 'per
  * never who the customers are.
  */
 export function MyInsights() {
+  const vendorApi = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
   const vendor = useMyVendor();
@@ -60,14 +74,23 @@ export function MyInsights() {
   const layout = useCustomLayout('dvote-insights-layout');
 
   const { from, to } = period.dates;
-  const query = { from: from!, to: to!, compare, branchId: branchOnly || branchId === 'all' ? undefined : branchId };
+  const query = {
+    from: from!,
+    to: to!,
+    compare,
+    branchId: branchOnly || branchId === 'all' ? undefined : branchId,
+  };
   const { data, isLoading, error } = useQuery({
     queryKey: ['insights', 'me', query],
     queryFn: () => vendorApi.insights(query),
     enabled: !!from && !!to,
     placeholderData: (prev) => prev,
   });
-  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: !branchOnly });
+  const { data: branches } = useQuery({
+    queryKey: ['branches', scope.key],
+    queryFn: () => scope.branches(),
+    enabled: !branchOnly,
+  });
 
   const money = (s: string) => `${Number(s).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${vendor.currency}`;
   const show = (v: number | string, f: (typeof KPIS)[number]['format']) =>
@@ -177,15 +200,30 @@ export function MyInsights() {
         </Card>
       ),
     },
-    { key: 'top', title: t('insights.patterns.topTitle'), min: 'half', node: <InsightsPattern which="top" branchId={query.branchId} money={money} /> },
+    {
+      key: 'top',
+      title: t('insights.patterns.topTitle'),
+      min: 'half',
+      node: <InsightsPattern which="top" branchId={query.branchId} money={money} />,
+    },
     {
       key: 'hours',
       title: t('insights.patterns.hoursTitle'),
       min: 'twoThirds',
       node: <InsightsPattern which="hours" branchId={query.branchId} money={money} />,
     },
-    { key: 'back', title: t('insights.patterns.backTitle'), min: 'twoThirds', node: <InsightsPattern which="back" branchId={query.branchId} money={money} /> },
-    { key: 'rewards', title: t('insights.rewards.title'), min: 'half', node: <RewardPerformance query={query} money={money} /> },
+    {
+      key: 'back',
+      title: t('insights.patterns.backTitle'),
+      min: 'twoThirds',
+      node: <InsightsPattern which="back" branchId={query.branchId} money={money} />,
+    },
+    {
+      key: 'rewards',
+      title: t('insights.rewards.title'),
+      min: 'half',
+      node: <RewardPerformance query={query} money={money} />,
+    },
     ...(data?.branches.length
       ? [
           {
@@ -230,7 +268,9 @@ export function MyInsights() {
     <>
       <PageHeader
         title={t('nav.insights')}
-        subtitle={t('insights.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+        subtitle={t('insights.subtitle', {
+          shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name,
+        })}
         extra={
           <div className="flex items-center gap-2">
             {layout.editing && layout.saved ? (
@@ -265,14 +305,23 @@ export function MyInsights() {
       </PeriodPicker>
       {data?.previousRange ? (
         <p className="-mt-2 mb-4 text-sm text-muted-foreground">
-          {t('insights.comparedWith', { range: rangeText(data.range), previous: rangeText(data.previousRange) })}
+          {t('insights.comparedWith', {
+            range: rangeText(data.range),
+            previous: rangeText(data.previousRange),
+          })}
         </p>
       ) : null}
       {!from || !to ? <p className="mb-4 text-sm text-muted-foreground">{t('insights.pickDates')}</p> : null}
       <ErrorAlert error={error} className="mb-4" />
 
       <CustomLayout sections={sections} layout={layout} />
-      {data ? <p className="mt-3 text-xs text-muted-foreground">{t('insights.updated', { time: dayjs(data.updatedAt).format('HH:mm') })}</p> : null}
+      {data ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t('insights.updated', {
+            time: dayjs(data.updatedAt).format('HH:mm'),
+          })}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -287,7 +336,12 @@ function Delta({ current, previous }: { current: number; previous: number }) {
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   return (
     <div className="mt-1 flex items-center gap-1 text-xs">
-      <span className={cn('inline-flex items-center gap-0.5 font-semibold', pct === 0 ? 'text-muted-foreground' : up ? 'text-success' : 'text-destructive')}>
+      <span
+        className={cn(
+          'inline-flex items-center gap-0.5 font-semibold',
+          pct === 0 ? 'text-muted-foreground' : up ? 'text-success' : 'text-destructive',
+        )}
+      >
         {pct === 0 ? null : <Icon className="size-3.5" />}
         <span dir="ltr">
           {pct > 0 ? '+' : ''}

@@ -8,5 +8,6 @@ import { ScansService } from './scans.service';
   imports: [AuthModule],
   controllers: [ScansController],
   providers: [ScansService],
+  exports: [ScansService],
 })
 export class ScansModule {}

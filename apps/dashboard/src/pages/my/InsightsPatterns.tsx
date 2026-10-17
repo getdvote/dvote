@@ -1,3 +1,4 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { DownloadIcon as Download } from '@solar-icons/react/linear';
@@ -10,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { num } from '../../components/PageHeader';
-import { vendorApi, type VendorPatterns } from '../../lib/api';
+import { type VendorPatterns } from '../../lib/api';
 import { WEEK_ORDER } from '../../lib/hours';
 import { t } from '../../i18n';
 
@@ -58,6 +59,7 @@ const Empty = ({ text }: { text: string }) => <p className="py-8 text-center tex
  * windows (last year / 12 weeks / 6 months), so they don't follow the page's period, only its branch.
  */
 export function InsightsPattern({ which, branchId, money }: { which: 'top' | 'hours' | 'back'; branchId?: string; money: (s: string) => string }) {
+  const vendorApi = useVendorApi();
   // one request for the three sections: the same query key, cached
   const { data, isLoading, error } = useQuery({
     queryKey: ['insights', 'patterns', branchId ?? 'all'],
@@ -140,7 +142,9 @@ function BusiestHours({ data }: { data: VendorPatterns }) {
   const hours = Array.from({ length: 24 }, (_, h) => h);
   const hint =
     t('insights.patterns.hoursHint') +
-    (peak ? ` ${t('insights.patterns.hoursPeak', { day: shortDay(peak.day), from: clock(peak.hour), to: clock(peak.hour + 1), count: num(peak.count) })}` : '');
+    (peak
+      ? ` ${t('insights.patterns.hoursPeak', { day: shortDay(peak.day), from: clock(peak.hour), to: clock(peak.hour + 1), count: num(peak.count) })}`
+      : '');
 
   return (
     <Section
@@ -270,7 +274,9 @@ function WhoComesBack({ data }: { data: VendorPatterns }) {
                   {c.returned.map((r, i) => (
                     <TableCell key={i} className="p-1 text-center">
                       {r === null || !c.size ? null : (
-                        <span className={cn('block rounded-md py-1.5 text-xs tabular-nums', LEVELS[level(r, 1)], r >= 0.5 && 'text-primary-foreground')}>
+                        <span
+                          className={cn('block rounded-md py-1.5 text-xs tabular-nums', LEVELS[level(r, 1)], r >= 0.5 && 'text-primary-foreground')}
+                        >
                           {pct(r)}
                         </span>
                       )}

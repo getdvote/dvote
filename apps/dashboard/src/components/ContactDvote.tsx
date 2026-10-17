@@ -1,3 +1,4 @@
+import { useVendorApi } from '../lib/vendor-workspace';
 import {
   CheckIcon as Check,
   CheckCircleIcon as CheckCircle,
@@ -17,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { errorMessage, vendorApi, type MerchantMood } from '../lib/api';
+import { errorMessage, type MerchantMood } from '../lib/api';
 import { t } from '../i18n';
 
 /** Where merchants reach the dvote team. Change here only. */
@@ -59,11 +60,22 @@ function CopyEmail() {
  * email or WhatsApp, each opening with a ready message (who is writing, from which shop) in the
  * dashboard language.
  */
-export function ContactDvote({ name, shop, open, onOpenChange }: { name: string; shop: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function ContactDvote({
+  name,
+  shop,
+  open,
+  onOpenChange,
+}: {
+  name: string;
+  shop: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const message = t('contact.template', { name, shop });
   const whatsapp = `https://wa.me/${DVOTE_WHATSAPP}?text=${encodeURIComponent(message)}`;
   const email = `mailto:${DVOTE_EMAIL}?subject=${encodeURIComponent(t('contact.subject', { shop }))}&body=${encodeURIComponent(message)}`;
-  const option = 'flex items-center gap-3 rounded-xl border bg-card p-4 text-start transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
+  const option =
+    'flex items-center gap-3 rounded-xl border bg-card p-4 text-start transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,7 +118,10 @@ export function ContactDvote({ name, shop, open, onOpenChange }: { name: string;
   );
 }
 
-const MOODS: { key: MerchantMood; icon: ComponentType<{ className?: string }> }[] = [
+const MOODS: {
+  key: MerchantMood;
+  icon: ComponentType<{ className?: string }>;
+}[] = [
   { key: 'love', icon: Love },
   { key: 'okay', icon: Okay },
   { key: 'unhappy', icon: Unhappy },
@@ -114,6 +129,7 @@ const MOODS: { key: MerchantMood; icon: ComponentType<{ className?: string }> }[
 
 /** For people who don't want a conversation: a mood and a few words, sent straight to the team. */
 function QuickFeedback() {
+  const vendorApi = useVendorApi();
   const [mood, setMood] = useState<MerchantMood | undefined>();
   const [message, setMessage] = useState('');
   const send = useMutation({

@@ -150,5 +150,6 @@ export class StorefrontFeedbackController {
     StorefrontFeedbackController,
   ],
   providers: [StorefrontFeedbackService],
+  exports: [StorefrontFeedbackService],
 })
 export class StorefrontFeedbackModule {}

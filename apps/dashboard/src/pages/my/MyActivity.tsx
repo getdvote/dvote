@@ -1,3 +1,4 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -13,7 +14,7 @@ import { num, PageHeader } from '../../components/PageHeader';
 import { PeriodPicker, Total, usePeriod } from '../../components/PeriodFilter';
 import { TableState } from '../../components/TableState';
 import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
-import { vendorApi, type ActivityItem, type PointEventType } from '../../lib/api';
+import { type ActivityItem, type PointEventType } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { localized, t } from '../../i18n';
 
@@ -29,6 +30,7 @@ const typeLabel = (type: PointEventType) => t(`activity.types.${type}`);
 
 /** Every collect, redemption and correction at my shops, newest first. Customers show as a card code. */
 export function MyActivity() {
+  const vendorApi = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
   const vendor = useMyVendor();
@@ -68,8 +70,15 @@ export function MyActivity() {
     placeholderData: (prev) => prev,
     refetchInterval: 60_000,
   });
-  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: !branchOnly });
-  const { data: staff } = useQuery({ queryKey: ['staff', scope.key], queryFn: () => scope.staff() });
+  const { data: branches } = useQuery({
+    queryKey: ['branches', scope.key],
+    queryFn: () => scope.branches(),
+    enabled: !branchOnly,
+  });
+  const { data: staff } = useQuery({
+    queryKey: ['staff', scope.key],
+    queryFn: () => scope.staff(),
+  });
 
   // any filter change starts again at page 1
   const reset =
@@ -86,7 +95,9 @@ export function MyActivity() {
     <>
       <PageHeader
         title={t('nav.activity')}
-        subtitle={t('activity.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+        subtitle={t('activity.subtitle', {
+          shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name,
+        })}
       />
 
       <PeriodPicker state={period} onChange={() => setPage(1)} />
@@ -175,9 +186,7 @@ export function MyActivity() {
         </div>
         <Pager page={page} pageSize={PAGE_SIZE} total={data?.total ?? 0} onChange={setPage} />
       </Card>
-      <p className="mt-3 text-xs text-muted-foreground">
-        {t('activity.footnote', { shop: vendor.name })}
-      </p>
+      <p className="mt-3 text-xs text-muted-foreground">{t('activity.footnote', { shop: vendor.name })}</p>
 
       <ActivitySheet item={open} currency={vendor.currency} onClose={() => setOpen(null)} />
     </>
@@ -215,14 +224,14 @@ export function ActivitySheet({ item, currency, onClose }: { item: ActivityItem 
                 {item.type === 'earn' ? <Row label={t('activity.receipt')}>{item.receiptRef ?? t('activity.notEntered')}</Row> : null}
                 {item.reason ? <Row label={t('activity.reason')}>{item.reason}</Row> : null}
                 <Row label={t('common.branch')}>{item.branch?.name ?? '—'}</Row>
-                <Row label={item.type === 'adjust' ? t('activity.by') : t('activity.scannedBy')}>{item.staff?.name ?? (item.type === 'adjust' ? t('activity.support') : '—')}</Row>
+                <Row label={item.type === 'adjust' ? t('activity.by') : t('activity.scannedBy')}>
+                  {item.staff?.name ?? (item.type === 'adjust' ? t('activity.support') : '—')}
+                </Row>
                 <Row label={t('activity.customer')}>
                   <span className="font-mono">#{item.customerRef}</span>
                 </Row>
               </dl>
-              {item.type === 'adjust' ? (
-                <p className="mt-4 text-xs text-muted-foreground">{t('activity.correctionNote')}</p>
-              ) : null}
+              {item.type === 'adjust' ? <p className="mt-4 text-xs text-muted-foreground">{t('activity.correctionNote')}</p> : null}
             </div>
           </>
         ) : null}

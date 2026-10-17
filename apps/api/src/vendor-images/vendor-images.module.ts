@@ -10,5 +10,6 @@ import { VendorImagesService } from './vendor-images.service';
   imports: [AuthModule, StorageModule],
   controllers: [VendorImagesController, AdminVendorImagesController],
   providers: [VendorImagesService],
+  exports: [VendorImagesService],
 })
 export class VendorImagesModule {}

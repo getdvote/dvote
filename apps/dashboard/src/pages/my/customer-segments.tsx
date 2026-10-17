@@ -1,3 +1,4 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AddCircleIcon as Plus,
@@ -11,7 +12,7 @@ import {
   UsersGroupRoundedIcon as UsersGroup,
 } from '@solar-icons/react/linear';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { WorkspaceLink as Link } from '../../lib/vendor-workspace';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,10 @@ import {
 import { t } from '../../i18n';
 
 /** Built-in segments in display order (same order as the API). */
-export const SEGMENTS: { key: CustomerSegment; variant: 'brand' | 'success' | 'warning' | 'secondary' | 'destructive' }[] = [
+export const SEGMENTS: {
+  key: CustomerSegment;
+  variant: 'brand' | 'success' | 'warning' | 'secondary' | 'destructive';
+}[] = [
   { key: 'champions', variant: 'success' },
   { key: 'regulars', variant: 'brand' },
   { key: 'new', variant: 'brand' },
@@ -73,12 +77,11 @@ const csvCell = (v: string | number | null | undefined) => {
   if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
-const cairoDay = (iso: string | null) =>
-  iso ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date(iso)) : '';
+const cairoDay = (iso: string | null) => (iso ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date(iso)) : '');
 
 /** Downloads every customer matching `q` as a CSV (with email and phone; merchant admins only). */
-export async function exportCustomers(q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>, fileLabel: string) {
-  const { items, truncated, asOf } = await vendorApi.customersExport(q);
+export async function exportCustomers(q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>, fileLabel: string, client = vendorApi) {
+  const { items, truncated, asOf } = await client.customersExport(q);
   const head = [
     t('customers.reference'),
     t('customers.segmentNameLabel'),
@@ -115,7 +118,12 @@ export async function exportCustomers(q: Omit<MerchantCustomerQuery, 'page' | 'p
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `customers-${fileLabel.toLowerCase().replace(/[^a-z0-9؀-ۿ]+/gi, '-').replace(/^-|-$/g, '') || 'all'}-${asOf}.csv`;
+  a.download = `customers-${
+    fileLabel
+      .toLowerCase()
+      .replace(/[^a-z0-9؀-ۿ]+/gi, '-')
+      .replace(/^-|-$/g, '') || 'all'
+  }-${asOf}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   if (truncated) toast.warning(t('customers.exportTruncated', { n: items.length }));
@@ -200,6 +208,7 @@ export function Segmentation({
   onSee: (key: CustomerSegment) => void;
   onSeeCustom: (id: string) => void;
 }) {
+  const vendorApi = useVendorApi();
   const qc = useQueryClient();
   const total = data?.customersTotal ?? 0;
   const count = (key: CustomerSegment) => data?.segments.find((s) => s.key === key)?.count ?? 0;
@@ -240,7 +249,7 @@ export function Segmentation({
               actions={seeActions(
                 () => onSee(s.key),
                 `/broadcast?segment=${s.key}`,
-                () => exportCustomers({ branchId, segment: s.key }, segmentLabel(s.key)),
+                () => exportCustomers({ branchId, segment: s.key }, segmentLabel(s.key), vendorApi),
               )}
             />
           ))}
@@ -278,7 +287,7 @@ export function Segmentation({
                 actions={seeActions(
                   () => onSeeCustom(s.id),
                   `/broadcast?customSegment=${s.id}`,
-                  () => exportCustomers({ branchId, customSegment: s.id }, s.name),
+                  () => exportCustomers({ branchId, customSegment: s.id }, s.name, vendorApi),
                 )}
                 menu={
                   canEdit ? (
@@ -319,7 +328,9 @@ export function Segmentation({
       <ConfirmAction
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title={t('customers.deleteSegmentTitle', { name: deleting?.name ?? '' })}
+        title={t('customers.deleteSegmentTitle', {
+          name: deleting?.name ?? '',
+        })}
         description={t('customers.deleteSegmentText')}
         actionLabel={t('customers.deleteSegment')}
         onConfirm={async () => {
@@ -369,6 +380,7 @@ function SegmentDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const vendorApi = useVendorApi();
   const [name, setName] = useState(segment?.name ?? '');
   const [description, setDescription] = useState(segment?.description ?? '');
   const [match, setMatch] = useState<'all' | 'any'>(segment?.match ?? 'all');
@@ -461,7 +473,10 @@ function SegmentDialog({
             </div>
             {rules.length ? (
               rules.map((r, i) => (
-                <div key={i} className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
+                <div
+                  key={i}
+                  className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]"
+                >
                   <Select value={r.field} onValueChange={(v) => setRule(i, blankRule(v as SegmentRuleField))}>
                     <SelectTrigger className="w-full" aria-label={t('customers.rulesTitle')}>
                       <SelectValue />
@@ -534,7 +549,12 @@ function SegmentDialog({
               {rules.length ? (
                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground" aria-live="polite">
                   {preview.isFetching ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                  {preview.data ? t('customers.matchNow', { n: num(preview.data.count), total: num(preview.data.customersTotal) }) : null}
+                  {preview.data
+                    ? t('customers.matchNow', {
+                        n: num(preview.data.count),
+                        total: num(preview.data.customersTotal),
+                      })
+                    : null}
                 </span>
               ) : null}
             </div>

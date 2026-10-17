@@ -1,6 +1,24 @@
-import { api, vendorApi, type AccountStatus, type Branch, type PointRule, type Reward, type RewardBody, type SoldOut, type Staff, type StaffMe, type StaffRole, type VendorImage } from './api';
+import {
+  api,
+  vendorApi,
+  type AccountStatus,
+  type Branch,
+  type PointRule,
+  type Reward,
+  type RewardBody,
+  type SoldOut,
+  type Staff,
+  type StaffMe,
+  type StaffRole,
+  type VendorImage,
+} from './api';
 
-type RuleBody = { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null };
+type RuleBody = {
+  spendAmount: number;
+  pointsPerSpend: number;
+  minPurchase?: number;
+  maxPointsPerPurchase?: number | null;
+};
 
 /**
  * One vendor's data, as the shared tabs (branches, rule, rewards, images, staff) see it.
@@ -58,7 +76,13 @@ export function adminScope(vendorId: string, currency: string): VendorScope {
   return {
     key: vendorId,
     currency,
-    can: { editVendor: true, branchPhotos: () => true, manageStaff: true, inviteRoles: ['vendor_admin', 'branch_manager', 'staff', 'viewer'], fixedBranchId: null },
+    can: {
+      editVendor: true,
+      branchPhotos: () => true,
+      manageStaff: true,
+      inviteRoles: ['vendor_admin', 'branch_manager', 'staff', 'viewer'],
+      fixedBranchId: null,
+    },
     branches: () => api.branches(vendorId),
     createBranch: (b) => api.createBranch(vendorId, b),
     updateBranch: api.updateBranch,
@@ -80,7 +104,7 @@ export function adminScope(vendorId: string, currency: string): VendorScope {
 }
 
 /** What the signed-in vendor account may do; the API enforces the same rules. */
-export function myVendorScope(me: StaffMe): VendorScope {
+export function myVendorScope(me: StaffMe, client: typeof vendorApi = vendorApi): VendorScope {
   const isAdmin = me.role === 'vendor_admin';
   const viewer = me.role === 'viewer'; // read-only, every branch
   return {
@@ -93,38 +117,38 @@ export function myVendorScope(me: StaffMe): VendorScope {
       inviteRoles: isAdmin ? ['vendor_admin', 'branch_manager', 'staff', 'viewer'] : viewer ? [] : ['staff'],
       fixedBranchId: isAdmin || viewer ? null : me.branchId,
     },
-    branches: vendorApi.branches,
-    createBranch: vendorApi.createBranch,
-    updateBranch: vendorApi.updateBranch,
-    pointRules: vendorApi.pointRules,
-    publishRule: vendorApi.publishRule,
-    deactivateRule: vendorApi.deactivateRule,
-    rewards: vendorApi.rewards,
-    createReward: vendorApi.createReward,
-    updateReward: vendorApi.updateReward,
-    uploadRewardImage: vendorApi.uploadRewardImage,
-    removeRewardImage: vendorApi.removeRewardImage,
-    images: vendorApi.images,
-    uploadImage: vendorApi.uploadImage,
-    deleteImage: vendorApi.deleteImage,
-    staff: vendorApi.staff,
-    updateStaff: vendorApi.updateStaff,
-    inviteStaff: vendorApi.inviteStaff,
+    branches: client.branches,
+    createBranch: client.createBranch,
+    updateBranch: client.updateBranch,
+    pointRules: client.pointRules,
+    publishRule: client.publishRule,
+    deactivateRule: client.deactivateRule,
+    rewards: client.rewards,
+    createReward: client.createReward,
+    updateReward: client.updateReward,
+    uploadRewardImage: client.uploadRewardImage,
+    removeRewardImage: client.removeRewardImage,
+    images: client.images,
+    uploadImage: client.uploadImage,
+    deleteImage: client.deleteImage,
+    staff: client.staff,
+    updateStaff: client.updateStaff,
+    inviteStaff: client.inviteStaff,
     // viewers change nothing: no pause / sold-out controls
     branchPause: viewer
       ? undefined
       : {
           fixedBranchId: isAdmin ? null : me.branchId,
-          pause: vendorApi.pauseBranch,
-          resume: vendorApi.resumeBranch,
+          pause: client.pauseBranch,
+          resume: client.resumeBranch,
         },
     soldOut: viewer
       ? undefined
       : {
           fixedBranchId: isAdmin ? null : me.branchId,
-          list: vendorApi.soldOuts,
-          set: vendorApi.setSoldOut,
-          clear: vendorApi.clearSoldOut,
+          list: client.soldOuts,
+          set: client.setSoldOut,
+          clear: client.clearSoldOut,
         },
   };
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useSearchParams } from 'react-router';
+import { useWorkspaceSearchParams as useSearchParams } from '../../lib/vendor-workspace';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '../../components/PageHeader';

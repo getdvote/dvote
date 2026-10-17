@@ -1,3 +1,4 @@
+import { useVendorApi } from '../../lib/vendor-workspace';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { num } from '../../components/PageHeader';
 import { rangeText } from '../../components/PeriodFilter';
-import { vendorApi, type RewardPerformance as Performance } from '../../lib/api';
+import { type RewardPerformance as Performance } from '../../lib/api';
 import { t } from '../../i18n';
 import { Thumb } from './MyRedemptions';
 
@@ -16,13 +17,8 @@ import { Thumb } from './MyRedemptions';
  * are close to it now, and what the points customers hold are worth at the active rule.
  * Balances are merchant-wide, so a branch manager sees redemptions only (the API sends nulls).
  */
-export function RewardPerformance({
-  query,
-  money,
-}: {
-  query: { from?: string; to?: string; branchId?: string };
-  money: (s: string) => string;
-}) {
+export function RewardPerformance({ query, money }: { query: { from?: string; to?: string; branchId?: string }; money: (s: string) => string }) {
+  const vendorApi = useVendorApi();
   const { from, to, branchId } = query;
   const q = { from: from!, to: to!, branchId };
   const { data, isLoading, error } = useQuery({
@@ -61,7 +57,12 @@ export function RewardPerformance({
               ) : (
                 <>
                   {money(held.worth)}
-                  <Sub>{t('insights.rewards.worthRate', { spend: money(held.rate.spendAmount), points: num(held.rate.pointsPerSpend) })}</Sub>
+                  <Sub>
+                    {t('insights.rewards.worthRate', {
+                      spend: money(held.rate.spendAmount),
+                      points: num(held.rate.pointsPerSpend),
+                    })}
+                  </Sub>
                 </>
               )
             ) : null}
@@ -115,7 +116,11 @@ function RewardsTable({ data, balances }: { data: Performance | undefined; balan
                       <span className="truncate">{r.name}</span>
                       {archived ? <Badge variant="secondary">{t('status.archived')}</Badge> : null}
                     </div>
-                    <div className="text-xs text-muted-foreground">{t('insights.rewards.cost', { points: num(r.pointsCost) })}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('insights.rewards.cost', {
+                        points: num(r.pointsCost),
+                      })}
+                    </div>
                   </div>
                 </div>
               </TableCell>
@@ -161,7 +166,10 @@ function Hint({ help, children }: { help: string; children: React.ReactNode }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none focus-visible:text-foreground">
+        <span
+          tabIndex={0}
+          className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none focus-visible:text-foreground"
+        >
           {children}
         </span>
       </TooltipTrigger>

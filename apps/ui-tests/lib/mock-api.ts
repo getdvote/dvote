@@ -62,7 +62,12 @@ const routes: [string, RegExp, Handler][] = [
 ];
 
 const json = (route: Route, status: number, body: unknown) =>
-  route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
+  route.fulfill({
+    status,
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify(body),
+  });
 
 /** Answers every call to the fake API and Supabase hosts. */
 export async function mockApi(page: Page, role: Role) {
@@ -71,14 +76,51 @@ export async function mockApi(page: Page, role: Role) {
     const req = route.request();
     const url = new URL(req.url());
     const method = req.method();
+    if (url.pathname.startsWith('/api/admin/workspace/'))
+      return json(route, 200, {
+        items: [
+          {
+            id: f.VENDOR_ID,
+            vendorId: f.VENDOR_ID,
+            vendorName: f.vendor.name,
+            name: 'Workspace record',
+            detail: 'Merchant operations',
+            status: 'active',
+            points: 100,
+            amount: null,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+      });
+    const workspace = url.pathname.match(/^\/api\/admin\/vendors\/([^/]+)\/workspace\/(.*)$/);
+    if (workspace) {
+      url.pathname = '/api/vendor/' + workspace[2];
+      if (workspace[2] === 'staff/me')
+        return json(route, 200, {
+          ...f.staffMe('vendor_admin'),
+          id: f.adminMe.id,
+          name: f.adminMe.name,
+          vendorId: workspace[1],
+        });
+    }
     if (method === 'OPTIONS') {
       return route.fulfill({
         status: 204,
-        headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' },
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': '*',
+          'access-control-allow-methods': '*',
+        },
       });
     }
     if (url.pathname === '/api/admin/me') {
-      return role === 'admin' ? json(route, 200, f.adminMe) : json(route, 403, { code: 'not_admin', message: 'Not a platform admin' });
+      return role === 'admin'
+        ? json(route, 200, f.adminMe)
+        : json(route, 403, {
+            code: 'not_admin',
+            message: 'Not a platform admin',
+          });
     }
     if (url.pathname === '/api/vendor/staff/me') {
       return role === 'admin' ? json(route, 403, { code: 'not_staff' }) : json(route, 200, f.staffMe(role));
@@ -111,9 +153,18 @@ export async function signIn(page: Page) {
     token_type: 'bearer',
     expires_in: 3600 * 24,
     expires_at: exp,
-    user: { id: 'mock-user', aud: 'authenticated', role: 'authenticated', email: 'mock@dvote.test', factors: [], app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() },
+    user: {
+      id: 'mock-user',
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: 'mock@dvote.test',
+      factors: [],
+      app_metadata: {},
+      user_metadata: {},
+      created_at: new Date().toISOString(),
+    },
   };
-  await page.addInitScript((value) => window.localStorage.setItem('dvote-dashboard-auth', value), JSON.stringify(session));
+  await page.addInitScript((value) => { try { window.localStorage.setItem('dvote-dashboard-auth', value); } catch { /* Sandboxed storefront previews do not have storage access. */ } }, JSON.stringify(session));
 }
 
 /** Dashboard / website language, set before the first paint like a returning visitor. */

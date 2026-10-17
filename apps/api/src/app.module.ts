@@ -25,6 +25,7 @@ import { FraudFlagsModule } from './fraud-flags/fraud-flags';
 import { RateLimitModule } from './rate-limit/rate-limit';
 import { PublicJoinModule } from './public-join/public-join.module';
 import { BroadcastsModule } from './broadcasts/broadcasts';
+import { AdminWorkspaceModule } from './admin/workspace.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { BroadcastsModule } from './broadcasts/broadcasts';
     StorefrontModule,
     PublicJoinModule,
     BroadcastsModule,
+    AdminWorkspaceModule,
   ],
 })
 export class AppModule {}

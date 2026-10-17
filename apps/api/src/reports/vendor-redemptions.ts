@@ -163,6 +163,7 @@ export class VendorRedemptionsService {
         include: {
           branches: { select: { id: true, name: true } },
           staff_users: { select: { id: true, name: true } },
+          platform_admins: { select: { id: true, name: true } },
           rewards: { select: { image_url: true } },
         },
       }),
@@ -197,7 +198,14 @@ export class VendorRedemptionsService {
         imageUrl: r.rewards.image_url,
         pointsCost: r.points_cost,
         branch: r.branches,
-        staff: r.staff_users,
+        staff:
+          r.staff_users ??
+          (r.platform_admins
+            ? {
+                id: r.platform_admins.id,
+                name: `dvote admin · ${r.platform_admins.name}`,
+              }
+            : { id: '', name: 'dvote admin' }),
         customerRef: r.card_id.slice(0, 6).toUpperCase(),
         createdAt: r.created_at.toISOString(),
       })),

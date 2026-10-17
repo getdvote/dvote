@@ -33,8 +33,19 @@ export interface Overview {
   pointsRedeemed: number;
   pointsOutstanding: number;
   collectsToday: number;
-  days: { date: string; pointsEarned: number; collects: number; newCustomers: number }[];
-  topVendors: { id: string; name: string; logoUrl: string | null; pointsEarned: number; collects: number }[];
+  days: {
+    date: string;
+    pointsEarned: number;
+    collects: number;
+    newCustomers: number;
+  }[];
+  topVendors: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    pointsEarned: number;
+    collects: number;
+  }[];
 }
 
 export type VendorCategory = 'cafe' | 'cafe_restaurant' | 'restaurant' | 'bakery' | 'desserts' | 'juice_bar';
@@ -72,9 +83,17 @@ export interface FraudFlag {
   status: FraudStatus;
   vendor: { id: string; name: string } | null;
   branch: { id: string; name: string } | null;
-  user: { id: string; name: string; email: string | null; status: UserStatus } | null;
+  user: {
+    id: string;
+    name: string;
+    email: string | null;
+    status: UserStatus;
+  } | null;
   staff: { id: string; name: string } | null;
-  details: Record<string, unknown> & { day?: string; review?: { note: string | null; at: string } };
+  details: Record<string, unknown> & {
+    day?: string;
+    review?: { note: string | null; at: string };
+  };
   reviewedBy: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -92,7 +111,14 @@ export interface FraudSummary {
 
 /** Which parts of dvote are up. */
 export interface SystemStatus {
-  checks: { name: string; kind: 'api' | 'database' | 'auth' | 'storage' | 'website'; up: boolean; latencyMs: number; detail: string; url?: string }[];
+  checks: {
+    name: string;
+    kind: 'api' | 'database' | 'auth' | 'storage' | 'website';
+    up: boolean;
+    latencyMs: number;
+    detail: string;
+    url?: string;
+  }[];
   checkedAt: string;
 }
 
@@ -102,7 +128,13 @@ export interface QrSources {
   master: { collects: number; points: number };
   shop: { collects: number; points: number };
   daily: { date: string; master: number; shop: number }[];
-  vendors: { id: string; name: string; logoUrl: string | null; master: number; shop: number }[];
+  vendors: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    master: number;
+    shop: number;
+  }[];
 }
 
 export interface Vendor {
@@ -192,7 +224,9 @@ export interface Reward {
   createdAt: string;
 }
 
-export type RewardBody = Omit<Partial<Reward>, 'retailValue'> & { retailValue?: number | null };
+export type RewardBody = Omit<Partial<Reward>, 'retailValue'> & {
+  retailValue?: number | null;
+};
 
 /** A reward sold out at one open branch right now (until: back on sale at; null = until turned back on). */
 export interface SoldOut {
@@ -281,7 +315,12 @@ export interface AdjustResult {
 
 /** The signed-in vendor account (GET /api/vendor/staff/me). */
 export interface StaffMe extends Staff {
-  vendor: { id: string; name: string; logoUrl: string | null; currency: string };
+  vendor: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    currency: string;
+  };
   branch: { id: string; name: string } | null;
   /** Active branches this account can work at (all of them for a merchant admin). */
   branches: { id: string; name: string }[];
@@ -297,7 +336,15 @@ export interface StaffMe extends Staff {
 /** GET /api/vendor/insights/patterns: fixed windows, not the page's date range. */
 export interface VendorPatterns {
   /** Last 365 days, most visit days then most spent. */
-  topMembers: { customerRef: string; name: string | null; visits: number; points: number; rewards: number; spent: string; lastSeen: string }[];
+  topMembers: {
+    customerRef: string;
+    name: string | null;
+    visits: number;
+    points: number;
+    rewards: number;
+    spent: string;
+    lastSeen: string;
+  }[];
   /** Last 12 weeks, Cairo time; day 0 = Sunday. Only hours with activity. */
   busiestHours: { day: number; hour: number; count: number }[];
   /** Last 6 months, oldest first; returned[k-1] = share seen again k months later (null = not yet). */
@@ -360,7 +407,12 @@ export interface VendorSummary {
   pointsRedeemed30d: number;
   pointsOutstanding: number;
   days: { date: string; pointsEarned: number; collects: number }[];
-  branches: { id: string; name: string; collects: number; pointsEarned: number }[];
+  branches: {
+    id: string;
+    name: string;
+    collects: number;
+    pointsEarned: number;
+  }[];
 }
 
 export interface Page<T> {
@@ -401,7 +453,13 @@ export interface ActivityQuery {
 
 export interface ActivityPage extends Page<ActivityItem> {
   /** For every row matching the filters, not just this page. */
-  totals: { collects: number; redemptions: number; pointsEarned: number; pointsRedeemed: number; sales: string };
+  totals: {
+    collects: number;
+    redemptions: number;
+    pointsEarned: number;
+    pointsRedeemed: number;
+    sales: string;
+  };
 }
 
 /** One reward given at my shops (GET /api/vendor/redemptions). Name and cost as they were then. */
@@ -430,7 +488,14 @@ export interface RedemptionQuery {
 export interface RedemptionPage extends Page<RedemptionItem> {
   totals: { redemptions: number; points: number; customers: number };
   /** Per reward for the period/branch/staff (ignores the reward filter), most given first. */
-  byReward: { rewardId: string; name: string; imageUrl: string | null; status: RewardStatus; count: number; points: number }[];
+  byReward: {
+    rewardId: string;
+    name: string;
+    imageUrl: string | null;
+    status: RewardStatus;
+    count: number;
+    points: number;
+  }[];
 }
 
 export type GoLiveStep = 'logo' | 'banner' | 'rule' | 'reward' | 'branch_hours' | 'staff' | 'test_scan';
@@ -468,7 +533,12 @@ export type StorefrontSection =
   | { type: 'menu' }
   | { type: 'branches' }
   | { type: 'feedback'; placeholder?: { en: string; ar: string } }
-  | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
+  | {
+      type: 'wifi';
+      ssid: string;
+      security: 'wpa' | 'wep' | 'none';
+      password: string;
+    };
 export interface Storefront {
   sections: StorefrontSection[];
 }
@@ -495,14 +565,7 @@ export type CustomerSegment = 'champions' | 'regulars' | 'new' | 'never_visited'
 
 /** What a custom segment's rules can look at. */
 export type SegmentRuleField =
-  | 'visits'
-  | 'visits_30d'
-  | 'spend'
-  | 'days_since_visit'
-  | 'days_since_joined'
-  | 'points'
-  | 'rewards_redeemed'
-  | 'segment';
+  'visits' | 'visits_30d' | 'spend' | 'days_since_visit' | 'days_since_joined' | 'points' | 'rewards_redeemed' | 'segment';
 export interface SegmentRule {
   field: SegmentRuleField;
   op: 'gte' | 'lte' | 'eq' | 'is' | 'is_not';
@@ -563,7 +626,15 @@ export interface CustomerExportRow extends MerchantCustomer {
 export interface MerchantCustomerDetail {
   customer: MerchantCustomer & { phone: string | null };
   asOf: string;
-  events: { id: string; type: 'earn' | 'redeem' | 'adjust'; points: number; amount: string | null; branchName: string | null; rewardName: string | null; createdAt: string }[];
+  events: {
+    id: string;
+    type: 'earn' | 'redeem' | 'adjust';
+    points: number;
+    amount: string | null;
+    branchName: string | null;
+    rewardName: string | null;
+    createdAt: string;
+  }[];
   total: number;
   page: number;
   pageSize: number;
@@ -591,9 +662,22 @@ export interface Insights {
   previousRange: { from: string; to: string } | null;
   current: InsightsKpis;
   previous: InsightsKpis | null;
-  days: { date: string; sales: string; visits: number; previousSales: string | null; previousVisits: number | null }[];
+  days: {
+    date: string;
+    sales: string;
+    visits: number;
+    previousSales: string | null;
+    previousVisits: number | null;
+  }[];
   /** Merchant admin, all branches only. */
-  branches: { id: string; name: string; sales: string; visits: number; customers: number; avgBill: string }[];
+  branches: {
+    id: string;
+    name: string;
+    sales: string;
+    visits: number;
+    customers: number;
+    avgBill: string;
+  }[];
   updatedAt: string;
 }
 
@@ -638,7 +722,6 @@ export class ApiError extends Error {
   }
 }
 
-
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 async function call<T>(method: Method, path: string, body?: unknown): Promise<T> {
@@ -659,7 +742,10 @@ async function call<T>(method: Method, path: string, body?: unknown): Promise<T>
     throw new ApiError(0, 'network', errorText('network') ?? 'Network error');
   }
   if (res.status === 204) return undefined as T;
-  const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string | string[] };
+  const json = (await res.json().catch(() => ({}))) as {
+    code?: string;
+    message?: string | string[];
+  };
   if (!res.ok) {
     const code = json.code ?? `http_${res.status}`;
     const server = Array.isArray(json.message) ? json.message.join(', ') : json.message;
@@ -681,6 +767,22 @@ const file = (f: File, fields: Record<string, string | undefined> = {}) => {
 };
 
 export const api = {
+  workspace: (section: string, q: { vendorId?: string; search?: string; page?: number } = {}) =>
+    call<{
+      items: {
+        id: string;
+        vendorId: string;
+        vendorName: string;
+        currency: string;
+        name: string;
+        detail: string;
+        status: string;
+        points: number | null;
+        amount: string | null;
+        createdAt: string;
+      }[];
+      total: number;
+    }>('GET', `/api/admin/workspace/${section}${qs(q)}`),
   me: () => call<AdminMe>('GET', '/api/admin/me'),
   overview: () => call<Overview>('GET', '/api/admin/overview'),
   qrSources: (days: number) => call<QrSources>('GET', `/api/admin/stats/qr-sources?days=${days}`),
@@ -696,8 +798,17 @@ export const api = {
   vendor: (id: string) => call<Vendor>('GET', `/api/admin/vendors/${id}`),
   createVendor: (body: { name: string; contactEmail?: string; currency?: string; category?: VendorCategory }) =>
     call<Vendor>('POST', '/api/admin/vendors', body),
-  updateVendor: (id: string, body: Partial<{ name: string; contactEmail: string | null; currency: string; status: VendorStatus } & VendorBranding>) =>
-    call<Vendor>('PATCH', `/api/admin/vendors/${id}`, body),
+  updateVendor: (
+    id: string,
+    body: Partial<
+      {
+        name: string;
+        contactEmail: string | null;
+        currency: string;
+        status: VendorStatus;
+      } & VendorBranding
+    >,
+  ) => call<Vendor>('PATCH', `/api/admin/vendors/${id}`, body),
   uploadLogo: (id: string, f: File) => call<Vendor>('PUT', `/api/admin/vendors/${id}/logo`, file(f)),
   removeLogo: (id: string) => call<Vendor>('DELETE', `/api/admin/vendors/${id}/logo`),
   uploadBanner: (id: string, f: File) => call<Vendor>('PUT', `/api/admin/vendors/${id}/banner`, file(f)),
@@ -714,7 +825,12 @@ export const api = {
   pointRules: (vendorId: string) => call<PointRule[]>('GET', `/api/admin/vendors/${vendorId}/point-rules`),
   publishRule: (
     vendorId: string,
-    body: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null },
+    body: {
+      spendAmount: number;
+      pointsPerSpend: number;
+      minPurchase?: number;
+      maxPointsPerPurchase?: number | null;
+    },
   ) => call<PointRule>('POST', `/api/admin/vendors/${vendorId}/point-rules`, body),
   deactivateRule: (vendorId: string) => call<void>('DELETE', `/api/admin/vendors/${vendorId}/point-rules/active`),
 
@@ -739,12 +855,18 @@ export const api = {
   user: (id: string) => call<UserDetail>('GET', `/api/admin/users/${id}`),
   setUserStatus: (id: string, status: UserStatus) => call<UserDetail>('PATCH', `/api/admin/users/${id}`, { status }),
   userEvents: (id: string, page: number, pageSize = 10) =>
-    call<{ items: UserEvent[]; total: number; page: number; pageSize: number }>('GET', `/api/admin/users/${id}/events?page=${page}&pageSize=${pageSize}`),
+    call<{ items: UserEvent[]; total: number; page: number; pageSize: number }>(
+      'GET',
+      `/api/admin/users/${id}/events?page=${page}&pageSize=${pageSize}`,
+    ),
   /** Add (positive) or take away (negative) points on one card, with a reason. */
   adjustCard: (cardId: string, body: { delta: number; reason: string; idempotencyKey: string }) =>
     call<AdjustResult>('POST', `/api/admin/cards/${cardId}/adjust`, body),
   /** Undo a mistyped collect: takes back exactly the points it gave. */
-  reverseEvent: (eventId: string, reason: string) => call<AdjustResult>('POST', `/api/admin/point-events/${eventId}/reverse`, { reason }),
+  reverseEvent: (eventId: string, reason: string) =>
+    call<AdjustResult>('POST', `/api/admin/point-events/${eventId}/reverse`, {
+      reason,
+    }),
 };
 
 /**
@@ -752,99 +874,154 @@ export const api = {
  * it from the token, so a Starbucks account can only ever reach Starbucks.
  */
 export interface CustomerFeedback {
-  id: string; name: string; phone: string | null; message: string; createdAt: string;
-  branchName: string | null; existingCustomer: boolean;
+  id: string;
+  name: string;
+  phone: string | null;
+  message: string;
+  createdAt: string;
+  branchName: string | null;
+  existingCustomer: boolean;
 }
-export const vendorApi = {
-  customerFeedback: (page = 1) => call<{ items: CustomerFeedback[]; page: number; hasMore: boolean }>('GET', `/api/vendor/customer-feedback?page=${page}`),
-  broadcastPreview: (body: MerchantCustomerQuery) => call<{ matched: number; linked: number; unavailable: number; configured: boolean }>('POST', '/api/vendor/broadcasts/preview', body),
-  sendBroadcast: (body: MerchantCustomerQuery & { title: string; body: string; idempotencyKey: string }) => call<{ id: string }>('POST', '/api/vendor/broadcasts', body),
-  broadcasts: () => call<{ id: string; title: string; body: string; createdAt: string; total: number; pending: number; accepted: number; skipped: number; failed: number; unknown: number }[]>('GET', '/api/vendor/broadcasts'),
-  nearbyNotifications: () => call<{ enabled: boolean; locations: number }>('GET', '/api/vendor/broadcasts/nearby'),
-  setNearbyNotifications: (enabled: boolean) => call<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled }),
-  customers: (q: MerchantCustomerQuery) => call<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
-  feedback: (body: { mood?: MerchantMood; message: string }) => call<void>('POST', '/api/vendor/feedback', body),
-  customersExport: (q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>) =>
-    call<{ items: CustomerExportRow[]; truncated: boolean; asOf: string }>('GET', `/api/vendor/customers/export${qs({ ...q })}`),
-  segmentPreview: (body: { match: 'all' | 'any'; rules: SegmentRule[]; branchId?: string }) =>
-    call<{ count: number; customersTotal: number }>('POST', '/api/vendor/customer-segments/preview', body),
-  createSegment: (body: CustomSegmentInput) => call<CustomSegment>('POST', '/api/vendor/customer-segments', body),
-  updateSegment: (id: string, body: Partial<CustomSegmentInput> & { sortOrder?: number }) =>
-    call<CustomSegment>('PATCH', `/api/vendor/customer-segments/${encodeURIComponent(id)}`, body),
-  archiveSegment: (id: string) => call<void>('DELETE', `/api/vendor/customer-segments/${encodeURIComponent(id)}`),
-  addSegmentMember: (id: string, cardId: string) =>
-    call<void>('PUT', `/api/vendor/customer-segments/${encodeURIComponent(id)}/members/${encodeURIComponent(cardId)}`),
-  removeSegmentMember: (id: string, cardId: string) =>
-    call<void>('DELETE', `/api/vendor/customer-segments/${encodeURIComponent(id)}/members/${encodeURIComponent(cardId)}`),
-  customer: (id: string, q: { branchId?: string; page?: number; pageSize?: number }) =>
-    call<MerchantCustomerDetail>('GET', `/api/vendor/customers/${encodeURIComponent(id)}${qs({ ...q })}`),
-  me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
-  summary: (q: { branchId?: string } = {}) => call<VendorSummary>('GET', `/api/vendor/summary${qs({ ...q })}`),
-  attention: () => call<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
-  goLive: () => call<GoLive>('GET', '/api/vendor/go-live'),
-  insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
-    call<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
-  rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>
-    call<RewardPerformance>('GET', `/api/vendor/reward-performance${qs({ ...q })}`),
-  redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
-  events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
+export function createVendorApi(prefix = '/api/vendor') {
+  const request = <T>(method: Method, url: string, body?: unknown) => call<T>(method, url.replace(/^\/api\/vendor(?=\/|$)/, prefix), body);
+  return {
+    customerFeedback: (page = 1) =>
+      request<{ items: CustomerFeedback[]; page: number; hasMore: boolean }>('GET', `/api/vendor/customer-feedback?page=${page}`),
+    broadcastPreview: (body: MerchantCustomerQuery) =>
+      request<{
+        matched: number;
+        linked: number;
+        unavailable: number;
+        configured: boolean;
+      }>('POST', '/api/vendor/broadcasts/preview', body),
+    sendBroadcast: (
+      body: MerchantCustomerQuery & {
+        title: string;
+        body: string;
+        idempotencyKey: string;
+      },
+    ) => request<{ id: string }>('POST', '/api/vendor/broadcasts', body),
+    broadcasts: () =>
+      request<
+        {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: string;
+          total: number;
+          pending: number;
+          accepted: number;
+          skipped: number;
+          failed: number;
+          unknown: number;
+        }[]
+      >('GET', '/api/vendor/broadcasts'),
+    nearbyNotifications: () => request<{ enabled: boolean; locations: number }>('GET', '/api/vendor/broadcasts/nearby'),
+    setNearbyNotifications: (enabled: boolean) =>
+      request<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled }),
+    customers: (q: MerchantCustomerQuery) => request<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
+    feedback: (body: { mood?: MerchantMood; message: string }) => request<void>('POST', '/api/vendor/feedback', body),
+    customersExport: (q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>) =>
+      request<{ items: CustomerExportRow[]; truncated: boolean; asOf: string }>('GET', `/api/vendor/customers/export${qs({ ...q })}`),
+    segmentPreview: (body: { match: 'all' | 'any'; rules: SegmentRule[]; branchId?: string }) =>
+      request<{ count: number; customersTotal: number }>('POST', '/api/vendor/customer-segments/preview', body),
+    createSegment: (body: CustomSegmentInput) => request<CustomSegment>('POST', '/api/vendor/customer-segments', body),
+    updateSegment: (id: string, body: Partial<CustomSegmentInput> & { sortOrder?: number }) =>
+      request<CustomSegment>('PATCH', `/api/vendor/customer-segments/${encodeURIComponent(id)}`, body),
+    archiveSegment: (id: string) => request<void>('DELETE', `/api/vendor/customer-segments/${encodeURIComponent(id)}`),
+    addSegmentMember: (id: string, cardId: string) =>
+      request<void>('PUT', `/api/vendor/customer-segments/${encodeURIComponent(id)}/members/${encodeURIComponent(cardId)}`),
+    removeSegmentMember: (id: string, cardId: string) =>
+      request<void>('DELETE', `/api/vendor/customer-segments/${encodeURIComponent(id)}/members/${encodeURIComponent(cardId)}`),
+    customer: (id: string, q: { branchId?: string; page?: number; pageSize?: number }) =>
+      request<MerchantCustomerDetail>('GET', `/api/vendor/customers/${encodeURIComponent(id)}${qs({ ...q })}`),
+    me: () => request<StaffMe>('GET', '/api/vendor/staff/me'),
+    summary: (q: { branchId?: string } = {}) => request<VendorSummary>('GET', `/api/vendor/summary${qs({ ...q })}`),
+    attention: () => request<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
+    goLive: () => request<GoLive>('GET', '/api/vendor/go-live'),
+    insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
+      request<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
+    rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>
+      request<RewardPerformance>('GET', `/api/vendor/reward-performance${qs({ ...q })}`),
+    redemptions: (q: RedemptionQuery) => request<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
+    events: (q: ActivityQuery) => request<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
-  usernameAvailability: (username: string) => call<{ available: boolean }>('GET', `/api/vendor/profile/username${qs({ username })}`),
-  reserveUsername: (username: string) => call<Vendor>('PUT', '/api/vendor/profile/username', { username }),
-  profile: () => call<Vendor>('GET', '/api/vendor/profile'),
-  storefront: () => call<StorefrontSettings>('GET', '/api/vendor/storefront'),
-  saveStorefront: (body: { branchId?: string; storefront: Storefront | null }) => call<StorefrontSettings>('PUT', '/api/vendor/storefront', body),
-  updateProfile: (
-    body: { name?: string; contactEmail?: string | null; contactPhone?: string | null } & Partial<VendorBranding> &
-      Partial<Pick<Vendor, 'pageStyle' | 'brandPrimary' | 'brandSecondary' | 'brandFont'>>,
-  ) =>
-    call<Vendor>('PATCH', '/api/vendor/profile', body),
-  uploadLogo: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/logo', file(f)),
-  removeLogo: () => call<Vendor>('DELETE', '/api/vendor/profile/logo'),
-  uploadBanner: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/banner', file(f)),
-  removeBanner: () => call<Vendor>('DELETE', '/api/vendor/profile/banner'),
+    usernameAvailability: (username: string) => request<{ available: boolean }>('GET', `/api/vendor/profile/username${qs({ username })}`),
+    reserveUsername: (username: string) => request<Vendor>('PUT', '/api/vendor/profile/username', { username }),
+    profile: () => request<Vendor>('GET', '/api/vendor/profile'),
+    storefront: () => request<StorefrontSettings>('GET', '/api/vendor/storefront'),
+    saveStorefront: (body: { branchId?: string; storefront: Storefront | null }) =>
+      request<StorefrontSettings>('PUT', '/api/vendor/storefront', body),
+    updateProfile: (
+      body: {
+        name?: string;
+        contactEmail?: string | null;
+        contactPhone?: string | null;
+      } & Partial<VendorBranding> &
+        Partial<Pick<Vendor, 'pageStyle' | 'brandPrimary' | 'brandSecondary' | 'brandFont'>>,
+    ) => request<Vendor>('PATCH', '/api/vendor/profile', body),
+    uploadLogo: (f: File) => request<Vendor>('PUT', '/api/vendor/profile/logo', file(f)),
+    removeLogo: () => request<Vendor>('DELETE', '/api/vendor/profile/logo'),
+    uploadBanner: (f: File) => request<Vendor>('PUT', '/api/vendor/profile/banner', file(f)),
+    removeBanner: () => request<Vendor>('DELETE', '/api/vendor/profile/banner'),
 
-  branches: () => call<Branch[]>('GET', '/api/vendor/branches'),
-  createBranch: (body: Partial<Branch>) => call<Branch>('POST', '/api/vendor/branches', body),
-  updateBranch: (id: string, body: Partial<Branch>) => call<Branch>('PATCH', `/api/vendor/branches/${id}`, body),
-  pauseBranch: (id: string, until: string) => call<Branch>('PUT', `/api/vendor/branches/${id}/pause`, { until }),
-  resumeBranch: (id: string) => call<Branch>('DELETE', `/api/vendor/branches/${id}/pause`),
+    branches: () => request<Branch[]>('GET', '/api/vendor/branches'),
+    createBranch: (body: Partial<Branch>) => request<Branch>('POST', '/api/vendor/branches', body),
+    updateBranch: (id: string, body: Partial<Branch>) => request<Branch>('PATCH', `/api/vendor/branches/${id}`, body),
+    pauseBranch: (id: string, until: string) => request<Branch>('PUT', `/api/vendor/branches/${id}/pause`, { until }),
+    resumeBranch: (id: string) => request<Branch>('DELETE', `/api/vendor/branches/${id}/pause`),
 
-  pointRules: () => call<PointRule[]>('GET', '/api/vendor/point-rules'),
-  publishRule: (body: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null }) =>
-    call<PointRule>('POST', '/api/vendor/point-rules', body),
-  deactivateRule: () => call<void>('DELETE', '/api/vendor/point-rules/active'),
+    pointRules: () => request<PointRule[]>('GET', '/api/vendor/point-rules'),
+    publishRule: (body: { spendAmount: number; pointsPerSpend: number; minPurchase?: number; maxPointsPerPurchase?: number | null }) =>
+      request<PointRule>('POST', '/api/vendor/point-rules', body),
+    deactivateRule: () => request<void>('DELETE', '/api/vendor/point-rules/active'),
 
-  rewards: () => call<Reward[]>('GET', '/api/vendor/rewards'),
-  createReward: (body: RewardBody) => call<Reward>('POST', '/api/vendor/rewards', body),
-  updateReward: (id: string, body: RewardBody) => call<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
-  uploadRewardImage: (id: string, f: File) => call<Reward>('PUT', `/api/vendor/rewards/${id}/image`, file(f)),
-  removeRewardImage: (id: string) => call<Reward>('DELETE', `/api/vendor/rewards/${id}/image`),
-  soldOuts: () => call<SoldOut[]>('GET', '/api/vendor/rewards/sold-out'),
-  /** branchId omitted (vendor admin) = every open branch; until null = until turned back on. */
-  setSoldOut: (rewardId: string, body: { branchId?: string; until: string | null }) =>
-    call<SoldOut[]>('PUT', `/api/vendor/rewards/${rewardId}/sold-out`, body),
-  clearSoldOut: (rewardId: string, branchId?: string) =>
-    call<SoldOut[]>('DELETE', `/api/vendor/rewards/${rewardId}/sold-out${qs({ branchId })}`),
+    rewards: () => request<Reward[]>('GET', '/api/vendor/rewards'),
+    createReward: (body: RewardBody) => request<Reward>('POST', '/api/vendor/rewards', body),
+    updateReward: (id: string, body: RewardBody) => request<Reward>('PATCH', `/api/vendor/rewards/${id}`, body),
+    uploadRewardImage: (id: string, f: File) => request<Reward>('PUT', `/api/vendor/rewards/${id}/image`, file(f)),
+    removeRewardImage: (id: string) => request<Reward>('DELETE', `/api/vendor/rewards/${id}/image`),
+    soldOuts: () => request<SoldOut[]>('GET', '/api/vendor/rewards/sold-out'),
+    /** branchId omitted (vendor admin) = every open branch; until null = until turned back on. */
+    setSoldOut: (rewardId: string, body: { branchId?: string; until: string | null }) =>
+      request<SoldOut[]>('PUT', `/api/vendor/rewards/${rewardId}/sold-out`, body),
+    clearSoldOut: (rewardId: string, branchId?: string) =>
+      request<SoldOut[]>('DELETE', `/api/vendor/rewards/${rewardId}/sold-out${qs({ branchId })}`),
 
-  images: () => call<VendorImage[]>('GET', '/api/vendor/images'),
-  uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) =>
-    call<VendorImage>('POST', '/api/vendor/images', file(f, { kind, branchId })),
-  deleteImage: (id: string) => call<void>('DELETE', `/api/vendor/images/${id}`),
+    images: () => request<VendorImage[]>('GET', '/api/vendor/images'),
+    uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) =>
+      request<VendorImage>('POST', '/api/vendor/images', file(f, { kind, branchId })),
+    deleteImage: (id: string) => request<void>('DELETE', `/api/vendor/images/${id}`),
 
-  /** The till: the same scan calls as the staff app. */
-  scanPreview: (code: string, intent: 'collect' | 'redeem' = 'collect', previewBranchId?: string) => call<ScanPreview>('POST', '/api/vendor/scans/preview', { code, intent, previewBranchId }),
-  collect: (body: { code: string; amount: number; branchId?: string; idempotencyKey: string }) =>
-    call<CollectResult>('POST', '/api/vendor/scans/collect', body),
-  redeem: (body: { code: string; rewardId?: string; expectedPointsCost?: number; branchId?: string; idempotencyKey: string }) => call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
-  patterns: (q: { branchId?: string }) => call<VendorPatterns>('GET', `/api/vendor/insights/patterns${qs({ ...q })}`),
-  scansToday: () => call<{ collects: number; redemptions: number }>('GET', '/api/vendor/scans/today'),
+    /** The till: the same scan calls as the staff app. */
+    scanPreview: (code: string, intent: 'collect' | 'redeem' = 'collect', previewBranchId?: string) =>
+      request<ScanPreview>('POST', '/api/vendor/scans/preview', {
+        code,
+        intent,
+        previewBranchId,
+      }),
+    collect: (body: { code: string; amount: number; branchId?: string; idempotencyKey: string }) =>
+      request<CollectResult>('POST', '/api/vendor/scans/collect', body),
+    redeem: (body: { code: string; rewardId?: string; expectedPointsCost?: number; branchId?: string; idempotencyKey: string }) =>
+      request<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
+    patterns: (q: { branchId?: string }) => request<VendorPatterns>('GET', `/api/vendor/insights/patterns${qs({ ...q })}`),
+    scansToday: () => request<{ collects: number; redemptions: number }>('GET', '/api/vendor/scans/today'),
 
-  staff: () => call<Staff[]>('GET', '/api/vendor/staff'),
-  inviteStaff: (body: { name: string; email: string; role: StaffRole; branchId?: string }) =>
-    call<Staff & { invited: boolean }>('POST', '/api/vendor/staff', body),
-  updateStaff: (id: string, body: { name?: string; status?: AccountStatus }) => call<Staff>('PATCH', `/api/vendor/staff/${id}`, body),
-};
+    staff: () => request<Staff[]>('GET', '/api/vendor/staff'),
+    inviteStaff: (body: { name: string; email: string; role: StaffRole; branchId?: string }) =>
+      request<Staff & { invited: boolean }>('POST', '/api/vendor/staff', body),
+    updateStaff: (
+      id: string,
+      body: {
+        name?: string;
+        status?: AccountStatus;
+        role?: StaffRole;
+        branchId?: string;
+      },
+    ) => request<Staff>('PATCH', `/api/vendor/staff/${id}`, body),
+  };
+}
+export const vendorApi = createVendorApi();
 
 /** A readable message for any error thrown by an API call or Supabase. */
 export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong.');
