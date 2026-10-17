@@ -66,6 +66,37 @@ describe('FeedbackService', () => {
   });
 });
 
+describe('FeedbackService.sendMerchant', () => {
+  const ctx = { vendorId: 'v1', staffId: 's1', role: 'vendor_admin' } as never;
+  const prisma = () => ({
+    merchant_feedback: {
+      create: jest.fn().mockResolvedValue({
+        staff_users: { name: 'Mona', email: 'mona@shop.test' },
+        vendors: { name: 'Joy Corner' },
+      }),
+    },
+  });
+  const make = (env: Record<string, string | undefined>, db: ReturnType<typeof prisma>) =>
+    new FeedbackService({ get: (k: string) => env[k] } as never, db as never);
+
+  it('saves the feedback for admins even when the sheet is not set up', async () => {
+    const db = prisma();
+    const fetch = jest.spyOn(global, 'fetch');
+    await make({}, db).sendMerchant(ctx, { mood: 'love', message: 'Great' });
+    expect(db.merchant_feedback.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { vendor_id: 'v1', staff_id: 's1', mood: 'love', message: 'Great' } }),
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('copies to the sheet when set up, and a sheet failure does not fail the request', async () => {
+    const db = prisma();
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('timeout'));
+    await expect(make(configured, db).sendMerchant(ctx, { message: 'Hmm' })).resolves.toBeUndefined();
+    expect(db.merchant_feedback.create).toHaveBeenCalled();
+  });
+});
+
 describe('CreateFeedbackDto', () => {
   const errors = (body: object) =>
     validateSync(plainToInstance(CreateFeedbackDto, body)).map(

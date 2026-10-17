@@ -1,6 +1,6 @@
 import { useContentMotion } from '../hooks/use-content-motion';
-import { WidgetIcon as LayoutDashboardActive, ShopIcon as StoreActive, UsersGroupRoundedIcon as UsersActive, ChartIcon as ChartColumnActive, ServerIcon as ServerActive } from '@solar-icons/react/bold-duotone';
-import { ArrowRightUpIcon as ArrowUpRight, ChartIcon as ChartColumn, ChevronsUpDownIcon as ChevronsUpDown, GlobeIcon, WidgetIcon as LayoutDashboard, LogoutIcon as LogOut, ServerIcon as Server, ShopIcon as Store, Sun2Icon as SunMoon, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
+import { WidgetIcon as LayoutDashboardActive, ShopIcon as StoreActive, UsersGroupRoundedIcon as UsersActive, ChartIcon as ChartColumnActive, ChatRoundLikeIcon as FeedbackActive, ServerIcon as ServerActive } from '@solar-icons/react/bold-duotone';
+import { ArrowRightUpIcon as ArrowUpRight, ChartIcon as ChartColumn, ChatRoundLikeIcon as FeedbackIcon, ChevronsUpDownIcon as ChevronsUpDown, GlobeIcon, WidgetIcon as LayoutDashboard, LogoutIcon as LogOut, ServerIcon as Server, ShopIcon as Store, Sun2Icon as SunMoon, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
 import { Fragment, useState, useRef, type ComponentType, type ReactNode } from 'react';
 import { MotionConfig, motion } from 'motion/react';
 import { NavLink, useLocation } from 'react-router';
@@ -55,6 +55,7 @@ const NAV: NavItem[] = [
   { to: '/merchants', icon: Store, activeIcon: StoreActive, label: 'Merchants' },
   { to: '/customers', icon: Users, activeIcon: UsersActive, label: 'Customers' },
   { to: '/statistics', icon: ChartColumn, activeIcon: ChartColumnActive, label: 'Statistics' },
+  { to: '/feedback', icon: FeedbackIcon, activeIcon: FeedbackActive, label: 'Feedback' },
   { to: '/system', icon: Server, activeIcon: ServerActive, label: 'System' },
 ];
 

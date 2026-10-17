@@ -1,8 +1,9 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNoContentResponse,
+  ApiOkResponse,
   ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -10,9 +11,11 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
+import { AdminApi } from '../auth/admin-api.decorator';
 import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffAuthGuard, type StaffContext } from '../auth/staff-auth.guard';
 import { CreateFeedbackDto, MerchantFeedbackDto } from './dto/create-feedback.dto';
+import { ListMerchantFeedbackQueryDto, MerchantFeedbackListDto } from './dto/merchant-feedback-list.dto';
 import { FeedbackService } from './feedback.service';
 
 @ApiTags('app: feedback')
@@ -63,5 +66,18 @@ export class VendorFeedbackController {
     @Body() dto: MerchantFeedbackDto,
   ): Promise<void> {
     await this.feedback.sendMerchant(ctx, dto);
+  }
+}
+
+/** Merchant quick feedback for platform admins (dashboard: Feedback page). */
+@AdminApi('admin: feedback')
+@Controller('admin/merchant-feedback')
+export class AdminFeedbackController {
+  constructor(private readonly feedback: FeedbackService) {}
+
+  @Get()
+  @ApiOkResponse({ type: MerchantFeedbackListDto })
+  list(@Query() query: ListMerchantFeedbackQueryDto): Promise<MerchantFeedbackListDto> {
+    return this.feedback.listMerchant(query);
   }
 }

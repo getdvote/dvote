@@ -1,6 +1,7 @@
-import { Check, ChevronLeft, ChevronRight, Copy, Gift, MessageSquare, MapPin, Navigation, UtensilsCrossed, WalletCards, Wifi } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Copy, Gift, MessageSquare, MapPin, Navigation, UtensilsCrossed, WalletCards, Wifi, ZoomIn } from 'lucide-react';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
+import { ImageViewer } from '../components/image-viewer';
 import { ErrorNote, Page, Spinner, cx } from '../components/ui';
 import { localized, t } from '../i18n';
 import { api, errorMessage, type PublicVendor, type Section } from '../lib/api';
@@ -313,13 +314,7 @@ export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branche
           ))}
         </ul>
       ) : kind === 'menu' ? (
-        <div className="grid gap-4">
-          {vendor.menu.map((url, i) => (
-            <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-line">
-              <img src={url} alt={t('venue.menuPage', { n: i + 1 })} className="w-full" />
-            </a>
-          ))}
-        </div>
+        <MenuPages images={vendor.menu} />
       ) : (
         <ul className="grid gap-3">
           {vendor.branches.map((b) => (
@@ -345,5 +340,32 @@ export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branche
         </ul>
       )}
     </Page>
+  );
+}
+
+/** The menu pages; tapping one opens it full screen to zoom in. */
+function MenuPages({ images }: { images: string[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const alt = (i: number) => t('venue.menuPage', { n: i + 1 });
+  return (
+    <>
+      <div className="grid gap-4">
+        {images.map((url, i) => (
+          <button
+            key={url}
+            type="button"
+            onClick={() => setOpen(i)}
+            className="relative block cursor-zoom-in overflow-hidden rounded-2xl border border-line"
+            aria-label={`${alt(i)} · ${t('venue.tapToZoom')}`}
+          >
+            <img src={url} alt={alt(i)} className="w-full" />
+            <span className="absolute end-3 bottom-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-[13px] font-medium text-white backdrop-blur">
+              <ZoomIn className="size-4" /> {t('venue.tapToZoom')}
+            </span>
+          </button>
+        ))}
+      </div>
+      {open !== null ? <ImageViewer images={images} index={open} onIndex={setOpen} onClose={() => setOpen(null)} alt={alt} /> : null}
+    </>
   );
 }
