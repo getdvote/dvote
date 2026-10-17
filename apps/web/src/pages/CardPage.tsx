@@ -70,6 +70,8 @@ export function CardPage() {
   const heading = params.get('new') ? t('card.enrolled') : params.get('back') ? t('card.welcomeBack') : t('card.yours');
   const apple = <WalletButton kind="apple" />;
   const google = <WalletButton kind="google" onClick={() => void addGoogle()} busy={adding} />;
+  // Samsung Wallet: not issued yet, shown disabled where Samsung phones are (Android, and computers)
+  const samsung = <WalletButton kind="samsung" />;
 
   return (
     <Page>
@@ -84,10 +86,16 @@ export function CardPage() {
       ) : (
       <div className="mt-6 grid justify-items-center gap-3">
         <p className="text-center text-[14px] text-muted">{t('card.addWithButtons')}</p>
-        {device === 'ios' ? apple : device === 'android' ? google : (
+        {device === 'ios' ? apple : device === 'android' ? (
+          <>
+            {google}
+            {samsung}
+          </>
+        ) : (
           <>
             {apple}
             {google}
+            {samsung}
           </>
         )}
         {device !== 'other' ? (
@@ -101,6 +109,7 @@ export function CardPage() {
         ) : null}
         <ErrorNote>{walletError}</ErrorNote>
         {device === 'ios' || device === 'other' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.appleSoon')}</p> : null}
+        {device === 'android' || device === 'other' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.samsungSoon')}</p> : null}
       </div>
       )}
 
@@ -123,7 +132,7 @@ export function CardPage() {
       <p className="mt-6 text-center text-[15px] font-medium">{t('card.atTill')}</p>
 
       <div className="mt-5 text-center">
-        <Link to={`/${card.vendor.slug}`} className="text-[15px] text-brand underline-offset-4 hover:underline">
+        <Link to={`/${card.vendor.slug}`} className="inline-block py-1 text-[15px] text-brand underline-offset-4 hover:underline">
           {t('card.visitShop', { shop: card.vendor.name })}
         </Link>
       </div>
@@ -131,8 +140,8 @@ export function CardPage() {
   );
 }
 
-/** Official supplied badges; Apple stays disabled until pass issuance is available. */
-function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google'; onClick?: () => void; busy?: boolean }) {
+/** Official supplied badges; Apple and Samsung stay disabled until their passes are issued. */
+function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google' | 'samsung'; onClick?: () => void; busy?: boolean }) {
   return (
     <button
       type="button"
@@ -143,7 +152,7 @@ function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google'; onCli
     >
       <img
         src={`/wallet/add-to-${kind}-wallet.svg`}
-        alt={kind === 'apple' ? t('card.addApple') : t('card.addGoogle')}
+        alt={kind === 'apple' ? t('card.addApple') : kind === 'samsung' ? t('card.addSamsung') : t('card.addGoogle')}
         className="h-full w-full object-contain"
       />
     </button>

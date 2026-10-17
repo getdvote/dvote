@@ -85,7 +85,8 @@ export function MyTill() {
   // Open / closed for the branch (the branches list is for managers and admins only).
   const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: OPENING_HOURS && me.role !== 'staff', refetchInterval: 60_000 });
   const branch = branches?.find((b) => b.id === branchId);
-  const state = branch ? branchState(branch) : null;
+  // hours switched off: no open / closed badge (the shared branches cache would still fill `branch`)
+  const state = OPENING_HOURS && branch ? branchState(branch) : null;
 
   const done = () => {
     void qc.invalidateQueries({ queryKey: ['scans', 'today'] });

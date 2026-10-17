@@ -104,6 +104,8 @@ export const en = {
     code: "Code",
     addApple: 'Add to Apple Wallet',
     addGoogle: 'Add to Google Wallet',
+    addSamsung: 'Add to Samsung Wallet',
+    samsungSoon: 'Samsung Wallet is coming soon.',
     appleSoon: 'Apple Wallet is coming soon. Your card is already saved: staff can find it by its code.',
     inGoogle: 'Your card is in Google Wallet. Show its QR at the till.',
     inApple: 'Your card is in Apple Wallet. Show its QR at the till.',

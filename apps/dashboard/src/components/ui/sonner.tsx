@@ -54,9 +54,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
         unstyled: true,
         classNames: {
           toast:
-            "group/toast relative flex w-(--width) flex-wrap items-start gap-x-3 gap-y-2 rounded-2xl bg-card p-4 pe-10 text-card-foreground shadow-lg ring-1 ring-foreground/10 data-[expanded=false]:data-[front=false]:overflow-hidden data-[expanded=false]:data-[front=false]:*:opacity-0",
+            "group/toast relative flex w-(--width) flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-card p-4 pe-10 text-card-foreground shadow-lg ring-1 ring-foreground/10 data-[expanded=false]:data-[front=false]:overflow-hidden data-[expanded=false]:data-[front=false]:*:opacity-0",
           icon: "m-0 flex size-8 shrink-0 items-center justify-center",
-          content: "grid min-w-0 flex-1 basis-[calc(100%-2.75rem)] gap-0.5 pt-1.5",
+          content: "grid min-w-0 flex-1 basis-[calc(100%-2.75rem)] gap-0.5",
           title: "text-sm font-semibold",
           description: "text-sm text-muted-foreground",
           closeButton:

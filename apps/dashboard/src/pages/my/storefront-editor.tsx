@@ -97,7 +97,7 @@ export function StorefrontEditor() {
               <SaveStatus />
             </div>
             {url ? (
-              <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground hover:underline">
+              <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate py-0.5 text-sm text-muted-foreground hover:text-foreground hover:underline">
                 {url.replace(/^https?:\/\//, '')}
               </a>
             ) : (
@@ -199,7 +199,7 @@ export function StorefrontEditor() {
 function PreviewFooter({ url, onNavigate }: { url: string | null; onNavigate?: () => void }) {
   const navigate = useNavigate();
   const link =
-    'rounded-md px-1 text-sm font-medium text-muted-foreground transition-colors duration-100 ease-linear hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
+    'rounded-md px-1 py-1 text-sm font-medium text-muted-foreground transition-colors duration-100 ease-linear hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
   return (
     <div className="flex items-center gap-4">
       {url ? (
