@@ -32,7 +32,7 @@ createRoot(document.getElementById('root')!).render(
             </AuthProvider>
           </QueryClientProvider>
         )}
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-center" />
       </TooltipProvider>
       </I18nProvider>
     </ThemeProvider>

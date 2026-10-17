@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Gift, Loader2, Plus, X } from 'lucide-react';
+import { GiftIcon as Gift, LoaderIcon as Loader2, AddIcon as Plus, CloseIcon as X } from '@solar-icons/react/linear';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

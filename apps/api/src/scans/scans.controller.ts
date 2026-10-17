@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -17,6 +17,7 @@ import {
   CollectResponseDto,
   RedeemResponseDto,
   PreviewScanResponseDto,
+  ScansTodayResponseDto,
 } from './dto/scan-response.dto';
 import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
 import { ScansService } from './scans.service';
@@ -32,6 +33,13 @@ import { ScansService } from './scans.service';
 @Controller('vendor/scans')
 export class ScansController {
   constructor(private readonly scans: ScansService) {}
+
+  /** My collects and rewards given today (Cairo time), for the dashboard till. */
+  @Get('today')
+  @ApiOkResponse({ type: ScansTodayResponseDto })
+  today(@CurrentStaff() ctx: StaffContext): Promise<ScansTodayResponseDto> {
+    return this.scans.today(ctx);
+  }
 
   /** What the QR is and whether it can be used here. Changes nothing. */
   @Post('preview')

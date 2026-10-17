@@ -136,6 +136,12 @@ describe('Vendor dashboard API: only my vendor’s data (e2e)', () => {
 
     const m = (await as('managerA1', 'get', '/api/vendor/summary').expect(200)).body;
     expect(m.branches.map((b: { name: string }) => b.name)).toEqual(['A1']);
+    const filtered = (await as('adminA', 'get', `/api/vendor/summary?branchId=${ids.branchA2}`).expect(200)).body;
+    expect(filtered.branches.map((b: { id: string }) => b.id)).toEqual([ids.branchA2]);
+    await as('adminA', 'get', `/api/vendor/summary?branchId=${ids.branchB1}`).expect(404);
+    await as('adminA', 'get', '/api/vendor/summary?branchId=invalid').expect(400);
+    const locked = (await as('managerA1', 'get', `/api/vendor/summary?branchId=${ids.branchA2}`).expect(200)).body;
+    expect(locked.branches.map((b: { id: string }) => b.id)).toEqual([ids.branchA1]);
     await as('staffA1', 'get', '/api/vendor/summary').expect(403);
   });
 

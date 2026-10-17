@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Calculator, Loader2 } from 'lucide-react';
+import { CalculatorIcon as Calculator, LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';

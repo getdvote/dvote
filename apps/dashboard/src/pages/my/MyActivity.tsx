@@ -192,7 +192,7 @@ const money = (s: string) => (s.endsWith('.00') ? num(Number(s)) : Number(s).toL
 function ActivitySheet({ item, currency, onClose }: { item: ActivityItem | null; currency: string; onClose: () => void }) {
   return (
     <Sheet open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-[440px]">
+      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=left]:w-full data-[side=right]:sm:max-w-[440px] data-[side=left]:sm:max-w-[440px]">
         {item ? (
           <>
             <SheetHeader>

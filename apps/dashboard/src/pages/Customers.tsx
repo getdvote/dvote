@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Ban, CircleCheck, Loader2, SlidersHorizontal, Undo2 } from 'lucide-react';
+import { ForbiddenCircleIcon as Ban, CheckCircleIcon as CircleCheck, LoaderIcon as Loader2, Tuning2Icon as SlidersHorizontal, UndoLeftIcon as Undo2 } from '@solar-icons/react/linear';
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -143,7 +143,7 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
 
   return (
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-[560px]">
+      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=left]:w-full data-[side=right]:sm:max-w-[560px] data-[side=left]:sm:max-w-[560px]">
         <SheetHeader>
           <SheetTitle>Customer</SheetTitle>
         </SheetHeader>

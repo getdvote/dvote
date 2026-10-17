@@ -1,4 +1,4 @@
-import { Copy, Plus, X } from 'lucide-react';
+import { CopyIcon as Copy, AddIcon as Plus, CloseIcon as X } from '@solar-icons/react/linear';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { HoursSlot } from '../lib/api';

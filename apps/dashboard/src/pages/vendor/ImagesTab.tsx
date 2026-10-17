@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Trash2, Upload, X } from 'lucide-react';
+import { AltArrowLeftIcon as ChevronLeft, AltArrowRightIcon as ChevronRight, GalleryIcon as ImageIcon, LoaderIcon as Loader2, TrashBinTrashIcon as Trash2, UploadIcon as Upload, CloseIcon as X } from '@solar-icons/react/linear';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -289,7 +289,7 @@ function ImageViewer({ images, index, onChange }: { images: VendorImage[]; index
             <Button variant="secondary" size="icon" aria-label={t('images.previous')} onClick={() => go(-1)}>
               <ChevronLeft className="rtl:rotate-180" />
             </Button>
-            <span className="text-sm text-white tabular-nums">
+            <span className="text-sm text-popover-foreground tabular-nums md:text-white">
               {(index ?? 0) + 1} / {images.length}
             </span>
             <Button variant="secondary" size="icon" aria-label={t('images.next')} onClick={() => go(1)}>

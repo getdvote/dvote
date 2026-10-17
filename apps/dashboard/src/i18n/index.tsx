@@ -19,9 +19,9 @@ import { en, type Dictionary, type PluralForms } from './en';
  */
 export type Language = 'en' | 'ar';
 
-export const LANGUAGES: { code: Language; label: string }[] = [
-  { code: 'en', label: 'English' },
-  { code: 'ar', label: 'العربية' },
+export const LANGUAGES: { code: Language; label: string; short: string }[] = [
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'ar', label: 'العربية', short: 'ع' },
 ];
 
 const STORAGE_KEY = 'dvote-dashboard-language';

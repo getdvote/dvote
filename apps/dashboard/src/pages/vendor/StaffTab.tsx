@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { LoaderIcon as Loader2, LetterIcon as Mail, UserPlusIcon as UserPlus } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';

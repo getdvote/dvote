@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { CircleCheck, CircleX, Cpu, Database, HardDrive, Image as ImageIcon, MemoryStick, RefreshCw, Smartphone, Users } from 'lucide-react';
+import { CheckCircleIcon as CircleCheck, CloseCircleIcon as CircleX, CpuIcon as Cpu, DatabaseIcon as Database, ServerIcon as HardDrive, GalleryIcon as ImageIcon, SdCardIcon as MemoryStick, RefreshIcon as RefreshCw, SmartphoneIcon as Smartphone, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

@@ -14,7 +14,8 @@ import { t } from '../i18n';
 
 /**
  * A trigger (usually a button) that asks before doing something hard to undo: suspend, block,
- * stop earning, delete. Stays open with a spinner until `onConfirm` settles.
+ * stop earning, delete. Stays open with a spinner until `onConfirm` settles. Without a trigger,
+ * open it yourself with `open` / `onOpenChange` (e.g. from a menu item, which closes its menu).
  */
 export function ConfirmAction({
   trigger,
@@ -22,18 +23,24 @@ export function ConfirmAction({
   description,
   actionLabel,
   onConfirm,
+  open: controlledOpen,
+  onOpenChange,
 }: {
-  trigger: ReactNode;
+  trigger?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: string;
   description?: ReactNode;
   actionLabel: string;
   onConfirm: () => Promise<unknown>;
 }) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlledOpen ?? ownOpen;
+  const setOpen = (o: boolean) => (onOpenChange ? onOpenChange(o) : setOwnOpen(o));
   const [busy, setBusy] = useState(false);
   return (
     <AlertDialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      {trigger ? <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger> : null}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

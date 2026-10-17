@@ -1,4 +1,4 @@
-import { AlertCircle } from 'lucide-react';
+import { DangerCircleIcon as AlertCircle } from '@solar-icons/react/linear';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { errorMessage } from '../lib/api';
 

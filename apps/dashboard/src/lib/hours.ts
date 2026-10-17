@@ -2,6 +2,13 @@ import dayjs from 'dayjs';
 import type { Branch, HoursSlot } from './api';
 import { t } from '../i18n';
 
+/**
+ * Opening hours and "temporarily closed" are hidden for now (decided 2026-10-17): no hours
+ * editor, no open-now pill or status, no badge on Scan. The API hides them from customers too
+ * (OPENING_HOURS_ENABLED). Set true to bring them back.
+ */
+export const OPENING_HOURS = false;
+
 /** Egypt's week starts on Saturday: rows are shown in this order (0 = Sunday). */
 export const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5];
 /** Day name in the dashboard language (0 = Sunday). */

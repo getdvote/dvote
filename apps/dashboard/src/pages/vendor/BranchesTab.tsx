@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Images, Loader2, MapPin, Plus } from 'lucide-react';
+import { AlbumIcon as Images, LoaderIcon as Loader2, MapPointIcon as MapPin, AddIcon as Plus } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { StatusTag } from '../../components/StatusTag';
 import { WeeklyHoursEditor } from '../../components/WeeklyHoursEditor';
 import { TableState } from '../../components/TableState';
 import { errorMessage, type Branch, type HoursSlot } from '../../lib/api';
-import { hoursSummary } from '../../lib/hours';
+import { hoursSummary, OPENING_HOURS } from '../../lib/hours';
 import { cityLabel, cityName, citiesSorted, type CityKey } from '../../lib/cities';
 import { t } from '../../i18n';
 import type { VendorScope } from '../../lib/scope';
@@ -62,18 +62,18 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
               <TableHead>{t('branches.address')}</TableHead>
               <TableHead>{t('branches.map')}</TableHead>
               <TableHead>{t('branches.photos')}</TableHead>
-              <TableHead>{t('branches.now')}</TableHead>
+              {OPENING_HOURS ? <TableHead>{t('branches.now')}</TableHead> : null}
               <TableHead>{t('common.status')}</TableHead>
               <TableHead className="pe-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={7} emptyText={t('branches.empty')} />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={OPENING_HOURS ? 7 : 6} emptyText={t('branches.empty')} />
             {data?.map((b) => (
               <TableRow key={b.id}>
                 <TableCell className="ps-4">
                   <div className="font-semibold">{b.name}</div>
-                  {hoursSummary(b.hours) ? <div className="text-xs text-muted-foreground tabular-nums">{hoursSummary(b.hours)}</div> : null}
+                  {OPENING_HOURS && hoursSummary(b.hours) ? <div className="text-xs text-muted-foreground tabular-nums">{hoursSummary(b.hours)}</div> : null}
                 </TableCell>
                 <TableCell className="max-w-xs whitespace-normal">
                   {b.address || b.city ? [b.address, cityName(b.city)].filter(Boolean).join(', ') : <span className="text-muted-foreground">—</span>}
@@ -97,9 +97,11 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
                     <Images /> {photoCount(b.id)}
                   </Button>
                 </TableCell>
-                <TableCell>
-                  <BranchNow scope={scope} branch={b} />
-                </TableCell>
+                {OPENING_HOURS ? (
+                  <TableCell>
+                    <BranchNow scope={scope} branch={b} />
+                  </TableCell>
+                ) : null}
                 <TableCell>
                   <StatusTag status={b.status} />
                 </TableCell>
@@ -162,7 +164,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
     if (found.city) setCity((c) => c ?? found.city);
   };
   const save = useMutation({
-    mutationFn: async (body: Pick<Branch, 'name' | 'address' | 'city' | 'lat' | 'lng' | 'hours'>) => {
+    mutationFn: async (body: Pick<Branch, 'name' | 'address' | 'city' | 'lat' | 'lng'> & Partial<Pick<Branch, 'hours'>>) => {
       if (!isNew) return { branch: await scope.updateBranch(current!.id, body), failed: 0 };
       // A new branch's photos can only upload once it exists.
       const branch = await scope.createBranch(body);
@@ -207,7 +209,8 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
               city,
               lat: location?.lat ?? null,
               lng: location?.lng ?? null,
-              hours,
+              // hours hidden: leave what the branch has untouched
+              ...(OPENING_HOURS ? { hours } : {}),
             });
           }}
         >
@@ -242,7 +245,7 @@ function BranchDialog({ scope, branch, onClose }: { scope: VendorScope; branch: 
               </Select>
             </Field>
           </div>
-          <WeeklyHoursEditor value={hours} onChange={setHours} />
+          {OPENING_HOURS ? <WeeklyHoursEditor value={hours} onChange={setHours} /> : null}
           <div className="grid gap-2">
             <span className="text-sm font-medium">{t('branches.location')}</span>
             <LocationPicker value={location} onChange={setLocation} onAddress={fillAddress} />

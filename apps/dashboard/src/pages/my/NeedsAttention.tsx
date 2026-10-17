@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
+import { ArrowRightIcon as ArrowRight, DangerCircleIcon as CircleAlert, CheckCircleIcon as CircleCheck, InfoCircleIcon as Info, DangerTriangleIcon as TriangleAlert } from '@solar-icons/react/linear';
 import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
