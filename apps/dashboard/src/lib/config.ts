@@ -6,6 +6,8 @@ const clean = (v: string | undefined) => (v ?? '').trim().replace(/\/+$/, '');
 
 export const config = {
   apiUrl: clean(import.meta.env.VITE_API_URL) || 'http://localhost:3000',
+  /** The customer website (apps/web): each shop's page is <webUrl>/<slug>. */
+  webUrl: clean(import.meta.env.VITE_WEB_URL) || 'http://localhost:5174',
   supabaseUrl: clean(import.meta.env.VITE_SUPABASE_URL),
   supabasePublishableKey: clean(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY),
 };

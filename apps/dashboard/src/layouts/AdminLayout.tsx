@@ -17,6 +17,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -45,6 +46,8 @@ export interface NavItem {
   label: string;
   /** Section heading; items with the same group sit together under it (none = top section). */
   group?: string;
+  /** A small button at the end of the row (e.g. preview), hidden when the sidebar is collapsed. */
+  action?: { icon: ComponentType<{ className?: string }>; label: string; onClick: () => void };
 }
 
 const NAV: NavItem[] = [
@@ -89,7 +92,10 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                 asChild
                 isActive={isActive(n.to)}
                 tooltip={n.label}
-                className="relative h-9 gap-3 px-3 font-medium data-active:bg-transparent [&_svg]:size-[18px] [&>*:not([data-pill])]:relative"
+                className={cn(
+                  'relative h-9 gap-3 px-3 font-medium data-active:bg-transparent [&_svg]:size-[18px] [&>*:not([data-pill])]:relative',
+                  n.action && 'pe-10',
+                )}
               >
                 <NavLink to={n.to}>
                   {/* the highlight glides from the old page to the new one */}
@@ -105,6 +111,16 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                   <span data-nav-label>{n.label}</span>
                 </NavLink>
               </SidebarMenuButton>
+              {n.action ? (
+                <SidebarMenuAction
+                  title={n.action.label}
+                  aria-label={n.action.label}
+                  onClick={n.action.onClick}
+                  className="top-1.5 right-1.5 size-6 w-6 text-muted-foreground hover:text-foreground rtl:right-auto rtl:left-1.5"
+                >
+                  <n.action.icon />
+                </SidebarMenuAction>
+              ) : null}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

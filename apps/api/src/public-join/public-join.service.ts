@@ -3,8 +3,10 @@ import { randomInt } from 'node:crypto';
 import { Prisma, type users } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
 import { PrismaService } from '../prisma/prisma.service';
+import { BUCKETS, StorageService } from '../storage/storage.service';
 import { GoogleWalletService } from '../wallet/google-wallet.service';
 import { egyptianMobile } from './egyptian-phone';
+import { BRAND_FONTS, readStorefront, type BrandFont, type PageStyle } from '../storefront/storefront';
 import type { JoinResultDto, JoinVendorDto, PublicCardDto, PublicVendorDto } from './dto/public-join.dto';
 
 /** Letters and digits that can't be confused when read aloud or typed (no 0/O, 1/I/L). */
@@ -33,6 +35,7 @@ export class PublicJoinService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly google: GoogleWalletService,
+    private readonly storage: StorageService,
   ) {}
 
   async walletStatus(publicId: string): Promise<{ google: boolean; apple: boolean }> {
@@ -45,13 +48,18 @@ export class PublicJoinService {
   }
 
   /** Venue page / join form data. Suspended or unknown merchants are not found. */
-  async vendor(slug: string): Promise<PublicVendorDto> {
+  async vendor(slug: string, branchId?: string): Promise<PublicVendorDto> {
     const v = await this.prisma.vendors.findUnique({
       where: { slug },
       include: {
         point_rules: { where: { is_active: true }, take: 1 },
         rewards: { where: { status: 'active' }, orderBy: [{ sort_order: 'asc' }, { points_cost: 'asc' }] },
-        branches: { where: { status: 'active' }, orderBy: { name: 'asc' }, select: { id: true, name: true } },
+        branches: {
+          where: { status: 'active' },
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, address: true, lat: true, lng: true, storefront: true },
+        },
+        vendor_images: { where: { kind: 'menu' }, orderBy: { sort_order: 'asc' }, select: { storage_path: true } },
       },
     });
     if (!v || v.status !== 'active') throw new NotFoundException({ code: 'vendor_not_found' });
@@ -67,7 +75,21 @@ export class PublicJoinService {
       currency: v.currency,
       rule: rule ? { spendAmount: fromMinor(toMinor(rule.spend_amount)), pointsPerSpend: rule.points_per_spend } : null,
       rewards: v.rewards.map((r) => ({ name: r.name, nameAr: r.name_ar, pointsCost: r.points_cost, imageUrl: r.image_url })),
-      branches: v.branches,
+      branches: v.branches.map((b) => ({
+        id: b.id,
+        name: b.name,
+        address: b.address,
+        mapsUrl: b.lat !== null && b.lng !== null ? `https://www.google.com/maps/dir/?api=1&destination=${String(b.lat)},${String(b.lng)}` : null,
+      })),
+      style: {
+        pageStyle: (v.page_style as PageStyle | null) ?? 'spotlight',
+        primary: v.brand_primary,
+        secondary: v.brand_secondary,
+        font: v.brand_font ? (BRAND_FONTS[v.brand_font as BrandFont] ?? null) : null,
+      },
+      // a branch's own storefront when the page is opened for it (?b=), else the shop's
+      sections: readStorefront(v.branches.find((b) => b.id === branchId)?.storefront ?? v.storefront).sections,
+      menu: v.vendor_images.map((i) => this.storage.publicUrl(BUCKETS.vendors, i.storage_path)),
     };
   }
 

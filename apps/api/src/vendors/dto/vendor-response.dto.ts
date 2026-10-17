@@ -13,6 +13,9 @@ export class VendorResponseDto {
   @ApiProperty({ type: String, nullable: true })
   logoUrl: string | null;
 
+  @ApiProperty({ example: 'joy-corner', description: 'Public page address: dvote.app/<slug> (empty = none yet)' })
+  slug: string;
+
   @ApiProperty({ type: String, nullable: true, description: 'Shop-page banner' })
   bannerUrl: string | null;
 
@@ -24,6 +27,13 @@ export class VendorResponseDto {
 
   @ApiProperty({ type: String, nullable: true })
   contactEmail: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Public page layout: spotlight | compact | branded | playful | split; null = spotlight' })
+  pageStyle: string | null;
+
+  @ApiProperty({ type: String, nullable: true }) brandPrimary: string | null;
+  @ApiProperty({ type: String, nullable: true }) brandSecondary: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Font key, see storefront.ts BRAND_FONTS' }) brandFont: string | null;
 
   @ApiProperty({ type: String, nullable: true, example: '+201001234567' })
   contactPhone: string | null;
@@ -53,10 +63,15 @@ export class VendorResponseDto {
       id: v.id,
       name: v.name,
       logoUrl: v.logo_url,
+      slug: v.slug,
       bannerUrl: v.banner_url,
       category: v.category as VendorCategory | null,
       cardDesign: v.card_design,
       contactEmail: v.contact_email,
+      pageStyle: v.page_style,
+      brandPrimary: v.brand_primary,
+      brandSecondary: v.brand_secondary,
+      brandFont: v.brand_font,
       contactPhone: v.contact_phone,
       currency: v.currency,
       status: v.status,

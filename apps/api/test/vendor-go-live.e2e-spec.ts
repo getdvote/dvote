@@ -134,7 +134,6 @@ describe('Go-live checklist: GET /api/vendor/go-live (e2e)', () => {
     const r = (await get('admin').expect(200)).body;
     expect(r.steps).toEqual([
       { key: 'logo', done: false, to: '/settings?tab=branding' },
-      { key: 'banner', done: false, to: '/settings?tab=branding' },
       { key: 'rule', done: false, to: '/card' },
       { key: 'reward', done: false, to: '/rewards' },
       { key: 'branch_hours', done: false, to: '/branches' },
@@ -143,7 +142,7 @@ describe('Go-live checklist: GET /api/vendor/go-live (e2e)', () => {
     ]);
     expect(r).toMatchObject({
       done: 0,
-      total: 7,
+      total: 6,
       live: false,
       rewards: { active: 0, withPhoto: 0, withArabic: 0 },
       firstScanAt: null,
@@ -155,13 +154,12 @@ describe('Go-live checklist: GET /api/vendor/go-live (e2e)', () => {
       where: { id: ids.vendor },
       data: {
         logo_url: 'https://x.test/logo.webp',
-        banner_url: 'https://x.test/banner.webp',
       },
     });
     await prisma.point_rules.create({
       data: { vendor_id: ids.vendor, version: 1, spend_amount: 10 },
     });
-    expect(await done()).toEqual(['logo', 'banner', 'rule']);
+    expect(await done()).toEqual(['logo', 'rule']);
 
     // A reward needs both a photo and an Arabic name; archived rewards don't count.
     const reward = await prisma.rewards.create({
@@ -258,7 +256,7 @@ describe('Go-live checklist: GET /api/vendor/go-live (e2e)', () => {
       },
     });
     r = (await get('admin').expect(200)).body;
-    expect(r).toMatchObject({ done: 7, total: 7, live: true });
+    expect(r).toMatchObject({ done: 6, total: 6, live: true });
     expect(r.firstScanAt).toBe(at.toISOString());
   });
 

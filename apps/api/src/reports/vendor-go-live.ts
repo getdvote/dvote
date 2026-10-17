@@ -9,7 +9,6 @@ import { PrismaService } from '../prisma/prisma.service';
 /** The go-live steps, in the order a new merchant should do them. */
 export const GO_LIVE_STEPS = [
   'logo',
-  'banner',
   'rule',
   'reward',
   'branch_hours',
@@ -21,7 +20,6 @@ export type GoLiveStep = (typeof GO_LIVE_STEPS)[number];
 /** Where in the dashboard each step is done. */
 const STEP_PATH: Record<GoLiveStep, string> = {
   logo: '/settings?tab=branding',
-  banner: '/settings?tab=branding',
   rule: '/card',
   reward: '/rewards',
   branch_hours: '/branches',
@@ -71,7 +69,7 @@ export class VendorGoLiveDto {
 }
 
 /**
- * Go-live checklist for a new merchant, from data that already exists: logo, banner, points
+ * Go-live checklist for a new merchant, from data that already exists: logo, points
  * rule, a first active reward with a photo and an Arabic name, an open branch with opening
  * hours, at least one staff member invited, and a first scan. Vendor admin only (they can do
  * every step).
@@ -86,7 +84,7 @@ export class VendorGoLiveService {
       await Promise.all([
         this.prisma.vendors.findUniqueOrThrow({
           where: { id: v },
-          select: { logo_url: true, banner_url: true },
+          select: { logo_url: true },
         }),
         this.prisma.point_rules.count({
           where: { vendor_id: v, is_active: true },
@@ -117,7 +115,6 @@ export class VendorGoLiveService {
     const hasArabic = (r: { name_ar: string | null }) => !!r.name_ar?.trim();
     const done: Record<GoLiveStep, boolean> = {
       logo: !!vendor.logo_url,
-      banner: !!vendor.banner_url,
       rule: rule > 0,
       reward: rewards.some((r) => !!r.image_url && hasArabic(r)),
       // with opening hours hidden, any open branch will do

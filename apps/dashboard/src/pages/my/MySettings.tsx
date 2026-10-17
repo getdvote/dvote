@@ -17,6 +17,7 @@ import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { t } from '../../i18n';
 import { StaffTab } from '../vendor/StaffTab';
 import { GeneralSettings } from './general-settings';
+import { BrandStyleEditor } from './brand-style';
 import { ProfileEditor } from './MyProfile';
 
 const TABS: { key: SettingsTab; icon: ComponentType<{ className?: string }> }[] = [
@@ -80,7 +81,10 @@ export function MySettings() {
             ) : x.key === 'general' ? (
               <GeneralSettings />
             ) : x.key === 'branding' ? (
-              <ProfileEditor />
+              <div className="grid gap-6">
+                <ProfileEditor />
+                <BrandStyleEditor />
+              </div>
             ) : (
               <Soon title={t(`settings.tabs.${x.key}`)} icon={x.icon} />
             )}

@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router';
 import { t, useI18n } from '../i18n';
+import { DvoteLogo } from './dvote-logo';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -27,15 +28,7 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
 }
 
 export function DvoteMark() {
-  return (
-    <span dir="ltr" className="inline-flex items-center gap-1 font-semibold text-ink">
-      <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-        <circle cx="12" cy="12" r="11" fill="#6155F5" />
-        <path d="M8 7h3.5a5 5 0 0 1 0 10H8z" fill="none" stroke="#fff" strokeWidth="2.2" />
-      </svg>
-      dvote
-    </span>
-  );
+  return <DvoteLogo height={20} className="shrink-0 text-ink" />;
 }
 
 export function Button({

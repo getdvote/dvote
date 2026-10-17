@@ -11,6 +11,9 @@ import { myVendorScope, type VendorScope } from '../lib/scope';
 import { cn } from '@/lib/utils';
 import { SideLayout, type NavItem } from './AdminLayout';
 import { t } from '../i18n';
+import { config } from '../lib/config';
+import { StorefrontPreviewDialog } from '../pages/my/storefront-editor';
+import { EyeIcon as Eye } from '@solar-icons/react/linear';
 
 /** The signed-in vendor account (only call inside the vendor routes). */
 export function useMe(): StaffMe {
@@ -35,6 +38,11 @@ export function useMyVendor(): Vendor {
       bannerUrl: null,
       category: null,
       cardDesign: null,
+      slug: '',
+      pageStyle: null,
+      brandPrimary: null,
+      brandSecondary: null,
+      brandFont: null,
       contactEmail: null,
       contactPhone: null,
       status: 'active',
@@ -51,6 +59,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const vendor = useMyVendor();
   const isAdmin = me.role === 'vendor_admin';
   const [helpOpen, setHelpOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const till: NavItem = { to: '/scan', icon: ScanLine, activeIcon: ScanLineActive, label: t('nav.till') };
   const cashier = me.role === 'staff';
   const viewer = me.role === 'viewer'; // read-only: no till, no team
@@ -58,7 +67,19 @@ export function VendorLayout({ children }: { children: ReactNode }) {
     { to: '/', icon: House, activeIcon: HouseActive, label: t('nav.home') },
     ...(viewer ? [] : [till]),
     // The shop as customers see it.
-    ...(isAdmin ? [{ to: '/storefront', icon: Store, activeIcon: StoreActive, label: t('nav.profile'), group: t('nav.hubGroup') }] : []),
+    ...(isAdmin
+      ? [
+          {
+            to: '/storefront',
+            icon: Store,
+            activeIcon: StoreActive,
+            label: t('nav.profile'),
+            group: t('nav.hubGroup'),
+            // the eye: the customer page in a phone, without leaving the current page
+            action: { icon: Eye, label: t('storefront.preview'), onClick: () => setPreviewOpen(true) },
+          },
+        ]
+      : []),
     { to: '/branches', icon: MapPin, activeIcon: MapPinActive, label: t('nav.branches'), group: t('nav.hubGroup') },
     { to: '/feedback', icon: MessageSquareWarning, activeIcon: MessageSquareWarningActive, label: t('nav.feedback'), group: t('nav.hubGroup') },
     // The loyalty program: the card (design + points rule), and rewards (catalogue + given).
@@ -83,11 +104,16 @@ export function VendorLayout({ children }: { children: ReactNode }) {
       accountNav={account}
       languageSwitch
       menuLinks={[
-        // the public shop page on the web: not live yet, so it goes nowhere
-        { icon: Store, label: t('nav.storefrontPreview'), href: '#' },
+        // the shop's public page on the customer website (opens in a new tab)
+        ...(vendor.slug ? [{ icon: Store, label: t('nav.storefrontPreview'), href: `${config.webUrl}/${vendor.slug}` }] : []),
         { icon: CircleHelp, label: t('nav.getHelp'), onSelect: () => setHelpOpen(true) },
       ]}
-      overlays={<ContactDvote name={me.name} shop={vendor.name} open={helpOpen} onOpenChange={setHelpOpen} />}
+      overlays={
+        <>
+          <ContactDvote name={me.name} shop={vendor.name} open={helpOpen} onOpenChange={setHelpOpen} />
+          {isAdmin ? <StorefrontPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} /> : null}
+        </>
+      }
       identity={{ name: vendor.name, subtitle: me.email, imageUrl: vendor.logoUrl, extra: cashier || !OPENING_HOURS ? null : <BranchesNow /> }}
     >
       {children}

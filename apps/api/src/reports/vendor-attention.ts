@@ -83,7 +83,7 @@ export class VendorAttentionService {
       await Promise.all([
         this.prisma.vendors.findUniqueOrThrow({
           where: { id: v },
-          select: { logo_url: true, banner_url: true },
+          select: { logo_url: true },
         }),
         this.prisma.point_rules.findFirst({
           where: { vendor_id: v, is_active: true },
@@ -231,21 +231,16 @@ export class VendorAttentionService {
         params: { count: noMap.length, branch: noMap[0].name },
       });
     }
-    if (admin && (!vendor.logo_url || !vendor.banner_url)) {
-      const missing = [
-        !vendor.logo_url && 'logo',
-        !vendor.banner_url && 'banner',
-      ]
-        .filter(Boolean)
-        .join(' and ');
+    // the banner is no longer used (2026-10-17): only the logo is asked for
+    if (admin && !vendor.logo_url) {
       add({
         key: 'profile_branding',
         group: 'setup',
         tone: 'info',
-        title: `Your shop has no ${missing}`,
-        detail: 'They make your shop page and cards in the app look like you.',
+        title: 'Your shop has no logo',
+        detail: 'It makes your storefront page and loyalty card look like you.',
         action: { label: 'Open branding', to: '/settings?tab=branding' },
-        params: { missing: !vendor.logo_url && !vendor.banner_url ? 'both' : !vendor.logo_url ? 'logo' : 'banner' },
+        params: { missing: 'logo' },
       });
     }
     if (admin && staffCount === 0) {
