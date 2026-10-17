@@ -14,8 +14,22 @@ export interface PublicVendor {
   currency: string;
   rule: { spendAmount: string; pointsPerSpend: number } | null;
   rewards: { name: string; nameAr: string | null; pointsCost: number; imageUrl: string | null }[];
-  branches: { id: string; name: string }[];
+  branches: { id: string; name: string; address: string | null; mapsUrl: string | null }[];
+  /** Settings → Branding. Colours #rrggbb or null (= the card colours); font = a Google Fonts family. */
+  style: { pageStyle: PageStyle; primary: string | null; secondary: string | null; font: string | null };
+  /** The page sections in order (the branch's own copy when opened with ?b=). */
+  sections: Section[];
+  /** Menu page images, in order. */
+  menu: string[];
 }
+
+export type PageStyle = 'spotlight' | 'compact' | 'branded';
+export type Section =
+  | { type: 'loyalty'; label: 'loyalty_card' | 'join_club' | 'collect_points' }
+  | { type: 'rewards' }
+  | { type: 'menu' }
+  | { type: 'branches' }
+  | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
 
 export interface PublicCard {
   publicId: string;
@@ -73,7 +87,8 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
 }
 
 export const api = {
-  vendor: (slug: string) => call<PublicVendor>('GET', `/api/public/vendors/${encodeURIComponent(slug)}`),
+  vendor: (slug: string, branch?: string | null) =>
+    call<PublicVendor>('GET', `/api/public/vendors/${encodeURIComponent(slug)}${branch ? `?b=${encodeURIComponent(branch)}` : ''}`),
   /** Join, or get the card back (same email + same mobile). No sign-in. */
   join: (slug: string, body: JoinBody) =>
     call<{ created: boolean; card: PublicCard }>('POST', `/api/public/vendors/${encodeURIComponent(slug)}/join`, body),

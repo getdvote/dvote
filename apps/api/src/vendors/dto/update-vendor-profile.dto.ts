@@ -12,4 +12,8 @@ export class UpdateVendorProfileDto extends PickType(UpdateVendorDto, [
   'contactPhone',
   'category',
   'cardDesign',
+  'pageStyle',
+  'brandPrimary',
+  'brandSecondary',
+  'brandFont',
 ] as const) {}

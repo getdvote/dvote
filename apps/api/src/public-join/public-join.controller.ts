@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -31,8 +31,8 @@ export class PublicJoinController {
   @Get('vendors/:slug')
   @ApiOkResponse({ type: PublicVendorDto })
   @ApiNotFoundResponse({ description: 'vendor_not_found (unknown or suspended)' })
-  vendor(@Param('slug') slug: string): Promise<PublicVendorDto> {
-    return this.join.vendor(slug.toLowerCase());
+  vendor(@Param('slug') slug: string, @Query('b') branch?: string): Promise<PublicVendorDto> {
+    return this.join.vendor(slug.toLowerCase(), branch);
   }
 
   /**

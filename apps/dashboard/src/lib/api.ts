@@ -109,6 +109,8 @@ export interface Vendor {
   id: string;
   name: string;
   logoUrl: string | null;
+  /** Public page address on the customer website: <web>/<slug> (empty = none yet). */
+  slug: string;
   /** Shop-page banner in the app. */
   bannerUrl: string | null;
   category: VendorCategory | null;
@@ -117,6 +119,11 @@ export interface Vendor {
   contactEmail: string | null;
   /** Shop contact phone, e.g. +201001234567. */
   contactPhone: string | null;
+  /** Public page look (Settings → Branding); null = defaults. */
+  pageStyle: PageStyle | null;
+  brandPrimary: string | null;
+  brandSecondary: string | null;
+  brandFont: BrandFont | null;
   currency: string;
   status: VendorStatus;
   branchCount: number;
@@ -444,6 +451,24 @@ export interface AttentionItem {
   params?: Record<string, string | number>;
 }
 
+/** The public page (customer website): sections in order; see lib/storefront.ts. */
+export type PageStyle = 'spotlight' | 'compact' | 'branded';
+export type BrandFont = 'inter' | 'poppins' | 'montserrat' | 'dm_sans' | 'playfair' | 'lora' | 'cairo' | 'tajawal' | 'almarai' | 'ibm_plex_arabic';
+export type StorefrontSection =
+  | { type: 'loyalty'; label: 'loyalty_card' | 'join_club' | 'collect_points' }
+  | { type: 'rewards' }
+  | { type: 'menu' }
+  | { type: 'branches' }
+  | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
+export interface Storefront {
+  sections: StorefrontSection[];
+}
+export interface StorefrontSettings {
+  shop: Storefront;
+  /** Open branches; storefront null = uses the shop's. */
+  branches: { id: string; name: string; storefront: Storefront | null }[];
+}
+
 /** How a merchant feels about dvote (quick feedback). */
 export type MerchantMood = 'love' | 'okay' | 'unhappy';
 
@@ -732,7 +757,12 @@ export const vendorApi = {
   events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
-  updateProfile: (body: { name?: string; contactEmail?: string | null; contactPhone?: string | null } & Partial<VendorBranding>) =>
+  storefront: () => call<StorefrontSettings>('GET', '/api/vendor/storefront'),
+  saveStorefront: (body: { branchId?: string; storefront: Storefront | null }) => call<StorefrontSettings>('PUT', '/api/vendor/storefront', body),
+  updateProfile: (
+    body: { name?: string; contactEmail?: string | null; contactPhone?: string | null } & Partial<VendorBranding> &
+      Partial<Pick<Vendor, 'pageStyle' | 'brandPrimary' | 'brandSecondary' | 'brandFont'>>,
+  ) =>
     call<Vendor>('PATCH', '/api/vendor/profile', body),
   uploadLogo: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/logo', file(f)),
   removeLogo: () => call<Vendor>('DELETE', '/api/vendor/profile/logo'),

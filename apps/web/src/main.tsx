@@ -6,7 +6,7 @@ import { configProblem } from './lib/config';
 import { CardPage } from './pages/CardPage';
 import { HomePage, PrivacyPage } from './pages/InfoPages';
 import { JoinPage } from './pages/JoinPage';
-import { VenuePage } from './pages/VenuePage';
+import { VenuePage, VenueSectionPage } from './pages/VenuePage';
 import './styles.css';
 
 /**
@@ -19,6 +19,9 @@ const router = createBrowserRouter([
   { path: '/c/:publicId', element: <CardPage /> },
   { path: '/:slug', element: <VenuePage /> },
   { path: '/:slug/join', element: <JoinPage /> },
+  { path: '/:slug/rewards', element: <VenueSectionPage kind="rewards" /> },
+  { path: '/:slug/menu', element: <VenueSectionPage kind="menu" /> },
+  { path: '/:slug/branches', element: <VenueSectionPage kind="branches" /> },
   { path: '*', element: <HomePage /> },
 ]);
 

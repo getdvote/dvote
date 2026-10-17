@@ -1,3 +1,4 @@
+import type { Storefront } from '../../storefront/storefront';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { IsUuid } from '../../common/uuid';
@@ -61,6 +62,16 @@ class PublicRewardDto {
 class PublicBranchDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() name: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Street line' }) address: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Google Maps directions link, when the branch has a map pin' }) mapsUrl: string | null;
+}
+
+/** How the page looks (Settings → Branding). Colours are #rrggbb or null (= the card colours). */
+class PublicStyleDto {
+  @ApiProperty({ enum: ['spotlight', 'compact', 'branded'] }) pageStyle: 'spotlight' | 'compact' | 'branded';
+  @ApiProperty({ type: String, nullable: true }) primary: string | null;
+  @ApiProperty({ type: String, nullable: true }) secondary: string | null;
+  @ApiProperty({ type: String, nullable: true, example: 'Playfair Display', description: 'Google Fonts family; null = default' }) font: string | null;
 }
 
 /** What the venue page and the join form show about a merchant (no private data). */
@@ -76,6 +87,9 @@ export class PublicVendorDto {
   @ApiProperty({ type: PublicRuleDto, nullable: true, description: 'null = not earning yet' }) rule: PublicRuleDto | null;
   @ApiProperty({ type: [PublicRewardDto] }) rewards: PublicRewardDto[];
   @ApiProperty({ type: [PublicBranchDto] }) branches: PublicBranchDto[];
+  @ApiProperty({ type: PublicStyleDto }) style: PublicStyleDto;
+  @ApiProperty({ description: 'Page sections in order ({type, ...}); the branch copy when ?b= names a branch that has one' }) sections: Storefront['sections'];
+  @ApiProperty({ type: [String], description: 'Menu page images, in order' }) menu: string[];
 }
 
 /** One customer's loyalty card at one merchant, as the card page and the wallet pass show it. */

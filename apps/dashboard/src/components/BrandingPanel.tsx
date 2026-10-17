@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { CheckIcon as Check, GalleryAddIcon as ImagePlus, LoaderIcon as Loader2, TrashBinTrashIcon as Trash2 } from '@solar-icons/react/linear';
-import { useRef } from 'react';
+import { CheckIcon as Check, LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,13 +8,11 @@ import { errorMessage, type Vendor, type VendorBranding, type VendorCategory } f
 import { CARD_DESIGNS, cardDesign, categoryLabel, designName, VENDOR_CATEGORIES } from '../lib/cardDesigns';
 import { t } from '../i18n';
 import { CardPreview } from './CardPreview';
-import { DvoteLogo } from './DvoteLogo';
 
-const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 const NONE = 'none';
 
 /**
- * How a vendor looks in the customer app: its category, the shop-page banner and the design of
+ * How a vendor looks to customers: its category and the design of
  * its loyalty cards (one of 10). The same panel serves a platform admin (any vendor) and a
  * vendor admin (their own vendor): only the save / upload calls differ.
  */
@@ -23,21 +20,16 @@ export function BrandingPanel({
   vendor,
   canEdit,
   save,
-  uploadBanner,
-  removeBanner,
   onSaved,
   showDesign = true,
 }: {
   vendor: Vendor;
   canEdit: boolean;
   save: (body: Partial<VendorBranding>) => Promise<Vendor>;
-  uploadBanner: (f: File) => Promise<Vendor>;
-  removeBanner: () => Promise<Vendor>;
   onSaved: (v: Vendor) => void;
   /** The card design picker (merchants have it on the Card page instead). */
   showDesign?: boolean;
 }) {
-  const fileInput = useRef<HTMLInputElement>(null);
   const done = (text: string) => (v: Vendor) => {
     onSaved(v);
     toast.success(text);
@@ -45,9 +37,6 @@ export function BrandingPanel({
   const fail = (e: unknown) => void toast.error(errorMessage(e));
 
   const update = useMutation({ mutationFn: save, onError: fail });
-  const banner = useMutation({ mutationFn: uploadBanner, onSuccess: done(t('branding.bannerSaved')), onError: fail });
-  const dropBanner = useMutation({ mutationFn: removeBanner, onSuccess: done(t('branding.bannerRemoved')), onError: fail });
-  const shown = cardDesign(vendor.id, vendor.cardDesign); // the empty banner uses its colours
 
   return (
     <div className="grid gap-8">
@@ -74,59 +63,6 @@ export function BrandingPanel({
             ))}
           </SelectContent>
         </Select>
-      </section>
-
-      {/* Banner */}
-      <section className="grid gap-2">
-        <h3 className="font-semibold">{t('branding.banner')}</h3>
-        <p className="text-sm text-muted-foreground">{t('branding.bannerHint')}</p>
-        <div className="flex flex-wrap items-end gap-4">
-          <div
-            className="relative aspect-[2/1] w-full max-w-md overflow-hidden rounded-xl border"
-            style={vendor.bannerUrl ? undefined : { background: `linear-gradient(135deg, ${shown.colors[0]}, ${shown.colors[1]})` }}
-          >
-            {vendor.bannerUrl ? (
-              <img src={vendor.bannerUrl} alt="" className="size-full object-cover" />
-            ) : (
-              <>
-                <div className="absolute -top-[10%] -end-[10%]">
-                  <DvoteLogo height={200} wordmark={false} color="rgba(255,255,255,0.12)" />
-                </div>
-                <span className="absolute start-3 bottom-2 rounded-full bg-black/45 px-2 py-0.5 text-xs text-white">
-                  {t('branding.noBanner')}
-                </span>
-              </>
-            )}
-            {banner.isPending || dropBanner.isPending ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <Loader2 className="size-6 animate-spin text-white" />
-              </div>
-            ) : null}
-          </div>
-          {canEdit ? (
-            <div className="flex gap-2">
-              <Button variant="outline" disabled={banner.isPending} onClick={() => fileInput.current?.click()}>
-                <ImagePlus /> {vendor.bannerUrl ? t('branding.replace') : t('branding.upload')}
-              </Button>
-              {vendor.bannerUrl ? (
-                <Button variant="ghost" className="text-destructive" disabled={dropBanner.isPending} onClick={() => dropBanner.mutate()}>
-                  <Trash2 /> {t('common.remove')}
-                </Button>
-              ) : null}
-              <input
-                ref={fileInput}
-                type="file"
-                accept={IMAGE_ACCEPT}
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) banner.mutate(f);
-                  e.target.value = '';
-                }}
-              />
-            </div>
-          ) : null}
-        </div>
       </section>
 
       {showDesign ? <CardDesignPicker vendor={vendor} canEdit={canEdit} save={save} onSaved={onSaved} /> : null}

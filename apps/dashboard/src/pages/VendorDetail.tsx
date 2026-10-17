@@ -82,8 +82,6 @@ export function VendorDetail() {
                     vendor={vendor}
                     canEdit
                     save={(body) => api.updateVendor(vendor.id, body)}
-                    uploadBanner={(f) => api.uploadBanner(vendor.id, f)}
-                    removeBanner={() => api.removeBanner(vendor.id)}
                     onSaved={(v) => {
                       qc.setQueryData(['vendor', v.id], v);
                       void qc.invalidateQueries({ queryKey: ['vendors'] });

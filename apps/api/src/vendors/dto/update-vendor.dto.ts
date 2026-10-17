@@ -18,6 +18,10 @@ import {
 } from 'class-validator';
 import { vendor_status } from '../../generated/prisma/enums.js';
 import { CARD_DESIGN_COUNT, VENDOR_CATEGORIES, type VendorCategory } from '../vendor-branding';
+import { BRAND_FONTS, PAGE_STYLES, type BrandFont, type PageStyle } from '../../storefront/storefront';
+
+const HEX = /^#[0-9a-f]{6}$/;
+const lowerHex = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
 
 /** A stored vendor phone: +20 and an Egyptian mobile number (010/011/012/015 + 8 digits). */
 const EGYPT_MOBILE = /^\+201[0125][0-9]{8}$/;
@@ -116,4 +120,26 @@ export class UpdateVendorDto {
   @Min(1)
   @Max(CARD_DESIGN_COUNT)
   cardDesign?: number | null;
+
+  @ApiPropertyOptional({ enum: PAGE_STYLES, nullable: true, description: 'Public page layout; null = spotlight' })
+  @IsOptional()
+  @IsIn(PAGE_STYLES)
+  pageStyle?: PageStyle | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, example: '#2048ac', description: 'Public page main colour; null = card colours' })
+  @IsOptional()
+  @Transform(lowerHex)
+  @Matches(HEX, { message: 'brandPrimary must be a #rrggbb colour' })
+  brandPrimary?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, example: '#01e8fe' })
+  @IsOptional()
+  @Transform(lowerHex)
+  @Matches(HEX, { message: 'brandSecondary must be a #rrggbb colour' })
+  brandSecondary?: string | null;
+
+  @ApiPropertyOptional({ enum: Object.keys(BRAND_FONTS), nullable: true, description: 'Public page display font; null = default' })
+  @IsOptional()
+  @IsIn(Object.keys(BRAND_FONTS))
+  brandFont?: BrandFont | null;
 }

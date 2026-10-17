@@ -25,6 +25,7 @@ model branches {
   city             String?            @db.VarChar(40)
   weekly_hours     Json?
   paused_until     DateTime?          @db.Timestamptz(6)
+  storefront       Json?
   vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   cards            cards[]
   fraud_flags      fraud_flags[]
@@ -219,6 +220,11 @@ model vendors {
   banner_url       String?            @db.VarChar(500)
   banner_path      String?            @db.VarChar(300)
   slug             String             @unique(map: "vendors_slug_uq") @default("") @db.VarChar(50)
+  storefront       Json?
+  page_style       String?            @db.VarChar(20)
+  brand_primary    String?            @db.VarChar(7)
+  brand_secondary  String?            @db.VarChar(7)
+  brand_font       String?            @db.VarChar(40)
   branches         branches[]
   cards            cards[]
   fraud_flags      fraud_flags[]

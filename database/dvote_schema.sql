@@ -76,7 +76,16 @@ CREATE TABLE vendors (
     currency       char(3)       NOT NULL DEFAULT 'EGP',    -- receipt totals are in this currency
     status         vendor_status NOT NULL DEFAULT 'active',
     created_at     timestamptz   NOT NULL DEFAULT now(),
-    updated_at     timestamptz   NOT NULL DEFAULT now()
+    updated_at     timestamptz   NOT NULL DEFAULT now(),
+    -- the public page (migration 22): sections in order, its style, brand colours and font
+    storefront      jsonb         CONSTRAINT vendors_storefront_ck CHECK (storefront IS NULL OR jsonb_typeof(storefront) = 'object'),
+    page_style      varchar(20)   CONSTRAINT vendors_page_style_ck CHECK (page_style IN ('spotlight', 'compact', 'branded')),
+    brand_primary   varchar(7),
+    brand_secondary varchar(7),
+    brand_font      varchar(40),
+    CONSTRAINT vendors_brand_colors_ck CHECK (
+        (brand_primary IS NULL OR brand_primary ~ '^#[0-9a-f]{6}$') AND
+        (brand_secondary IS NULL OR brand_secondary ~ '^#[0-9a-f]{6}$'))
 );
 
 CREATE TABLE branches (
@@ -102,7 +111,8 @@ CREATE TABLE branches (
             AND closes_at ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
             AND opens_at <> closes_at)
     ),
-    CONSTRAINT branches_weekly_hours_ck CHECK (weekly_hours IS NULL OR jsonb_typeof(weekly_hours) = 'array')
+    CONSTRAINT branches_weekly_hours_ck CHECK (weekly_hours IS NULL OR jsonb_typeof(weekly_hours) = 'array'),
+    storefront  jsonb CONSTRAINT branches_storefront_ck CHECK (storefront IS NULL OR jsonb_typeof(storefront) = 'object')  -- this branch's own storefront (migration 22); NULL = the shop's
 );
 CREATE INDEX branches_vendor_idx ON branches (vendor_id);
 
