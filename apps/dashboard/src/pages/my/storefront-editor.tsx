@@ -8,6 +8,7 @@ import {
   QrCodeIcon,
   CheckCircleIcon as CheckCircle,
   GiftIcon,
+  ChatRoundDotsIcon,
   LoaderIcon as Loader2,
   MapPointIcon,
   RefreshIcon as Refresh,
@@ -45,6 +46,7 @@ const ICONS: Record<StorefrontSection['type'], ComponentType<{ className?: strin
   menu: ChefHatIcon,
   branches: MapPointIcon,
   wifi: WiFiRouterIcon,
+  feedback: ChatRoundDotsIcon,
 };
 
 export const storefrontUrl = (vendor: Vendor, branchId?: string) =>
@@ -384,6 +386,8 @@ function SectionFields({
           <Link to="/rewards">{t('storefront.manageRewards')}</Link>
         </Button>
       );
+    case 'feedback':
+      return <Button variant="outline" className="w-fit" asChild><Link to="/feedback">{t('feedback.view')}</Link></Button>;
     case 'branches':
       return (
         <Button variant="outline" className="w-fit" asChild>

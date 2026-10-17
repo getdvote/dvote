@@ -982,6 +982,7 @@ export const en = {
       rewards: { title: 'Rewards', hint: 'Your active rewards and their points.' },
       menu: { title: 'Menu', hint: 'Your menu pages, opened from the page.' },
       branches: { title: 'Branches', hint: 'Your open branches, with directions.' },
+      feedback: { title: "Feedback", hint: "Comments from visitors, with an optional phone number." },
       wifi: { title: 'WiFi', hint: 'The guest network, with the password to copy.' },
     },
     buttonWording: 'Button wording',
@@ -1038,6 +1039,14 @@ export const en = {
     subtitle: 'Store QR codes, NFC links, and holders for your branches.',
   },
   feedback: {
+    view: "View feedback",
+    empty: "No feedback yet. Add the Feedback section to your storefront to start receiving comments.",
+    cardholder: "Cardholder · phone match",
+    guest: "Guest",
+    allBranches: "Shop storefront",
+    previous: "Previous",
+    next: "Next",
+
     subtitle: 'What your customers tell you about their visits.',
   },
   placeholder: {

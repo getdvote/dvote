@@ -982,6 +982,7 @@ export const ar: Dictionary = {
       rewards: { title: 'المكافآت', hint: 'مكافآتك المتاحة ونقاطها.' },
       menu: { title: 'المنيو', hint: 'صفحات المنيو، تُفتح من الصفحة.' },
       branches: { title: 'الفروع', hint: 'فروعك المفتوحة مع الاتجاهات.' },
+      feedback: { title: "آراء العملاء", hint: "تعليقات الزوار مع رقم موبايل اختياري." },
       wifi: { title: 'واي فاي', hint: 'شبكة الضيوف مع كلمة المرور للنسخ.' },
     },
     buttonWording: 'نص الزر',
@@ -1038,6 +1039,14 @@ export const ar: Dictionary = {
     subtitle: 'رموز QR وروابط NFC وحواملها لفروعك.',
   },
   feedback: {
+    view: "عرض الآراء",
+    empty: "لا توجد آراء بعد. أضف قسم الآراء إلى صفحة متجرك لاستقبال التعليقات.",
+    cardholder: "حامل بطاقة · تطابق الموبايل",
+    guest: "زائر",
+    allBranches: "صفحة المتجر",
+    previous: "السابق",
+    next: "التالي",
+
     subtitle: 'ما يقوله عملاؤك عن زياراتهم.',
   },
   placeholder: {

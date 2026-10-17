@@ -5,7 +5,7 @@ import { BadRequestException } from '@nestjs/common';
  * section not in the list is not shown. Stored as jsonb on vendors (the shop) and branches (a
  * branch's own copy); checked here, never trusted from the client.
  */
-export const SECTION_TYPES = ['loyalty', 'rewards', 'menu', 'branches', 'wifi'] as const;
+export const SECTION_TYPES = ['loyalty', 'rewards', 'menu', 'branches', 'wifi', 'feedback'] as const;
 export type SectionType = (typeof SECTION_TYPES)[number];
 
 /** Button / heading words the merchant picks from (translated on the page). */
@@ -17,6 +17,7 @@ export type StorefrontSection =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
+  | { type: 'feedback' }
   | { type: 'wifi'; ssid: string; security: (typeof WIFI_SECURITY)[number]; password: string };
 
 export interface Storefront {

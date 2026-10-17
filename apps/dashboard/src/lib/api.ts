@@ -459,6 +459,7 @@ export type StorefrontSection =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
+  | { type: 'feedback' }
   | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
 export interface Storefront {
   sections: StorefrontSection[];
@@ -728,7 +729,12 @@ export const api = {
  * The signed-in vendor account's own data (/api/vendor). No vendor id is ever sent: the API takes
  * it from the token, so a Starbucks account can only ever reach Starbucks.
  */
+export interface CustomerFeedback {
+  id: string; name: string; phone: string | null; message: string; createdAt: string;
+  branchName: string | null; existingCustomer: boolean;
+}
 export const vendorApi = {
+  customerFeedback: (page = 1) => call<{ items: CustomerFeedback[]; page: number; hasMore: boolean }>('GET', `/api/vendor/customer-feedback?page=${page}`),
   customers: (q: MerchantCustomerQuery) => call<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
   feedback: (body: { mood?: MerchantMood; message: string }) => call<void>('POST', '/api/vendor/feedback', body),
   customersExport: (q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>) =>
