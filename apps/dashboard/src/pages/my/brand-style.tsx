@@ -5,23 +5,21 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Field } from '../../components/Field';
 import { initial } from '../../components/PageHeader';
 import { useMyVendor } from '../../layouts/VendorLayout';
-import { errorMessage, vendorApi, type BrandFont, type PageStyle, type Vendor } from '../../lib/api';
+import { errorMessage, vendorApi, type PageStyle, type Vendor } from '../../lib/api';
 import { cardDesign } from '../../lib/cardDesigns';
 import { BRAND_FONTS, loadFonts, PAGE_STYLES } from '../../lib/storefront';
 import { t } from '../../i18n';
 
 const SAVE_KEY = ['vendor-style', 'save'];
-const DEFAULT_FONT = 'default';
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /**
  * Settings → Branding, the public page's look: page style (3 layouts), brand colours and the
- * display font. Saves on its own; the customer page (and the Storefront preview) follow.
+ * settings. Saves on its own; the customer page (and the Storefront preview) follow.
  */
 export function BrandStyleEditor() {
   const vendor = useMyVendor();
@@ -74,7 +72,7 @@ export function BrandStyleEditor() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>{t('brandStyle.colors')}</CardTitle>
@@ -98,33 +96,6 @@ export function BrandStyleEditor() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('brandStyle.font')}</CardTitle>
-            <CardDescription>{t('brandStyle.fontHint')}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <Select
-              value={vendor.brandFont ?? DEFAULT_FONT}
-              onValueChange={(v) => save.mutate({ brandFont: v === DEFAULT_FONT ? null : (v as BrandFont) })}
-            >
-              <SelectTrigger className="w-full" aria-label={t('brandStyle.font')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={DEFAULT_FONT}>{t('brandStyle.defaultFont')}</SelectItem>
-                {(Object.keys(BRAND_FONTS) as BrandFont[]).map((k) => (
-                  <SelectItem key={k} value={k}>
-                    <span style={{ fontFamily: `"${BRAND_FONTS[k]}"` }}>{BRAND_FONTS[k]}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="rounded-xl bg-muted px-4 py-3 text-2xl" style={{ fontFamily: font ? `"${font}"` : undefined }}>
-              {vendor.name} · مرحبًا
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
