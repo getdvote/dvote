@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DvoteLogo } from '../../components/DvoteLogo';
 import { Field } from '../../components/Field';
+import { Segmented } from '../../components/segmented';
 import { initial } from '../../components/PageHeader';
 import { cardDesign } from '../../lib/cardDesigns';
 import type { Vendor } from '../../lib/api';
@@ -220,39 +220,6 @@ export function QrPosterDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Segmented<T extends string>({
-  id,
-  value,
-  onChange,
-  options,
-}: {
-  id: string;
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-}) {
-  return (
-    <ToggleGroup
-      id={id}
-      type="single"
-      spacing={1}
-      value={value}
-      onValueChange={(v) => v && onChange(v as T)}
-      className="w-full rounded-lg bg-muted p-1"
-    >
-      {options.map((o) => (
-        <ToggleGroupItem
-          key={o.value}
-          value={o.value}
-          className="h-8 flex-1 rounded-md border border-transparent text-muted-foreground transition duration-100 ease-linear hover:bg-transparent hover:text-foreground data-[state=on]:border-border data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-xs dark:data-[state=on]:bg-input/30"
-        >
-          {o.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
   );
 }
 

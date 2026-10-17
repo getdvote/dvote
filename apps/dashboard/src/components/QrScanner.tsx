@@ -6,9 +6,11 @@ import { t } from '../i18n';
 /**
  * The computer's camera, reading QR codes (jsQR on a downscaled frame, ~6 times a second).
  * Calls `onCode` with each code it sees; the caller ignores repeats while it checks one.
- * `onBlocked` when there is no camera or the browser refused it.
+ * `onBlocked` when the browser refused the camera ('denied') or there is none / it can't be used ('missing').
  */
-export function QrScanner({ onCode, onBlocked, paused }: { onCode: (code: string) => void; onBlocked: () => void; paused?: boolean }) {
+export type CameraProblem = 'denied' | 'missing';
+
+export function QrScanner({ onCode, onBlocked, paused }: { onCode: (code: string) => void; onBlocked: (problem: CameraProblem) => void; paused?: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
   const latest = useRef({ onCode, onBlocked, paused });
@@ -45,8 +47,9 @@ export function QrScanner({ onCode, onBlocked, paused }: { onCode: (code: string
         }
         setReady(true);
         tick();
-      } catch {
-        if (!stopped) latest.current.onBlocked();
+      } catch (err) {
+        const name = err instanceof DOMException ? err.name : '';
+        if (!stopped) latest.current.onBlocked(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'missing');
       }
     })();
 

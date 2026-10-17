@@ -7,6 +7,7 @@ import {
   Input,
   Page,
   Spinner,
+  cx,
 } from "../components/ui";
 import { getLanguage, t } from "../i18n";
 import { api, errorMessage } from "../lib/api";
@@ -100,8 +101,15 @@ export function FeedbackPage() {
                   rows={5}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full resize-y rounded-2xl border border-line bg-canvas p-4 outline-none focus:border-brand"
+                  className="w-full resize-none overflow-y-auto rounded-2xl border border-line bg-canvas p-4 outline-none focus:border-brand"
                 />
+                <span
+                  dir="ltr"
+                  aria-live="polite"
+                  className={cx('mt-1 block text-end text-[13px] tabular-nums', message.length >= 1800 ? 'text-danger' : 'text-muted')}
+                >
+                  {message.length} / 2000
+                </span>
               </Field>
               <ErrorNote>{submitError}</ErrorNote>
               <Button

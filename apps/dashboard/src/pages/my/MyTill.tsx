@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircleIcon as CheckCircle2, GiftIcon as Gift, KeyboardIcon as Keyboard, LoaderIcon as Loader2, ScannerIcon as ScanLine } from '@solar-icons/react/linear';
-import { useRef, useState, type ComponentType, type FormEvent } from 'react';
+import { BarcodeScanIcon as BarcodeScan, CameraIcon as Camera, CheckCircleIcon as CheckCircle2, GiftIcon as Gift, LoaderIcon as Loader2, ScannerIcon as ScanLine } from '@solar-icons/react/linear';
+import { useEffect, useRef, useState, type ComponentType, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
+import { Segmented } from '../../components/segmented';
 import { num } from '../../components/PageHeader';
-import { QrScanner } from '../../components/QrScanner';
+import { CameraBlockedHelp, useCameraGranted } from '../../components/camera-help';
+import { QrScanner, type CameraProblem } from '../../components/QrScanner';
 import { errorText, t } from '../../i18n';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { ApiError, errorMessage, vendorApi, type RedeemPreview, type StaffMe } from '../../lib/api';
@@ -24,7 +26,7 @@ type Rule = NonNullable<StaffMe['activeRule']>;
 
 /** One till visit, from the scan to the result. */
 type Step =
-  | { kind: 'scan'; rewardOnly: boolean; manual: boolean }
+  | { kind: 'scan'; rewardOnly: boolean }
   | { kind: 'amount'; code: string }
   | { kind: 'redeem'; code: string; preview: RedeemPreview }
   | { kind: 'collected'; points: number; amount: string; currency: string }
@@ -124,7 +126,7 @@ export function MyTill() {
       <button
         type="button"
         disabled={!ready}
-        onClick={() => setStep({ kind: 'scan', rewardOnly: false, manual: false })}
+        onClick={() => setStep({ kind: 'scan', rewardOnly: false })}
         className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-14 text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:ring-4 focus-visible:ring-ring/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ScanLine className="size-9" strokeWidth={1.75} aria-hidden />
@@ -132,9 +134,8 @@ export function MyTill() {
         <span className="text-sm text-primary-foreground/80">{t('till.scanHint')}</span>
       </button>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Tile icon={Gift} title={t('till.redeem')} hint={t('till.redeemHint')} disabled={!ready} onClick={() => setStep({ kind: 'scan', rewardOnly: true, manual: false })} />
-        <Tile icon={Keyboard} title={t('till.type')} hint={t('till.typeHint')} disabled={!ready} onClick={() => setStep({ kind: 'scan', rewardOnly: false, manual: true })} />
+      <div className="mt-4 grid gap-4">
+        <Tile icon={Gift} title={t('till.redeem')} hint={t('till.redeemHint')} disabled={!ready} onClick={() => setStep({ kind: 'scan', rewardOnly: true })} />
       </div>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
@@ -205,13 +206,28 @@ function TillFlow({ step, setStep, me, branchId, onDone }: { step: Step; setStep
   }
 }
 
+type ScanMode = 'scanner' | 'camera';
+/** A whole dvote code: scanners without an Enter suffix are checked once one has arrived. */
+const FULL_CODE = /^dvote:(q1|c1):[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url, as the API makes them
+
+/**
+ * Read the customer's QR: with a hand scanner (first and default: most cafés have one and no
+ * camera at the till) or the computer's camera. The scanner "types" into a field that keeps focus.
+ */
 function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; setStep: (s: Step) => void }) {
-  const [manual, setManual] = useState(step.manual);
+  const [mode, setMode] = useState<ScanMode>('scanner');
   const [typed, setTyped] = useState('');
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [camera, setCamera] = useState<CameraProblem | null>(null);
   const busy = useRef(false); // the camera sees the same QR many times a second
   const lastBad = useRef<string | null>(null);
+  // allowed in the browser's site settings: start the camera again, no reload needed
+  useCameraGranted(() => {
+    if (camera !== 'denied') return;
+    setCamera(null);
+    setError(null);
+  });
 
   async function check(raw: string) {
     const code = raw.trim();
@@ -236,16 +252,19 @@ function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; se
     } catch (err) {
       lastBad.current = code;
       setError(errorMessage(err));
+      // ready for the next scan: the scanner types a fresh code into an empty field
+      setTyped('');
     } finally {
       busy.current = false;
       setChecking(false);
     }
   }
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
+  const switchMode = (next: ScanMode) => {
+    setMode(next);
+    setError(null);
+    setCamera(null);
     lastBad.current = null;
-    void check(typed);
   };
 
   return (
@@ -254,55 +273,125 @@ function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; se
         <DialogTitle>{step.rewardOnly ? t('till.scanRedeemTitle') : t('till.scanTitle')}</DialogTitle>
         <DialogDescription>{t('till.scanBody')}</DialogDescription>
       </DialogHeader>
-      {manual ? (
-        <form id="till-manual-code" onSubmit={submit} className="grid gap-4">
-          <Field label={t('till.codeLabel')} htmlFor="till-code" hint={t('till.codeHint')}>
-            <Input
-              id="till-code"
-              dir="ltr"
-              autoFocus
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="dvote:c1:…"
-              value={typed}
-              onChange={(e) => {
-                setTyped(e.target.value);
-                setError(null);
-              }}
-            />
-          </Field>
-        </form>
+      <Segmented
+        size="md"
+        label={t('till.scanWith')}
+        value={mode}
+        onChange={switchMode}
+        options={[
+          { value: 'scanner', label: t('till.modeScanner'), icon: BarcodeScan },
+          { value: 'camera', label: t('till.modeCamera'), icon: Camera },
+        ]}
+      />
+      {mode === 'scanner' ? (
+        <ScannerInput
+          value={typed}
+          checking={checking}
+          onChange={(v) => {
+            setTyped(v);
+            setError(null);
+            lastBad.current = null;
+          }}
+          onSubmit={(v) => void check(v)}
+        />
       ) : (
-        <div className="relative">
-          <QrScanner onCode={(c) => void check(c)} onBlocked={() => (setManual(true), setError(t('till.cameraBlocked')))} paused={checking} />
-          {checking ? (
-            <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/45">
-              <Loader2 className="size-8 animate-spin text-white" />
+        <>
+          {camera ? null : (
+            <div className="relative">
+              <QrScanner
+                onCode={(c) => void check(c)}
+                onBlocked={(problem) => {
+                  setCamera(problem);
+                  if (problem === 'missing') setError(t('till.cameraMissing'));
+                }}
+                paused={checking}
+              />
+              {checking ? (
+                <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/45">
+                  <Loader2 className="size-8 animate-spin text-white" />
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
+          )}
+          {camera === 'denied' ? <CameraBlockedHelp /> : null}
+        </>
       )}
       <ErrorAlert error={error} />
-      <div data-mobile-dialog-actions className="grid gap-2">
-      {manual ? (
-        <Button type="submit" form="till-manual-code" disabled={checking || !typed.trim()}>
-          {checking ? <Loader2 className="animate-spin" /> : null}
-          {t('till.continue')}
-        </Button>
-      ) : null}
-      <Button
-        variant="ghost"
-        onClick={() => {
-          setManual((m) => !m);
-          setError(null);
-          lastBad.current = null;
-        }}
-      >
-        {manual ? <ScanLine /> : <Keyboard />}
-        {manual ? t('till.useCamera') : t('till.type')}
-      </Button>
-      </div>
     </>
+  );
+}
+
+/**
+ * The hand scanner's target: a "ready" panel and the field it types into. The field keeps focus
+ * (a stray click elsewhere in the dialog gives it back), Enter checks the code, and so does a
+ * complete code arriving without Enter. Typing by hand works the same way.
+ */
+function ScannerInput({ value, checking, onChange, onSubmit }: { value: string; checking: boolean; onChange: (v: string) => void; onSubmit: (v: string) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [focused, setFocused] = useState(true);
+
+  useEffect(() => {
+    if (!FULL_CODE.test(value.trim())) return;
+    const timer = window.setTimeout(() => onSubmit(value), 250);
+    return () => window.clearTimeout(timer);
+  }, [value, onSubmit]);
+
+  useEffect(() => {
+    if (!checking) input.current?.focus();
+  }, [checking]);
+
+  return (
+    <form
+      id="till-manual-code"
+      className="grid gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(value);
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => input.current?.focus()}
+        className={cn(
+          'flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-4 py-7 text-center transition duration-100 ease-linear',
+          focused ? 'border-primary/40 bg-primary/[0.03]' : 'border-border bg-muted/40 hover:bg-muted',
+        )}
+      >
+        <span className="relative flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          {focused && !checking ? <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" /> : null}
+          {checking ? <Loader2 className="size-6 animate-spin" /> : <BarcodeScan className="relative size-6" />}
+        </span>
+        <span className="grid gap-0.5">
+          <span className="font-medium">{checking ? t('till.checking') : focused ? t('till.scannerReady') : t('till.scannerPaused')}</span>
+          <span className="text-sm text-muted-foreground">{focused ? t('till.scannerReadyHint') : t('till.scannerPausedHint')}</span>
+        </span>
+      </button>
+      <Field label={t('till.codeLabel')} htmlFor="till-code" hint={t('till.codeEnterHint')}>
+        <Input
+          ref={input}
+          id="till-code"
+          dir="ltr"
+          autoFocus
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="dvote:c1:…"
+          value={value}
+          disabled={checking}
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => {
+            // clicked on empty space (not a button or field): give the scanner its box back
+            if (!e.relatedTarget && !checking) {
+              window.setTimeout(() => {
+                const active = document.activeElement;
+                if (!active || active === document.body || active.getAttribute('role') === 'dialog') input.current?.focus();
+                else setFocused(false);
+              }, 0);
+            } else setFocused(false);
+          }}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </Field>
+    </form>
   );
 }
 
