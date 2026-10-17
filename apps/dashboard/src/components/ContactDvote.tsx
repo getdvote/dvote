@@ -1,9 +1,23 @@
-import { CheckIcon as Check, AltArrowRightIcon as ChevronRight, CopyIcon as Copy, LetterIcon as Mail } from '@solar-icons/react/linear';
-import { useState } from 'react';
+import {
+  CheckIcon as Check,
+  CheckCircleIcon as CheckCircle,
+  AltArrowRightIcon as ChevronRight,
+  CopyIcon as Copy,
+  EmojiFunnyCircleIcon as Love,
+  LoaderIcon as Loader2,
+  LetterIcon as Mail,
+  SadCircleIcon as Unhappy,
+  SmileCircleIcon as Okay,
+} from '@solar-icons/react/linear';
+import { useMutation } from '@tanstack/react-query';
+import { useState, type ComponentType } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { errorMessage, vendorApi, type MerchantMood } from '../lib/api';
 import { t } from '../i18n';
 
 /** Where merchants reach the dvote team. Change here only. */
@@ -85,7 +99,80 @@ export function ContactDvote({ name, shop, open, onOpenChange }: { name: string;
           </div>
         </div>
         <p className="text-xs text-muted-foreground">{t('contact.templateNote')}</p>
+        <Separator />
+        <QuickFeedback key={String(open)} />
       </DialogContent>
     </Dialog>
+  );
+}
+
+const MOODS: { key: MerchantMood; icon: ComponentType<{ className?: string }> }[] = [
+  { key: 'love', icon: Love },
+  { key: 'okay', icon: Okay },
+  { key: 'unhappy', icon: Unhappy },
+];
+
+/** For people who don't want a conversation: a mood and a few words, sent straight to the team. */
+function QuickFeedback() {
+  const [mood, setMood] = useState<MerchantMood | undefined>();
+  const [message, setMessage] = useState('');
+  const send = useMutation({
+    mutationFn: () => vendorApi.feedback({ mood, message: message.trim() }),
+    onError: (e) => void toast.error(errorMessage(e)),
+  });
+
+  if (send.isSuccess) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl bg-muted/60 p-4" role="status">
+        <CheckCircle className="size-5 shrink-0 text-primary" />
+        <div>
+          <p className="text-sm font-medium">{t('contact.feedbackThanks')}</p>
+          <p className="text-xs text-muted-foreground">{t('contact.feedbackThanksText')}</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (message.trim()) send.mutate();
+      }}
+    >
+      <div>
+        <h3 className="text-sm font-medium">{t('contact.feedbackTitle')}</h3>
+        <p className="text-xs text-muted-foreground">{t('contact.feedbackHint')}</p>
+      </div>
+      <div className="flex gap-2" role="radiogroup" aria-label={t('contact.feedbackMood')}>
+        {MOODS.map(({ key, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={mood === key}
+            onClick={() => setMood(mood === key ? undefined : key)}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs outline-none transition duration-100 ease-linear focus-visible:ring-3 focus-visible:ring-ring/50',
+              mood === key ? 'border-primary bg-brand-soft font-medium' : 'hover:bg-muted',
+            )}
+          >
+            <Icon className="size-4" /> {t(`contact.moods.${key}`)}
+          </button>
+        ))}
+      </div>
+      <Textarea
+        rows={3}
+        maxLength={2000}
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder={t('contact.feedbackPlaceholder')}
+        aria-label={t('contact.feedbackTitle')}
+      />
+      <Button type="submit" variant="outline" disabled={!message.trim() || send.isPending}>
+        {send.isPending ? <Loader2 className="animate-spin" /> : null}
+        {t('contact.feedbackSend')}
+      </Button>
+    </form>
   );
 }

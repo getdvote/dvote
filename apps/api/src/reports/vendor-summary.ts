@@ -59,7 +59,8 @@ export class VendorSummaryService {
   /** Activity numbers for my vendor; a branch manager's activity numbers cover their branch only. */
   async summary(ctx: StaffContext, query: VendorSummaryQueryDto = {}): Promise<VendorSummaryResponseDto> {
     const v = ctx.vendorId;
-    const branchId = ctx.role === 'vendor_admin' ? query.branchId : ctx.branchId!;
+    // merchant-wide accounts (admin, viewer) have no branch; branch roles are held to theirs
+    const branchId = ctx.branchId ?? query.branchId;
     if (branchId && !await this.prisma.branches.findFirst({ where: { id: branchId, vendor_id: v }, select: { id: true } })) {
       throw new NotFoundException({ code: 'branch_not_found' });
     }
@@ -142,7 +143,7 @@ export class VendorSummaryController {
 
   /** Dashboard home: today, the last 14 days, branches (counts only, no customer data). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorSummaryResponseDto })
   summary(@CurrentStaff() ctx: StaffContext, @Query() query: VendorSummaryQueryDto): Promise<VendorSummaryResponseDto> {
     return this.reports.summary(ctx, query);

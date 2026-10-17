@@ -58,7 +58,7 @@ export class StaffController {
    * staff app shows after sign-in. Declared before ':id' so 'me' isn't parsed as an id.
    */
   @Get('me')
-  @StaffRoles('vendor_admin', 'branch_manager', 'staff')
+  @StaffRoles('vendor_admin', 'branch_manager', 'staff', 'viewer')
   @ApiOkResponse({ type: StaffMeResponseDto })
   me(@CurrentStaff() ctx: StaffContext): Promise<StaffMeResponseDto> {
     return this.staff.me(ctx);

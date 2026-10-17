@@ -4,10 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '../../components/PageHeader';
 import { t } from '../../i18n';
-import { useMe, useMyScope } from '../../layouts/VendorLayout';
+import { useMyScope } from '../../layouts/VendorLayout';
 import { BranchesTab } from '../vendor/BranchesTab';
 import { RewardsTab } from '../vendor/RewardsTab';
-import { StaffTab } from '../vendor/StaffTab';
 import { MyRedemptions } from './MyRedemptions';
 
 /** The same tabs the platform admin uses, fed with my vendor's scope (/api/vendor only). */
@@ -58,15 +57,5 @@ export function MyRewards() {
         </TabsContent>
       </Tabs>
     </>
-  );
-}
-
-export function MyStaff() {
-  const me = useMe();
-  const scope = useMyScope();
-  return (
-    <Section title={t('nav.staff')} subtitle={me.role === 'vendor_admin' ? t('sections.staffAll') : t('sections.staffBranch', { branch: me.branch?.name ?? '' })}>
-      <StaffTab scope={scope} selfId={me.id} />
-    </Section>
   );
 }

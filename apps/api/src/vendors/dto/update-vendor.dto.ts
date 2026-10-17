@@ -6,6 +6,7 @@ import {
   IsIn,
   IsInt,
   IsISO4217CurrencyCode,
+  Matches,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -18,8 +19,21 @@ import {
 import { vendor_status } from '../../generated/prisma/enums.js';
 import { CARD_DESIGN_COUNT, VENDOR_CATEGORIES, type VendorCategory } from '../vendor-branding';
 
+/** A stored vendor phone: +20 and an Egyptian mobile number (010/011/012/015 + 8 digits). */
+const EGYPT_MOBILE = /^\+201[0125][0-9]{8}$/;
+
 /**
- * Only sent fields change. logoUrl / contactEmail accept null to clear them;
+ * "010 0123 4567", "+20 10 0123 4567", "00201001234567" → "+201001234567". Anything else is
+ * returned without spaces/dashes so the validator rejects it.
+ */
+export function egyptianMobile(raw: string): string {
+  const s = raw.replace(/[\s\-()]/g, '');
+  const m = /^(?:\+20|0020|20)?0?(1[0125][0-9]{8})$/.exec(s);
+  return m ? `+20${m[1]}` : s;
+}
+
+/**
+ * Only sent fields change. logoUrl / contactEmail / contactPhone accept null to clear them;
  * name, currency and status can't be null.
  */
 export class UpdateVendorDto {
@@ -47,6 +61,18 @@ export class UpdateVendorDto {
   @IsEmail()
   @MaxLength(255)
   contactEmail?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    example: '010 0123 4567',
+    description:
+      'Egyptian mobile number: 01 + 9 digits (010/011/012/015); a +20 / 0020 prefix, spaces and dashes are accepted. Stored as +201XXXXXXXXX',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? egyptianMobile(value) : value))
+  @Matches(EGYPT_MOBILE, { message: 'contactPhone must be an Egyptian mobile number, e.g. 010 0123 4567' })
+  contactPhone?: string | null;
 
   @ApiPropertyOptional({
     example: 'EGP',

@@ -13,7 +13,7 @@ export class VendorPointRulesController {
   constructor(private readonly rules: PointRulesService) {}
 
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: [PointRuleResponseDto] })
   async list(@CurrentStaff() ctx: StaffContext): Promise<PointRuleResponseDto[]> {
     return (await this.rules.list(ctx.vendorId)).map((r) => PointRuleResponseDto.from(r));

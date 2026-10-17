@@ -137,7 +137,7 @@ export class VendorRewardPerformanceService {
     ctx: StaffContext,
     q: VendorRewardPerformanceQueryDto,
   ): Promise<VendorRewardPerformanceDto> {
-    const admin = ctx.role === 'vendor_admin';
+    const admin = ctx.branchId === null; // merchant-wide: admin or viewer
     const branchId = admin ? q.branchId : ctx.branchId!;
     const where: Prisma.redemptionsWhereInput = {
       vendor_id: ctx.vendorId,
@@ -290,7 +290,7 @@ export class VendorRewardPerformanceController {
 
   /** Per reward: given in the period, customers who can afford it or are close now; and what held points are worth (counts only). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorRewardPerformanceDto })
   get(
     @CurrentStaff() ctx: StaffContext,

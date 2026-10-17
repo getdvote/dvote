@@ -86,7 +86,7 @@ export class VendorImagesService {
       where: {
         id,
         vendor_id: ctx.vendorId,
-        ...(ctx.role === 'vendor_admin' ? {} : { kind: 'branch_photo', branch_id: ctx.branchId }),
+        ...(ctx.branchId === null ? {} : { kind: 'branch_photo', branch_id: ctx.branchId }),
       },
     });
     if (!image) throw new NotFoundException({ code: 'image_not_found' });

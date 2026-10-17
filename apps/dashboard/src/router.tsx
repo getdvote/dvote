@@ -16,7 +16,7 @@ import { MyMessages } from './pages/my/MyMessages';
 import { MyStoreIds } from './pages/my/MyStoreIds';
 import { MySettings } from './pages/my/MySettings';
 import { MyTill } from './pages/my/MyTill';
-import { MyBranches, MyRewards, MyStaff } from './pages/my/MySections';
+import { MyBranches, MyRewards } from './pages/my/MySections';
 import { Overview } from './pages/Overview';
 import { Statistics } from './pages/Statistics';
 import { System } from './pages/System';
@@ -73,7 +73,7 @@ function Shell() {
       <VendorLayout>
         <Routes>
           <Route path="/" element={<MyHome />} />
-          <Route path="/scan" element={<MyTill />} />
+          {staff.role === 'viewer' ? null : <Route path="/scan" element={<MyTill />} />}
           <Route path="/customers" element={<MyCustomers />} />
           <Route path="/insights" element={<MyInsights />} />
           <Route path="/activity" element={<MyActivity />} />
@@ -83,7 +83,8 @@ function Shell() {
           <Route path="/rewards" element={<MyRewards />} />
           <Route path="/redemptions" element={<Navigate to="/rewards?tab=redemptions" replace />} />
           <Route path="/menu" element={<Navigate to="/storefront" replace />} />
-          <Route path="/staff" element={<MyStaff />} />
+          {/* the team moved into Settings */}
+          <Route path="/staff" element={<Navigate to="/settings?tab=team" replace />} />
           {staff.role === 'vendor_admin' ? <Route path="/storefront" element={<MyProfile />} /> : null}
           {/* old links (bookmarks) to the storefront */}
           <Route path="/profile" element={<Navigate to="/storefront" replace />} />

@@ -13,7 +13,7 @@ export type BranchStatus = 'active' | 'closed';
 export type RewardStatus = 'active' | 'archived';
 export type AccountStatus = 'active' | 'disabled';
 export type UserStatus = 'active' | 'blocked';
-export type StaffRole = 'vendor_admin' | 'branch_manager' | 'staff';
+export type StaffRole = 'vendor_admin' | 'branch_manager' | 'staff' | 'viewer';
 
 export interface AdminMe {
   id: string;
@@ -115,6 +115,8 @@ export interface Vendor {
   /** Loyalty-card design 1-10; null = automatic. */
   cardDesign: number | null;
   contactEmail: string | null;
+  /** Shop contact phone, e.g. +201001234567. */
+  contactPhone: string | null;
   currency: string;
   status: VendorStatus;
   branchCount: number;
@@ -442,12 +444,49 @@ export interface AttentionItem {
   params?: Record<string, string | number>;
 }
 
-export type CustomerSegment = 'new' | 'returning' | 'regular' | 'at_risk' | 'no_visits';
+/** How a merchant feels about dvote (quick feedback). */
+export type MerchantMood = 'love' | 'okay' | 'unhappy';
+
+export type CustomerSegment = 'champions' | 'regulars' | 'new' | 'never_visited' | 'slipping' | 'at_risk' | 'lost';
+
+/** What a custom segment's rules can look at. */
+export type SegmentRuleField =
+  | 'visits'
+  | 'visits_30d'
+  | 'spend'
+  | 'days_since_visit'
+  | 'days_since_joined'
+  | 'points'
+  | 'rewards_redeemed'
+  | 'segment';
+export interface SegmentRule {
+  field: SegmentRuleField;
+  op: 'gte' | 'lte' | 'eq' | 'is' | 'is_not';
+  value: number | string;
+}
+export interface CustomSegment {
+  id: string;
+  name: string;
+  description: string | null;
+  match: 'all' | 'any';
+  rules: SegmentRule[];
+  sortOrder: number;
+  /** Customers showing this segment, in the current scope. */
+  count: number;
+}
+export interface CustomSegmentInput {
+  name: string;
+  description?: string | null;
+  match: 'all' | 'any';
+  rules: SegmentRule[];
+}
 export interface MerchantCustomer {
   id: string;
   reference: string;
   name: string | null;
   segment: CustomerSegment;
+  /** At most one: added by hand (manual) or matched by the rules. */
+  customSegment: { id: string; name: string; manual: boolean } | null;
   firstVisitAt: string | null;
   lastVisitAt: string | null;
   visits: number;
@@ -461,6 +500,7 @@ export interface MerchantCustomerQuery {
   branchId?: string;
   search?: string;
   segment?: CustomerSegment;
+  customSegment?: string;
   sort?: 'recent' | 'spend' | 'visits' | 'name';
   page?: number;
   pageSize?: number;
@@ -468,10 +508,16 @@ export interface MerchantCustomerQuery {
 export interface MerchantCustomerList extends Page<MerchantCustomer> {
   customersTotal: number;
   segments: { key: CustomerSegment; count: number }[];
+  customSegments: CustomSegment[];
   asOf: string;
 }
+export interface CustomerExportRow extends MerchantCustomer {
+  email: string | null;
+  phone: string | null;
+  joinedAt: string;
+}
 export interface MerchantCustomerDetail {
-  customer: MerchantCustomer;
+  customer: MerchantCustomer & { phone: string | null };
   asOf: string;
   events: { id: string; type: 'earn' | 'redeem' | 'adjust'; points: number; amount: string | null; branchName: string | null; rewardName: string | null; createdAt: string }[];
   total: number;
@@ -659,6 +705,19 @@ export const api = {
  */
 export const vendorApi = {
   customers: (q: MerchantCustomerQuery) => call<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
+  feedback: (body: { mood?: MerchantMood; message: string }) => call<void>('POST', '/api/vendor/feedback', body),
+  customersExport: (q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>) =>
+    call<{ items: CustomerExportRow[]; truncated: boolean; asOf: string }>('GET', `/api/vendor/customers/export${qs({ ...q })}`),
+  segmentPreview: (body: { match: 'all' | 'any'; rules: SegmentRule[]; branchId?: string }) =>
+    call<{ count: number; customersTotal: number }>('POST', '/api/vendor/customer-segments/preview', body),
+  createSegment: (body: CustomSegmentInput) => call<CustomSegment>('POST', '/api/vendor/customer-segments', body),
+  updateSegment: (id: string, body: Partial<CustomSegmentInput> & { sortOrder?: number }) =>
+    call<CustomSegment>('PATCH', `/api/vendor/customer-segments/${encodeURIComponent(id)}`, body),
+  archiveSegment: (id: string) => call<void>('DELETE', `/api/vendor/customer-segments/${encodeURIComponent(id)}`),
+  addSegmentMember: (id: string, cardId: string) =>
+    call<void>('PUT', `/api/vendor/customer-segments/${encodeURIComponent(id)}/members/${encodeURIComponent(cardId)}`),
+  removeSegmentMember: (id: string, cardId: string) =>
+    call<void>('DELETE', `/api/vendor/customer-segments/${encodeURIComponent(id)}/members/${encodeURIComponent(cardId)}`),
   customer: (id: string, q: { branchId?: string; page?: number; pageSize?: number }) =>
     call<MerchantCustomerDetail>('GET', `/api/vendor/customers/${encodeURIComponent(id)}${qs({ ...q })}`),
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
@@ -673,7 +732,7 @@ export const vendorApi = {
   events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
-  updateProfile: (body: { name?: string; contactEmail?: string | null } & Partial<VendorBranding>) =>
+  updateProfile: (body: { name?: string; contactEmail?: string | null; contactPhone?: string | null } & Partial<VendorBranding>) =>
     call<Vendor>('PATCH', '/api/vendor/profile', body),
   uploadLogo: (f: File) => call<Vendor>('PUT', '/api/vendor/profile/logo', file(f)),
   removeLogo: () => call<Vendor>('DELETE', '/api/vendor/profile/logo'),

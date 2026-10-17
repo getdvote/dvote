@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
-import { FeedbackController } from './feedback.controller';
+import { FeedbackController, VendorFeedbackController } from './feedback.controller';
 import { FeedbackService } from './feedback.service';
 
-/** Customer feedback (/api/app/feedback), written to a Google Sheet. */
+/** Customer (/api/app/feedback) and merchant (/api/vendor/feedback) feedback, written to a Google Sheet. */
 @Module({
   imports: [AuthModule],
-  controllers: [FeedbackController],
+  controllers: [FeedbackController, VendorFeedbackController],
   providers: [FeedbackService],
 })
 export class FeedbackModule {}

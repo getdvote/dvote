@@ -20,8 +20,8 @@ export type GoLiveStep = (typeof GO_LIVE_STEPS)[number];
 
 /** Where in the dashboard each step is done. */
 const STEP_PATH: Record<GoLiveStep, string> = {
-  logo: '/storefront',
-  banner: '/storefront',
+  logo: '/settings?tab=branding',
+  banner: '/settings?tab=branding',
   rule: '/card',
   reward: '/rewards',
   branch_hours: '/branches',
@@ -44,7 +44,7 @@ class GoLiveStepDto {
   @ApiProperty({ enum: GO_LIVE_STEPS, enumName: 'GoLiveStep' })
   key: GoLiveStep;
   @ApiProperty() done: boolean;
-  @ApiProperty({ example: '/storefront', description: 'Dashboard path' })
+  @ApiProperty({ example: '/settings?tab=branding', description: 'Dashboard path' })
   to: string;
 }
 

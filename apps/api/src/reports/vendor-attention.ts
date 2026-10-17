@@ -72,7 +72,7 @@ export class VendorAttentionService {
 
   async list(ctx: StaffContext): Promise<VendorAttentionDto> {
     const v = ctx.vendorId;
-    const admin = ctx.role === 'vendor_admin';
+    const admin = ctx.branchId === null; // merchant-wide: admin or viewer
     const branchWhere = {
       vendor_id: v,
       status: 'active' as const,
@@ -244,7 +244,7 @@ export class VendorAttentionService {
         tone: 'info',
         title: `Your shop has no ${missing}`,
         detail: 'They make your shop page and cards in the app look like you.',
-        action: { label: 'Open storefront', to: '/storefront' },
+        action: { label: 'Open branding', to: '/settings?tab=branding' },
         params: { missing: !vendor.logo_url && !vendor.banner_url ? 'both' : !vendor.logo_url ? 'logo' : 'banner' },
       });
     }
@@ -273,7 +273,7 @@ export class VendorAttentionService {
   private async unusual(ctx: StaffContext): Promise<AttentionItemDto[]> {
     const v = ctx.vendorId;
     const branch =
-      ctx.role === 'vendor_admin'
+      ctx.branchId === null
         ? Prisma.empty
         : Prisma.sql`AND e.branch_id = ${ctx.branchId}::uuid`;
     const today = Prisma.sql`(e.created_at AT TIME ZONE ${TZ})::date = (now() AT TIME ZONE ${TZ})::date`;
@@ -360,7 +360,7 @@ export class VendorAttentionController {
 
   /** Dashboard home: what needs the signed-in manager or admin now, most urgent first. */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorAttentionDto })
   list(@CurrentStaff() ctx: StaffContext): Promise<VendorAttentionDto> {
     return this.attention.list(ctx);

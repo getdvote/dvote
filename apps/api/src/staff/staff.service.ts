@@ -155,7 +155,7 @@ export class StaffService {
 
     const role = dto.role ?? target.role;
     let branchId: string | null;
-    if (role === 'vendor_admin') {
+    if (role === 'vendor_admin' || role === 'viewer') {
       if (dto.branchId !== undefined) {
         throw new BadRequestException({ code: 'branch_not_allowed' });
       }
@@ -258,13 +258,13 @@ export class StaffService {
     }
   }
 
-  /** vendor_admin has no branch; branch roles need an active branch of this vendor. */
+  /** vendor_admin and viewer have no branch; branch roles need an active branch of this vendor. */
   private async assertRoleBranch(
     vendorId: string,
     role: staff_role,
     branchId: string | null,
   ): Promise<void> {
-    if (role === 'vendor_admin') {
+    if (role === 'vendor_admin' || role === 'viewer') {
       if (branchId)
         throw new BadRequestException({ code: 'branch_not_allowed' });
       return;
@@ -280,7 +280,7 @@ export class StaffService {
 
 /** Tenant scoping: every query is limited to the caller's vendor (and branch for branch roles). */
 function scope(ctx: StaffContext): Prisma.staff_usersWhereInput {
-  return ctx.role === 'vendor_admin'
+  return ctx.branchId === null
     ? { vendor_id: ctx.vendorId }
     : { vendor_id: ctx.vendorId, branch_id: ctx.branchId };
 }

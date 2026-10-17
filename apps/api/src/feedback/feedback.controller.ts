@@ -10,7 +10,9 @@ import {
 import type { users } from '../generated/prisma/client.js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CustomerAuthGuard } from '../auth/customer-auth.guard';
-import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { CurrentStaff } from '../auth/current-staff.decorator';
+import { StaffAuthGuard, type StaffContext } from '../auth/staff-auth.guard';
+import { CreateFeedbackDto, MerchantFeedbackDto } from './dto/create-feedback.dto';
 import { FeedbackService } from './feedback.service';
 
 @ApiTags('app: feedback')
@@ -36,5 +38,30 @@ export class FeedbackController {
     @Body() dto: CreateFeedbackDto,
   ): Promise<void> {
     await this.feedback.send(user.id, dto);
+  }
+}
+
+/** Quick feedback from the merchant dashboard (Get help dialog): any signed-in team member. */
+@ApiTags('vendor: feedback')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({
+  description: 'missing_token | invalid_token | token_expired',
+})
+@UseGuards(StaffAuthGuard)
+@Controller('vendor/feedback')
+export class VendorFeedbackController {
+  constructor(private readonly feedback: FeedbackService) {}
+
+  @Post()
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: 'Feedback received' })
+  @ApiServiceUnavailableResponse({
+    description: 'feedback_not_configured | feedback_unavailable',
+  })
+  async create(
+    @CurrentStaff() ctx: StaffContext,
+    @Body() dto: MerchantFeedbackDto,
+  ): Promise<void> {
+    await this.feedback.sendMerchant(ctx, dto);
   }
 }

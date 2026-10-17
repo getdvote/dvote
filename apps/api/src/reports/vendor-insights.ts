@@ -158,7 +158,8 @@ export class VendorInsightsService {
     if (days < 1) throw new BadRequestException({ code: 'range_invalid' });
     if (days > MAX_DAYS)
       throw new BadRequestException({ code: 'range_too_long' });
-    const branchId = ctx.role === 'vendor_admin' ? q.branchId : ctx.branchId!;
+    // merchant-wide accounts (admin, viewer) have no branch; branch roles are held to theirs
+    const branchId = ctx.branchId ?? q.branchId;
     const range = { from: q.from, to: q.to };
     const previousRange =
       q.compare === 'none'
@@ -170,7 +171,7 @@ export class VendorInsightsService {
       previousRange ? this.kpis(ctx.vendorId, branchId, previousRange) : null,
       this.daily(ctx.vendorId, branchId, range),
       previousRange ? this.daily(ctx.vendorId, branchId, previousRange) : null,
-      ctx.role === 'vendor_admin' && !branchId
+      ctx.branchId === null && !branchId
         ? this.byBranch(ctx.vendorId, range)
         : [],
     ]);
@@ -333,7 +334,7 @@ export class VendorInsightsController {
 
   /** Loyalty performance for a period vs the one before (counts only, no customer data). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorInsightsDto })
   get(
     @CurrentStaff() ctx: StaffContext,
