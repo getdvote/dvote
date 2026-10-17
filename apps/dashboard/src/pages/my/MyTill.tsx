@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircleIcon as CheckCircle2, GiftIcon as Gift, KeyboardIcon as Keyboard, LoaderIcon as Loader2, ScannerIcon as ScanLine } from '@solar-icons/react/linear';
 import { useRef, useState, type ComponentType, type FormEvent } from 'react';
@@ -142,10 +143,10 @@ export function MyTill() {
           : t('till.noRule')}
       </p>
 
-      <div className="mt-10 rounded-xl border bg-card px-5 py-4">
+      <Link to={`/activity?period=today&staff=${me.id}`} className="mt-10 block rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <div className="font-medium">{t('till.today', { collects: num(today?.collects ?? 0), redemptions: num(today?.redemptions ?? 0) })}</div>
         <div className="text-sm text-muted-foreground">{t('till.todayBy')}</div>
-      </div>
+      </Link>
 
       <Dialog open={!!step} onOpenChange={(o) => (o ? null : setStep(null))}>
         <DialogContent className="sm:max-w-md">

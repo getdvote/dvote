@@ -8,6 +8,7 @@ import {
   QrCodeIcon,
   CheckCircleIcon as CheckCircle,
   GiftIcon,
+  ChatRoundDotsIcon,
   LoaderIcon as Loader2,
   MapPointIcon,
   RefreshIcon as Refresh,
@@ -15,7 +16,7 @@ import {
   WalletIcon,
   WiFiRouterIcon,
 } from '@solar-icons/react/linear';
-import { useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -32,9 +33,8 @@ import { IPhoneMockup } from '../../components/IPhoneMockup';
 import { initial } from '../../components/PageHeader';
 import { useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { errorMessage, vendorApi, type Storefront, type StorefrontSection, type Vendor } from '../../lib/api';
-import { cardDesign } from '../../lib/cardDesigns';
 import { config } from '../../lib/config';
-import { BRAND_FONTS, loadFonts, LOYALTY_LABELS, newSection, SECTION_TYPES, WIFI_SECURITY } from '../../lib/storefront';
+import { LOYALTY_LABELS, newSection, SECTION_TYPES, WIFI_SECURITY } from '../../lib/storefront';
 import { t } from '../../i18n';
 import { ImagesTab } from '../vendor/ImagesTab';
 
@@ -46,28 +46,8 @@ const ICONS: Record<StorefrontSection['type'], ComponentType<{ className?: strin
   menu: ChefHatIcon,
   branches: MapPointIcon,
   wifi: WiFiRouterIcon,
+  feedback: ChatRoundDotsIcon,
 };
-
-/** Readable text on a #rrggbb background. */
-function inkOn(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170 ? '#1c1c1e' : '#ffffff';
-}
-
-/** Merchant branding for the customer preview and brand-style editor. */
-export function useBrand(vendor: Vendor) {
-  const design = cardDesign(vendor.id, vendor.cardDesign);
-  const primary = vendor.brandPrimary ?? design.colors[0];
-  const font = vendor.brandFont ? `"${BRAND_FONTS[vendor.brandFont]}", var(--font-sans)` : undefined;
-  useEffect(() => loadFonts(Object.values(BRAND_FONTS)), []);
-  const vars = {
-    '--primary': primary,
-    '--primary-foreground': inkOn(primary),
-    '--ring': primary,
-    '--brand-soft': `color-mix(in oklab, ${primary} 12%, var(--card))`,
-  } as CSSProperties;
-  return { primary, font, vars };
-}
 
 export const storefrontUrl = (vendor: Vendor, branchId?: string) =>
   vendor.slug ? `${config.webUrl}/${vendor.slug}${branchId ? `?b=${branchId}` : ''}` : null;
@@ -101,57 +81,59 @@ export function StorefrontEditor() {
 
   return (
     <div className="grid gap-6">
-      {/* the shop, as its page shows it */}
-      <Card className="gap-4 p-4 sm:p-5">
-        <div className="flex min-w-0 items-center gap-4">
-        {vendor.logoUrl ? (
-          <img src={vendor.logoUrl} alt="" className="size-14 shrink-0 rounded-2xl object-cover shadow-sm" />
-        ) : (
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground">
-            {initial(vendor.name)}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold">
-            {vendor.name}
-          </h2>
-          {url ? (
-            <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground">
-              {url.replace(/^https?:\/\//, '')}
-            </a>
+      {/* the shop and its page address, with the ways to share it */}
+      <Card className="flex-row flex-wrap items-center gap-4 p-4 sm:p-5">
+        <div className="flex min-w-0 flex-1 basis-64 items-center gap-4">
+          {vendor.logoUrl ? (
+            <img src={vendor.logoUrl} alt="" className="size-12 shrink-0 rounded-xl border object-cover" />
           ) : (
-            <p className="text-sm text-muted-foreground">{t('storefront.noSlug')}</p>
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-semibold">{initial(vendor.name)}</span>
           )}
-        </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <SaveStatus />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" disabled={!url} onClick={async () => {
-              if (!url) return;
-              try {
-                await navigator.clipboard.writeText(url);
-                toast.success(t('storefront.linkCopied'));
-              } catch {
-                toast.error(t('storefront.copyFailed'));
-              }
-            }}>
-              <CopyIcon /> {t('storefront.copyLink')}
-            </Button>
-            <Button variant="outline" disabled>
-              <QrCodeIcon /> {t('storefront.getQr')} <Badge variant="outline">{t('common.soon')}</Badge>
-            </Button>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="truncate font-semibold">{vendor.name}</h2>
+              <SaveStatus />
+            </div>
+            {url ? (
+              <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground hover:underline">
+                {url.replace(/^https?:\/\//, '')}
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('storefront.noSlug')}</p>
+            )}
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!url}
+            onClick={() => {
+              if (!url) return;
+              navigator.clipboard.writeText(url).then(
+                () => toast.success(t('storefront.linkCopied')),
+                () => toast.error(t('storefront.copyFailed')),
+              );
+            }}
+          >
+            <CopyIcon /> {t('storefront.copyLink')}
+          </Button>
+          <Button variant="outline" size="sm" disabled>
+            <QrCodeIcon /> {t('storefront.getQr')}
+            <Badge variant="outline" className="ms-0.5">
+              {t('common.soon')}
+            </Badge>
+          </Button>
         </div>
       </Card>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="grid justify-items-center gap-5 lg:sticky lg:top-4">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid justify-items-center gap-5 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1">
           <IPhoneMockup src={url} width={300} reloadKey={previewKey} title={t('storefront.preview')} empty={t('storefront.noSlug')} />
           <PreviewFooter url={url} />
         </div>
 
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4 lg:col-start-1 lg:row-start-1">
           <Card>
             <CardHeader>
               <CardTitle>{t('storefront.appliesTo')}</CardTitle>
@@ -406,6 +388,8 @@ function SectionFields({
           <Link to="/rewards">{t('storefront.manageRewards')}</Link>
         </Button>
       );
+    case 'feedback':
+      return <FeedbackSettings section={s} onChange={onChange} />;
     case 'branches':
       return (
         <Button variant="outline" className="w-fit" asChild>
@@ -436,7 +420,6 @@ function MenuDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
 /** The eye button next to Storefront in the sidebar: the live page in an iPhone, over everything. */
 export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const vendor = useMyVendor();
-  const brand = useBrand(vendor);
   const url = storefrontUrl(vendor);
   // fit the phone in the window (screen ratio 393 × 852, plus room for the footer)
   const [width, setWidth] = useState(300);
@@ -449,7 +432,6 @@ export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        style={brand.vars}
         className="w-auto max-w-none justify-items-center gap-5 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&>[data-slot=dialog-close]]:hidden"
       >
         <DialogHeader className="sr-only">
@@ -463,4 +445,26 @@ export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean;
       </DialogContent>
     </Dialog>
   );
+}
+
+function FeedbackSettings({ section, onChange }: { section: Extract<StorefrontSection, { type: 'feedback' }>; onChange: (s: StorefrontSection) => void }) {
+  const [en, setEn] = useState(section.placeholder?.en ?? '');
+  const [ar, setAr] = useState(section.placeholder?.ar ?? '');
+  const both = !!en.trim() && !!ar.trim();
+  const empty = !en.trim() && !ar.trim();
+  const changed = en.trim() !== (section.placeholder?.en ?? '') || ar.trim() !== (section.placeholder?.ar ?? '');
+  return <div className="grid gap-4">
+    <p className="text-sm text-muted-foreground">{t('feedback.placeholderHint')}</p>
+    <Field label={t('feedback.placeholderEn')} htmlFor="feedback-placeholder-en">
+      <Input id="feedback-placeholder-en" dir="ltr" maxLength={300} value={en} placeholder={t('feedback.defaultEn')} onChange={e => setEn(e.target.value)} />
+    </Field>
+    <Field label={t('feedback.placeholderAr')} htmlFor="feedback-placeholder-ar">
+      <Input id="feedback-placeholder-ar" dir="rtl" maxLength={300} value={ar} placeholder={t('feedback.defaultAr')} onChange={e => setAr(e.target.value)} />
+    </Field>
+    {!both && !empty ? <p role="status" className="text-sm text-destructive">{t('feedback.bothRequired')}</p> : null}
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" disabled={!changed || (!both && !empty)} onClick={() => onChange(both ? { type: 'feedback', placeholder: { en: en.trim(), ar: ar.trim() } } : { type: 'feedback' })}>{t('feedback.savePlaceholder')}</Button>
+      <Button variant="outline" asChild><Link to="/feedback">{t('feedback.view')}</Link></Button>
+    </div>
+  </div>;
 }

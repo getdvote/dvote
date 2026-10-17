@@ -75,6 +75,19 @@ export const en = {
     getBackTitle: 'Get your card back',
     getBackText: "Type the email and mobile number you joined with.",
   },
+  feedback: {
+    placeholder: "How was your visit? Tell us what you think.",
+    title: "Feedback",
+    rowHint: "Tell us about your visit",
+    hint: "Leave a comment for the shop. This does not create a loyalty card or customer account.",
+    name: "Your name",
+    phone: "Mobile number",
+    comment: "Your comment",
+    send: "Send feedback",
+    thanks: "Thank you! Your feedback has been sent to the shop.",
+    back: "Back to the shop",
+    unavailable: "Feedback is not available for this storefront.",
+  },
   card: {
     addWithButtons: "Add your card using a wallet button below.",
     or: "OR",
@@ -104,6 +117,7 @@ export const en = {
     body3: 'Your points and visits are recorded only when staff scan your card at the till.',
   },
   errors: {
+    feedback_unavailable: "Feedback is not available for this storefront.",
     wallet_not_configured: 'Google Wallet is not set up yet. Your card is saved: staff can find it by its code.',
     network: "Can't reach dvote right now. Check your connection and try again.",
     generic: 'Something went wrong. Please try again.',

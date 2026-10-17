@@ -1,7 +1,7 @@
 import type { BrandFont, PageStyle, StorefrontSection } from './api';
 
 /** Keep in step with apps/api/src/storefront/storefront.ts. */
-export const SECTION_TYPES: StorefrontSection['type'][] = ['loyalty', 'rewards', 'menu', 'branches', 'wifi'];
+export const SECTION_TYPES: StorefrontSection['type'][] = ['loyalty', 'rewards', 'menu', 'branches', 'wifi', 'feedback'];
 export const LOYALTY_LABELS = ['loyalty_card', 'join_club', 'collect_points'] as const;
 export const WIFI_SECURITY = ['wpa', 'wep', 'none'] as const;
 export const PAGE_STYLES: PageStyle[] = ['spotlight', 'compact', 'branded', 'playful', 'split'];

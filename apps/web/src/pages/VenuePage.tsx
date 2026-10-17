@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, Copy, Gift, MapPin, Navigation, UtensilsCrossed, WalletCards, Wifi } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Copy, Gift, MessageSquare, MapPin, Navigation, UtensilsCrossed, WalletCards, Wifi } from 'lucide-react';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ErrorNote, Page, Spinner, cx } from '../components/ui';
@@ -202,6 +202,8 @@ function SectionRow({ section: s, brand }: { section: Section; brand: Brand }) {
   const { vendor, q } = brand;
   const base = `/${vendor.slug}`;
   switch (s.type) {
+    case 'feedback':
+      return <Row to={`${base}/feedback${q}`} icon={MessageSquare} title={t('feedback.title')} text={t('feedback.rowHint')} brand={brand} />;
     case 'loyalty':
       return <Row to={`${base}/join${q}`} icon={WalletCards} title={t(`venue.labels.${s.label}`)} text={earnText(vendor)} brand={brand} />;
     case 'rewards':

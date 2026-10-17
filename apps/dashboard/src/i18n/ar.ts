@@ -123,6 +123,15 @@ export const ar: Dictionary = {
     footnote: 'العملاء والنقاط المحتفظ بها تشمل كل من لديه بطاقة في {shop}. لا يعرض dvote هوية عملائك أبدًا.',
   },
   profile: {
+    username: "اسم مستخدم المتجر",
+    usernameHint: "عنوان متجرك الفريد. تغييره يغيّر رابط صفحتك.",
+    usernameSaved: "تم حفظ اسم مستخدم المتجر",
+    reserveUsername: "حفظ اسم المستخدم",
+    usernameFormat: "استخدم من 2 إلى 50 حرفًا إنجليزيًا صغيرًا أو رقمًا مع شرطات مفردة.",
+    checkingUsername: "جارٍ التحقق من التوفر…",
+    usernameAvailable: "اسم المستخدم متاح",
+    usernameTaken: "اسم المستخدم مستخدم أو محجوز.",
+
     subtitle: 'كيف يظهر متجرك في تطبيق dvote.',
     logoUpdated: 'تم تحديث الشعار',
     logoRemoved: 'تمت إزالة الشعار',
@@ -982,6 +991,8 @@ export const ar: Dictionary = {
       rewards: { title: 'المكافآت', hint: 'مكافآتك المتاحة ونقاطها.' },
       menu: { title: 'المنيو', hint: 'صفحات المنيو، تُفتح من الصفحة.' },
       branches: { title: 'الفروع', hint: 'فروعك المفتوحة مع الاتجاهات.' },
+      feedback: {
+ title: "آراء العملاء", hint: "تعليقات الزوار مع رقم موبايل اختياري." },
       wifi: { title: 'واي فاي', hint: 'شبكة الضيوف مع كلمة المرور للنسخ.' },
     },
     buttonWording: 'نص الزر',
@@ -1038,6 +1049,21 @@ export const ar: Dictionary = {
     subtitle: 'رموز QR وروابط NFC وحواملها لفروعك.',
   },
   feedback: {
+    placeholderHint: "استخدم النص الافتراضي أو أدخل نصًا مخصصًا باللغتين. امسح الحقلين لاستعادة النص الافتراضي.",
+    placeholderEn: "النص الإرشادي بالإنجليزية",
+    placeholderAr: "النص الإرشادي بالعربية",
+    defaultEn: "How was your visit? Tell us what you think.",
+    defaultAr: "كيف كانت زيارتك؟ شاركنا رأيك.",
+    bothRequired: "أدخل النسختين العربية والإنجليزية.",
+    savePlaceholder: "حفظ النص الإرشادي",
+    view: "عرض الآراء",
+    empty: "لا توجد آراء بعد. أضف قسم الآراء إلى صفحة متجرك لاستقبال التعليقات.",
+    cardholder: "حامل بطاقة · تطابق الموبايل",
+    guest: "زائر",
+    allBranches: "صفحة المتجر",
+    previous: "السابق",
+    next: "التالي",
+
     subtitle: 'ما يقوله عملاؤك عن زياراتهم.',
   },
   placeholder: {
@@ -1135,6 +1161,9 @@ export const ar: Dictionary = {
     continue: "متابعة",
   },
   errors: {
+    username_taken: "اسم المستخدم مستخدم أو محجوز.",
+    invalid_username: "اختر اسم مستخدم صالحًا للمتجر.",
+
     feedback_not_configured: "لم يتم إعداد الملاحظات على الخادم بعد. استخدم واتساب أو البريد حاليًا.",
     feedback_unavailable: "تعذّر إرسال ملاحظتك الآن. حاول مرة أخرى.",
     segment_name_taken: "لديك بالفعل شريحة بهذا الاسم.",

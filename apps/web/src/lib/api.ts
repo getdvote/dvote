@@ -29,6 +29,7 @@ export type Section =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
+  | { type: 'feedback'; placeholder?: { en: string; ar: string } }
   | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
 
 export interface PublicCard {
@@ -87,6 +88,8 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
 }
 
 export const api = {
+  submitFeedback: (slug: string, body: { name: string; phone?: string; message: string; branchId?: string }) =>
+    call<{ received: boolean }>('POST', `/api/public/vendors/${encodeURIComponent(slug)}/feedback`, body),
   vendor: (slug: string, branch?: string | null) =>
     call<PublicVendor>('GET', `/api/public/vendors/${encodeURIComponent(slug)}${branch ? `?b=${encodeURIComponent(branch)}` : ''}`),
   /** Join, or get the card back (same email + same mobile). No sign-in. */

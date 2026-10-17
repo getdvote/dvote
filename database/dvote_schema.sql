@@ -463,28 +463,26 @@ LANGUAGE sql IMMUTABLE AS $$
                  'privacy', 'terms', 'about', 'login', 'dashboard', 'staff', 'static', 'assets', 'dvote')
 $$;
 
--- A free slug from a name: "Joy Corner" -> joy-corner, then joy-corner-2, -3 ... if taken.
+-- A free slug from a name: "Joy Corner" -> joy-corner, then a random numeric suffix if taken.
 -- Names without Latin letters (e.g. Arabic) become "shop", "shop-2", ...
 CREATE FUNCTION vendor_slug_from(name text, own_id uuid) RETURNS text
 LANGUAGE plpgsql AS $$
 DECLARE
-    base text := left(trim(both '-' from regexp_replace(lower(coalesce(name, '')), '[^a-z0-9]+', '-', 'g')), 44);
-    candidate text;
-    n int := 1;
+  base text := left(trim(both '-' from regexp_replace(lower(coalesce(name, '')), '[^a-z0-9]+', '-', 'g')), 44);
+  candidate text;
 BEGIN
-    -- one slug pick at a time, so two merchants created at once never get the same slug
-    PERFORM pg_advisory_xact_lock(hashtext('vendor_slug'));
-    base := trim(both '-' from base);
-    IF length(base) < 2 THEN base := 'shop'; END IF;
-    IF vendor_slug_reserved(base) THEN base := base || '-shop'; END IF;
-    candidate := base;
-    WHILE EXISTS (SELECT 1 FROM vendors WHERE slug = candidate AND id IS DISTINCT FROM own_id) LOOP
-        n := n + 1;
-        candidate := base || '-' || n;
-    END LOOP;
-    RETURN candidate;
+  PERFORM pg_advisory_xact_lock(hashtext('vendor_slug'));
+  base := trim(both '-' from base);
+  IF length(base) < 2 THEN base := 'shop'; END IF;
+  IF vendor_slug_reserved(base) THEN base := left(base, 39) || '-shop'; END IF;
+  candidate := base;
+  WHILE EXISTS (SELECT 1 FROM vendors WHERE slug = candidate AND id IS DISTINCT FROM own_id) LOOP
+    candidate := base || '-' || (10000 + floor(random() * 90000)::int)::text;
+  END LOOP;
+  RETURN candidate;
 END;
 $$;
+
 
 -- Fill the slug of every new merchant that is created without one (admin API, tests, seeds).
 CREATE FUNCTION vendors_fill_slug() RETURNS trigger
@@ -627,6 +625,23 @@ ALTER TABLE vendors ALTER COLUMN slug SET DEFAULT '';
 -- the verified email in that token. Our own email-code table (16_wallet_join) is not needed; it
 -- never held data.
 DROP TABLE join_requests;
+
+-- Storefront comments are separate from customer/card enrollment.
+CREATE TABLE vendor_feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_id uuid NOT NULL REFERENCES vendors(id),
+  branch_id uuid,
+  card_id uuid,
+  name varchar(120) NOT NULL CHECK (length(trim(name)) > 0),
+  phone varchar(20),
+  message varchar(2000) NOT NULL CHECK (length(trim(message)) > 0),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (branch_id, vendor_id) REFERENCES branches(id, vendor_id),
+  FOREIGN KEY (card_id, vendor_id) REFERENCES cards(id, vendor_id)
+);
+CREATE INDEX vendor_feedback_vendor_created_idx ON vendor_feedback(vendor_id, created_at DESC, id DESC);
+ALTER TABLE vendor_feedback ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON vendor_feedback FROM anon, authenticated;
 
 COMMIT;
 

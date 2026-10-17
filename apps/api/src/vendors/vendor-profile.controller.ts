@@ -1,3 +1,5 @@
+import { Query } from '@nestjs/common';
+import { StorefrontUsernameDto } from './dto/storefront-username.dto';
 import {
   Body,
   Controller,
@@ -43,6 +45,18 @@ import { VendorsService } from './vendors.service';
 @Controller('vendor/profile')
 export class VendorProfileController {
   constructor(private readonly vendors: VendorsService) {}
+
+  @Get('username')
+  @StaffRoles('vendor_admin')
+  usernameAvailability(@CurrentStaff() ctx: StaffContext, @Query() query: StorefrontUsernameDto) {
+    return this.vendors.usernameAvailability(ctx.vendorId, query.username);
+  }
+
+  @Put('username')
+  @StaffRoles('vendor_admin')
+  async reserveUsername(@CurrentStaff() ctx: StaffContext, @Body() dto: StorefrontUsernameDto) {
+    return VendorResponseDto.from(await this.vendors.reserveUsername(ctx.vendorId, dto.username));
+  }
 
   /** Any staff role: the vendor they work for. */
   @Get()

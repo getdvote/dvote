@@ -5,7 +5,7 @@ import { BadRequestException } from '@nestjs/common';
  * section not in the list is not shown. Stored as jsonb on vendors (the shop) and branches (a
  * branch's own copy); checked here, never trusted from the client.
  */
-export const SECTION_TYPES = ['loyalty', 'rewards', 'menu', 'branches', 'wifi'] as const;
+export const SECTION_TYPES = ['loyalty', 'rewards', 'menu', 'branches', 'wifi', 'feedback'] as const;
 export type SectionType = (typeof SECTION_TYPES)[number];
 
 /** Button / heading words the merchant picks from (translated on the page). */
@@ -17,6 +17,7 @@ export type StorefrontSection =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
+  | { type: 'feedback'; placeholder?: { en: string; ar: string } }
   | { type: 'wifi'; ssid: string; security: (typeof WIFI_SECURITY)[number]; password: string };
 
 export interface Storefront {
@@ -67,6 +68,14 @@ export function checkStorefront(input: unknown): Storefront {
     switch (type) {
       case 'loyalty':
         return { type, label: pick(LOYALTY_LABELS, s.label, 'loyalty_card') };
+      case 'feedback': {
+        if (s.placeholder === undefined) return { type };
+        const p = s.placeholder as Record<string, unknown> | null;
+        if (!p || typeof p !== 'object' || typeof p.en !== 'string' || typeof p.ar !== 'string' || !p.en.trim() || !p.ar.trim() || p.en.length > 300 || p.ar.length > 300) {
+          throw bad('Feedback placeholder needs both English and Arabic (1–300 characters each)');
+        }
+        return { type, placeholder: { en: p.en.trim(), ar: p.ar.trim() } };
+      }
       case 'wifi':
         return {
           type,

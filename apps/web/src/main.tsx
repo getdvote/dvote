@@ -1,3 +1,4 @@
+import { FeedbackPage } from './pages/feedback-page';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
   { path: '/c/:publicId/wallet', element: <WalletPage /> },
   { path: '/c/:publicId', element: <CardPage /> },
   { path: '/:slug', element: <VenuePage /> },
+  { path: '/:slug/feedback', element: <FeedbackPage /> },
   { path: '/:slug/join', element: <JoinPage /> },
   { path: '/:slug/rewards', element: <VenueSectionPage kind="rewards" /> },
   { path: '/:slug/menu', element: <VenueSectionPage kind="menu" /> },

@@ -1,3 +1,4 @@
+import { StorefrontFeedbackModule } from './storefront-feedback/storefront-feedback.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
@@ -44,6 +45,7 @@ import { PublicJoinModule } from './public-join/public-join.module';
     ScansModule,
     CardsModule,
     FeedbackModule,
+    StorefrontFeedbackModule,
     VendorImagesModule,
     AdminModule,
     BranchesModule,
