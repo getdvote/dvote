@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Gift, X } from 'lucide-react';
+import { GiftIcon as Gift, CloseIcon as X } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,12 @@ import { t } from '../../i18n';
 const PAGE_SIZE = 25;
 const ALL = 'all';
 
-/** Rewards given at my shops: what customers pick, where, and who handed it over. Customers show as a card code. */
-export function MyRedemptions() {
+/** Rewards given at my shops (a tab of the Rewards page when `embedded`): what customers pick, where, and who handed it over. Customers show as a card code. */
+export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
   const me = useMe();
   const scope = useMyScope();
   const vendor = useMyVendor();
-  const branchOnly = me.role !== 'vendor_admin';
+  const branchOnly = me.branchId !== null; // branch roles; admins and viewers see every branch
 
   const period = usePeriod('30d');
   const [rewardId, setRewardId] = useState(ALL);
@@ -62,10 +62,16 @@ export function MyRedemptions() {
 
   return (
     <>
-      <PageHeader
-        title={t('nav.redemptions')}
-        subtitle={t('redemptions.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
-      />
+      {embedded ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          {t('redemptions.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+        </p>
+      ) : (
+        <PageHeader
+          title={t('nav.redemptions')}
+          subtitle={t('redemptions.subtitle', { shop: branchOnly ? (me.branch?.name ?? t('availability.yourBranch')) : vendor.name })}
+        />
+      )}
       <PeriodPicker state={period} onChange={() => setPage(1)} />
 
       <Card className="mb-5 flex-row flex-wrap gap-0 divide-x py-0">

@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { Check, ImagePlus, Loader2, Trash2 } from 'lucide-react';
+import { CheckIcon as Check, GalleryAddIcon as ImagePlus, LoaderIcon as Loader2, TrashBinTrashIcon as Trash2 } from '@solar-icons/react/linear';
 import { useRef } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ export function BrandingPanel({
   uploadBanner,
   removeBanner,
   onSaved,
+  showDesign = true,
 }: {
   vendor: Vendor;
   canEdit: boolean;
@@ -33,6 +34,8 @@ export function BrandingPanel({
   uploadBanner: (f: File) => Promise<Vendor>;
   removeBanner: () => Promise<Vendor>;
   onSaved: (v: Vendor) => void;
+  /** The card design picker (merchants have it on the Card page instead). */
+  showDesign?: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const done = (text: string) => (v: Vendor) => {
@@ -44,7 +47,7 @@ export function BrandingPanel({
   const update = useMutation({ mutationFn: save, onError: fail });
   const banner = useMutation({ mutationFn: uploadBanner, onSuccess: done(t('branding.bannerSaved')), onError: fail });
   const dropBanner = useMutation({ mutationFn: removeBanner, onSuccess: done(t('branding.bannerRemoved')), onError: fail });
-  const shown = cardDesign(vendor.id, vendor.cardDesign);
+  const shown = cardDesign(vendor.id, vendor.cardDesign); // the empty banner uses its colours
 
   return (
     <div className="grid gap-8">
@@ -126,53 +129,76 @@ export function BrandingPanel({
         </div>
       </section>
 
-      {/* Card design */}
-      <section className="grid gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-semibold">{t('branding.design')}</h3>
-          {canEdit && vendor.cardDesign ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={update.isPending}
-              onClick={() => update.mutate({ cardDesign: null }, { onSuccess: done(t('branding.automaticToast')) })}
-            >
-              {t('branding.automatic')}
-            </Button>
-          ) : null}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {t('branding.designHint', { shop: vendor.name })}{' '}
-          {vendor.cardDesign ? t('branding.now', { design: designName(shown) }) : t('branding.noneChosen', { design: designName(shown) })}
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {CARD_DESIGNS.map((d) => {
-            const selected = vendor.cardDesign === d.id;
-            const pending = update.isPending && update.variables?.cardDesign === d.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                disabled={!canEdit || update.isPending}
-                onClick={() => update.mutate({ cardDesign: d.id }, { onSuccess: done(t('branding.designToast', { design: designName(d) })) })}
-                className={cn(
-                  'group grid gap-1.5 rounded-2xl p-1.5 text-start outline-none transition focus-visible:ring-3 focus-visible:ring-ring/50',
-                  selected ? 'bg-brand-soft ring-2 ring-primary' : 'enabled:hover:bg-muted',
-                  !canEdit && 'cursor-default',
-                )}
-                aria-pressed={selected}
-                aria-label={t('branding.designLabel', { n: d.id, design: designName(d) })}
-              >
-                <CardPreview design={d} name={vendor.name} logoUrl={vendor.logoUrl} />
-                <span className="flex items-center gap-1.5 px-1 text-sm font-medium">
-                  {pending ? <Loader2 className="size-3.5 animate-spin" /> : selected ? <Check className="size-3.5 text-primary" /> : null}
-                  {d.id}. {designName(d)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {showDesign ? <CardDesignPicker vendor={vendor} canEdit={canEdit} save={save} onSaved={onSaved} /> : null}
     </div>
+  );
+}
+
+/** The design of the vendor's loyalty cards in the customer app: one of 10, or automatic. */
+export function CardDesignPicker({
+  vendor,
+  canEdit,
+  save,
+  onSaved,
+}: {
+  vendor: Vendor;
+  canEdit: boolean;
+  save: (body: Partial<VendorBranding>) => Promise<Vendor>;
+  onSaved: (v: Vendor) => void;
+}) {
+  const done = (text: string) => (v: Vendor) => {
+    onSaved(v);
+    toast.success(text);
+  };
+  const update = useMutation({ mutationFn: save, onError: (e: unknown) => void toast.error(errorMessage(e)) });
+  const shown = cardDesign(vendor.id, vendor.cardDesign);
+
+  return (
+    <section className="grid gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">{t('branding.design')}</h3>
+        {canEdit && vendor.cardDesign ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={update.isPending}
+            onClick={() => update.mutate({ cardDesign: null }, { onSuccess: done(t('branding.automaticToast')) })}
+          >
+            {t('branding.automatic')}
+          </Button>
+        ) : null}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {t('branding.designHint', { shop: vendor.name })}{' '}
+        {vendor.cardDesign ? t('branding.now', { design: designName(shown) }) : t('branding.noneChosen', { design: designName(shown) })}
+      </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {CARD_DESIGNS.map((d) => {
+          const selected = vendor.cardDesign === d.id;
+          const pending = update.isPending && update.variables?.cardDesign === d.id;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              disabled={!canEdit || update.isPending}
+              onClick={() => update.mutate({ cardDesign: d.id }, { onSuccess: done(t('branding.designToast', { design: designName(d) })) })}
+              className={cn(
+                'group grid gap-1.5 rounded-2xl p-1.5 text-start outline-none transition focus-visible:ring-3 focus-visible:ring-ring/50',
+                selected ? 'bg-brand-soft ring-2 ring-primary' : 'enabled:hover:bg-muted',
+                !canEdit && 'cursor-default',
+              )}
+              aria-pressed={selected}
+              aria-label={t('branding.designLabel', { n: d.id, design: designName(d) })}
+            >
+              <CardPreview design={d} name={vendor.name} logoUrl={vendor.logoUrl} />
+              <span className="flex items-center gap-1.5 px-1 text-sm font-medium">
+                {pending ? <Loader2 className="size-3.5 animate-spin" /> : selected ? <Check className="size-3.5 text-primary" /> : null}
+                {d.id}. {designName(d)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }

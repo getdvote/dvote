@@ -1,6 +1,8 @@
+import { useState } from 'react';
+import { SelectFilter } from '../../components/ListControls';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Gift, Trophy, Users, Zap } from 'lucide-react';
+import { GiftIcon as Gift, CupStarIcon as Trophy, UsersGroupRoundedIcon as Users, BoltIcon as Zap } from '@solar-icons/react/linear';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
@@ -8,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { num, PageHeader } from '../../components/PageHeader';
 import { TableState } from '../../components/TableState';
-import { useMe, useMyVendor } from '../../layouts/VendorLayout';
+import { useMe, useMyVendor, useMyScope } from '../../layouts/VendorLayout';
 import { vendorApi } from '../../lib/api';
 import { OverviewSkeleton, Stat } from '../Overview';
 import { GoLiveChecklist, useGoLivePending } from './GoLiveChecklist';
@@ -25,19 +27,30 @@ const chartConfig = () =>
 export function MyHome() {
   const me = useMe();
   const vendor = useMyVendor();
-  const { data, isLoading, error } = useQuery({ queryKey: ['summary', 'me'], queryFn: vendorApi.summary, refetchInterval: 60_000 });
-  const branchOnly = me.role !== 'vendor_admin';
+  const branchOnly = me.branchId !== null; // branch roles; admins and viewers see every branch
+  const scope = useMyScope();
+  const [branch, setBranch] = useState('all');
+  const branchId = branchOnly ? me.branchId ?? undefined : branch === 'all' ? undefined : branch;
+  const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: !branchOnly });
+  const selectedBranch = branches?.find((b) => b.id === branchId);
+  const { data, isLoading, error } = useQuery({ queryKey: ['summary', 'me', branchId ?? 'all'], queryFn: () => vendorApi.summary({ branchId }), refetchInterval: 60_000 });
   // while the go-live steps show, setup tips live there instead of twice
-  const goLivePending = useGoLivePending(!branchOnly);
+  const isAdmin = me.role === 'vendor_admin'; // the go-live steps are the admin's to do
+  const goLivePending = useGoLivePending(isAdmin);
 
   return (
     <>
       <PageHeader
         title={t('home.hi', { name: me.name.split(' ')[0] })}
-        subtitle={t('home.today', { shop: (branchOnly ? me.branch?.name : vendor.name) ?? '', date: dayjs().format('dddd D MMMM') })}
+        subtitle={t('home.today', { shop: (branchOnly ? me.branch?.name : selectedBranch?.name ?? vendor.name) ?? '', date: dayjs().format('dddd D MMMM') })}
+        extra={branchOnly ? null : (
+          <SelectFilter label={t('common.branch')} allLabel={t('common.allBranches')} value={branch} onChange={setBranch}
+            options={branches?.map((b) => ({ value: b.id, label: b.name }))} />
+        )}
       />
-      {branchOnly ? null : <GoLiveChecklist className="mb-5" />}
+      {isAdmin ? <GoLiveChecklist className="mb-5" /> : null}
       <div className="mb-5">
+        {!branchOnly && branchId ? <p className="mb-2 text-xs text-muted-foreground">{t('home.merchantUpdates')}</p> : null}
         <NeedsAttention hideSetup={goLivePending} />
       </div>
       <ErrorAlert error={error} className="mb-4" />
@@ -48,8 +61,8 @@ export function MyHome() {
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <Stat icon={Zap} title={t('home.collectsToday')} value={data.collectsToday} note={t('home.pointsGivenToday', { n: data.pointsToday })} />
             <Stat icon={Users} title={t('home.customers')} value={data.customers} note={t('home.newThisWeek', { n: data.newCustomers7d })} />
-            <Stat icon={Trophy} title={t('home.earned30')} value={data.pointsEarned30d} note={branchOnly ? t('home.atYourBranch') : t('home.allBranches')} />
-            <Stat icon={Gift} title={t('home.held')} value={data.pointsOutstanding} note={t('home.redeemed30', { n: data.pointsRedeemed30d })} />
+            <Stat icon={Trophy} title={t('home.earned30')} value={data.pointsEarned30d} note={branchId ? (selectedBranch?.name ?? t('home.atYourBranch')) : t('home.allBranches')} />
+            <Stat icon={Gift} title={t(branchId ? 'home.heldAllBranches' : 'home.held')} value={data.pointsOutstanding} note={t('home.redeemed30', { n: data.pointsRedeemed30d })} />
           </div>
 
           <div className="grid gap-5 xl:grid-cols-3">
@@ -95,7 +108,7 @@ export function MyHome() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{branchOnly ? t('home.myBranch30') : t('home.branches30')}</CardTitle>
+              <CardTitle>{branchId ? t('home.myBranch30') : t('home.branches30')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-hidden rounded-lg border">
@@ -122,7 +135,7 @@ export function MyHome() {
             </CardContent>
           </Card>
           <p className="text-xs text-muted-foreground">
-            {t('home.footnote', { shop: vendor.name })}
+            {t(branchId ? 'home.branchFootnote' : 'home.footnote', { shop: vendor.name })}
           </p>
         </div>
       )}

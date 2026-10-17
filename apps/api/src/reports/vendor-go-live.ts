@@ -3,7 +3,7 @@ import { ApiOkResponse, ApiProperty } from '@nestjs/swagger';
 import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { VendorApi } from '../auth/vendor-api.decorator';
-import { readWeek } from '../branches/hours';
+import { openingHoursEnabled, readWeek } from '../branches/hours';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** The go-live steps, in the order a new merchant should do them. */
@@ -20,9 +20,9 @@ export type GoLiveStep = (typeof GO_LIVE_STEPS)[number];
 
 /** Where in the dashboard each step is done. */
 const STEP_PATH: Record<GoLiveStep, string> = {
-  logo: '/profile',
-  banner: '/profile',
-  rule: '/rule',
+  logo: '/settings?tab=branding',
+  banner: '/settings?tab=branding',
+  rule: '/card',
   reward: '/rewards',
   branch_hours: '/branches',
   staff: '/staff',
@@ -44,7 +44,7 @@ class GoLiveStepDto {
   @ApiProperty({ enum: GO_LIVE_STEPS, enumName: 'GoLiveStep' })
   key: GoLiveStep;
   @ApiProperty() done: boolean;
-  @ApiProperty({ example: '/profile', description: 'Dashboard path' })
+  @ApiProperty({ example: '/settings?tab=branding', description: 'Dashboard path' })
   to: string;
 }
 
@@ -120,7 +120,8 @@ export class VendorGoLiveService {
       banner: !!vendor.banner_url,
       rule: rule > 0,
       reward: rewards.some((r) => !!r.image_url && hasArabic(r)),
-      branch_hours: branches.some((b) => !!readWeek(b.weekly_hours)?.length),
+      // with opening hours hidden, any open branch will do
+      branch_hours: openingHoursEnabled() ? branches.some((b) => !!readWeek(b.weekly_hours)?.length) : branches.length > 0,
       staff: staff > 0,
       test_scan: !!firstScan,
     };

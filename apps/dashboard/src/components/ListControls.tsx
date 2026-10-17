@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { AltArrowLeftIcon as ChevronLeft, AltArrowRightIcon as ChevronRight, MagnifierIcon as Search, CloseIcon as X } from '@solar-icons/react/linear';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

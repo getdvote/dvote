@@ -20,7 +20,7 @@ export class VendorRewardsController {
   ) {}
 
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: [RewardResponseDto] })
   async list(@CurrentStaff() ctx: StaffContext): Promise<RewardResponseDto[]> {
     return (await this.rewards.list(ctx.vendorId)).map((r) => RewardResponseDto.from(r));
@@ -28,7 +28,7 @@ export class VendorRewardsController {
 
   /** Rewards sold out right now, per open branch (both roles see every branch). */
   @Get('sold-out')
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: [SoldOutResponseDto] })
   soldOut(@CurrentStaff() ctx: StaffContext): Promise<SoldOutResponseDto[]> {
     return this.soldOuts.list(ctx.vendorId);

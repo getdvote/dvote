@@ -208,6 +208,7 @@ model vendors {
   name             String             @db.VarChar(120)
   logo_url         String?            @db.VarChar(500)
   contact_email    String?            @db.VarChar(255)
+  contact_phone    String?            @db.VarChar(20)
   currency         String             @default("EGP") @db.Char(3)
   status           vendor_status      @default(active)
   created_at       DateTime           @default(now()) @db.Timestamptz(6)
@@ -423,6 +424,7 @@ enum staff_role {
   vendor_admin
   branch_manager
   staff
+  viewer
 }
 
 enum user_status {
@@ -460,4 +462,35 @@ enum user_gender {
 enum vendor_image_kind {
   menu
   branch_photo
+}
+
+/// Custom customer segments (migration 20). Queried with raw SQL in src/merchant-customers.
+model customer_segments {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id           String   @db.Uuid
+  name                String   @db.VarChar(60)
+  description         String?  @db.VarChar(300)
+  match               String   @default("all") @db.VarChar(3)
+  rules               Json     @default("[]")
+  sort_order          Int      @default(0)
+  status              String   @default("active") @db.VarChar(10)
+  created_by_staff_id String?  @db.Uuid
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([id, vendor_id])
+}
+
+/// Customers added to (included) or removed from (not included) a custom segment by hand.
+model customer_segment_members {
+  segment_id      String   @db.Uuid
+  card_id         String   @db.Uuid
+  vendor_id       String   @db.Uuid
+  included        Boolean
+  set_by_staff_id String?  @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([segment_id, card_id])
+  @@index([vendor_id, card_id], map: "customer_segment_members_card_idx")
 }

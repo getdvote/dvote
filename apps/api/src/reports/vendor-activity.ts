@@ -160,7 +160,8 @@ export class VendorActivityService {
   ): Promise<VendorActivityDto> {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 25;
-    const branchId = ctx.role === 'vendor_admin' ? q.branchId : ctx.branchId!;
+    // merchant-wide accounts (admin, viewer) have no branch; branch roles are held to theirs
+    const branchId = ctx.branchId ?? q.branchId;
 
     const days = await cairoDays(this.prisma, q.from, q.to);
 
@@ -239,7 +240,7 @@ export class VendorActivityController {
 
   /** Every collect, redemption and correction at my shops, newest first (no customer names). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorActivityDto })
   list(
     @CurrentStaff() ctx: StaffContext,

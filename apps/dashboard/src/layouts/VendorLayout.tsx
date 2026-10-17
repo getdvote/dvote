@@ -1,13 +1,12 @@
+import { HomeIcon as HouseActive, ScannerIcon as ScanLineActive, ShopIcon as StoreActive, MapPointIcon as MapPinActive, ChatSquareWarningIcon as MessageSquareWarningActive, CardIcon as CreditCardActive, GiftIcon as GiftActive, SmartphoneVibrationIcon as MegaphoneActive, GraphUpIcon as ChartLineActive, UsersGroupRoundedIcon as UsersActive, BillListIcon as ReceiptTextActive, BoxIcon as KitActive, SettingsIcon as SettingsActive } from '@solar-icons/react/bold-duotone';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, ChartLine, Crown, Gift, HandHeart, LayoutDashboard, ReceiptText, Settings, Store, Users } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { BoxIcon as KitIcon, GraphUpIcon as ChartLine, QuestionCircleIcon as CircleHelp, SmartphoneVibrationIcon as Megaphone, MapPointIcon as MapPin, ChatSquareWarningIcon as MessageSquareWarning, CardIcon as CreditCard, GiftIcon as Gift, HomeIcon as House, BillListIcon as ReceiptText, ScannerIcon as ScanLine, SettingsIcon as Settings, ShopIcon as Store, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { initial } from '../components/PageHeader';
-import { WhatsAppSoon } from '../components/WhatsAppSoon';
+import { ContactDvote } from '../components/ContactDvote';
 import { vendorApi, type StaffMe, type Vendor } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { branchState, stateLabel, type BranchState } from '../lib/hours';
+import { branchState, OPENING_HOURS, stateLabel, type BranchState } from '../lib/hours';
 import { myVendorScope, type VendorScope } from '../lib/scope';
 import { cn } from '@/lib/utils';
 import { SideLayout, type NavItem } from './AdminLayout';
@@ -37,6 +36,7 @@ export function useMyVendor(): Vendor {
       category: null,
       cardDesign: null,
       contactEmail: null,
+      contactPhone: null,
       status: 'active',
       branchCount: 0,
       staffCount: 0,
@@ -50,42 +50,45 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const me = useMe();
   const vendor = useMyVendor();
   const isAdmin = me.role === 'vendor_admin';
-  const nav: NavItem[] = [
-    { to: '/', icon: LayoutDashboard, label: t('nav.overview') },
-    // How the shop is doing: customers and reports.
-    { to: '/customers', icon: Users, label: t('nav.customers'), group: t('nav.insightsGroup') },
-    { to: '/insights', icon: ChartLine, label: t('nav.insights'), group: t('nav.insightsGroup') },
-    { to: '/activity', icon: ReceiptText, label: t('nav.activity'), group: t('nav.insightsGroup') },
-    { to: '/redemptions', icon: HandHeart, label: t('nav.redemptions'), group: t('nav.insightsGroup') },
-    // Everything about setting up the shop itself, together under one heading.
-    ...(isAdmin ? [{ to: '/profile', icon: Settings, label: t('nav.profile'), group: t('nav.shopGroup') }] : []),
-    { to: '/branches', icon: Store, label: t('nav.branches'), group: t('nav.shopGroup') },
-    { to: '/menu', icon: BookOpen, label: t('nav.menu'), group: t('nav.shopGroup') },
-    { to: '/staff', icon: Users, label: t('nav.staff'), group: t('nav.shopGroup') },
-    { to: '/rewards', icon: Gift, label: t('nav.rewards'), group: t('nav.shopGroup') },
-    { to: '/rule', icon: Crown, label: t('nav.rule'), group: t('nav.shopGroup') },
+  const [helpOpen, setHelpOpen] = useState(false);
+  const till: NavItem = { to: '/scan', icon: ScanLine, activeIcon: ScanLineActive, label: t('nav.till') };
+  const cashier = me.role === 'staff';
+  const viewer = me.role === 'viewer'; // read-only: no till, no team
+  const nav: NavItem[] = cashier ? [till] : [
+    { to: '/', icon: House, activeIcon: HouseActive, label: t('nav.home') },
+    ...(viewer ? [] : [till]),
+    // The shop as customers see it.
+    ...(isAdmin ? [{ to: '/storefront', icon: Store, activeIcon: StoreActive, label: t('nav.profile'), group: t('nav.hubGroup') }] : []),
+    { to: '/branches', icon: MapPin, activeIcon: MapPinActive, label: t('nav.branches'), group: t('nav.hubGroup') },
+    { to: '/feedback', icon: MessageSquareWarning, activeIcon: MessageSquareWarningActive, label: t('nav.feedback'), group: t('nav.hubGroup') },
+    // The loyalty program: the card (design + points rule), and rewards (catalogue + given).
+    { to: '/card', icon: CreditCard, activeIcon: CreditCardActive, label: t('nav.card'), group: t('nav.loyaltyGroup') },
+    { to: '/rewards', icon: Gift, activeIcon: GiftActive, label: t('nav.rewards'), group: t('nav.loyaltyGroup') },
+    { to: '/broadcast', icon: Megaphone, activeIcon: MegaphoneActive, label: t('nav.messages'), group: t('nav.loyaltyGroup') },
+    // How the shop is doing.
+    { to: '/insights', icon: ChartLine, activeIcon: ChartLineActive, label: t('nav.insights'), group: t('nav.workspaceGroup') },
+    { to: '/customers', icon: Users, activeIcon: UsersActive, label: t('nav.customers'), group: t('nav.workspaceGroup') },
+    { to: '/activity', icon: ReceiptText, activeIcon: ReceiptTextActive, label: t('nav.activity'), group: t('nav.workspaceGroup') },
+    { to: '/kit', icon: KitIcon, activeIcon: KitActive, label: t('nav.storeIds'), group: t('nav.workspaceGroup') },
+  ];
+  // In the profile menu (the shop card at the top of the sidebar).
+  // the team lives in Settings → Team
+  const account: NavItem[] = cashier ? [] : [
+    { to: '/settings', icon: Settings, activeIcon: SettingsActive, label: t('nav.settings') },
   ];
 
   return (
     <SideLayout
       nav={nav}
-      badge={t('nav.merchantBadge')}
+      accountNav={account}
       languageSwitch
-      headerExtra={<WhatsAppSoon />}
-      person={{ name: me.name, email: me.email }}
-      top={
-        <div className="mt-5 flex items-center gap-3 rounded-lg bg-muted/60 p-2.5">
-          <Avatar className="size-10">
-            {vendor.logoUrl ? <AvatarImage src={vendor.logoUrl} alt="" /> : null}
-            <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">{vendor.name}</div>
-            <div className="truncate text-xs text-muted-foreground">{isAdmin ? t('nav.merchantAdmin') : t('nav.manager', { branch: me.branch?.name ?? '' })}</div>
-            <BranchesNow />
-          </div>
-        </div>
-      }
+      menuLinks={[
+        // the public shop page on the web: not live yet, so it goes nowhere
+        { icon: Store, label: t('nav.storefrontPreview'), href: '#' },
+        { icon: CircleHelp, label: t('nav.getHelp'), onSelect: () => setHelpOpen(true) },
+      ]}
+      overlays={<ContactDvote name={me.name} shop={vendor.name} open={helpOpen} onOpenChange={setHelpOpen} />}
+      identity={{ name: vendor.name, subtitle: me.email, imageUrl: vendor.logoUrl, extra: cashier || !OPENING_HOURS ? null : <BranchesNow /> }}
     >
       {children}
     </SideLayout>
@@ -108,7 +111,7 @@ function BranchesNow() {
   const me = useMe();
   const scope = useMyScope();
   const { data } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), refetchInterval: 60_000 });
-  const open = (data ?? []).filter((b) => b.status === 'active' && (me.role === 'vendor_admin' || b.id === me.branchId));
+  const open = (data ?? []).filter((b) => b.status === 'active' && (me.branchId === null || b.id === me.branchId));
   if (!open.length) return null;
 
   const states = open.map((b) => branchState(b));

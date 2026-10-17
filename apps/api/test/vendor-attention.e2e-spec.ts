@@ -131,7 +131,7 @@ describe('Dashboard home: needs your attention (e2e)', () => {
     expect(items[0]).toMatchObject({
       group: 'now',
       tone: 'critical',
-      action: { to: '/rule' },
+      action: { to: '/card' },
     });
     expect(items.find((i) => i.key === 'branches_no_hours')!.title).toBe(
       'A1 has no opening hours',

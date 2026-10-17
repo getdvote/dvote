@@ -1,5 +1,5 @@
-import { Controller, Get, Injectable, Module } from '@nestjs/common';
-import { ApiOkResponse, ApiProperty } from '@nestjs/swagger';
+import { Controller, Get, Injectable, Module, Query, NotFoundException } from '@nestjs/common';
+import { ApiOkResponse, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Prisma } from '../generated/prisma/client.js';
 import { AuthModule } from '../auth/auth.module';
 import { CurrentStaff } from '../auth/current-staff.decorator';
@@ -9,9 +9,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VendorActivityController, VendorActivityService } from './vendor-activity';
 import { VendorAttentionController, VendorAttentionService } from './vendor-attention';
 import { VendorInsightsController, VendorInsightsService } from './vendor-insights';
+import { VendorPatternsController, VendorPatternsService } from './vendor-patterns';
 import { VendorRewardPerformanceController, VendorRewardPerformanceService } from './vendor-reward-performance';
 import { VendorGoLiveController, VendorGoLiveService } from './vendor-go-live';
 import { VendorRedemptionsController, VendorRedemptionsService } from './vendor-redemptions';
+
+import { IsOptional } from 'class-validator';
+import { IsUuid } from '../common/uuid';
+
+export class VendorSummaryQueryDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUuid()
+  branchId?: string;
+}
 
 const TZ = 'Africa/Cairo';
 
@@ -32,11 +43,11 @@ class SummaryBranchDto {
 export class VendorSummaryResponseDto {
   @ApiProperty({ description: 'Collects today (Cairo time)' }) collectsToday: number;
   @ApiProperty() pointsToday: number;
-  @ApiProperty({ description: 'Customers with a card here (whole vendor)' }) customers: number;
-  @ApiProperty({ description: 'New cards in the last 7 days' }) newCustomers7d: number;
+  @ApiProperty({ description: 'Customers with a card; when branch-filtered, those who collected at that branch' }) customers: number;
+  @ApiProperty({ description: 'New cards in the last 7 days; when branch-filtered, first collects at that branch in the last 7 days' }) newCustomers7d: number;
   @ApiProperty() pointsEarned30d: number;
   @ApiProperty() pointsRedeemed30d: number;
-  @ApiProperty({ description: 'Points customers hold here right now' }) pointsOutstanding: number;
+  @ApiProperty({ description: 'Merchant-wide points held; balances are shared across branches' }) pointsOutstanding: number;
   @ApiProperty({ type: [SummaryDayDto], description: '14 days, oldest first' }) days: SummaryDayDto[];
   @ApiProperty({ type: [SummaryBranchDto] }) branches: SummaryBranchDto[];
 }
@@ -46,9 +57,23 @@ export class VendorSummaryService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Activity numbers for my vendor; a branch manager's activity numbers cover their branch only. */
-  async summary(ctx: StaffContext): Promise<VendorSummaryResponseDto> {
+  async summary(ctx: StaffContext, query: VendorSummaryQueryDto = {}): Promise<VendorSummaryResponseDto> {
     const v = ctx.vendorId;
-    const branchOnly = ctx.role === 'vendor_admin' ? Prisma.empty : Prisma.sql`AND e.branch_id = ${ctx.branchId}::uuid`;
+    // merchant-wide accounts (admin, viewer) have no branch; branch roles are held to theirs
+    const branchId = ctx.branchId ?? query.branchId;
+    if (branchId && !await this.prisma.branches.findFirst({ where: { id: branchId, vendor_id: v }, select: { id: true } })) {
+      throw new NotFoundException({ code: 'branch_not_found' });
+    }
+    const branchOnly = branchId ? Prisma.sql`AND e.branch_id = ${branchId}::uuid` : Prisma.empty;
+    const customerScope = branchId ? Prisma.sql`AND EXISTS (
+      SELECT 1 FROM point_events e WHERE e.card_id = cards.id AND e.vendor_id = ${v}::uuid
+        AND e.branch_id = ${branchId}::uuid AND e.type = 'earn'
+    )` : Prisma.empty;
+    const newCustomers = branchId ? Prisma.sql`SELECT count(*) FROM (
+      SELECT e.card_id FROM point_events e WHERE e.vendor_id = ${v}::uuid
+        AND e.branch_id = ${branchId}::uuid AND e.type = 'earn'
+      GROUP BY e.card_id HAVING min(e.created_at) >= now() - interval '7 days'
+    ) first_visits` : Prisma.sql`SELECT count(*) FROM cards WHERE vendor_id = ${v}::uuid AND created_at >= now() - interval '7 days'`;
 
     const [c] = await this.prisma.$queryRaw<
       {
@@ -66,8 +91,8 @@ export class VendorSummaryService {
            AND (e.created_at AT TIME ZONE ${TZ})::date = (now() AT TIME ZONE ${TZ})::date)        AS collects_today,
         (SELECT sum(delta) FROM point_events e WHERE e.vendor_id = ${v}::uuid AND e.type = 'earn' ${branchOnly}
            AND (e.created_at AT TIME ZONE ${TZ})::date = (now() AT TIME ZONE ${TZ})::date)        AS points_today,
-        (SELECT count(*) FROM cards WHERE vendor_id = ${v}::uuid)                                   AS customers,
-        (SELECT count(*) FROM cards WHERE vendor_id = ${v}::uuid AND created_at >= now() - interval '7 days') AS new7d,
+        (SELECT count(*) FROM cards WHERE vendor_id = ${v}::uuid ${customerScope})                                   AS customers,
+        (${newCustomers}) AS new7d,
         (SELECT sum(delta) FROM point_events e WHERE e.vendor_id = ${v}::uuid AND e.type = 'earn' ${branchOnly}
            AND e.created_at >= now() - interval '30 days')                                          AS earned30,
         (SELECT -sum(delta) FROM point_events e WHERE e.vendor_id = ${v}::uuid AND e.type = 'redeem' ${branchOnly}
@@ -92,7 +117,7 @@ export class VendorSummaryService {
       FROM branches b
       LEFT JOIN point_events e ON e.branch_id = b.id AND e.type = 'earn' AND e.created_at >= now() - interval '30 days'
       WHERE b.vendor_id = ${v}::uuid AND b.status = 'active'
-        ${ctx.role === 'vendor_admin' ? Prisma.empty : Prisma.sql`AND b.id = ${ctx.branchId}::uuid`}
+        ${branchId ? Prisma.sql`AND b.id = ${branchId}::uuid` : Prisma.empty}
       GROUP BY b.id, b.name
       ORDER BY points DESC NULLS LAST, b.name`;
 
@@ -118,17 +143,17 @@ export class VendorSummaryController {
 
   /** Dashboard home: today, the last 14 days, branches (counts only, no customer data). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorSummaryResponseDto })
-  summary(@CurrentStaff() ctx: StaffContext): Promise<VendorSummaryResponseDto> {
-    return this.reports.summary(ctx);
+  summary(@CurrentStaff() ctx: StaffContext, @Query() query: VendorSummaryQueryDto): Promise<VendorSummaryResponseDto> {
+    return this.reports.summary(ctx, query);
   }
 }
 
 /** Reports for the vendor dashboard (/api/vendor/summary, /api/vendor/events, /api/vendor/redemptions, /api/vendor/attention, /api/vendor/insights, /api/vendor/reward-performance, /api/vendor/go-live). */
 @Module({
   imports: [AuthModule],
-  controllers: [VendorSummaryController, VendorActivityController, VendorRedemptionsController, VendorAttentionController, VendorInsightsController, VendorRewardPerformanceController, VendorGoLiveController],
-  providers: [VendorSummaryService, VendorActivityService, VendorRedemptionsService, VendorAttentionService, VendorInsightsService, VendorRewardPerformanceService, VendorGoLiveService],
+  controllers: [VendorSummaryController, VendorActivityController, VendorRedemptionsController, VendorAttentionController, VendorInsightsController, VendorPatternsController, VendorRewardPerformanceController, VendorGoLiveController],
+  providers: [VendorSummaryService, VendorActivityService, VendorRedemptionsService, VendorAttentionService, VendorInsightsService, VendorPatternsService, VendorRewardPerformanceService, VendorGoLiveService],
 })
 export class ReportsModule {}

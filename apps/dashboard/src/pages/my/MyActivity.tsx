@@ -31,7 +31,7 @@ export function MyActivity() {
   const me = useMe();
   const scope = useMyScope();
   const vendor = useMyVendor();
-  const branchOnly = me.role !== 'vendor_admin';
+  const branchOnly = me.branchId !== null; // branch roles; admins and viewers see every branch
 
   const period = usePeriod();
   const [type, setType] = useState<PointEventType | typeof ALL>(ALL);
@@ -192,7 +192,7 @@ const money = (s: string) => (s.endsWith('.00') ? num(Number(s)) : Number(s).toL
 function ActivitySheet({ item, currency, onClose }: { item: ActivityItem | null; currency: string; onClose: () => void }) {
   return (
     <Sheet open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-[440px]">
+      <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=left]:w-full data-[side=right]:sm:max-w-[440px] data-[side=left]:sm:max-w-[440px]">
         {item ? (
           <>
             <SheetHeader>

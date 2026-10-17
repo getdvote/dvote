@@ -133,9 +133,9 @@ describe('Go-live checklist: GET /api/vendor/go-live (e2e)', () => {
   it('a new merchant starts with nothing done, steps in order', async () => {
     const r = (await get('admin').expect(200)).body;
     expect(r.steps).toEqual([
-      { key: 'logo', done: false, to: '/profile' },
-      { key: 'banner', done: false, to: '/profile' },
-      { key: 'rule', done: false, to: '/rule' },
+      { key: 'logo', done: false, to: '/settings?tab=branding' },
+      { key: 'banner', done: false, to: '/settings?tab=branding' },
+      { key: 'rule', done: false, to: '/card' },
       { key: 'reward', done: false, to: '/rewards' },
       { key: 'branch_hours', done: false, to: '/branches' },
       { key: 'staff', done: false, to: '/staff' },

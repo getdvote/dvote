@@ -90,6 +90,7 @@ export class VendorsService {
         logo_url: dto.logoUrl,
         logo_path: replacesUpload ? null : undefined,
         contact_email: dto.contactEmail,
+        contact_phone: dto.contactPhone,
         currency: dto.currency,
         status: dto.status,
         category: dto.category,

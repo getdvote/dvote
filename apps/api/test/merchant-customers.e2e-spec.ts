@@ -59,6 +59,7 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
       ['owner', v, null, 'vendor_admin'],
       ['manager', v, a1, 'branch_manager'],
       ['cashier', v, a1, 'staff'],
+      ['viewer', v, null, 'viewer'],
       ['other', other, null, 'vendor_admin'],
     ] as [string, string, string | null, staff_role][]) {
       const auth = randomUUID();
@@ -170,6 +171,8 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
     const boundary = await customer('boundary', 'Day 29');
     await earn('boundary', boundary, 29);
     await customer('none', null);
+    // joined 40 days ago without a visit: never visited (a fresh card would be "new")
+    await prisma.$executeRaw`UPDATE cards SET created_at = now() - interval '40 days' WHERE id = ${cards.none}::uuid`;
     const branchOnly = await customer('branchOnly', 'Branch Two Only');
     await earn('branchOnly', branchOnly, 0, a2);
     await customer('other', 'Sam Example', other, sam);
@@ -225,6 +228,8 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
           'SET LOCAL session_replication_role = replica',
         );
         const where = { vendor_id: { in: [v, other] } };
+        await tx.customer_segment_members.deleteMany({ where });
+        await tx.customer_segments.deleteMany({ where });
         await tx.redemptions.deleteMany({ where });
         await tx.point_events.deleteMany({ where });
         await tx.cards.deleteMany({ where });
@@ -239,21 +244,27 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
     await app?.close();
   });
 
-  it('classifies once, with exact Cairo 29/30/89-day boundaries', async () => {
+  it('classifies once into the built-in segments, with exact Cairo boundaries', async () => {
     const { body } = await get('owner').expect(200);
     expect(body.customersTotal).toBe(7);
     expect(body.total).toBe(7);
+    // new: Sam, Day 29, Branch Two Only · champions: 2 visits in 30 days · regulars: 1 ·
+    // slipping: last visit 30 days ago after 2 visits · never visited: card 40 days old
     expect(body.segments).toEqual([
+      { key: 'champions', count: 1 },
+      { key: 'regulars', count: 1 },
       { key: 'new', count: 3 },
-      { key: 'returning', count: 1 },
-      { key: 'regular', count: 1 },
-      { key: 'at_risk', count: 1 },
-      { key: 'no_visits', count: 1 },
+      { key: 'never_visited', count: 1 },
+      { key: 'slipping', count: 1 },
+      { key: 'at_risk', count: 0 },
+      { key: 'lost', count: 0 },
     ]);
+    expect(body.customSegments).toEqual([]);
     expect(
       body.items.find((c: { id: string }) => c.id === cards.regular),
     ).toMatchObject({
-      segment: 'regular',
+      segment: 'champions',
+      customSegment: null,
       visits: 6,
       visits90d: 5,
       spend: '600.00',
@@ -272,7 +283,7 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
       body.items.find((c: { id: string }) => c.id === cards.none),
     ).toMatchObject({
       name: null,
-      segment: 'no_visits',
+      segment: 'never_visited',
       firstVisitAt: null,
       lastVisitAt: null,
       spend: '0.00',
@@ -280,7 +291,7 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
   });
 
   it('searches names and references only, handles Arabic, and retains independent counts', async () => {
-    const { body } = await get('owner', '?segment=regular').expect(200);
+    const { body } = await get('owner', '?segment=champions').expect(200);
     expect(body.total).toBe(1);
     expect(body.customersTotal).toBe(7);
     expect(
@@ -330,6 +341,7 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
         'reference',
         'name',
         'segment',
+        'customSegment',
         'firstVisitAt',
         'lastVisitAt',
         'visits',
@@ -338,11 +350,13 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
         'averageBill',
         'rewardsRedeemed',
         'pointsBalance',
+        'phone',
       ].sort(),
     );
+    // the profile shows the phone (2026-10-17); email and other private fields stay out
+    expect(body.customer.phone).toBe(privatePhone);
     for (const field of [
       'email',
-      'phone',
       'birth_date',
       'gender',
       'auth_user_id',
@@ -355,7 +369,6 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
       expect(JSON.stringify(body)).not.toContain(`"${field}"`);
     for (const value of [
       privateEmail,
-      privatePhone,
       '5000.00',
       'Other merchant',
       ...users,
@@ -408,5 +421,70 @@ describe('Merchant customers: segments, profiles and private data (e2e)', () => 
       await get('owner', q).expect(400);
     await get('owner', '/not-a-uuid').expect(400);
     await get('owner', `/${randomUUID()}`).expect(404);
+  });
+
+  it('custom segments: rules, one per customer, hand-made changes and archive', async () => {
+    const send = (method: 'post' | 'patch' | 'put' | 'delete', path: string, who = 'owner') =>
+      request(app.getHttpServer())[method](`/api/vendor/customer-segments${path}`).set('Authorization', `Bearer ${tokens[who]}`);
+
+    expect(
+      (await send('post', '/preview').send({ rules: [{ field: 'visits', op: 'gte', value: 2 }] }).expect(200)).body,
+    ).toEqual({ count: 4, customersTotal: 7 });
+    await send('post', '/preview').send({ rules: [{ field: 'segment', op: 'gte', value: 1 }] }).expect(400);
+
+    const big = (
+      await send('post', '')
+        .send({ name: 'Big visitors', rules: [{ field: 'visits', op: 'gte', value: 3 }] })
+        .expect(201)
+    ).body;
+    expect(big).toMatchObject({ name: 'Big visitors', match: 'all', count: 1 });
+    const fresh = (
+      await send('post', '')
+        .send({ name: 'Fresh', match: 'any', rules: [{ field: 'segment', op: 'is', value: 'new' }, { field: 'visits', op: 'gte', value: 6 }] })
+        .expect(201)
+    ).body;
+    // Regular Customer matches both: the first segment in the list wins
+    expect(fresh.count).toBe(3);
+    await send('post', '').send({ name: 'fresh' }).expect(409);
+    await send('post', '', 'manager').send({ name: 'Nope' }).expect(403);
+
+    // by hand: Sam into Big visitors (beats Fresh), then out of it again
+    await send('put', `/${big.id}/members/${cards.new}`).expect(204);
+    let sam = (await get('owner', `/${cards.new}`).expect(200)).body.customer;
+    expect(sam.customSegment).toEqual({ id: big.id, name: 'Big visitors', manual: true });
+    await send('delete', `/${big.id}/members/${cards.new}`).expect(204);
+    sam = (await get('owner', `/${cards.new}`).expect(200)).body.customer;
+    expect(sam.customSegment).toEqual({ id: fresh.id, name: 'Fresh', manual: false });
+    expect((await get('owner', `?customSegment=${big.id}`).expect(200)).body.total).toBe(1);
+
+    await send('put', `/${big.id}/members/${cards.other}`).expect(404);
+    await send('delete', `/${fresh.id}`).expect(204);
+    expect((await get('owner').expect(200)).body.customSegments.map((x: { id: string }) => x.id)).toEqual([big.id]);
+  });
+
+  it('exports every matching customer with contact details, for merchant admins only', async () => {
+    const { body } = await get('owner', '/export').expect(200);
+    expect(body.items).toHaveLength(7);
+    expect(body.truncated).toBe(false);
+    expect(body.items.find((c: { id: string }) => c.id === cards.new)).toMatchObject({
+      email: privateEmail,
+      phone: privatePhone,
+    });
+    expect((await get('owner', '/export?segment=never_visited').expect(200)).body.items).toHaveLength(1);
+    await get('manager', '/export').expect(403);
+  });
+
+  it('viewers read merchant-wide but change nothing', async () => {
+    const { body } = await get('viewer').expect(200);
+    expect(body.customersTotal).toBe(7);
+    expect((await get('viewer', `/${cards.new}`).expect(200)).body.customer.phone).toBe(privatePhone);
+    await get('viewer', '/export').expect(403);
+    const as = (method: 'post' | 'get', path: string) =>
+      request(app.getHttpServer())[method](path).set('Authorization', `Bearer ${tokens.viewer}`);
+    await as('get', '/api/vendor/summary').expect(200);
+    await as('get', '/api/vendor/staff/me').expect(200);
+    await as('post', '/api/vendor/customer-segments').send({ name: 'Nope' }).expect(403);
+    await as('post', '/api/vendor/scans/preview').send({ code: 'dvote:q1:x' }).expect(403);
+    await as('get', '/api/vendor/staff').expect(403);
   });
 });

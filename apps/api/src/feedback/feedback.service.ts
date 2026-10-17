@@ -4,16 +4,20 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { StaffContext } from '../auth/staff-auth.guard';
 import { Env } from '../config/env.validation';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   FEEDBACK_CATEGORIES,
+  MERCHANT_MOODS,
   type CreateFeedbackDto,
+  type MerchantFeedbackDto,
 } from './dto/create-feedback.dto';
 
 const SHEET_TIMEOUT_MS = 10_000;
 
 /**
- * Sends customer feedback to the feedback Google Sheet through its Apps Script web app
+ * Sends customer and merchant feedback to the feedback Google Sheet through its Apps Script web app
  * (google-apps-script/feedback.gs). Feedback is not stored in our database.
  */
 @Injectable()
@@ -22,12 +26,32 @@ export class FeedbackService {
   private readonly url: string | undefined;
   private readonly secret: string | undefined;
 
-  constructor(config: ConfigService<Env, true>) {
+  constructor(
+    config: ConfigService<Env, true>,
+    private readonly prisma: PrismaService,
+  ) {
     this.url = config.get('FEEDBACK_SHEET_URL', { infer: true });
     this.secret = config.get('FEEDBACK_SHEET_SECRET', { infer: true })?.trim();
   }
 
   async send(userId: string, dto: CreateFeedbackDto): Promise<void> {
+    await this.write(userId, FEEDBACK_CATEGORIES[dto.category], dto.message);
+  }
+
+  /** Quick feedback from the merchant dashboard: same sheet, the sender is the shop and staff member. */
+  async sendMerchant(ctx: StaffContext, dto: MerchantFeedbackDto): Promise<void> {
+    const staff = await this.prisma.staff_users.findUniqueOrThrow({
+      where: { id: ctx.staffId },
+      select: { name: true, email: true, vendors: { select: { name: true } } },
+    });
+    await this.write(
+      `merchant · ${staff.vendors.name} · ${staff.name} <${staff.email}> (${ctx.role})`,
+      `Merchant feedback${dto.mood ? ` · ${MERCHANT_MOODS[dto.mood]}` : ''}`,
+      dto.message,
+    );
+  }
+
+  private async write(userId: string, category: string, message: string): Promise<void> {
     if (!this.url || !this.secret) {
       throw new ServiceUnavailableException({
         code: 'feedback_not_configured',
@@ -47,8 +71,8 @@ export class FeedbackService {
           secret: this.secret,
           createdAt: new Date().toISOString(),
           userId,
-          category: FEEDBACK_CATEGORIES[dto.category],
-          message: dto.message,
+          category,
+          message,
         }),
         signal: AbortSignal.timeout(SHEET_TIMEOUT_MS),
       });

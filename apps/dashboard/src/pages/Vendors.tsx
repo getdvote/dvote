@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Loader2, Plus } from 'lucide-react';
+import { LoaderIcon as Loader2, AddIcon as Plus } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';

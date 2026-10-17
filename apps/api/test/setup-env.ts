@@ -17,3 +17,5 @@ process.env.SUPABASE_URL = 'https://test-project.supabase.co';
 process.env.ADMIN_MFA_REQUIRED = 'true';
 // Flood protection is off in tests (they make many quick requests); rate-limit.e2e-spec turns it on.
 process.env.RATE_LIMIT_ENABLED = 'false';
+// Opening hours are hidden in the product for now; the tests keep covering them.
+process.env.OPENING_HOURS_ENABLED = 'true';

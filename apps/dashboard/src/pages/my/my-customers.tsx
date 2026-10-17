@@ -1,15 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, LockKeyhole, UsersRound } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DownloadMinimalisticIcon as Download, LoaderIcon as Loader2, LockIcon as LockKeyhole, UsersGroupTwoRoundedIcon as UsersRound } from '@solar-icons/react/linear';
+import { toast } from "sonner";
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -21,6 +23,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -38,26 +41,25 @@ import {
 import { num, PageHeader } from "../../components/PageHeader";
 import { useMe, useMyScope, useMyVendor } from "../../layouts/VendorLayout";
 import {
+  errorMessage,
   vendorApi,
   type CustomerSegment,
+  type CustomSegment,
   type MerchantCustomer,
   type MerchantCustomerQuery,
 } from "../../lib/api";
-import { cn } from "@/lib/utils";
 import { localeOf, t } from "../../i18n";
+import { formatEgyptianMobile } from "../../lib/phone";
+import {
+  CustomSegmentBadge,
+  exportCustomers,
+  SegmentBadge,
+  segmentLabel,
+  Segmentation,
+  SEGMENTS,
+  segmentText,
+} from "./customer-segments";
 
-const SEGMENTS: {
-  key: CustomerSegment;
-  variant: "brand" | "success" | "warning" | "secondary";
-}[] = [
-  { key: "new", variant: "brand" },
-  { key: "returning", variant: "secondary" },
-  { key: "regular", variant: "success" },
-  { key: "at_risk", variant: "warning" },
-  { key: "no_visits", variant: "secondary" },
-];
-const segmentLabel = (key: CustomerSegment) => t(`customers.segments.${key}.label`);
-const segmentText = (key: CustomerSegment) => t(`customers.segments.${key}.description`);
 const PAGE_SIZE = 25;
 const date = (value: string | null) =>
   value
@@ -67,7 +69,7 @@ const date = (value: string | null) =>
         year: "numeric",
         timeZone: "Africa/Cairo",
       }).format(new Date(value))
-    : t("customers.segments.no_visits.label");
+    : t("customers.segments.never_visited.label");
 const time = (value: string) =>
   new Intl.DateTimeFormat(localeOf(), {
     hour: "2-digit",
@@ -83,22 +85,19 @@ const cash = (value: string, currency: string) =>
 const displayName = (c: MerchantCustomer) =>
   c.name?.trim() || t("customers.fallbackName", { ref: c.reference });
 
-function SegmentBadge({ segment }: { segment: CustomerSegment }) {
-  const s = SEGMENTS.find((item) => item.key === segment)!;
-  return <Badge variant={s.variant}>{segmentLabel(s.key)}</Badge>;
-}
-
 /** Merchant customer directory. URL state preserves filters, paging and the open profile. */
 export function MyCustomers() {
   const me = useMe();
   const vendor = useMyVendor();
   const scope = useMyScope();
   const [params, setParams] = useSearchParams();
-  const manager = me.role !== "vendor_admin";
+  const manager = me.branchId !== null; // branch-scoped (branch manager); admins and viewers see every branch
+  const isAdmin = me.role === "vendor_admin";
   const branchId = manager
     ? (me.branchId ?? undefined)
     : params.get("branch") || undefined;
   const segment = SEGMENTS.find((s) => s.key === params.get("segment"))?.key;
+  const customSegment = params.get("custom") || undefined;
   const sort = (
     ["recent", "spend", "visits", "name"].includes(params.get("sort") ?? "")
       ? params.get("sort")
@@ -111,7 +110,8 @@ export function MyCustomers() {
       : 1;
   const search = params.get("search") ?? "";
   const customerId = params.get("customer");
-  const query = { branchId, segment, sort, search, page, pageSize: PAGE_SIZE };
+  const query = { branchId, segment, customSegment, sort, search, page, pageSize: PAGE_SIZE };
+  const [exporting, setExporting] = useState(false);
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ["merchant-customers", me.id, vendor.id, query],
     queryFn: () => vendorApi.customers(query),
@@ -140,6 +140,47 @@ export function MyCustomers() {
   };
   const count = (key: CustomerSegment) =>
     data?.segments.find((s) => s.key === key)?.count ?? 0;
+  const view = params.get("view") === "segmentation" ? "segmentation" : "customers";
+  const showView = (v: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (v === "segmentation") next.set("view", v);
+      else next.delete("view");
+      return next;
+    });
+  /** From Segmentation: the list, filtered to one segment (built-in or custom). */
+  const seeSegment = (key: string, kind: "segment" | "custom") =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("view");
+      next.delete("page");
+      next.delete("segment");
+      next.delete("custom");
+      next.set(kind, key);
+      return next;
+    });
+  /** The segment filter: "all", a built-in key, or "custom:<id>". */
+  const filterValue = customSegment ? `custom:${customSegment}` : (segment ?? "all");
+  const setFilter = (v: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("page");
+      next.delete("segment");
+      next.delete("custom");
+      if (v.startsWith("custom:")) next.set("custom", v.slice(7));
+      else if (v !== "all") next.set("segment", v);
+      return next;
+    });
+  const filtered = !!(segment || customSegment);
+  const exportList = () => {
+    setExporting(true);
+    const label = segment
+      ? segmentLabel(segment)
+      : (data?.customSegments.find((x) => x.id === customSegment)?.name ?? "all");
+    exportCustomers({ branchId, segment, customSegment, sort, search }, label)
+      .catch((e: unknown) => void toast.error(errorMessage(e)))
+      .finally(() => setExporting(false));
+  };
 
   return (
     <>
@@ -161,6 +202,21 @@ export function MyCustomers() {
           />
         )}
       </div>
+      <Tabs value={view} onValueChange={showView}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="customers">{t("customers.tabList")}</TabsTrigger>
+          <TabsTrigger value="segmentation">{t("customers.tabSegments")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="segmentation">
+          <Segmentation
+            data={data}
+            branchId={branchId}
+            canEdit={isAdmin}
+            onSee={(key) => seeSegment(key, "segment")}
+            onSeeCustom={(id) => seeSegment(id, "custom")}
+          />
+        </TabsContent>
+        <TabsContent value="customers">
       <ErrorAlert error={error} className="mb-4" />
       {error ? (
         <Button variant="outline" onClick={() => void refetch()}>
@@ -168,88 +224,51 @@ export function MyCustomers() {
         </Button>
       ) : (
         <>
-          <div
-            className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label={t("customers.segmentsLabel")}
-          >
-            {SEGMENTS.slice(0, 4).map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                aria-pressed={segment === s.key}
-                onClick={() =>
-                  set("segment", segment === s.key ? undefined : s.key)
-                }
-                className={cn(
-                  "rounded-xl border bg-card p-4 text-start transition-colors duration-100 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  segment === s.key && "border-primary bg-accent",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{segmentLabel(s.key)}</span>
-                  <ArrowUpRight
-                    className="size-4 text-muted-foreground rtl:-scale-x-100"
-                    aria-hidden
-                  />
-                </div>
-                <div className="my-2 flex items-baseline gap-2">
-                  {data ? (
-                    <>
-                      <span className="text-3xl font-semibold tabular-nums">
-                        {num(count(s.key))}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {t("customers.percentOf", {
-                          n: data.customersTotal
-                            ? Math.round(
-                                (count(s.key) / data.customersTotal) * 100,
-                              )
-                            : 0,
-                        })}
-                      </span>
-                    </>
-                  ) : (
-                    <Skeleton className="h-9 w-20" />
-                  )}
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {segmentText(s.key)}
-                </p>
-              </button>
-            ))}
-          </div>
           <Card className="gap-0 py-0">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={!segment ? "secondary" : "ghost"}
-                  aria-pressed={!segment}
-                  onClick={() => set("segment")}
-                >
-                  <UsersRound /> {t("customers.all")}{" "}
-                  {data && (
-                    <Badge variant="outline">{num(data.customersTotal)}</Badge>
-                  )}
-                </Button>
-                {(count("no_visits") > 0 || segment === "no_visits") && (
-                  <Button
-                    variant={segment === "no_visits" ? "secondary" : "ghost"}
-                    onClick={() => set("segment", "no_visits")}
-                  >
-                    {segmentLabel("no_visits")} ({count("no_visits")})
+              <Select value={filterValue} onValueChange={setFilter}>
+                <SelectTrigger aria-label={t("customers.segment")} className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t("customers.all")}
+                    {data ? ` (${num(data.customersTotal)})` : ""}
+                  </SelectItem>
+                  <SelectGroup>
+                    <SelectLabel>{t("customers.filterBuiltIn")}</SelectLabel>
+                    {SEGMENTS.map((x) => (
+                      <SelectItem key={x.key} value={x.key}>
+                        {segmentLabel(x.key)}
+                        {data ? ` (${num(count(x.key))})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                  {data?.customSegments.length ? (
+                    <SelectGroup>
+                      <SelectLabel>{t("customers.filterCustom")}</SelectLabel>
+                      {data.customSegments.map((x) => (
+                        <SelectItem key={x.id} value={`custom:${x.id}`}>
+                          {x.name} ({num(x.count)})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ) : null}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground">
+                  {data
+                    ? t("customers.matching", { n: data.total })
+                    : t("customers.loading")}
+                </p>
+                {isAdmin && (
+                  <Button variant="outline" size="sm" disabled={exporting || !data?.total} onClick={exportList}>
+                    {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+                    {t("customers.exportList")}
                   </Button>
                 )}
-                {segment && segment !== "no_visits" && (
-                  <Badge variant="brand">
-                    {segmentLabel(segment)}
-                  </Badge>
-                )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {data
-                  ? t("customers.matching", { n: data.total })
-                  : t("customers.loading")}
-              </p>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 p-4">
               <SearchInput
@@ -282,18 +301,18 @@ export function MyCustomers() {
                   aria-hidden
                 />
                 <h2 className="font-semibold">
-                  {search || segment
+                  {search || filtered
                     ? t("customers.noMatch")
                     : page > 1
                       ? t("customers.noPage")
                       : t("customers.emptyTitle")}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {search || segment
+                  {search || filtered
                     ? t("customers.noMatchText")
                     : t("customers.emptyText")}
                 </p>
-                {(search || segment || page > 1) && (
+                {(search || filtered || page > 1) && (
                   <Button
                     variant="outline"
                     className="mt-4"
@@ -331,7 +350,10 @@ export function MyCustomers() {
                             />
                           </TableCell>
                           <TableCell>
-                            <SegmentBadge segment={c.segment} />
+                            <div className="flex flex-wrap gap-1.5">
+                              <SegmentBadge segment={c.segment} />
+                              {c.customSegment && <CustomSegmentBadge name={c.customSegment.name} />}
+                            </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {date(c.lastVisitAt)}
@@ -358,7 +380,10 @@ export function MyCustomers() {
                           customer={c}
                           onClick={() => set("customer", c.id, false)}
                         />
-                        <SegmentBadge segment={c.segment} />
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          <SegmentBadge segment={c.segment} />
+                          {c.customSegment && <CustomSegmentBadge name={c.customSegment.name} />}
+                        </div>
                       </div>
                       <div className="flex flex-wrap justify-between gap-2 text-sm">
                         <span>
@@ -399,11 +424,13 @@ export function MyCustomers() {
       <p className="mt-2 text-xs text-muted-foreground">
         {t("customers.footnote")}
       </p>
+        </TabsContent>
+      </Tabs>
       <Sheet
         open={!!customerId}
         onOpenChange={(open) => !open && set("customer", undefined, false)}
       >
-        <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
+        <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=left]:w-full data-[side=right]:sm:max-w-xl data-[side=left]:sm:max-w-xl">
           {customerId && (
             <CustomerProfile
               key={`${customerId}:${branchId ?? ""}`}
@@ -411,6 +438,8 @@ export function MyCustomers() {
               branchId={branchId}
               currency={vendor.currency}
               scopeName={scopeName}
+              segments={data?.customSegments ?? []}
+              canEdit={isAdmin}
             />
           )}
         </SheetContent>
@@ -454,11 +483,15 @@ function CustomerProfile({
   branchId,
   currency,
   scopeName,
+  segments,
+  canEdit,
 }: {
   id: string;
   branchId?: string;
   currency: string;
   scopeName: string;
+  segments: CustomSegment[];
+  canEdit: boolean;
 }) {
   const me = useMe();
   const [page, setPage] = useState(1);
@@ -508,6 +541,7 @@ function CustomerProfile({
               <p className="text-sm text-muted-foreground">
                 {segmentText(c.segment)}
               </p>
+              <CustomSegmentPicker customer={c} segments={segments} canEdit={canEdit} />
               <dl className="grid grid-cols-2 gap-3">
                 <Metric label={t("customers.spend")}>
                   {cash(c.spend, currency)}
@@ -531,11 +565,15 @@ function CustomerProfile({
               <dl className="divide-y text-sm">
                 <Info label={t("customers.firstPurchase")}>{date(c.firstVisitAt)}</Info>
                 <Info label={t("customers.lastPurchase")}>{date(c.lastVisitAt)}</Info>
-                <Info label={t("staff.email")}>
-                  <Hidden />
-                </Info>
+                {/* email stays in the database but isn't shown: phone is the contact from now on */}
                 <Info label={t("customers.phone")}>
-                  <Hidden />
+                  {c.phone ? (
+                    <a dir="ltr" href={`tel:${c.phone}`} className="font-medium tabular-nums hover:underline">
+                      {formatEgyptianMobile(c.phone)}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </Info>
               </dl>
               <section aria-label={t("customers.history")}>
@@ -594,11 +632,6 @@ function CustomerProfile({
     </>
   );
 }
-const Hidden = () => (
-  <span className="flex items-center gap-1.5 text-muted-foreground">
-    <LockKeyhole className="size-3.5" aria-hidden /> {t("customers.privateShort")}
-  </span>
-);
 const Metric = ({
   label,
   children,
@@ -617,3 +650,72 @@ const Info = ({ label, children }: { label: string; children: ReactNode }) => (
     <dd>{children}</dd>
   </div>
 );
+
+/** The customer's own segment (at most one): shown to everyone, changed by hand by merchant admins. */
+function CustomSegmentPicker({
+  customer: c,
+  segments,
+  canEdit,
+}: {
+  customer: MerchantCustomer;
+  segments: CustomSegment[];
+  canEdit: boolean;
+}) {
+  const qc = useQueryClient();
+  const NONE = "none";
+  const change = useMutation({
+    mutationFn: (to: string) =>
+      to === NONE
+        ? vendorApi.removeSegmentMember(c.customSegment!.id, c.id)
+        : vendorApi.addSegmentMember(to, c.id),
+    onSuccess: async () => {
+      toast.success(t("customers.segmentUpdated"));
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["merchant-customer"] }),
+        qc.invalidateQueries({ queryKey: ["merchant-customers"] }),
+      ]);
+    },
+    onError: (e) => void toast.error(errorMessage(e)),
+  });
+  if (!canEdit && !c.customSegment) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{t("customers.customSegment")}</p>
+        {c.customSegment ? (
+          <p className="text-sm">
+            <span className="font-medium">{c.customSegment.name}</span>
+            <span className="text-muted-foreground">
+              {" · "}
+              {c.customSegment.manual ? t("customers.manual") : t("customers.byRules")}
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("customers.noCustomSegment")}</p>
+        )}
+      </div>
+      {canEdit && segments.length > 0 && (
+        <Select
+          value={c.customSegment?.id ?? NONE}
+          disabled={change.isPending}
+          onValueChange={(v) => change.mutate(v)}
+        >
+          <SelectTrigger size="sm" className="w-44" aria-label={t("customers.customSegment")}>
+            {change.isPending ? <Loader2 className="animate-spin" /> : null}
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {c.customSegment && (
+              <SelectItem value={NONE}>{t("customers.removeFromSegment")}</SelectItem>
+            )}
+            {segments.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}

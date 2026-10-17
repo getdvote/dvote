@@ -45,7 +45,7 @@ export function RewardPerformance({
       <ErrorAlert error={error} className="mx-6 mb-4" />
 
       {balances ? (
-        <div className="grid border-t sm:grid-cols-2 xl:grid-cols-4 [&>*]:border-b sm:[&>*:nth-child(odd)]:border-e xl:[&>*]:border-e xl:[&>*:last-child]:border-e-0">
+        <div className="grid border-t @md:grid-cols-2 @4xl:grid-cols-4 [&>*]:border-b @md:[&>*:nth-child(odd)]:border-e @4xl:[&>*]:border-e @4xl:[&>*:last-child]:border-e-0">
           <Stat label={t('insights.rewards.pointsHeld')} help={t('insights.rewards.help.pointsHeld')} loading={isLoading || !held}>
             {held ? (
               <>

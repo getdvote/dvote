@@ -1,27 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { CheckCircleIcon as Check, CloseCircleIcon as Cross, LoaderIcon as Loader2, LetterIcon as Mail, UserPlusIcon as UserPlus } from '@solar-icons/react/linear';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
 import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
 import { errorMessage, type Branch, type Staff, type StaffRole } from '../../lib/api';
+import { MERCHANT_WIDE, PERMISSION_GROUPS, ROLE_PERMISSIONS } from '../../lib/permissions';
 import type { VendorScope } from '../../lib/scope';
 import { TabToolbar } from './TabToolbar';
 import { t } from '../../i18n';
 
-const ROLE: Record<StaffRole, 'brand' | 'secondary' | 'outline'> = {
+const ROLE: Record<StaffRole, 'brand' | 'secondary' | 'outline' | 'muted'> = {
   vendor_admin: 'brand',
   branch_manager: 'secondary',
   staff: 'outline',
+  viewer: 'muted',
 };
 const roleLabel = (r: StaffRole) => t(`staff.roles.${r}`);
 
@@ -121,7 +125,8 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
   const roles = scope.can.inviteRoles;
   const [role, setRole] = useState<StaffRole>(roles[0]);
   const [branchId, setBranchId] = useState<string | undefined>();
-  const pickBranch = role !== 'vendor_admin' && !scope.can.fixedBranchId;
+  const wide = MERCHANT_WIDE.includes(role);
+  const pickBranch = !wide && !scope.can.fixedBranchId;
 
   const invite = useMutation({
     mutationFn: async (v: { name: string; email: string }) => {
@@ -129,7 +134,7 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
       return scope.inviteStaff({
         ...v,
         role,
-        branchId: role === 'vendor_admin' ? undefined : (scope.can.fixedBranchId ?? branchId),
+        branchId: wide ? undefined : (scope.can.fixedBranchId ?? branchId),
       });
     },
     onSuccess: (s) => {
@@ -139,83 +144,157 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
       onClose();
     },
   });
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) {
-          onClose();
-          invite.reset();
-        }
+  const close = (o: boolean) => {
+    if (!o) {
+      onClose();
+      invite.reset();
+    }
+  };
+  const title = role === 'vendor_admin' && roles.length === 1 ? t('staff.inviteAdmin') : t('staff.invite');
+  const form = (
+    <form
+      id="invite-form"
+      className="grid gap-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        invite.mutate({ name: String(f.get('name')).trim(), email: String(f.get('email')).trim() });
       }}
     >
+      <Field label={t('common.name')} htmlFor="invite-name">
+        <Input id="invite-name" name="name" required maxLength={120} pattern=".*\S.*" placeholder={t('staff.fullName')} autoFocus />
+      </Field>
+      <Field label={t('staff.email')} htmlFor="invite-email">
+        <div className="relative">
+          <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input id="invite-email" name="email" type="email" required placeholder="name@shop.com" className="ps-9" />
+        </div>
+      </Field>
+      {roles.length > 1 ? (
+        <fieldset className="grid gap-2">
+          <legend className="mb-2 text-sm font-medium">{t('staff.role')}</legend>
+          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup">
+            {roles.map((r) => (
+              <button
+                key={r}
+                type="button"
+                role="radio"
+                aria-checked={r === role}
+                onClick={() => setRole(r)}
+                className={cn(
+                  'grid gap-0.5 rounded-xl border p-3 text-start outline-none transition duration-100 ease-linear focus-visible:ring-3 focus-visible:ring-ring/50',
+                  r === role ? 'border-primary bg-brand-soft ring-1 ring-primary' : 'hover:bg-muted',
+                )}
+              >
+                <span className="text-sm font-medium">{roleLabel(r)}</span>
+                <span className="text-xs text-muted-foreground">{t(`staff.roleText.${r}`)}</span>
+              </button>
+            ))}
+          </div>
+          <RolePermissions role={role} />
+        </fieldset>
+      ) : null}
+      {pickBranch ? (
+        <Field label={t('common.branch')} htmlFor="invite-branch">
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger id="invite-branch" className="w-full">
+              <SelectValue placeholder={t('staff.chooseBranch')} />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
+      <ErrorAlert error={invite.error} />
+    </form>
+  );
+  const actions = (
+    <>
+      <Button variant="outline" onClick={onClose}>
+        {t('common.cancel')}
+      </Button>
+      <Button type="submit" form="invite-form" disabled={invite.isPending}>
+        {invite.isPending ? <Loader2 className="animate-spin" /> : null}
+        {t('staff.send')}
+      </Button>
+    </>
+  );
+
+  // With roles to choose (and their permissions to read), a drawer; a single role fits a dialog.
+  if (roles.length > 1) {
+    return (
+      <Sheet open={open} onOpenChange={close}>
+        <SheetContent className="gap-0 data-[side=left]:w-full data-[side=right]:w-full data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl">
+          <SheetHeader className="border-b pe-12">
+            <SheetTitle>{title}</SheetTitle>
+            <SheetDescription>{t('staff.inviteText')}</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">{form}</div>
+          <SheetFooter className="flex-row justify-end border-t">{actions}</SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+  return (
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{role === 'vendor_admin' ? t('staff.inviteAdmin') : t('staff.invite')}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{t('staff.inviteText')}</DialogDescription>
         </DialogHeader>
-        <form
-          id="invite-form"
-          className="grid gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget);
-            invite.mutate({ name: String(f.get('name')).trim(), email: String(f.get('email')).trim() });
-          }}
-        >
-          <Field label={t('common.name')} htmlFor="invite-name">
-            <Input id="invite-name" name="name" required maxLength={120} pattern=".*\S.*" placeholder={t('staff.fullName')} autoFocus />
-          </Field>
-          <Field label={t('staff.email')} htmlFor="invite-email">
-            <div className="relative">
-              <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="invite-email" name="email" type="email" required placeholder="name@shop.com" className="ps-9" />
-            </div>
-          </Field>
-          {roles.length > 1 ? (
-            <Field label={t('staff.role')} htmlFor="invite-role" hint={t('staff.roleHint')}>
-              <Select value={role} onValueChange={(v) => setRole(v as StaffRole)}>
-                <SelectTrigger id="invite-role" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {roleLabel(r)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          ) : null}
-          {pickBranch ? (
-            <Field label={t('common.branch')} htmlFor="invite-branch">
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger id="invite-branch" className="w-full">
-                  <SelectValue placeholder={t('staff.chooseBranch')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          ) : null}
-          <ErrorAlert error={invite.error} />
-        </form>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" form="invite-form" disabled={invite.isPending}>
-            {invite.isPending ? <Loader2 className="animate-spin" /> : null}
-            {t('staff.send')}
-          </Button>
-        </DialogFooter>
+        {form}
+        <DialogFooter>{actions}</DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The fixed bundle a role comes with, grouped like the dashboard (read-only). */
+export function RolePermissions({ role }: { role: StaffRole }) {
+  const has = ROLE_PERMISSIONS[role];
+  return (
+    <div className="mt-2 grid gap-4 rounded-xl border p-4">
+      <div>
+        <h3 className="text-sm font-medium">{t('staff.permissionsTitle', { role: roleLabel(role) })}</h3>
+        {role === 'branch_manager' || role === 'staff' ? (
+          <p className="text-xs text-muted-foreground">{t('staff.branchOnly')}</p>
+        ) : null}
+      </div>
+      <div className="grid gap-4">
+        {PERMISSION_GROUPS.map((g) => (
+          <section key={g.key} className="grid content-start gap-2">
+            <h4 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">{t(`staff.permGroups.${g.key}`)}</h4>
+            <ul className="grid gap-2">
+              {g.items.map((i) => {
+                const on = has.includes(i.key);
+                return (
+                  <li key={i.key} className={cn('flex items-start gap-2', !on && 'opacity-60')}>
+                    {on ? (
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-label={t('common.yes')} />
+                    ) : (
+                      <Cross className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label={t('common.no')} />
+                    )}
+                    <span className="min-w-0 text-sm">
+                      <span className="font-medium">{t(`staff.perms.${i.key}.label`)}</span>
+                      {'soon' in i && i.soon ? (
+                        <Badge variant="outline" className="ms-1.5 align-middle">
+                          {t('staff.soon')}
+                        </Badge>
+                      ) : null}
+                      <span className="block text-xs text-muted-foreground">{t(`staff.perms.${i.key}.hint`)}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }

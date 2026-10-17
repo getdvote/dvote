@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ChevronDown, CircleCheck, CircleSlash, Loader2 } from 'lucide-react';
+import { AltArrowDownIcon as ChevronDown, CheckCircleIcon as CircleCheck, SlashCircleIcon as CircleSlash, LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import {

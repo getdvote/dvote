@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Store, Trophy, Users, Zap, type LucideIcon } from 'lucide-react';
+import { ShopIcon as Store, CupStarIcon as Trophy, UsersGroupRoundedIcon as Users, BoltIcon as Zap } from '@solar-icons/react/linear';
+import type { Icon as SolarIcon } from '@solar-icons/react/lib/types';
 import { useNavigate } from 'react-router';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -146,7 +147,7 @@ function DailyBars({ title, data, dataKey }: { title: string; data: { date: stri
   );
 }
 
-export function Stat({ icon: Icon, title, value, note }: { icon: LucideIcon; title: string; value: number; note: string }) {
+export function Stat({ icon: Icon, title, value, note }: { icon: SolarIcon; title: string; value: number; note: string }) {
   return (
     <Card>
       <CardContent className="flex items-start gap-3.5">

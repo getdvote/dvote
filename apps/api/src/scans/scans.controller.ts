@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -11,12 +11,13 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentStaff } from '../auth/current-staff.decorator';
-import { StaffAuthGuard, type StaffContext } from '../auth/staff-auth.guard';
+import { StaffAuthGuard, StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { CollectScanDto, PreviewScanDto, RedeemScanDto } from './dto/scan.dto';
 import {
   CollectResponseDto,
   RedeemResponseDto,
   PreviewScanResponseDto,
+  ScansTodayResponseDto,
 } from './dto/scan-response.dto';
 import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
 import { ScansService } from './scans.service';
@@ -29,9 +30,17 @@ import { ScansService } from './scans.service';
 })
 @UseGuards(StaffAuthGuard)
 @UserLimit(LIMITS.scans)
+@StaffRoles('vendor_admin', 'branch_manager', 'staff') // not viewers: read-only
 @Controller('vendor/scans')
 export class ScansController {
   constructor(private readonly scans: ScansService) {}
+
+  /** My collects and rewards given today (Cairo time), for the dashboard till. */
+  @Get('today')
+  @ApiOkResponse({ type: ScansTodayResponseDto })
+  today(@CurrentStaff() ctx: StaffContext): Promise<ScansTodayResponseDto> {
+    return this.scans.today(ctx);
+  }
 
   /** What the QR is and whether it can be used here. Changes nothing. */
   @Post('preview')
