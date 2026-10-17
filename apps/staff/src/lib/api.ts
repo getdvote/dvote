@@ -27,7 +27,7 @@ export interface ScanPreview {
   purpose: 'collect' | 'redeem';
   usable: boolean;
   reason: string | null;
-  expiresAt: string;
+  expiresAt: string | null;
   /** A usable redeem QR: what to confirm (the reward and who is redeeming it). */
   redeem?: RedeemPreview | null;
 }

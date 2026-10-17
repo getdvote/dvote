@@ -85,6 +85,13 @@ React 19 + Vite + Tailwind v4 (no shadcn; own small components in `src/component
 
 ### Built — Google Wallet button (2026-10-17, `src/wallet/`)
 
+**Wallet collect scanning (2026-10-17):** the staff scanner accepts `dvote:c1:`. ScansService validates
+the hashed card token, enforces the scanning merchant, and supports preview + collect with the existing
+amount, branch, blocked-user and receipt checks. Each visit uses a fresh idempotency key; retries
+return the same event (scoped to card and staff). Wallet codes remain reusable, and ledger rows use
+`scan_source=wallet_card` with no one-time QR row. Wallet reward selection/redeem, pass balance
+updates and notifications remain pending. Collect + existing redeem integration suites: 46 tests pass.
+
 - `GET /api/public/cards/{publicId}/google-wallet` → `{saveUrl}` (`https://pay.google.com/gp/v/save/<jwt>`), JWT signed RS256 with the service-account key (`jose`). It carries a **LoyaltyClass per merchant** (`<issuer>.vendor-<vendorId>`: name, logo or `WALLET_DEFAULT_LOGO_URL`, first colour of the card design) and a **LoyaltyObject per card** (`<issuer>.card-<publicId>`: points, cardholder, short code, QR). Google creates them when the customer saves. Errors: 404 `card_not_found`, 503 `wallet_not_configured`.
 - **Card QR** `dvote:c1:<secret>`: secret = 128 bits of HMAC-SHA256(`WALLET_TOKEN_SECRET`, card id) (`wallet/card-token.ts`), so it can be rebuilt; `cards.token_hash` = its SHA-256 and `google_object_id` are saved when the link is made. **Never change `WALLET_TOKEN_SECRET` once passes exist.**
 - Env (optional; unset = 503): `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_KEY_FILE` (service-account JSON in git-ignored `apps/api/.secrets/`), `WALLET_TOKEN_SECRET` (≥ 32 chars), `WALLET_DEFAULT_LOGO_URL`.

@@ -7,7 +7,7 @@ import { api, ApiError, friendlyMessage } from '../lib/api';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
-const QR_PREFIX = 'dvote:q1:';
+const QR_PREFIXES = ['dvote:q1:', 'dvote:c1:'];
 
 /**
  * Scan the customer's QR (camera on phones and in the browser). The server checks it: a collect
@@ -35,7 +35,7 @@ export default function Scan() {
       if (busy.current) return;
       busy.current = true;
       setError(null);
-      if (!code.startsWith(QR_PREFIX)) {
+      if (!QR_PREFIXES.some((prefix) => code.startsWith(prefix))) {
         setError('This is not a dvote QR code.');
         setTimeout(() => (busy.current = false), 1500);
         return;
@@ -73,15 +73,15 @@ export default function Scan() {
   return (
     <Screen>
       <View style={styles.top}>
-        <Text style={styles.title}>Scan the customer's QR</Text>
-        <Text style={styles.hint}>Ask the customer to show their QR in the dvote app: to collect points, or for a reward.</Text>
+        <Text style={styles.title}>Scan the customer&apos;s QR</Text>
+        <Text style={styles.hint}>Ask the customer to show their loyalty card QR in Wallet, or their dvote app QR.</Text>
       </View>
 
       {manual ? (
         <View style={styles.manual}>
           <Field
             label="QR code text"
-            placeholder="dvote:q1:..."
+            placeholder="dvote:c1:..."
             value={typed}
             onChangeText={setTyped}
             autoCapitalize="none"

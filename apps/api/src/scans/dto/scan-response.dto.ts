@@ -38,8 +38,8 @@ export class PreviewScanResponseDto {
   })
   reason: string | null;
 
-  @ApiProperty()
-  expiresAt: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Wallet card QRs do not expire' })
+  expiresAt: string | null;
 
   @ApiPropertyOptional({ type: PreviewRedeemDto, nullable: true, description: 'redeem QRs that can be confirmed' })
   redeem: PreviewRedeemDto | null;
