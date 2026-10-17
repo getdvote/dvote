@@ -83,23 +83,25 @@ export function StorefrontEditor() {
     <div className="grid gap-6">
       {/* the shop and its page address, with the ways to share it */}
       <Card className="flex-row flex-wrap items-center gap-4 p-4 sm:p-5">
-        {vendor.logoUrl ? (
-          <img src={vendor.logoUrl} alt="" className="size-12 shrink-0 rounded-xl border object-cover" />
-        ) : (
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-semibold">{initial(vendor.name)}</span>
-        )}
-        <div className="min-w-0 flex-1 basis-48">
-          <div className="flex items-center gap-2">
-            <h2 className="truncate font-semibold">{vendor.name}</h2>
-            <SaveStatus />
-          </div>
-          {url ? (
-            <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground hover:underline">
-              {url.replace(/^https?:\/\//, '')}
-            </a>
+        <div className="flex min-w-0 flex-1 basis-64 items-center gap-4">
+          {vendor.logoUrl ? (
+            <img src={vendor.logoUrl} alt="" className="size-12 shrink-0 rounded-xl border object-cover" />
           ) : (
-            <p className="text-sm text-muted-foreground">{t('storefront.noSlug')}</p>
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-semibold">{initial(vendor.name)}</span>
           )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="truncate font-semibold">{vendor.name}</h2>
+              <SaveStatus />
+            </div>
+            {url ? (
+              <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="block truncate text-sm text-muted-foreground hover:text-foreground hover:underline">
+                {url.replace(/^https?:\/\//, '')}
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('storefront.noSlug')}</p>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -125,13 +127,13 @@ export function StorefrontEditor() {
         </div>
       </Card>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="grid justify-items-center gap-5 lg:sticky lg:top-4">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid justify-items-center gap-5 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1">
           <IPhoneMockup src={url} width={300} reloadKey={previewKey} title={t('storefront.preview')} empty={t('storefront.noSlug')} />
           <PreviewFooter url={url} />
         </div>
 
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4 lg:col-start-1 lg:row-start-1">
           <Card>
             <CardHeader>
               <CardTitle>{t('storefront.appliesTo')}</CardTitle>
