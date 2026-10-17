@@ -8,7 +8,7 @@ import { cardDesign } from '../lib/cardDesigns';
 import { useVendor } from './VenuePage';
 
 /**
- * dvote.app/<slug>/join: name + Egyptian mobile (decided 2026-10-17). A known name + mobile gets
+ * dvote.app/<slug>/join: name + Egyptian mobile (decided 2026-10-17). A known mobile gets
  * the same card back; a new one gets a new card. No sign-in, no email.
  */
 export function JoinPage() {

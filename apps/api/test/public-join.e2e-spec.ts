@@ -118,12 +118,11 @@ describe('Public join (dvote.app/<slug>): venue page, join with the form, card p
     expect(new Set(cards.map((c) => c.user_id)).size).toBe(1);
   });
 
-  it('a known mobile with another name is refused (409 details_mismatch), nothing revealed', async () => {
+  it('a known mobile with another name returns the same card and preserves the saved name', async () => {
     const form = newForm();
-    await join(slugs.a, form).expect(200);
-    const res = await join(slugs.a, { ...form, name: 'Someone Else' }).expect(409);
-    expect(res.body.code).toBe('details_mismatch');
-    expect(res.body.card).toBeUndefined();
+    const first = await join(slugs.a, form).expect(200);
+    const res = await join(slugs.a, { ...form, name: 'Someone Else' }).expect(200);
+    expect(res.body).toMatchObject({ created: false, card: { publicId: first.body.card.publicId, cardholder: 'Mona Ali' } });
   });
 
   it('rules: Egyptian mobile, a name, this merchant’s branch', async () => {

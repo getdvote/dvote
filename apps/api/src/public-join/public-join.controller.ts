@@ -1,7 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -16,8 +15,8 @@ import { GoogleWalletService } from '../wallet/google-wallet.service';
 
 /**
  * The public web site (dvote.app): a merchant's venue page and join form, and the card page.
- * No sign-in anywhere (decided 2026-10-17: no email code either); the customer is the email +
- * mobile number typed on the form.
+ * No sign-in anywhere (decided 2026-10-17: no email code either); the customer is identified by the
+ * normalized mobile number typed on the form.
  */
 @ApiTags('public: join + card')
 @Controller('public')
@@ -36,7 +35,7 @@ export class PublicJoinController {
   }
 
   /**
-   * Join the merchant, or get the card back (same email + same mobile = the same card).
+   * Join the merchant, or get the card back (same mobile = the same card).
    * Rate limited per IP (no sign-in): LIMITS.join a minute.
    */
   @Post('vendors/:slug/join')
@@ -44,7 +43,6 @@ export class PublicJoinController {
   @UserLimit(LIMITS.join)
   @ApiOkResponse({ type: JoinResultDto })
   @ApiBadRequestResponse({ description: 'invalid_phone | name_required | age_required | invalid_branch | validation (email, source)' })
-  @ApiConflictResponse({ description: 'details_mismatch (the email is known with another mobile number)' })
   @ApiForbiddenResponse({ description: 'user_blocked' })
   @ApiNotFoundResponse({ description: 'vendor_not_found' })
   @ApiTooManyRequestsResponse({ description: 'rate_limited' })

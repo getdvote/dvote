@@ -3,11 +3,12 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from '../auth/auth.module';
 import { LiveInterceptor } from './live.interceptor';
 import { LiveService } from './live.service';
+import { WalletModule } from '../wallet/wallet.module';
 
 /** Live updates to the customer app (WebSocket at /api/app/live). Global: any service can notify. */
 @Global()
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, WalletModule],
   providers: [LiveService, { provide: APP_INTERCEPTOR, useClass: LiveInterceptor }],
   exports: [LiveService],
 })

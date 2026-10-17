@@ -29,6 +29,10 @@ export class FakeStorage {
     return Promise.resolve();
   }
 
+  download(bucket: Bucket, path: string) {
+    return Promise.resolve(this.get(bucket, path)?.data ?? null);
+  }
+
   remove(bucket: Bucket, paths: string[]) {
     for (const p of paths) this.files.delete(`${bucket}/${p}`);
     return Promise.resolve();

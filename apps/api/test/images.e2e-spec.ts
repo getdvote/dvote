@@ -178,6 +178,8 @@ describe('Images: customer photos, vendor logos, menu pages, branch photos (e2e)
       const meta = await sharp(storage.get('vendors', vendor.logo_path!)!.data).metadata();
       expect(meta).toMatchObject({ format: 'webp', width: 512 }); // fits in 512, not cropped
       expect(meta.height).toBeLessThan(512);
+      const wallet = storage.get('vendors', vendor.logo_path!.replace('.webp', '-wallet-v1.webp'))!;
+      expect(await sharp(wallet.data).metadata()).toMatchObject({ format: 'webp', width: 720, height: 720, hasAlpha: false });
     });
 
     it('staff and branch managers cannot change the logo', async () => {
@@ -192,7 +194,7 @@ describe('Images: customer photos, vendor logos, menu pages, branch photos (e2e)
       await upload('adminA', 'put', '/api/vendor/profile/logo', png).expect(200);
       const second = (await prisma.vendors.findUniqueOrThrow({ where: { id: ids.vendorA } })).logo_path!;
       expect(storage.has('vendors', first)).toBe(false);
-      expect(storage.list('vendors', `${ids.vendorA}/logo/`)).toEqual([second]);
+      expect(storage.list('vendors', `${ids.vendorA}/logo/`)).toEqual([second, second.replace('.webp', '-wallet-v1.webp')]);
 
       const res = await as('adminA', 'delete', '/api/vendor/profile/logo').expect(200);
       expect(res.body.logoUrl).toBeNull();

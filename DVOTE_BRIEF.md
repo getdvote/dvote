@@ -10,10 +10,30 @@
 > - Repo: `github.com/getdvote/dvote` — work happens on `develop`; merging needs Karim's approval.
 > - **This file contains no secrets.** Keys and passwords live only in each app's `.env` (never committed).
 
+> **Automatic Wallet logos (2026-10-17):** admin/merchant logo uploads create an additional opaque
+> 720×720 WebP (`<original-uuid>-wallet-v1.webp`) with the intact artwork centred and empty sides
+> filled from the dominant visible edge colour (white fallback for transparent edges). Google uses
+> this version; the website/dashboard keep the original. Replacing/removing a logo deletes both.
+> Existing uploaded logos are converted during Wallet sync; API startup resyncs linked passes.
+> External logo URLs are passed through unchanged. No schema migration or separate upload needed.
+
+> **Public card lookup (2026-10-17, latest):** mobile alone identifies the customer. An existing
+> Egyptian mobile returns that customer's card for the merchant regardless of the typed name;
+> if no card exists there, a new card is created for the same customer. A new mobile creates a
+> customer and card. Names are required on the form but never compared with or used to overwrite
+> an existing saved name. No email or OTP is required for now, as requested by Karim.
+
 > **Wallet scan fix (2026-10-17):** staff scanner and `/api/vendor/scans/preview|collect` now accept
 > `dvote:c1:` wallet card QRs as well as the app's `dvote:q1:` codes. Wallet collects are reusable
 > across visits, merchant-scoped, idempotent per submission and recorded with `scan_source=wallet_card`.
-> Wallet redemption selection, pass balance synchronization and notifications remain pending.
+> Wallet redemption selection and notifications remain pending.
+>
+> **Google Wallet sync (2026-10-17):** saved passes receive the latest points after collects,
+> redemptions and admin corrections, plus merchant colour, logo and banner after dashboard changes.
+> Updates run after commit without blocking the till. Failed/missed updates retry every minute and
+> on API startup using the existing `pass_updated_at` checkpoint; no new database migration.
+> Google controls the native pass layout (web gradients/patterns are not reproduced). Apple pass
+> issuing/update support and lock-screen notification messages remain pending.
 
 > **⚠ Direction change 2026-10-17 — wallet passes instead of a customer app.** Customers no longer
 > install an app. At the till an **NFC tag / QR** opens a mobile web page; the customer types name,

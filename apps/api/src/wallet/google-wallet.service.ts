@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ServiceUnavailableException, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { importPKCS8, SignJWT } from 'jose';
 import type { Env } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
 import { cardQr, cardSecret, hashCardSecret } from './card-token';
+import { WalletLogoService } from '../storage/wallet-logo.service';
 
 /** First colour of each card design (1-10), same order as CARD_DESIGNS in the dashboard and web. */
 const DESIGN_COLORS = ['#1C1C1E', '#2E9E6B', '#2F6BDE', '#F2B33D', '#6155F5', '#E0533D', '#0E8C99', '#3E2723', '#AD1457', '#E9DCC9'];
@@ -21,21 +22,165 @@ interface ServiceAccount {
   private_key: string;
 }
 
+/** Only controlled diagnostics reach logs; never dump credentials, request bodies or tokens. */
+class WalletRequestError extends Error {}
+
+async function googleFailure(operation: string, response: Response): Promise<WalletRequestError> {
+  let reason = '';
+  try {
+    const body = await response.json() as { error?: { status?: unknown; errors?: { reason?: unknown }[] } };
+    const code = body.error?.status ?? body.error?.errors?.[0]?.reason;
+    if (typeof code === 'string' && /^[A-Za-z0-9_]{1,80}$/.test(code)) reason = ` (${code})`;
+  } catch { /* Some gateways return an empty or HTML error response. */ }
+  return new WalletRequestError(`${operation}: HTTP ${response.status}${reason}`);
+}
+
 /**
  * "Add to Google Wallet": a signed JWT save link (https://pay.google.com/gp/v/save/<jwt>) that
  * carries one LoyaltyClass per merchant (name, logo, colour) and one LoyaltyObject per card
  * (points, cardholder, short code, the card QR). Google creates both when the customer saves;
- * no Google API call is needed for that. Balance updates (REST PATCH) come later.
+ * no Google API call is needed for that. Existing passes are synchronized through REST PATCH.
  */
 @Injectable()
-export class GoogleWalletService {
+export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDestroy {
+  private readonly log = new Logger(GoogleWalletService.name);
+  private readonly pending = new Set<string>();
+  private running?: Promise<void>;
+  private timer?: NodeJS.Timeout;
+  private stopped = false;
   private account?: ServiceAccount;
   private token?: { value: string; until: number };
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    private readonly walletLogos: WalletLogoService,
   ) {}
+
+  private get configured(): boolean {
+    return !!this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) && !!this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+  }
+
+  onApplicationBootstrap(): void {
+    if (!this.configured) return;
+    this.timer = setInterval(() => void this.reconcile(), 60_000);
+    this.timer.unref();
+    void this.reconcile(true);
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    this.stopped = true;
+    clearInterval(this.timer);
+    await this.running;
+  }
+
+  /** Called only after the points transaction commits; network failures never undo points. */
+  userChanged(userId: string): void {
+    void this.enqueue({ user_id: userId });
+  }
+
+  vendorChanged(vendorId: string): void {
+    void this.enqueue({ vendor_id: vendorId });
+  }
+
+  private async enqueue(scope: { user_id?: string; vendor_id?: string }): Promise<void> {
+    if (!this.configured || this.stopped) return;
+    try {
+      const cards = await this.prisma.cards.findMany({ where: { ...scope, google_object_id: { not: null } }, select: { id: true } });
+      for (const card of cards) this.pending.add(card.id);
+      this.drain();
+    } catch {
+      this.log.warn('Could not schedule Google Wallet update; reconciliation will retry.');
+    }
+  }
+
+  /** The existing pass_updated_at checkpoint survives restarts and outages. */
+  async reconcile(force = false): Promise<void> {
+    if (!this.configured || this.stopped) return;
+    try {
+      let cursor = '';
+      while (!this.stopped) {
+        const cards = await this.prisma.$queryRaw<{ id: string }[]>`
+          SELECT c.id FROM cards c JOIN vendors v ON v.id = c.vendor_id
+          WHERE c.google_object_id IS NOT NULL AND c.id::text > ${cursor}
+            AND (${force} OR c.pass_updated_at IS NULL OR c.updated_at > c.pass_updated_at OR v.updated_at > c.pass_updated_at)
+          ORDER BY c.id::text LIMIT 100`;
+        if (!cards.length) break;
+        for (const card of cards) this.pending.add(card.id);
+        this.drain();
+        cursor = cards[cards.length - 1].id;
+        await this.running;
+      }
+    } catch {
+      this.log.warn('Google Wallet reconciliation failed; will retry in one minute.');
+    }
+  }
+
+  private drain(): void {
+    if (this.running || this.stopped) return;
+    this.running = (async () => {
+      while (this.pending.size && !this.stopped) {
+        const id = this.pending.values().next().value!;
+        this.pending.delete(id);
+        try { await this.syncCard(id); } catch (error) {
+          const reason = error instanceof WalletRequestError ? error.message
+            : error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'request timed out'
+            : error instanceof TypeError ? 'network request failed'
+            : 'local configuration or database error';
+          this.log.warn(`Google Wallet update failed for card ${id}: ${reason}; reconciliation will retry.`);
+        }
+      }
+    })().finally(() => { this.running = undefined; });
+  }
+
+  /** Serial execution prevents older balance snapshots overwriting newer ones. */
+  private async syncCard(id: string): Promise<void> {
+    const started = new Date();
+    const card = await this.prisma.cards.findUnique({ where: { id }, include: { users: { select: { name: true } }, vendors: true } });
+    if (!card?.google_object_id) return;
+    const issuer = this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true });
+    if (!card.google_object_id.startsWith(`${issuer}.`)) return;
+    const v = card.vendors;
+    if (!await this.patch('loyaltyObject', card.google_object_id, {
+      loyaltyPoints: { label: 'Points', balance: { int: card.balance } },
+      accountName: card.users.name ?? '',
+      state: v.status === 'active' ? 'ACTIVE' : 'INACTIVE',
+    })) return;
+    if (!await this.patch('loyaltyClass', `${issuer}.vendor-${v.id}`, await this.branding(v))) return;
+    // now() also equals the updated_at trigger's timestamp. Do not checkpoint a newer
+    // balance/branding change that happened while Google was processing this snapshot.
+    await this.prisma.$executeRaw`
+      UPDATE cards c SET pass_updated_at = now()
+      WHERE c.id = ${id}::uuid AND c.balance = ${card.balance}
+        AND c.google_object_id = ${card.google_object_id}
+        AND EXISTS (SELECT 1 FROM vendors v WHERE v.id = c.vendor_id AND v.updated_at <= ${started})`;
+  }
+
+  private async patch(resource: 'loyaltyClass' | 'loyaltyObject', id: string, body: unknown): Promise<boolean> {
+    const res = await fetch(`https://walletobjects.googleapis.com/walletobjects/v1/${resource}/${encodeURIComponent(id)}`, {
+      method: 'PATCH', headers: { Authorization: `Bearer ${await this.accessToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(4000),
+    });
+    // A save link can exist before the customer actually saves the card. Keep it pending.
+    if (res.status === 404) return false;
+    if (!res.ok) {
+      if (res.status === 401) this.token = undefined;
+      throw await googleFailure(`Google Wallet ${resource} PATCH`, res);
+    }
+    return true;
+  }
+
+  private async branding(v: { id: string; name: string; logo_url: string | null; logo_path: string | null; banner_url: string | null; card_design: number | null }) {
+    const logo = v.logo_path ? await this.walletLogos.ensure(v.logo_path) : v.logo_url ?? this.config.get('WALLET_DEFAULT_LOGO_URL', { infer: true });
+    return {
+      // Required even when PATCHing an already approved class.
+      reviewStatus: 'UNDER_REVIEW',
+      issuerName: v.name, programName: `${v.name} loyalty`,
+      ...(logo ? { programLogo: { sourceUri: { uri: logo }, contentDescription: { defaultValue: { language: 'en-US', value: v.name } } } } : {}),
+      heroImage: v.banner_url ? { sourceUri: { uri: v.banner_url }, contentDescription: { defaultValue: { language: 'en-US', value: v.name } } } : null,
+      hexBackgroundColor: designColor(v.id, v.card_design),
+    };
+  }
 
   async saveUrl(publicId: string): Promise<string> {
     const issuerId = this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true });
@@ -45,7 +190,7 @@ export class GoogleWalletService {
     }
     const card = await this.prisma.cards.findUnique({
       where: { public_id: publicId },
-      include: { users: { select: { name: true } }, vendors: { select: { id: true, name: true, logo_url: true, card_design: true, status: true } } },
+      include: { users: { select: { name: true } }, vendors: true },
     });
     if (!card || card.vendors.status !== 'active') throw new NotFoundException({ code: 'card_not_found' });
     const v = card.vendors;
@@ -53,15 +198,10 @@ export class GoogleWalletService {
     const secret = cardSecret(tokenSecret, card.id);
     const classId = `${issuerId}.vendor-${v.id}`;
     const objectId = `${issuerId}.card-${card.public_id}`;
-    const logo = v.logo_url ?? this.config.get('WALLET_DEFAULT_LOGO_URL', { infer: true });
 
     const loyaltyClass = {
       id: classId,
-      issuerName: v.name,
-      programName: `${v.name} loyalty`,
-      ...(logo ? { programLogo: { sourceUri: { uri: logo }, contentDescription: { defaultValue: { language: 'en-US', value: v.name } } } } : {}),
-      hexBackgroundColor: designColor(v.id, v.card_design),
-      reviewStatus: 'UNDER_REVIEW',
+      ...await this.branding(v),
     };
     const loyaltyObject = {
       id: objectId,
@@ -126,7 +266,7 @@ export class GoogleWalletService {
       body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) throw new Error(`Google token ${res.status}`);
+    if (!res.ok) throw await googleFailure('Google OAuth token', res);
     const json = (await res.json()) as { access_token: string; expires_in: number };
     this.token = { value: json.access_token, until: Date.now() + (json.expires_in - 600) * 1000 };
     return json.access_token;

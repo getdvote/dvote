@@ -7,6 +7,8 @@ import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { IMAGE_CONTENT_TYPE, newImageName, toWebp } from '../storage/images';
 import { BUCKETS, StorageService } from '../storage/storage.service';
+import { WalletLogoService } from '../storage/wallet-logo.service';
+import { logoFiles } from '../storage/wallet-logo';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { ListVendorsQueryDto } from './dto/list-vendors-query.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
@@ -29,6 +31,7 @@ export class VendorsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly walletLogos: WalletLogoService,
   ) {}
 
   list(query: ListVendorsQueryDto): Promise<VendorWithCounts[]> {
@@ -103,7 +106,7 @@ export class VendorsService {
       include: withCounts,
     });
     if (replacesUpload) {
-      await this.storage.removeQuietly(BUCKETS.vendors, [vendor.logo_path!]);
+      await this.storage.removeQuietly(BUCKETS.vendors, logoFiles(vendor.logo_path!));
     }
     return updated;
   }
@@ -137,24 +140,25 @@ export class VendorsService {
     const url = this.storage.publicUrl(BUCKETS.vendors, path);
     let updated: VendorWithCounts;
     try {
+      if (kind === 'logo') await this.walletLogos.ensure(path, webp);
       updated = await this.prisma.vendors.update({
         where: { id },
         data: kind === 'logo' ? { logo_path: path, logo_url: url } : { banner_path: path, banner_url: url },
         include: withCounts,
       });
     } catch (err) {
-      await this.storage.removeQuietly(BUCKETS.vendors, [path]);
+      await this.storage.removeQuietly(BUCKETS.vendors, kind === 'logo' ? logoFiles(path) : [path]);
       throw err;
     }
     const old = kind === 'logo' ? vendor.logo_path : vendor.banner_path;
-    if (old) await this.storage.removeQuietly(BUCKETS.vendors, [old]);
+    if (old) await this.storage.removeQuietly(BUCKETS.vendors, kind === 'logo' ? logoFiles(old) : [old]);
     return updated;
   }
 
   private async removeImage(id: string, kind: 'logo' | 'banner'): Promise<VendorWithCounts> {
     const vendor = await this.get(id);
     const old = kind === 'logo' ? vendor.logo_path : vendor.banner_path;
-    if (old) await this.storage.remove(BUCKETS.vendors, [old]);
+    if (old) await this.storage.remove(BUCKETS.vendors, kind === 'logo' ? logoFiles(old) : [old]);
     return this.prisma.vendors.update({
       where: { id },
       data: kind === 'logo' ? { logo_path: null, logo_url: null } : { banner_path: null, banner_url: null },

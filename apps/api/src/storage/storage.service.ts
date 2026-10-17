@@ -71,6 +71,15 @@ export class StorageService {
     if (error) throw this.failed(`upload ${bucket}/${path}`, error);
   }
 
+  async download(bucket: Bucket, path: string): Promise<Buffer | null> {
+    const { data, error } = await this.storage().from(bucket).download(path);
+    if (error) {
+      if (['404', 'not_found', 'NoSuchKey'].includes(String(error.statusCode)) || error.message === 'Object not found') return null;
+      throw this.failed(`download ${bucket}/${path}`, error);
+    }
+    return Buffer.from(await data.arrayBuffer());
+  }
+
   /** Deletes files. Missing files are not an error (the goal, "gone", is reached). */
   async remove(bucket: Bucket, paths: string[]): Promise<void> {
     if (paths.length === 0) return;

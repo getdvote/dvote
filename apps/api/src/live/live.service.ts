@@ -6,6 +6,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { CUSTOMER_PROVIDERS } from '../auth/customer-auth.guard';
 import { SupabaseJwtVerifier } from '../auth/supabase-jwt.verifier';
 import { PrismaService } from '../prisma/prisma.service';
+import { GoogleWalletService } from '../wallet/google-wallet.service';
 
 /** Where customer apps connect: ws(s)://<api>/api/app/live */
 export const LIVE_PATH = '/api/app/live';
@@ -47,6 +48,7 @@ export class LiveService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly http: HttpAdapterHost,
     private readonly verifier: SupabaseJwtVerifier,
     private readonly prisma: PrismaService,
+    private readonly wallet: GoogleWalletService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -69,11 +71,13 @@ export class LiveService implements OnApplicationBootstrap, OnModuleDestroy {
 
   /** A dashboard saved something about a shop: every connected app re-reads what it shows. */
   vendorChanged(vendorId: string | null): void {
+    if (vendorId) this.wallet.vendorChanged(vendorId);
     this.send(() => true, { type: 'vendor', vendorId });
   }
 
   /** This customer's points changed. */
   cardsChanged(userId: string): void {
+    this.wallet.userChanged(userId);
     this.send((c) => c.userId === userId, { type: 'cards' });
   }
 

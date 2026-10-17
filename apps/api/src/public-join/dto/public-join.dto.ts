@@ -7,7 +7,7 @@ export const JOIN_SOURCES = ['nfc', 'qr', 'link'] as const;
 export const HEARD_FROM = ['friend', 'social_media', 'walking_by', 'google_maps', 'other'] as const;
 
 export class JoinVendorDto {
-  @ApiProperty({ example: 'Mona Ali', description: 'With the phone, identifies the customer: a known phone needs the same name (409 details_mismatch)' })
+  @ApiProperty({ example: 'Mona Ali', description: 'Display name for a new customer; an existing mobile keeps its saved name' })
   @IsString()
   @MinLength(2)
   @MaxLength(120)
