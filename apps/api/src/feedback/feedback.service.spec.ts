@@ -8,7 +8,7 @@ import { FeedbackService } from './feedback.service';
 
 function service(env: Record<string, string | undefined>) {
   const config = { get: (key: string) => env[key] } as unknown as ConfigService;
-  return new FeedbackService(config as never);
+  return new FeedbackService(config as never, {} as never);
 }
 
 const configured = {

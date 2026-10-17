@@ -6,6 +6,7 @@ import { initial, num } from '../../components/PageHeader';
 import { useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { cardDesign, categoryLabel } from '../../lib/cardDesigns';
 import { cityName } from '../../lib/cities';
+import { defaultShader, shaderCss } from '../../lib/coverShaders';
 import { t } from '../../i18n';
 
 const money = (v: string) => v.replace(/\.00$/, '');
@@ -45,7 +46,7 @@ export function StorefrontPreview({ onEdit }: { onEdit: () => void }) {
             {/* banner */}
             <div
               className="h-44 w-full bg-cover bg-center"
-              style={vendor.bannerUrl ? { backgroundImage: `url(${vendor.bannerUrl})` } : { background: `linear-gradient(135deg, ${design.colors[0]}, ${design.colors[1]})` }}
+              style={vendor.bannerUrl ? { backgroundImage: `url(${vendor.bannerUrl})` } : { background: shaderCss(defaultShader(vendor.id)) }}
             />
             <div className="-mt-10 px-5">
               <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-neutral-100 text-2xl font-semibold shadow-sm">

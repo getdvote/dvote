@@ -69,7 +69,8 @@ export class VendorPatternsService {
 
   async get(ctx: StaffContext, q: VendorPatternsQueryDto): Promise<VendorPatternsDto> {
     const v = ctx.vendorId;
-    const branchId = ctx.role === 'vendor_admin' ? q.branchId : ctx.branchId!;
+    // merchant-wide accounts (admin, viewer) have no branch; branch roles are held to theirs
+    const branchId = ctx.branchId ?? q.branchId;
     const branch = branchId ? Prisma.sql`AND e.branch_id = ${branchId}::uuid` : Prisma.empty;
 
     const [members, hours, cohortRows, [current]] = await Promise.all([
@@ -162,7 +163,7 @@ export class VendorPatternsController {
 
   /** Top members, busiest hours, who comes back (fixed windows, not the page's date range). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorPatternsDto })
   get(@CurrentStaff() ctx: StaffContext, @Query() q: VendorPatternsQueryDto): Promise<VendorPatternsDto> {
     return this.patterns.get(ctx, q);

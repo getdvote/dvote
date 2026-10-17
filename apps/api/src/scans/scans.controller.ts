@@ -11,7 +11,7 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentStaff } from '../auth/current-staff.decorator';
-import { StaffAuthGuard, type StaffContext } from '../auth/staff-auth.guard';
+import { StaffAuthGuard, StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { CollectScanDto, PreviewScanDto, RedeemScanDto } from './dto/scan.dto';
 import {
   CollectResponseDto,
@@ -30,6 +30,7 @@ import { ScansService } from './scans.service';
 })
 @UseGuards(StaffAuthGuard)
 @UserLimit(LIMITS.scans)
+@StaffRoles('vendor_admin', 'branch_manager', 'staff') // not viewers: read-only
 @Controller('vendor/scans')
 export class ScansController {
   constructor(private readonly scans: ScansService) {}

@@ -139,7 +139,8 @@ export class VendorRedemptionsService {
   ): Promise<VendorRedemptionsDto> {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 25;
-    const branchId = ctx.role === 'vendor_admin' ? q.branchId : ctx.branchId!;
+    // merchant-wide accounts (admin, viewer) have no branch; branch roles are held to theirs
+    const branchId = ctx.branchId ?? q.branchId;
 
     // The breakdown ignores the reward filter so it can be used to pick one.
     const base: Prisma.redemptionsWhereInput = {
@@ -232,7 +233,7 @@ export class VendorRedemptionsController {
 
   /** Rewards given at my shops: the list, totals and a per-reward breakdown (no customer names). */
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorRedemptionsDto })
   list(
     @CurrentStaff() ctx: StaffContext,

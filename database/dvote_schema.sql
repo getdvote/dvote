@@ -16,7 +16,7 @@ BEGIN;
 -- ---------------------------------------------------------------------
 CREATE TYPE vendor_status       AS ENUM ('active', 'suspended');
 CREATE TYPE branch_status       AS ENUM ('active', 'closed');
-CREATE TYPE staff_role          AS ENUM ('vendor_admin', 'branch_manager', 'staff');
+CREATE TYPE staff_role          AS ENUM ('vendor_admin', 'branch_manager', 'staff', 'viewer');  -- viewer: read-only, merchant-wide (migration 21)
 CREATE TYPE account_status      AS ENUM ('active', 'disabled');          -- staff + platform admins
 CREATE TYPE user_status         AS ENUM ('active', 'blocked');           -- customers
 CREATE TYPE user_gender         AS ENUM ('male', 'female');              -- NULL = not given
@@ -71,6 +71,7 @@ CREATE TABLE vendors (
                        category IN ('cafe', 'cafe_restaurant', 'restaurant', 'bakery', 'desserts', 'juice_bar')),  -- NULL = not set
     card_design    smallint      CONSTRAINT vendors_card_design_ck CHECK (card_design BETWEEN 1 AND 10),     -- loyalty-card design; NULL = automatic
     contact_email  varchar(255),
+    contact_phone  varchar(20)   CONSTRAINT vendors_contact_phone_ck CHECK (contact_phone ~ '^\+?[0-9]{6,15}$'),  -- e.g. +201001234567; NULL = not set
     currency       char(3)       NOT NULL DEFAULT 'EGP',    -- receipt totals are in this currency
     status         vendor_status NOT NULL DEFAULT 'active',
     created_at     timestamptz   NOT NULL DEFAULT now(),
@@ -120,8 +121,8 @@ CREATE TABLE staff_users (
     FOREIGN KEY (branch_id, vendor_id) REFERENCES branches (id, vendor_id),
     -- vendor admins are vendor-wide; managers and staff belong to one branch
     CONSTRAINT staff_role_branch_ck CHECK (
-        (role = 'vendor_admin' AND branch_id IS NULL) OR
-        (role <> 'vendor_admin' AND branch_id IS NOT NULL)
+        (role IN ('vendor_admin', 'viewer') AND branch_id IS NULL) OR
+        (role NOT IN ('vendor_admin', 'viewer') AND branch_id IS NOT NULL)
     )
 );
 CREATE UNIQUE INDEX staff_users_email_uq ON staff_users (lower(email));
@@ -370,6 +371,38 @@ CREATE TABLE fraud_flags (
 CREATE INDEX fraud_flags_status_time_idx ON fraud_flags (status, created_at);
 CREATE INDEX fraud_flags_vendor_idx ON fraud_flags (vendor_id);
 
+-- Custom customer segments (migration 20): rules and/or customers added by hand.
+CREATE TABLE customer_segments (
+    id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id           uuid         NOT NULL REFERENCES vendors (id),
+    name                varchar(60)  NOT NULL CHECK (btrim(name) <> ''),
+    description         varchar(300),
+    match               varchar(3)   NOT NULL DEFAULT 'all' CHECK (match IN ('all', 'any')),
+    rules               jsonb        NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(rules) = 'array'),  -- [{field, op, value}], checked by the API
+    sort_order          int          NOT NULL DEFAULT 0,
+    status              varchar(10)  NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+    created_by_staff_id uuid         REFERENCES staff_users (id),
+    created_at          timestamptz  NOT NULL DEFAULT now(),
+    updated_at          timestamptz  NOT NULL DEFAULT now(),
+    UNIQUE (id, vendor_id)
+);
+CREATE UNIQUE INDEX customer_segments_name_uq ON customer_segments (vendor_id, lower(name)) WHERE status = 'active';
+
+-- included = added by hand, false = removed by hand (beats the rules)
+CREATE TABLE customer_segment_members (
+    segment_id      uuid        NOT NULL,
+    card_id         uuid        NOT NULL,
+    vendor_id       uuid        NOT NULL,
+    included        boolean     NOT NULL,
+    set_by_staff_id uuid        REFERENCES staff_users (id),
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (segment_id, card_id),
+    FOREIGN KEY (segment_id, vendor_id) REFERENCES customer_segments (id, vendor_id),
+    FOREIGN KEY (card_id, vendor_id) REFERENCES cards (id, vendor_id)
+);
+CREATE INDEX customer_segment_members_card_idx ON customer_segment_members (vendor_id, card_id);
+
 -- ---------------------------------------------------------------------
 -- 8. TRIGGERS
 -- ---------------------------------------------------------------------
@@ -380,7 +413,7 @@ BEGIN
     FOREACH t IN ARRAY ARRAY[
         'platform_admins','vendors','branches','staff_users','point_rules','rewards',
         'users','user_identities','cards','qr_codes','point_events','redemptions','fraud_flags',
-        'vendor_images','reward_sold_outs']
+        'vendor_images','reward_sold_outs','customer_segments','customer_segment_members']
     LOOP
         EXECUTE format(
             'CREATE TRIGGER %I_set_updated_at BEFORE UPDATE ON %I

@@ -25,6 +25,9 @@ export class VendorResponseDto {
   @ApiProperty({ type: String, nullable: true })
   contactEmail: string | null;
 
+  @ApiProperty({ type: String, nullable: true, example: '+201001234567' })
+  contactPhone: string | null;
+
   @ApiProperty({ example: 'EGP' })
   currency: string;
 
@@ -54,6 +57,7 @@ export class VendorResponseDto {
       category: v.category as VendorCategory | null,
       cardDesign: v.card_design,
       contactEmail: v.contact_email,
+      contactPhone: v.contact_phone,
       currency: v.currency,
       status: v.status,
       branchCount: v._count.branches,

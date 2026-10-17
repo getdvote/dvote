@@ -82,15 +82,16 @@ export function adminScope(vendorId: string, currency: string): VendorScope {
 /** What the signed-in vendor account may do; the API enforces the same rules. */
 export function myVendorScope(me: StaffMe): VendorScope {
   const isAdmin = me.role === 'vendor_admin';
+  const viewer = me.role === 'viewer'; // read-only, every branch
   return {
     key: 'me',
     currency: me.vendor.currency,
     can: {
       editVendor: isAdmin,
-      branchPhotos: (branchId) => isAdmin || branchId === me.branchId,
-      manageStaff: true,
-      inviteRoles: isAdmin ? ['branch_manager', 'staff'] : ['staff'],
-      fixedBranchId: isAdmin ? null : me.branchId,
+      branchPhotos: (branchId) => isAdmin || (!viewer && branchId === me.branchId),
+      manageStaff: !viewer,
+      inviteRoles: isAdmin ? ['vendor_admin', 'branch_manager', 'staff', 'viewer'] : viewer ? [] : ['staff'],
+      fixedBranchId: isAdmin || viewer ? null : me.branchId,
     },
     branches: vendorApi.branches,
     createBranch: vendorApi.createBranch,
@@ -109,16 +110,21 @@ export function myVendorScope(me: StaffMe): VendorScope {
     staff: vendorApi.staff,
     updateStaff: vendorApi.updateStaff,
     inviteStaff: vendorApi.inviteStaff,
-    branchPause: {
-      fixedBranchId: isAdmin ? null : me.branchId,
-      pause: vendorApi.pauseBranch,
-      resume: vendorApi.resumeBranch,
-    },
-    soldOut: {
-      fixedBranchId: isAdmin ? null : me.branchId,
-      list: vendorApi.soldOuts,
-      set: vendorApi.setSoldOut,
-      clear: vendorApi.clearSoldOut,
-    },
+    // viewers change nothing: no pause / sold-out controls
+    branchPause: viewer
+      ? undefined
+      : {
+          fixedBranchId: isAdmin ? null : me.branchId,
+          pause: vendorApi.pauseBranch,
+          resume: vendorApi.resumeBranch,
+        },
+    soldOut: viewer
+      ? undefined
+      : {
+          fixedBranchId: isAdmin ? null : me.branchId,
+          list: vendorApi.soldOuts,
+          set: vendorApi.setSoldOut,
+          clear: vendorApi.clearSoldOut,
+        },
   };
 }

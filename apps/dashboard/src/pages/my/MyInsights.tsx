@@ -52,7 +52,7 @@ export function MyInsights() {
   const me = useMe();
   const scope = useMyScope();
   const vendor = useMyVendor();
-  const branchOnly = me.role !== 'vendor_admin';
+  const branchOnly = me.branchId !== null; // branch roles; admins and viewers see every branch
   const period = usePeriod('30d');
   const [compare, setCompare] = useState<'previous' | 'none'>('previous');
   const [branchId, setBranchId] = useState('all');

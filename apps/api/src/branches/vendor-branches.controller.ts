@@ -14,7 +14,7 @@ export class VendorBranchesController {
   constructor(private readonly branches: BranchesService) {}
 
   @Get()
-  @StaffRoles('vendor_admin', 'branch_manager')
+  @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: [BranchResponseDto] })
   async list(@CurrentStaff() ctx: StaffContext): Promise<BranchResponseDto[]> {
     return (await this.branches.list(ctx.vendorId)).map((b) => BranchResponseDto.from(b));

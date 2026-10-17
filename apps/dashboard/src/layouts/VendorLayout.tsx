@@ -1,6 +1,6 @@
-import { HomeIcon as HouseActive, ScannerIcon as ScanLineActive, ShopIcon as StoreActive, MapPointIcon as MapPinActive, ChatSquareWarningIcon as MessageSquareWarningActive, CardIcon as CreditCardActive, GiftIcon as GiftActive, SmartphoneVibrationIcon as MegaphoneActive, GraphUpIcon as ChartLineActive, UsersGroupRoundedIcon as UsersActive, BillListIcon as ReceiptTextActive, BoxIcon as KitActive, UsersGroupTwoRoundedIcon as UsersRoundActive, SettingsIcon as SettingsActive } from '@solar-icons/react/bold-duotone';
+import { HomeIcon as HouseActive, ScannerIcon as ScanLineActive, ShopIcon as StoreActive, MapPointIcon as MapPinActive, ChatSquareWarningIcon as MessageSquareWarningActive, CardIcon as CreditCardActive, GiftIcon as GiftActive, SmartphoneVibrationIcon as MegaphoneActive, GraphUpIcon as ChartLineActive, UsersGroupRoundedIcon as UsersActive, BillListIcon as ReceiptTextActive, BoxIcon as KitActive, SettingsIcon as SettingsActive } from '@solar-icons/react/bold-duotone';
 import { useQuery } from '@tanstack/react-query';
-import { BoxIcon as KitIcon, GraphUpIcon as ChartLine, QuestionCircleIcon as CircleHelp, SmartphoneVibrationIcon as Megaphone, MapPointIcon as MapPin, ChatSquareWarningIcon as MessageSquareWarning, CardIcon as CreditCard, GiftIcon as Gift, HomeIcon as House, BillListIcon as ReceiptText, ScannerIcon as ScanLine, SettingsIcon as Settings, ShopIcon as Store, UsersGroupRoundedIcon as Users, UsersGroupTwoRoundedIcon as UsersRound } from '@solar-icons/react/linear';
+import { BoxIcon as KitIcon, GraphUpIcon as ChartLine, QuestionCircleIcon as CircleHelp, SmartphoneVibrationIcon as Megaphone, MapPointIcon as MapPin, ChatSquareWarningIcon as MessageSquareWarning, CardIcon as CreditCard, GiftIcon as Gift, HomeIcon as House, BillListIcon as ReceiptText, ScannerIcon as ScanLine, SettingsIcon as Settings, ShopIcon as Store, UsersGroupRoundedIcon as Users } from '@solar-icons/react/linear';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ContactDvote } from '../components/ContactDvote';
@@ -36,6 +36,7 @@ export function useMyVendor(): Vendor {
       category: null,
       cardDesign: null,
       contactEmail: null,
+      contactPhone: null,
       status: 'active',
       branchCount: 0,
       staffCount: 0,
@@ -52,9 +53,10 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const till: NavItem = { to: '/scan', icon: ScanLine, activeIcon: ScanLineActive, label: t('nav.till') };
   const cashier = me.role === 'staff';
+  const viewer = me.role === 'viewer'; // read-only: no till, no team
   const nav: NavItem[] = cashier ? [till] : [
     { to: '/', icon: House, activeIcon: HouseActive, label: t('nav.home') },
-    till,
+    ...(viewer ? [] : [till]),
     // The shop as customers see it.
     ...(isAdmin ? [{ to: '/storefront', icon: Store, activeIcon: StoreActive, label: t('nav.profile'), group: t('nav.hubGroup') }] : []),
     { to: '/branches', icon: MapPin, activeIcon: MapPinActive, label: t('nav.branches'), group: t('nav.hubGroup') },
@@ -70,8 +72,8 @@ export function VendorLayout({ children }: { children: ReactNode }) {
     { to: '/kit', icon: KitIcon, activeIcon: KitActive, label: t('nav.storeIds'), group: t('nav.workspaceGroup') },
   ];
   // In the profile menu (the shop card at the top of the sidebar).
+  // the team lives in Settings → Team
   const account: NavItem[] = cashier ? [] : [
-    { to: '/staff', icon: UsersRound, activeIcon: UsersRoundActive, label: t('nav.team') },
     { to: '/settings', icon: Settings, activeIcon: SettingsActive, label: t('nav.settings') },
   ];
 
@@ -109,7 +111,7 @@ function BranchesNow() {
   const me = useMe();
   const scope = useMyScope();
   const { data } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), refetchInterval: 60_000 });
-  const open = (data ?? []).filter((b) => b.status === 'active' && (me.role === 'vendor_admin' || b.id === me.branchId));
+  const open = (data ?? []).filter((b) => b.status === 'active' && (me.branchId === null || b.id === me.branchId));
   if (!open.length) return null;
 
   const states = open.map((b) => branchState(b));

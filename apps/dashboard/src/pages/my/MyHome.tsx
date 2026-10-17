@@ -27,7 +27,7 @@ const chartConfig = () =>
 export function MyHome() {
   const me = useMe();
   const vendor = useMyVendor();
-  const branchOnly = me.role !== 'vendor_admin';
+  const branchOnly = me.branchId !== null; // branch roles; admins and viewers see every branch
   const scope = useMyScope();
   const [branch, setBranch] = useState('all');
   const branchId = branchOnly ? me.branchId ?? undefined : branch === 'all' ? undefined : branch;
@@ -35,7 +35,8 @@ export function MyHome() {
   const selectedBranch = branches?.find((b) => b.id === branchId);
   const { data, isLoading, error } = useQuery({ queryKey: ['summary', 'me', branchId ?? 'all'], queryFn: () => vendorApi.summary({ branchId }), refetchInterval: 60_000 });
   // while the go-live steps show, setup tips live there instead of twice
-  const goLivePending = useGoLivePending(!branchOnly);
+  const isAdmin = me.role === 'vendor_admin'; // the go-live steps are the admin's to do
+  const goLivePending = useGoLivePending(isAdmin);
 
   return (
     <>
@@ -47,7 +48,7 @@ export function MyHome() {
             options={branches?.map((b) => ({ value: b.id, label: b.name }))} />
         )}
       />
-      {branchOnly ? null : <GoLiveChecklist className="mb-5" />}
+      {isAdmin ? <GoLiveChecklist className="mb-5" /> : null}
       <div className="mb-5">
         {!branchOnly && branchId ? <p className="mb-2 text-xs text-muted-foreground">{t('home.merchantUpdates')}</p> : null}
         <NeedsAttention hideSetup={goLivePending} />
