@@ -111,7 +111,7 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
       ],
     });
     await seedStaff('adminA', ids.vendorA, null, 'vendor_admin');
-    await seedStaff('adminA2', ids.vendorA, null, 'vendor_admin');
+    await seedStaff('adminA2', ids.vendorA, null, 'viewer');
     await seedStaff('managerA1', ids.vendorA, ids.branchA1, 'branch_manager');
     await seedStaff('managerA2', ids.vendorA, ids.branchA2, 'branch_manager');
     await seedStaff('staffA1', ids.vendorA, ids.branchA1, 'staff');
@@ -393,18 +393,18 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
       expect(res.body).toMatchObject({ name: 'Moved', branchId: ids.branchA1 });
     });
 
-    it('promoting to vendor_admin clears the branch', async () => {
+    it('cannot promote another vendor admin while the vendor already has one', async () => {
       const res = await api(
         'adminA',
         'patch',
         `/api/vendor/staff/${people.managerA2.id}`,
       )
         .send({ role: 'vendor_admin' })
-        .expect(200);
-      expect(res.body).toMatchObject({ role: 'vendor_admin', branchId: null });
+        .expect(409);
+      expect(res.body.code).toBe('vendor_admin_exists');
     });
 
-    it('demoting a vendor_admin requires a branch → 400 branch_required', async () => {
+    it('moving a merchant-wide viewer to staff requires a branch → 400 branch_required', async () => {
       const res = await api(
         'adminA',
         'patch',

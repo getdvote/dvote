@@ -10,6 +10,15 @@
 > - Repo: `github.com/getdvote/dvote` — work happens on `develop`; merging needs Karim's approval.
 > - **This file contains no secrets.** Keys and passwords live only in each app's `.env` (never committed).
 
+> **Wallet redemption (2026-10-17):** dashboard Till → Redeem reward → scan static Wallet QR →
+> customer name/balance and this merchant's rewards → affordable rewards enabled → confirm.
+> API rechecks merchant, branch, blocked status, active reward, sold-out status, displayed price
+> and sufficient points; atomic decrement + ledger + redemption snapshot, idempotent retries,
+> followed by Google Wallet sync. Wallet preview takes `intent: redeem` (earning rule not needed)
+> and `previewBranchId`; redeem takes staff-selected `rewardId` and optional `expectedPointsCost`.
+> Original app redeem QRs still work. Customer web shows both Wallet buttons and keeps the saved
+> notice; Google button disables when `hasUsers` is true, Apple remains unavailable pending setup.
+
 > **Invitation password setup (2026-10-17):** dashboard `/set-password` handles Supabase invitation
 > and recovery sessions with EN/AR password + confirmation fields, no manual publishable key.
 > Existing local invite links to `/dev/staff.html` forward their browser-only fragment to the
@@ -44,7 +53,7 @@
 > **Wallet scan fix (2026-10-17):** staff scanner and `/api/vendor/scans/preview|collect` now accept
 > `dvote:c1:` wallet card QRs as well as the app's `dvote:q1:` codes. Wallet collects are reusable
 > across visits, merchant-scoped, idempotent per submission and recorded with `scan_source=wallet_card`.
-> Wallet redemption selection and notifications remain pending.
+> Wallet redemption selection and Google broadcasts are now built (see latest notes above).
 > Dashboard Till (`MyTill.tsx`) also accepts both `dvote:q1:` and `dvote:c1:`; its separate
 > client-side prefix check was corrected on 2026-10-17 after the staff-app fix.
 >
@@ -288,3 +297,41 @@ Customer picks a reward → redeem QR tied to that reward's vendor → staff sca
 - Never change Windows security settings yourself — ask Karim to.
 - Keep `CLAUDE.md` (and this brief) updated when decisions change.
 - Schema changes: hand-written migration → apply to **both** cloud and local → `npm run db:pull` → mirror in `database/dvote_schema.sql` (details in `CLAUDE.md`).
+
+### Redemption Wallet confirmations (2026-10-17)
+- Successful reward redemptions (Wallet card or app QR) queue a Google Wallet message: "You have redeemed your reward successfully", with reward, points spent and remaining balance. The durable outbox is written in the redemption transaction; Google delivery runs afterward through the existing five-second worker, so provider failures cannot undo points. Idempotent redemption retries create only one message. Transactional messages are excluded from Broadcast history and share its three-per-card rolling-day notification allowance; delivery still depends on Google/device notification settings. Apple notifications await Apple pass setup.
+- Customer card page keeps both Wallet buttons visible and disables each only when that wallet is saved (or Google is busy). Apple remains clickable and explains that setup is pending; it cannot issue a pass yet.
+- Validation: API and customer web builds; redemption, Broadcast and Google Wallet e2e suites (23 tests), including duplicate redemption notification prevention and provider-failure balance preservation.
+
+### Wallet delivery diagnostics (2026-10-17)
+- Investigated real missing redemption notifications: one provider-error outcome and one local daily-limit skip; the pass already had two accepted Broadcast messages. Retried the missing confirmation once using its existing message ID, verified it exists on Google's pass, reconciled its delivery row to accepted, and the customer confirmed the phone notification appeared. The original provider error had not been logged, so its exact cause remains unproven.
+- Wallet worker now logs controlled Google HTTP diagnostics and records definite 4xx rejections as failed/provider_http_<status>, rather than unknown. Definite rejections no longer consume the local rolling notification quota; ambiguous network/server failures remain unknown to prevent unsafe duplicate sends.
+
+### Staff home refresh and web dependencies (2026-10-17)
+Staff home (web/iOS/Android shared screen) now has a faded vendor-logo watermark, larger welcome/vendor heading, a scan action panel and scrollable layout for smaller screens. Other staff screens retain the compact header. No new packages required for this UI. Staff lint/typecheck pass. Customer image-viewer import failure after pulling changes was caused by missing installed dependencies; installed the existing locked dependencies in apps/web and apps/dashboard without changing manifests or lockfiles.
+
+### Staff app aligned with dashboard design (2026-10-17)
+Staff login, home, scan, bill amount, reward confirmation and success screens use the dashboard's light stone palette, Inter regular/medium/semibold/bold fonts, dark dvote brand bar, white bordered panels and 12px controls. Mobile touch targets stay at least 52px for primary actions; the centered task column is capped at 560px on web. Home retains the faded vendor logo and larger welcome. Inter assets load locally via Expo-compatible expo-font and @expo-google-fonts/inter; only the four required faces are imported. Staff theme owns native equivalents of dashboard tokens; Field focus has a visible border. Scanning and points behavior is unchanged. Checked with staff lint/typecheck and Expo web export; physical iOS/Android visual review remains manual.
+
+### Platform staff onboarding (2026-10-17)
+Platform admins can now invite all four roles through POST /api/admin/vendors/{id}/staff. When a vendor has no staff rows, the first member is forced to vendor_admin with no branch (both UI and API); afterward the selected role is respected. Merchant-wide roles omit branches; staff/branch_manager require an active branch of that vendor. Existing /admins stays compatible. Dashboard admin Staff tab shows a first-admin explanation initially, then the role picker; merchant-side permissions remain unchanged. First-member creation uses a vendor row lock in the insertion transaction. No migration. API build and 61 admin/staff e2e tests pass. Installed the dashboard's already-declared html-to-image dependency to restore QR poster rendering imports.
+
+### Staff home cleanup and one vendor admin (2026-10-17)
+- Staff home replaces the oversized rotated rectangular watermark with a small faint circular logo; header vendor images are circular and the dark brand bar no longer tints the opaque PNG into a white block. Layout widths/min-width and clipping keep the page inside the viewport. Branch choices are full-width rows with wrapped names and a selection indicator. Home keeps the dashboard palette and Inter.
+- Exactly one vendor_admin row is allowed per vendor, including disabled accounts. Migration 27_one_vendor_admin adds a partial unique index on staff_users.vendor_id WHERE role='vendor_admin', applied to cloud and local. API rejects duplicate invitations (both new /staff and legacy /admins), merchant-side invites and promotions with 409 vendor_admin_exists; transaction vendor locks cover concurrent decisions, and preflight validation avoids unnecessary emails. Dashboard hides admin when the vendor already has one. No existing accounts were demoted or deleted; cloud duplicate check was empty.
+- Prisma introspection fix now restores the many-staff vendor and branch relations after removing the misleading partial @unique attribute. npm run db:pull completed. Local DB's previously pending feedback migrations were completed with conditional revokes for absent Supabase roles; 24/25/26/27 are now applied there. Existing migration files were preserved.
+- Validation: API/dashboard builds, 71 admin/staff/dashboard e2e tests (including concurrent admins, disabled admin, direct DB uniqueness), staff lint/typecheck and web export pass. Phone visual review remains manual.
+
+### Staff Collect/Redeem tabs and merchant role wording (2026-10-17)
+Staff Home now has Collect and Redeem tabs; branch selection is shared. Collect keeps the receipt amount flow. Redeem scans a saved Wallet card, loads customer name/balance and this merchant's active rewards with branch sold-out and affordability flags, disables unusable choices, then loads a fresh confirmation preview before Give reward. Sends rewardId + expectedPointsCost and an idempotency key to the existing transactional redeem endpoint; backend wallet sync/notification behavior remains shared. Original one-time reward QRs go straight to confirmation in the Redeem tab; collect QRs are refused there with guidance. Returning from a redemption preserves the Redeem tab; no active earning rule is required to redeem. QR secrets remain session-memory only. Customer information is fetched from the API rather than passed in confirmation-route JSON.
+Dashboard vendor_admin role labels now read Merchant admin / مسؤول المتجر, including the platform Feedback table. The database role and its permissions remain vendor_admin; it is not a dvote platform super admin.
+Validation for staff tabs: lint/typecheck pass, Expo export succeeds for web/Android/iOS, dashboard build passes, and all 47 collect/redeem backend integration tests pass. No real points were granted or redeemed during automated verification.
+
+### Staff app access (2026-10-17)
+Only vendor_admin (Merchant admin), branch_manager and staff can enter the staff web/mobile app. Session loading checks the server-returned role for both password sign-in and restored sessions before exposing Home; viewers are signed out locally and shown a dashboard-only explanation. A role refusal from scan endpoints also clears staff app access. Local sign-out avoids revoking the viewer's other dashboard sessions. API ScansController already restricts preview/collect/redeem/today to the same three roles; viewer dashboard access is unchanged. Validation: staff lint/typecheck, explicit role allowlist checks, staff web export, and 12 redemption e2e tests including all three roles collecting/redeeming and viewer refusal at every scan endpoint.
+
+### Branch map polish (2026-10-17)
+LocationPicker uses a taller rounded map panel, softened OSM tile colors, theme-aware zoom controls, a clearer dark pin, compact search/location actions and a collapsible Google Maps link field. Leaflet's default Ukraine-flag prefix is replaced with a plain linked Leaflet credit; OpenStreetMap attribution remains. ResizeObserver keeps the map correctly sized in branch dialogs; wheel zoom is disabled to avoid trapping form scrolling (buttons/pinch remain). Selection guidance is localized EN/AR. Dashboard typecheck/build passes; no new map provider or dependency.
+
+### Automatic light/dark branch maps (2026-10-17)
+All embedded maps currently use the shared dashboard LocationPicker (admin/merchant Add and Edit branch forms). Replaced its Leaflet renderer with a lazy-loaded MapLibre BranchMap using OpenFreeMap's OpenMapTiles-derived Positron style in light mode and Dark Matter-derived dark style in dark mode. useTheme.resolvedTheme follows explicit light/dark and system preference; setStyle preserves camera/pin. No API key or added provider account. Provider/data attribution comes from the vector source (OpenFreeMap/OpenMapTiles/OpenStreetMap). Removed the previous raster color filter; controls and pin use dashboard theme colors. Vite worker is explicitly bundled per OpenFreeMap's quick start. Click/drag, search, link, geolocation and resize behavior are retained. WebGL failure shows localized guidance so search/link can still set coordinates. Other apps have outbound Google Maps directions links, not embedded map previews. Dashboard build passes and both style/TileJSON endpoints returned HTTP 200.

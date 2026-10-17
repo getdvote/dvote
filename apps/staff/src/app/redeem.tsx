@@ -1,9 +1,9 @@
 import { randomUUID } from 'expo-crypto';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ErrorBox, PrimaryButton, Screen, TextLink, VendorHeader } from '../components/ui';
-import { api, ApiError, type RedeemPreview } from '../lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, ErrorBox, PrimaryButton, Screen, TextLink, VendorHeader } from '../components/ui';
+import { api, ApiError, friendlyMessage, type RedeemPreview } from '../lib/api';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
@@ -14,19 +14,70 @@ import { theme } from '../lib/theme';
  */
 export default function Redeem() {
   const { me, branchId, handleAuthError, scannedCode: code, setScannedCode } = useSession();
-  const params = useLocalSearchParams<{ preview?: string }>();
+  const params = useLocalSearchParams<{ rewardId?: string }>();
+  const [preview, setPreview] = useState<RedeemPreview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // One key per confirmation: a retry after a network error never takes points twice.
   const idempotencyKey = useRef(randomUUID()).current;
 
-  let preview: RedeemPreview | null = null;
-  try {
-    preview = params.preview ? (JSON.parse(params.preview) as RedeemPreview) : null;
-  } catch {
-    preview = null;
-  }
-  if (!me || !code || !preview) return <Redirect href="/home" />;
+  useEffect(() => {
+    let active = true;
+    if (!code) return;
+    void (async () => {
+      try {
+        const result = await api.preview(code, 'redeem', branchId ?? undefined);
+        if (!result.usable) throw new Error(friendlyMessage(result.reason ?? 'qr_invalid'));
+        const walletReward = result.wallet?.rewards.find((r) => r.rewardId === params.rewardId);
+        if (walletReward && !walletReward.usable)
+          throw new Error(friendlyMessage(walletReward.reason ?? 'reward_unavailable'));
+        const reward = result.wallet ? walletReward : result.redeem;
+        if (!reward) throw new Error(friendlyMessage('reward_unavailable'));
+        if (active) setPreview(reward);
+      } catch (err) {
+        if (!active || (await handleAuthError(err))) return;
+        setError(err instanceof Error ? err.message : 'Could not load the reward. Try again.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [code, branchId, params.rewardId, handleAuthError, refresh]);
+  if (!me || !code) return <Redirect href="/home" />;
+  if (!preview)
+    return (
+      <Screen>
+        <View style={styles.loading}>
+          {loading ? (
+            <ActivityIndicator color={theme.text} />
+          ) : (
+            <>
+              <ErrorBox message={error} />
+              <TextLink
+                title="Try again"
+                onPress={() => {
+                  setLoading(true);
+                  setError(null);
+                  setRefresh((n) => n + 1);
+                }}
+              />
+            </>
+          )}
+          <TextLink
+            title={params.rewardId ? 'Choose another reward' : 'Back to Redeem'}
+            onPress={() =>
+              params.rewardId
+                ? router.replace('/rewards')
+                : router.replace({ pathname: '/home', params: { mode: 'redeem' } })
+            }
+          />
+        </View>
+      </Screen>
+    );
   const branch = me.branches.find((b) => b.id === branchId);
   const p = preview;
 
@@ -39,6 +90,8 @@ export default function Redeem() {
         // vendor admins have no branch of their own: send the one picked on Home
         branchId: me!.branch ? undefined : (branchId ?? undefined),
         idempotencyKey,
+        rewardId: p.rewardId,
+        expectedPointsCost: p.pointsCost,
       });
       setScannedCode(null); // used: never reuse it
       router.replace({
@@ -66,7 +119,12 @@ export default function Redeem() {
 
         <View style={styles.card}>
           {p.rewardImageUrl ? (
-            <Image source={{ uri: p.rewardImageUrl }} style={styles.image} resizeMode="cover" accessibilityIgnoresInvertColors />
+            <Image
+              source={{ uri: p.rewardImageUrl }}
+              style={styles.image}
+              resizeMode="cover"
+              accessibilityIgnoresInvertColors
+            />
           ) : null}
           <View style={styles.cardBody}>
             <Text style={styles.reward}>{p.rewardName}</Text>
@@ -96,11 +154,14 @@ export default function Redeem() {
 
       <View style={styles.footer}>
         <PrimaryButton title="Give reward" onPress={give} loading={busy} />
+        {params.rewardId && !busy ? (
+          <TextLink title="Choose another reward" onPress={() => router.replace('/rewards')} />
+        ) : null}
         <TextLink
           title="Cancel"
           onPress={() => {
             setScannedCode(null);
-            router.replace('/home');
+            router.replace({ pathname: '/home', params: { mode: 'redeem' } });
           }}
         />
       </View>
@@ -109,15 +170,28 @@ export default function Redeem() {
 }
 
 const styles = StyleSheet.create({
+  loading: { flex: 1, justifyContent: 'center', gap: 20 },
   content: { gap: 14, paddingBottom: 16 },
   title: { fontSize: 17, fontWeight: '600', color: theme.text, textAlign: 'center', marginTop: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#ECECF1' },
-  image: { width: '100%', height: 170, backgroundColor: '#EEE' },
+  card: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  image: { width: '100%', height: 170, backgroundColor: theme.subtle },
   cardBody: { padding: 16, gap: 4 },
   reward: { fontSize: 22, fontWeight: '700', color: theme.text },
   rewardAr: { fontSize: 17, color: theme.muted, writingDirection: 'rtl' },
   cost: { fontSize: 17, fontWeight: '700', color: theme.text, marginTop: 6 },
-  label: { fontSize: 13, fontWeight: '600', color: theme.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
   customer: { fontSize: 20, fontWeight: '700', color: theme.text, marginBottom: 6 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   muted: { fontSize: 15, color: theme.muted },

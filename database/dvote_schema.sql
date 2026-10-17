@@ -139,6 +139,7 @@ CREATE TABLE staff_users (
 CREATE UNIQUE INDEX staff_users_email_uq ON staff_users (lower(email));
 CREATE UNIQUE INDEX staff_users_auth_user_id_key ON staff_users (auth_user_id);
 CREATE INDEX staff_users_vendor_idx ON staff_users (vendor_id);
+CREATE UNIQUE INDEX staff_users_one_admin_uq ON staff_users (vendor_id) WHERE role = 'vendor_admin';
 
 -- Earning rule ("settings"), versioned: points = floor(total / spend_amount) * points_per_spend
 CREATE TABLE point_rules (

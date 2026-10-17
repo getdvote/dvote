@@ -421,14 +421,15 @@ export const en = {
   },
   staff: {
     roles: {
-      vendor_admin: "Super admin",
+      vendor_admin: "Merchant admin",
       branch_manager: "Branch manager",
       staff: "Staff",
       viewer: "Viewer only",
     },
     enabledToast: "{name} can sign in again",
     disabledToast: "{name} is disabled",
-    hintAdmins: "Invite the owner as merchant admin; they add managers and staff from their side.",
+    hintAdmins: "The first team member is automatically the merchant admin. Choose a role for each person you invite afterward.",
+    firstAdmin: "This vendor has no team members yet. This person will be the merchant admin, with access to every branch.",
     hint: "People you invite get an email to set a password, then sign in with the team link below.",
     inviteAdmin: "Invite merchant admin",
     invite: "Invite",
@@ -658,6 +659,9 @@ export const en = {
     linkPlaceholder: "…or paste a Google Maps link",
     linkLabel: "Google Maps link",
     none: "No location yet: click the map where the shop is.",
+    selected: "Location selected · drag the pin to adjust",
+    preview: "Branch location map",
+    unavailable: "Map preview is unavailable in this browser. Search for a place or paste a Google Maps link to set the location.",
     clear: "Clear location",
   },
   activity: {
@@ -1172,6 +1176,9 @@ export const en = {
     feedbackThanksText: 'Your feedback goes straight to the dvote team.',
   },
   till: {
+    chooseReward: "Choose a reward",
+    noRewards: "This merchant has no available rewards.",
+    redeemChoice: "Redeem",
     title: 'dvote · scan',
     scan: 'Scan card',
     scanHint: "Collect points or give a reward: scan the customer's QR",
@@ -1251,6 +1258,8 @@ export const en = {
     continue: "Continue",
   },
   errors: {
+    reward_changed: 'The reward price changed. Scan the card again to see the latest rewards.',
+    reward_required: 'Choose a reward to redeem.',
     username_taken: "This username is taken or reserved.",
     invalid_username: "Choose a valid storefront username.",
 
@@ -1287,6 +1296,7 @@ export const en = {
     vendor_not_found: "This merchant no longer exists.",
     currency_locked: "The currency can't change once the merchant has a points rule.",
     email_taken: "This email is already used by another staff account.",
+    vendor_admin_exists: "This vendor already has a merchant admin. Each vendor can have only one, including disabled accounts.",
     account_already_staff: "This account already works at a merchant.",
     email_rate_limited: "Too many invite emails were sent. Try again in a while.",
     too_many_images: "Limit reached: delete an image first.",

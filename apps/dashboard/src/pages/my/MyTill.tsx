@@ -16,7 +16,7 @@ import { CameraBlockedHelp, useCameraGranted } from '../../components/camera-hel
 import { QrScanner, type CameraProblem } from '../../components/QrScanner';
 import { errorText, t } from '../../i18n';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
-import { ApiError, errorMessage, vendorApi, type RedeemPreview, type StaffMe } from '../../lib/api';
+import { ApiError, errorMessage, vendorApi, type RedeemPreview, type StaffMe, type WalletCardPreview } from '../../lib/api';
 import { branchState, OPENING_HOURS, stateLabel, type BranchState } from '../../lib/hours';
 
 const QR_PREFIXES = ['dvote:q1:', 'dvote:c1:'];
@@ -28,6 +28,7 @@ type Rule = NonNullable<StaffMe['activeRule']>;
 type Step =
   | { kind: 'scan'; rewardOnly: boolean }
   | { kind: 'amount'; code: string }
+  | { kind: 'walletRewards'; code: string; wallet: WalletCardPreview }
   | { kind: 'redeem'; code: string; preview: RedeemPreview }
   | { kind: 'collected'; points: number; amount: string; currency: string }
   | { kind: 'given'; reward: string; points: number; balance: number };
@@ -191,9 +192,11 @@ function TillFlow({ step, setStep, me, branchId, onDone }: { step: Step; setStep
   const sendBranch = me.branch ? undefined : (branchId ?? undefined);
   switch (step.kind) {
     case 'scan':
-      return <ScanStep step={step} setStep={setStep} />;
+      return <ScanStep step={step} setStep={setStep} branchId={sendBranch} />;
     case 'amount':
       return <AmountStep code={step.code} rule={me.activeRule} currency={me.vendor.currency} branchId={sendBranch} setStep={setStep} onDone={onDone} />;
+    case 'walletRewards':
+      return <WalletRewardsStep code={step.code} wallet={step.wallet} setStep={setStep} />;
     case 'redeem':
       return <RedeemStep code={step.code} preview={step.preview} branchId={sendBranch} setStep={setStep} onDone={onDone} />;
     case 'collected':
@@ -215,7 +218,7 @@ const FULL_CODE = /^dvote:(q1|c1):[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url,
  * Read the customer's QR: with a hand scanner (first and default: most cafés have one and no
  * camera at the till) or the computer's camera. The scanner "types" into a field that keeps focus.
  */
-function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; setStep: (s: Step) => void }) {
+function ScanStep({ step, setStep, branchId }: { step: Extract<Step, { kind: 'scan' }>; setStep: (s: Step) => void; branchId?: string }) {
   const [mode, setMode] = useState<ScanMode>('scanner');
   const [typed, setTyped] = useState('');
   const [checking, setChecking] = useState(false);
@@ -242,12 +245,13 @@ function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; se
     setChecking(true);
     setError(null);
     try {
-      const preview = await vendorApi.scanPreview(code);
+      const preview = await vendorApi.scanPreview(code, step.rewardOnly ? 'redeem' : 'collect', branchId);
       if (!preview.usable) {
         const reason = preview.reason ?? 'wrong_qr_type';
         throw new ApiError(409, reason, errorText(reason) ?? t('common.somethingWrong'));
       }
       if (preview.purpose === 'redeem' && preview.redeem) setStep({ kind: 'redeem', code, preview: preview.redeem });
+      else if (step.rewardOnly && preview.wallet) setStep({ kind: 'walletRewards', code, wallet: preview.wallet });
       else if (step.rewardOnly) throw new Error(t('till.notReward'));
       else setStep({ kind: 'amount', code });
     } catch (err) {
@@ -470,6 +474,22 @@ function AmountStep({
   );
 }
 
+function WalletRewardsStep({ code, wallet, setStep }: { code: string; wallet: WalletCardPreview; setStep: (s: Step) => void }) {
+  return <>
+    <DialogHeader><DialogTitle>{t('till.chooseReward')}</DialogTitle><DialogDescription>{wallet.customerName ?? t('till.someone')} · {t('till.points', { n: num(wallet.balance) })}</DialogDescription></DialogHeader>
+    <div className="grid max-h-[55vh] gap-3 overflow-y-auto">
+      {!wallet.rewards.length && <p className="text-sm text-muted-foreground">{t('till.noRewards')}</p>}
+      {wallet.rewards.map(reward => <div key={reward.rewardId} className="flex items-center gap-3 rounded-xl border p-3">
+        {reward.rewardImageUrl && <img src={reward.rewardImageUrl} alt="" className="size-14 rounded-lg object-cover" />}
+        <div className="min-w-0 flex-1"><p className="font-medium">{reward.rewardName}</p>{reward.rewardNameAr && <p dir="rtl" className="text-sm text-muted-foreground">{reward.rewardNameAr}</p>}<p className="text-sm">{t('till.points', { n: num(reward.pointsCost) })}</p>
+          {!reward.usable && <p className="text-xs text-muted-foreground">{errorText(reward.reason ?? 'insufficient_points')}</p>}
+        </div>
+        <Button disabled={!reward.usable} onClick={() => setStep({ kind: 'redeem', code, preview: reward })}>{t('till.redeemChoice')}</Button>
+      </div>)}
+    </div>
+  </>;
+}
+
 function RedeemStep({ code, preview: p, branchId, setStep, onDone }: { code: string; preview: RedeemPreview; branchId?: string; setStep: (s: Step) => void; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -480,7 +500,7 @@ function RedeemStep({ code, preview: p, branchId, setStep, onDone }: { code: str
     setBusy(true);
     setError(null);
     try {
-      const r = await vendorApi.redeem({ code, branchId, idempotencyKey });
+      const r = await vendorApi.redeem({ code, rewardId: p.rewardId, expectedPointsCost: p.pointsCost, branchId, idempotencyKey });
       onDone();
       setStep({ kind: 'given', reward: r.rewardName, points: r.pointsRedeemed, balance: r.cardBalance });
     } catch (err) {
@@ -525,6 +545,14 @@ function RedeemStep({ code, preview: p, branchId, setStep, onDone }: { code: str
         {busy ? <Loader2 className="animate-spin" /> : null}
         {t('till.give')}
       </Button>
+      {code.startsWith('dvote:c1:') && <Button variant="ghost" disabled={busy} onClick={async () => {
+        setBusy(true); setError(null);
+        try {
+          const fresh = await vendorApi.scanPreview(code, 'redeem', branchId);
+          if (!fresh.usable || !fresh.wallet) throw new ApiError(409, fresh.reason ?? 'qr_invalid', errorText(fresh.reason ?? 'qr_invalid') ?? t('common.somethingWrong'));
+          setStep({ kind: 'walletRewards', code, wallet: fresh.wallet });
+        } catch (err) { setError(err); } finally { setBusy(false); }
+      }}>{t('till.chooseReward')}</Button>}
       </div>
     </>
   );

@@ -134,12 +134,14 @@ describe('Add to Google Wallet (e2e)', () => {
     try {
       const service = app.get(GoogleWalletService);
       const id = `${ISSUER}.card-${publicId}`;
+      expect(await service.isSaved(id)).toBe(true);
       expect((await service.notifyCard(id, 'dvote-broadcast-test', 'Coffee', 'Use your points')).status).toBe('accepted');
       expect(posted).toEqual([{ message: { id: 'dvote-broadcast-test', header: 'Coffee', body: 'Use your points', messageType: 'TEXT_AND_NOTIFY' } }]);
       messages = [{ id: 'dvote-broadcast-test' }];
       await service.notifyCard(id, 'dvote-broadcast-test', 'Coffee', 'Use your points');
       expect(posted).toHaveLength(1);
       hasUsers = false;
+      expect(await service.isSaved(id)).toBe(false);
       expect((await service.notifyCard(id, 'new-message', 'Coffee', 'Use your points')).status).toBe('skipped');
       expect(posted).toHaveLength(1);
     } finally { fetchMock.mockImplementation(original); }

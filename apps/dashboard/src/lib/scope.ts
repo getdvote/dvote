@@ -58,7 +58,7 @@ export function adminScope(vendorId: string, currency: string): VendorScope {
   return {
     key: vendorId,
     currency,
-    can: { editVendor: true, branchPhotos: () => true, manageStaff: true, inviteRoles: ['vendor_admin'], fixedBranchId: null },
+    can: { editVendor: true, branchPhotos: () => true, manageStaff: true, inviteRoles: ['vendor_admin', 'branch_manager', 'staff', 'viewer'], fixedBranchId: null },
     branches: () => api.branches(vendorId),
     createBranch: (b) => api.createBranch(vendorId, b),
     updateBranch: api.updateBranch,
@@ -75,7 +75,7 @@ export function adminScope(vendorId: string, currency: string): VendorScope {
     deleteImage: (id) => api.deleteImage(vendorId, id),
     staff: () => api.staff(vendorId),
     updateStaff: api.updateStaff,
-    inviteStaff: (b) => api.inviteVendorAdmin(vendorId, { name: b.name, email: b.email }),
+    inviteStaff: (b) => api.inviteVendorStaff(vendorId, b),
   };
 }
 

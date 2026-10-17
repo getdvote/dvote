@@ -7,7 +7,7 @@ import { configureApp } from '../src/app.setup';
 import { SUPABASE_JWKS } from '../src/auth/supabase-jwt.verifier';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { BroadcastsService } from '../src/broadcasts/broadcasts';
-import { GoogleWalletService } from '../src/wallet/google-wallet.service';
+import { GoogleWalletService, WalletRequestError } from '../src/wallet/google-wallet.service';
 import { createTestSigner } from './helpers/test-auth';
 
 describe('Segmented Wallet broadcasts (e2e)', () => {
@@ -96,6 +96,16 @@ describe('Segmented Wallet broadcasts (e2e)', () => {
     await service.processPending();
     expect(google.notifyCard.mock.calls.length).toBe(count);
     expect((await db.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM wallet_broadcast_recipients WHERE vendor_id=${vendor}::uuid AND status='unknown'`)[0].n).toBe(1);
+  });
+
+  it('records definite Google rejections without reserving notification quota', async () => {
+    await db.$executeRaw`UPDATE wallet_broadcast_recipients SET attempted_at=now()-interval '25 hours' WHERE vendor_id=${vendor}::uuid`;
+    google.notifyCard.mockRejectedValueOnce(new WalletRequestError('Google Wallet addMessage: HTTP 400 (invalidResource)', 400) as never);
+    const sent = await call('admin').send(message()).expect(201);
+    await service.processPending();
+    const rows = await db.$queryRaw<{ status: string; reason: string | null }[]>`SELECT status,reason FROM wallet_broadcast_recipients WHERE broadcast_id=${sent.body.id}::uuid`;
+    expect(rows).toContainEqual({ status: 'failed', reason: 'provider_http_400' });
+    expect(rows.some(r => r.status === 'unknown')).toBe(false);
   });
 
   it('keeps nearby reminders off until enabled and validates message input', async () => {

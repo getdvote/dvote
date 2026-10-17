@@ -1,14 +1,14 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
-import { ErrorBox, Field, PrimaryButton, Screen, TextLink, showHelp } from '../components/ui';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Text, ErrorBox, Field, PrimaryButton, Screen, TextLink, showHelp } from '../components/ui';
 import { ApiError } from '../lib/api';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
 /** Design 1: "Login with your provided account" (accounts are created by the vendor). */
 export default function Login() {
-  const { me, signIn } = useSession();
+  const { me, signIn, accessError } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -46,7 +46,8 @@ export default function Login() {
             resizeMode="contain"
             accessibilityLabel="dvote"
           />
-          <Text style={styles.title}>Login with your{'\n'}provided account</Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in with your staff account.</Text>
         </View>
 
         <View style={styles.form}>
@@ -73,7 +74,7 @@ export default function Login() {
             returnKeyType="go"
             onSubmitEditing={submit}
           />
-          <ErrorBox message={error} />
+          <ErrorBox message={error ?? accessError} />
           <View style={styles.actions}>
             <PrimaryButton title="Login" onPress={submit} loading={busy} />
             <TextLink title="Need help?" onPress={showHelp} />
@@ -89,12 +90,13 @@ const styles = StyleSheet.create({
   brand: { alignItems: 'center', paddingTop: 56, gap: 16 },
   logo: { width: 60, height: 54 },
   title: {
-    fontSize: 21,
+    fontSize: 28,
     fontWeight: '700',
     color: theme.text,
     textAlign: 'center',
-    lineHeight: 28,
+    lineHeight: 36,
   },
-  form: { marginTop: 56, gap: 20 },
+  subtitle: { fontSize: 14, color: theme.muted, textAlign: 'center' },
+  form: { marginTop: 32, gap: 20, padding: 20, borderRadius: 16, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   actions: { marginTop: 8, gap: 28 },
 });

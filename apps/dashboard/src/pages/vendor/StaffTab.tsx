@@ -36,7 +36,10 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
   const { data, isLoading, error } = useQuery({ queryKey: ['staff', scope.key], queryFn: () => scope.staff() });
   const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches() });
   const branchName = (id: string | null) => (id ? (branches?.find((b) => b.id === id)?.name ?? '—') : t('common.allBranches'));
-  const onlyAdmins = scope.can.inviteRoles.length === 1 && scope.can.inviteRoles[0] === 'vendor_admin';
+  const firstStaff = scope.key !== 'me' && data?.length === 0;
+  const hasAdmin = data?.some(s => s.role === 'vendor_admin') ?? false;
+  const inviteRoles: StaffRole[] = firstStaff ? ['vendor_admin'] : scope.can.inviteRoles.filter(role => role !== 'vendor_admin' || !hasAdmin);
+  const onlyAdmins = inviteRoles.length === 1 && inviteRoles[0] === 'vendor_admin';
 
   const toggle = useMutation({
     mutationFn: (s: Staff) => scope.updateStaff(s.id, { status: s.status === 'active' ? 'disabled' : 'active' }),
@@ -57,7 +60,7 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
         }
       >
         {scope.can.inviteRoles.length ? (
-          <Button onClick={() => setInviting(true)}>
+          <Button onClick={() => setInviting(true)} disabled={!data || isLoading}>
             <UserPlus /> {onlyAdmins ? t('staff.inviteAdmin') : t('staff.invite')}
           </Button>
         ) : null}
@@ -111,7 +114,9 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
         </Table>
       </div>
       <InviteDialog
+        key={`${scope.key}:${firstStaff ? 'first' : 'team'}:${inviting}`}
         scope={scope}
+        roles={inviteRoles}
         branches={(branches ?? []).filter((b) => b.status === 'active')}
         open={inviting}
         onClose={() => setInviting(false)}
@@ -120,9 +125,8 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
   );
 }
 
-function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; branches: Branch[]; open: boolean; onClose: () => void }) {
+function InviteDialog({ scope, roles, branches, open, onClose }: { scope: VendorScope; roles: StaffRole[]; branches: Branch[]; open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
-  const roles = scope.can.inviteRoles;
   const [role, setRole] = useState<StaffRole>(roles[0]);
   const [branchId, setBranchId] = useState<string | undefined>();
   const wide = MERCHANT_WIDE.includes(role);
@@ -170,6 +174,7 @@ function InviteDialog({ scope, branches, open, onClose }: { scope: VendorScope; 
           <Input id="invite-email" name="email" type="email" required placeholder="name@shop.com" className="ps-9" />
         </div>
       </Field>
+      {roles.length === 1 && role === 'vendor_admin' ? <p className="rounded-lg border bg-muted p-3 text-sm">{t('staff.firstAdmin')}</p> : null}
       {roles.length > 1 ? (
         <fieldset className="grid gap-2">
           <legend className="mb-2 text-sm font-medium">{t('staff.role')}</legend>

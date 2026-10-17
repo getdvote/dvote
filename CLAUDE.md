@@ -85,6 +85,19 @@ React 19 + Vite + Tailwind v4 (no shadcn; own small components in `src/component
 
 ### Built — Google Wallet button (2026-10-17, `src/wallet/`)
 
+**Staff-selected Wallet redemption (2026-10-17):** dashboard Till's Redeem reward action recognizes
+`dvote:c1:`. Preview `{code,intent:'redeem',previewBranchId?}` returns `wallet` with customer name,
+balance and merchant-only active rewards, each with usable/reason and current price (insufficient
+or sold out disabled). No earning rule is required to redeem. Selection opens the existing reward
+confirmation, with an option to reload the reward list. Redeem accepts `rewardId` for a Wallet
+card and `expectedPointsCost` to reject a changed price. It reuses the atomic balance decrement,
+ledger and redemption snapshot, records scan_source=wallet_card and triggers post-commit Google
+sync. Replay is scoped to wallet card, reward and staff. App QR redemption remains supported.
+Tests cover concurrent/duplicate redemption, ledger equality, merchant isolation, sold-out branch,
+price mismatch, insufficient points, no earning rule and the Wallet sync hook. No migration.
+Customer web always shows both Wallet badges (device-preferred first), disables Google when
+`hasUsers=true` on the Google object, and retains the saved notice. Apple is still unavailable.
+
 **Broadcasts (2026-10-17):** `src/broadcasts/broadcasts.ts`, migration `24_wallet_broadcasts`
 (local + cloud; lockdown re-run; schema mirrored and Prisma refreshed). `/api/vendor/broadcasts`
 (merchant admin only): POST `preview` accepts customer segment/customSegment/branchId/search;
@@ -138,15 +151,15 @@ and the mock Google endpoint rejects PATCHes missing it.
 the hashed card token, enforces the scanning merchant, and supports preview + collect with the existing
 amount, branch, blocked-user and receipt checks. Each visit uses a fresh idempotency key; retries
 return the same event (scoped to card and staff). Wallet codes remain reusable, and ledger rows use
-`scan_source=wallet_card` with no one-time QR row. Wallet reward selection/redeem and notifications
-remain pending. Google pass synchronization is built above. Collect + existing redeem integration suites: 46 tests pass.
+`scan_source=wallet_card` with no one-time QR row. Wallet reward selection/redeem, Google broadcasts
+and Google pass synchronization are built above. Apple pass support remains pending.
 
 - `GET /api/public/cards/{publicId}/google-wallet` → `{saveUrl}` (`https://pay.google.com/gp/v/save/<jwt>`), JWT signed RS256 with the service-account key (`jose`). It carries a **LoyaltyClass per merchant** (`<issuer>.vendor-<vendorId>`: name, logo or `WALLET_DEFAULT_LOGO_URL`, first colour of the card design) and a **LoyaltyObject per card** (`<issuer>.card-<publicId>`: points, cardholder, short code, QR). Google creates them when the customer saves. Errors: 404 `card_not_found`, 503 `wallet_not_configured`.
 - **Card QR** `dvote:c1:<secret>`: secret = 128 bits of HMAC-SHA256(`WALLET_TOKEN_SECRET`, card id) (`wallet/card-token.ts`), so it can be rebuilt; `cards.token_hash` = its SHA-256 and `google_object_id` are saved when the link is made. **Never change `WALLET_TOKEN_SECRET` once passes exist.**
 - Env (optional; unset = 503): `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_KEY_FILE` (service-account JSON in git-ignored `apps/api/.secrets/`), `WALLET_TOKEN_SECRET` (≥ 32 chars), `WALLET_DEFAULT_LOGO_URL`.
 - Web: the card page button fetches the link and opens it; Apple button stays off ("coming soon"). Test: `test/google-wallet.e2e-spec.ts` (throwaway RSA key, `test/helpers/google-wallet-env.ts`).
 - **Built:** wallet collect scanning and automatic Google pass balance/branding updates (see above).
-- **Not yet:** staff-selected wallet redemptions, Apple passes and notification messages.
+- **Not yet:** Apple passes and Apple notification messages.
 
 ### Customer app while paused (`apps/mobile`)
 
@@ -470,3 +483,24 @@ Storefront follow-up: Feedback sections may define `placeholder: {en, ar}` (both
 ### Responsive UI tests (2026-10-17, `apps/ui-tests`)
 
 Playwright checks every dashboard page (all roles + platform admin), the customer website and the main dialogs at 9 viewports (320 → 2560 px wide, plus a short 1280 × 640) and Arabic RTL at 4, for sideways overflow, content off screen, overlapping controls, tap targets under 24 px on phones, clipped button text and dialogs that don't fit. Both apps run on their own Vite servers (5199 / 5198) against a mocked API (`lib/fixtures.ts`, typed with the apps' API types; fake Supabase session), so no accounts or cloud data. Run `npm run ui:test` (root) or `npm test` + `npm run summary` in `apps/ui-tests`; 452 checks passing as of 2026-10-17. Add new pages to the specs and new endpoints to `lib/mock-api.ts`. Layout rules learned from it: lists on the website use `grid grid-cols-1` (a plain `grid` lets one-line `truncate` text widen every row), inline-flex links with truncated text need `max-w-full`, and popovers taller than a phone use `max-h-(--radix-popover-content-available-height)` + `overflow-y-auto`.
+
+### Wallet redemption confirmations (2026-10-17)
+Successful redemptions enqueue a transactional Google Wallet confirmation in the existing wallet_broadcasts/recipients outbox, tagged audience.type=redemption and keyed redemption:<id>. Queued atomically with the ledger, delivered after commit by BroadcastsService, excluded from campaign history, and subject to the shared per-card rolling-day quota. Provider errors never undo redemption. Both customer Wallet buttons remain visible; saved wallet alone is disabled; Apple button explains pending Apple setup until issuance exists.
+
+Wallet notification delivery: Broadcast worker logs controlled WalletRequestError diagnostics. Definite HTTP 4xx rejections are failed/provider_http_<status> and do not reserve local notification quota; ambiguous delivery remains unknown. Real redemption message retry verified on Google and customer confirmed notification arrival (2026-10-17).
+
+Staff home UI (2026-10-17): optional Screen.backgroundLogoUrl renders a noninteractive decorative vendor watermark; VendorHeader.prominent enlarges the home greeting only. Home uses a ScrollView and scan action panel; existing branch selection and scan eligibility are preserved. Staff lint and typecheck pass.
+
+Staff dashboard styling (2026-10-17): apps/staff/src/lib/theme.ts mirrors dashboard light stone colors/radii. Shared Text maps weights to bundled Inter faces; RootLayout loads four faces with expo-font. Screen provides the dark dvote/Staff bar and white page on stone canvas. Shared buttons, fields and reward cards use matching bordered 12px/16px surfaces; mobile primary controls remain 52px high. This replaces the old grey/pill staff style across all routes while retaining the home watermark.
+
+Platform staff onboarding update (2026-10-17): POST /api/admin/vendors/{id}/staff (PlatformAdminGuard) accepts CreateStaffDto. StaffService.createForVendor forces the first staff member to vendor_admin/no branch; subsequent invitations honor vendor_admin/branch_manager/staff/viewer with existing role/branch validation and invite/link behavior. AdminScope now uses this endpoint and exposes all role choices after the first-member admin dialog. Existing /admins remains admin-only for compatibility. Vendor-side role limits are unchanged. Tested with 61 admin-vendors/staff e2e cases.
+
+One vendor admin (2026-10-17): migration 27_one_vendor_admin enforces UNIQUE staff_users(vendor_id) WHERE role='vendor_admin' across all statuses, cloud/local applied. StaffService prechecks invites and uses vendor-row-locked transactions for admin creation/promotion; duplicates return vendor_admin_exists (409). Admin role is hidden from invite choices if already occupied. Disabled admin must be re-enabled; creating another is refused. prisma/fix-introspection.cjs strips the partial unique from the client model and restores both vendors.staff_users[] and branches.staff_users[]. Staff home now uses circular logos, subtle circular watermark, a visible dvote brand header and stacked branch choices with constrained widths.
+
+Staff Collect/Redeem tabs (2026-10-17): Home mode query controls the two tabs. Scan passes intent and previewBranchId. Wallet redemption routes through /rewards (customer balance + affordable/available reward choices), then /redeem?rewardId=... which rechecks the preview. One-time app reward QRs confirm directly. Redeem sends rewardId/expectedPointsCost with the existing idempotency key; Wallet sync and confirmation notification are handled by the existing API transaction/outbox. Secrets remain in SessionProvider memory. vendor_admin display name is Merchant admin (مسؤول المتجر), including admin Feedback; platform administration is separate.
+
+Staff app entry policy (2026-10-17): canUseStaffApp allows vendor_admin/branch_manager/staff only. SessionProvider checks actual /staff/me role on sign-in and restore; viewer/unknown roles never become the staff app's active profile. Viewers get staff_app_not_allowed and are signed out with scope=local; forbidden_role during scanning also removes app access. The dashboard's shared /staff/me remains viewer-accessible, while ScansController enforces its existing three-role allowlist. Role tests exercise successful collect/redeem for all permitted roles and forbidden_role for viewers on preview/collect/redeem.
+
+Branch map UI (2026-10-17): LocationPicker's map styling is scoped under .branch-location-map. Plain Leaflet attribution prefix replaces its default flag; OSM credit is retained. Taller panel, softer tiles, themed controls, dark pin, collapsible link input, selected-location guidance and ResizeObserver sizing work in the shared branch forms.
+
+Branch map themes (2026-10-17): LocationPicker lazy-loads BranchMap.tsx (MapLibre GL + explicit Vite worker). OpenFreeMap style URLs /styles/positron and /styles/dark provide the requested OpenMapTiles-derived light/dark looks with no key. Uses useTheme.resolvedTheme; setStyle does not recreate the map, so zoom/pin persist. All existing embedded maps are covered by this shared picker; outbound Google directions links remain external. Credits are supplied by the vector TileJSON. Old Leaflet map rendering/filter CSS was replaced with scoped MapLibre control/pin styles.

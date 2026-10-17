@@ -29,6 +29,7 @@ import {
   StaffResponseDto,
 } from '../staff/dto/staff-response.dto';
 import { StaffService } from '../staff/staff.service';
+import { CreateStaffDto } from '../staff/dto/create-staff.dto';
 import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { CreateVendorAdminDto } from './dto/create-vendor-admin.dto';
 import { CreateVendorDto } from './dto/create-vendor.dto';
@@ -131,6 +132,14 @@ export class AdminVendorsController {
     @Param('id', ParseUuidPipe) id: string,
   ): Promise<VendorResponseDto> {
     return VendorResponseDto.from(await this.vendors.removeBanner(id));
+  }
+
+  @Post(':id/staff')
+  @ApiCreatedResponse({ type: CreateStaffResponseDto })
+  @ApiNotFoundResponse({ description: 'vendor_not_found' })
+  async addStaff(@Param('id', ParseUuidPipe) id: string, @Body() dto: CreateStaffDto): Promise<CreateStaffResponseDto> {
+    const { staff, invited } = await this.staff.createForVendor(id, dto);
+    return { ...StaffResponseDto.from(staff), invited };
   }
 
   /** Invite a vendor_admin (e.g. the owner) by email; they then manage their own staff. */

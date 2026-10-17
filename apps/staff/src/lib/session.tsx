@@ -8,7 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api, ApiError, SIGN_OUT_CODES, type StaffMe } from './api';
+import { api, ApiError, friendlyMessage, SIGN_OUT_CODES, type StaffMe } from './api';
+import { canUseStaffApp } from './staff-access';
 import { supabase } from './supabase';
 
 interface SessionState {
@@ -16,6 +17,7 @@ interface SessionState {
   loading: boolean;
   session: Session | null;
   me: StaffMe | null;
+  accessError: string | null;
   /** The branch points are booked at: own branch, or the one a vendor admin picked. */
   branchId: string | null;
   chooseBranch: (id: string) => void;
@@ -34,11 +36,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<StaffMe | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const [pickedBranch, setPickedBranch] = useState<string | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
+    setSession(null);
     setMe(null);
     setPickedBranch(null);
     setScannedCode(null);
@@ -47,9 +51,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   /** Loads the staff profile; a non-staff or disabled account is signed out. */
   const loadMe = useCallback(async () => {
     try {
-      setMe(await api.me());
+      const profile = await api.me();
+      if (!canUseStaffApp(profile.role)) throw new ApiError(403, 'staff_app_not_allowed', friendlyMessage('staff_app_not_allowed'));
+      setAccessError(null);
+      setMe(profile);
     } catch (err) {
       await signOut();
+      if (err instanceof ApiError && err.code === 'staff_app_not_allowed') setAccessError(err.message);
       throw err;
     }
   }, [signOut]);
@@ -66,6 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
+      setAccessError(null);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         throw new ApiError(401, 'login_failed', error.message === 'Invalid login credentials'
@@ -81,6 +90,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     async (err: unknown) => {
       if (err instanceof ApiError && SIGN_OUT_CODES.has(err.code)) {
         await signOut();
+        if (err.code === 'forbidden_role') setAccessError(friendlyMessage('staff_app_not_allowed'));
         return true;
       }
       return false;
@@ -93,6 +103,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loading,
       session,
       me,
+      accessError,
       branchId: me?.branch?.id ?? pickedBranch ?? (me?.branches.length === 1 ? me.branches[0].id : null),
       chooseBranch: setPickedBranch,
       scannedCode,
@@ -101,7 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       signOut,
       handleAuthError,
     }),
-    [loading, session, me, pickedBranch, scannedCode, signIn, signOut, handleAuthError],
+    [loading, session, me, accessError, pickedBranch, scannedCode, signIn, signOut, handleAuthError],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

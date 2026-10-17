@@ -22,7 +22,7 @@ const MOODS: Record<MerchantMood, { label: string; icon: ComponentType<{ classNa
 };
 
 const ROLES: Record<string, string> = {
-  vendor_admin: 'Super admin',
+  vendor_admin: 'Merchant admin',
   branch_manager: 'Branch manager',
   staff: 'Staff',
   viewer: 'Viewer',

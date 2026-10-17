@@ -51,7 +51,7 @@ export class ScansController {
     @CurrentStaff() ctx: StaffContext,
     @Body() dto: PreviewScanDto,
   ): Promise<PreviewScanResponseDto> {
-    return this.scans.preview(ctx, dto.code);
+    return this.scans.preview(ctx, dto.code, dto.intent, dto.previewBranchId);
   }
 
   /** Enter the receipt total: the server computes and adds the points. */

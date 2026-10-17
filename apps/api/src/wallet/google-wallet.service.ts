@@ -23,7 +23,9 @@ interface ServiceAccount {
 }
 
 /** Only controlled diagnostics reach logs; never dump credentials, request bodies or tokens. */
-class WalletRequestError extends Error {}
+export class WalletRequestError extends Error {
+  constructor(message: string, readonly httpStatus: number) { super(message); }
+}
 
 async function googleFailure(operation: string, response: Response): Promise<WalletRequestError> {
   let reason = '';
@@ -32,7 +34,7 @@ async function googleFailure(operation: string, response: Response): Promise<Wal
     const code = body.error?.status ?? body.error?.errors?.[0]?.reason;
     if (typeof code === 'string' && /^[A-Za-z0-9_]{1,80}$/.test(code)) reason = ` (${code})`;
   } catch { /* Some gateways return an empty or HTML error response. */ }
-  return new WalletRequestError(`${operation}: HTTP ${response.status}${reason}`);
+  return new WalletRequestError(`${operation}: HTTP ${response.status}${reason}`, response.status);
 }
 
 /**
@@ -277,8 +279,8 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
         signal: AbortSignal.timeout(4000),
       });
       if (!res.ok) return false;
-      const obj = (await res.json()) as { state?: string };
-      return obj.state !== 'INACTIVE';
+      const obj = (await res.json()) as { state?: string; hasUsers?: boolean };
+      return obj.hasUsers === true && obj.state !== 'INACTIVE';
     } catch {
       return false;
     }

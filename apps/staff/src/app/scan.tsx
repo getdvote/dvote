@@ -1,8 +1,8 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { ErrorBox, Field, PrimaryButton, Screen, TextLink } from '../components/ui';
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Text, ErrorBox, Field, PrimaryButton, Screen, TextLink } from '../components/ui';
 import { api, ApiError, friendlyMessage } from '../lib/api';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
@@ -16,7 +16,9 @@ const QR_PREFIXES = ['dvote:q1:', 'dvote:c1:'];
  * camera that can't focus, and for testing on a computer.
  */
 export default function Scan() {
-  const { me, handleAuthError, setScannedCode } = useSession();
+  const { me, branchId, handleAuthError, setScannedCode } = useSession();
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const mode = params.mode === 'redeem' ? 'redeem' : 'collect';
   const [permission, requestPermission] = useCameraPermissions();
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function Scan() {
   const { width } = useWindowDimensions();
   // Square camera: the column width (phone-width, minus side gutters). Computed, because
   // a percentage width + aspectRatio is measured wrongly on the web.
-  const box = { width: Math.min(width, theme.maxWidth) - theme.gutter * 2 };
+  const box = { width: Math.min(Math.min(width, theme.maxWidth) - theme.gutter * 2 - 2, 360) };
   const square = { ...box, height: box.width };
 
   const check = useCallback(
@@ -42,12 +44,18 @@ export default function Scan() {
       }
       setChecking(true);
       try {
-        const preview = await api.preview(code);
+        const preview = await api.preview(code, mode, branchId ?? undefined);
         if (!preview.usable) throw new ApiError(409, preview.reason ?? 'wrong_qr_type', '');
+        if (mode === 'redeem' && !preview.wallet && preview.purpose !== 'redeem')
+          throw new Error('Ask the customer for their Wallet card or a reward QR.');
+        if (mode === 'collect' && preview.purpose === 'redeem')
+          throw new Error('This is a reward QR. Switch to the Redeem tab.');
         setScannedCode(code);
-        if (preview.purpose === 'redeem' && preview.redeem) {
+        if (mode === 'redeem' && preview.wallet) {
+          router.replace('/rewards');
+        } else if (preview.purpose === 'redeem' && preview.redeem) {
           // A reward: confirm who gets what, no bill to type.
-          router.replace({ pathname: '/redeem', params: { preview: JSON.stringify(preview.redeem) } });
+          router.replace('/redeem');
         } else {
           router.replace('/amount');
         }
@@ -56,14 +64,16 @@ export default function Scan() {
         setError(
           err instanceof ApiError
             ? err.message || friendlyMessage(err.code)
-            : 'Could not check this QR. Please try again.',
+            : err instanceof Error
+              ? err.message
+              : 'Could not check this QR. Please try again.',
         );
         setTimeout(() => (busy.current = false), 1500);
       } finally {
         setChecking(false);
       }
     },
-    [handleAuthError, setScannedCode],
+    [handleAuthError, setScannedCode, branchId, mode],
   );
 
   if (!me) return <Redirect href="/login" />;
@@ -73,8 +83,10 @@ export default function Scan() {
   return (
     <Screen>
       <View style={styles.top}>
-        <Text style={styles.title}>Scan the customer&apos;s QR</Text>
-        <Text style={styles.hint}>Ask the customer to show their loyalty card QR in Wallet, or their dvote app QR.</Text>
+        <Text style={styles.title}>{mode === 'redeem' ? 'Scan to redeem' : 'Scan to collect'}</Text>
+        <Text style={styles.hint}>
+          Ask the customer to show their loyalty card QR in Wallet, or their dvote app QR.
+        </Text>
       </View>
 
       {manual ? (
@@ -132,7 +144,7 @@ export default function Scan() {
             busy.current = false;
           }}
         />
-        <TextLink title="Cancel" onPress={() => router.replace('/home')} />
+        <TextLink title="Cancel" onPress={() => router.replace({ pathname: '/home', params: { mode } })} />
       </View>
     </Screen>
   );
