@@ -12,13 +12,15 @@ import {
   MERCHANT_MOODS,
   type CreateFeedbackDto,
   type MerchantFeedbackDto,
+  type MerchantMood,
 } from './dto/create-feedback.dto';
+import type { ListMerchantFeedbackQueryDto, MerchantFeedbackListDto } from './dto/merchant-feedback-list.dto';
 
 const SHEET_TIMEOUT_MS = 10_000;
 
 /**
  * Sends customer and merchant feedback to the feedback Google Sheet through its Apps Script web app
- * (google-apps-script/feedback.gs). Feedback is not stored in our database.
+ * (google-apps-script/feedback.gs). Merchant feedback is also stored (merchant_feedback) for admins.
  */
 @Injectable()
 export class FeedbackService {
@@ -38,17 +40,58 @@ export class FeedbackService {
     await this.write(userId, FEEDBACK_CATEGORIES[dto.category], dto.message);
   }
 
-  /** Quick feedback from the merchant dashboard: same sheet, the sender is the shop and staff member. */
+  /**
+   * Quick feedback from the merchant dashboard: saved for the admin Feedback page, then copied to the
+   * sheet when it is set up (a sheet failure is logged, never shown to the merchant).
+   */
   async sendMerchant(ctx: StaffContext, dto: MerchantFeedbackDto): Promise<void> {
-    const staff = await this.prisma.staff_users.findUniqueOrThrow({
-      where: { id: ctx.staffId },
-      select: { name: true, email: true, vendors: { select: { name: true } } },
+    const row = await this.prisma.merchant_feedback.create({
+      data: { vendor_id: ctx.vendorId, staff_id: ctx.staffId, mood: dto.mood ?? null, message: dto.message },
+      select: { staff_users: { select: { name: true, email: true } }, vendors: { select: { name: true } } },
     });
+    if (!this.url || !this.secret) return;
     await this.write(
-      `merchant · ${staff.vendors.name} · ${staff.name} <${staff.email}> (${ctx.role})`,
+      `merchant · ${row.vendors.name} · ${row.staff_users.name} <${row.staff_users.email}> (${ctx.role})`,
       `Merchant feedback${dto.mood ? ` · ${MERCHANT_MOODS[dto.mood]}` : ''}`,
       dto.message,
-    );
+    ).catch(() => undefined);
+  }
+
+  /** The admin Feedback page: newest first, with the shop and the team member who sent it. */
+  async listMerchant(query: ListMerchantFeedbackQueryDto): Promise<MerchantFeedbackListDto> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const scope = { vendor_id: query.vendorId };
+    const where = { ...scope, mood: query.mood };
+    const [total, rows, moods] = await Promise.all([
+      this.prisma.merchant_feedback.count({ where }),
+      this.prisma.merchant_feedback.findMany({
+        where,
+        include: {
+          vendors: { select: { id: true, name: true, logo_url: true } },
+          staff_users: { select: { name: true, email: true, role: true } },
+        },
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.merchant_feedback.groupBy({ by: ['mood'], where: scope, _count: { _all: true } }),
+    ]);
+    const count = (m: string | null) => moods.find((x) => x.mood === m)?._count._all ?? 0;
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        createdAt: r.created_at.toISOString(),
+        mood: (r.mood as MerchantMood | null) ?? null,
+        message: r.message,
+        vendor: { id: r.vendors.id, name: r.vendors.name, logoUrl: r.vendors.logo_url },
+        staff: { name: r.staff_users.name, email: r.staff_users.email, role: r.staff_users.role },
+      })),
+      total,
+      page,
+      pageSize,
+      moods: { love: count('love'), okay: count('okay'), unhappy: count('unhappy'), none: count(null) },
+    };
   }
 
   private async write(userId: string, category: string, message: string): Promise<void> {

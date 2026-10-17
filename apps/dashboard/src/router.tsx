@@ -19,6 +19,7 @@ import { MyTill } from './pages/my/MyTill';
 import { MyBranches, MyRewards } from './pages/my/MySections';
 import { Overview } from './pages/Overview';
 import { Statistics } from './pages/Statistics';
+import { Feedback } from './pages/Feedback';
 import { System } from './pages/System';
 import { VendorDetail } from './pages/VendorDetail';
 import { Vendors } from './pages/Vendors';
@@ -49,6 +50,7 @@ function Shell() {
           <Route path="/merchants/:id" element={<VendorDetail />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/statistics" element={<Statistics />} />
+          <Route path="/feedback" element={<Feedback />} />
           <Route path="/system" element={<System />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

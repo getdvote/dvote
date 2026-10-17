@@ -474,6 +474,16 @@ export interface StorefrontSettings {
 /** How a merchant feels about dvote (quick feedback). */
 export type MerchantMood = 'love' | 'okay' | 'unhappy';
 
+/** Quick feedback a merchant team member sent from Get help (admin Feedback page). */
+export interface MerchantFeedback {
+  id: string;
+  createdAt: string;
+  mood: MerchantMood | null;
+  message: string;
+  vendor: { id: string; name: string; logoUrl: string | null };
+  staff: { name: string; email: string; role: string };
+}
+
 export type CustomerSegment = 'champions' | 'regulars' | 'new' | 'never_visited' | 'slipping' | 'at_risk' | 'lost';
 
 /** What a custom segment's rules can look at. */
@@ -713,6 +723,8 @@ export const api = {
   staff: (vendorId: string) => call<Staff[]>('GET', `/api/admin/vendors/${vendorId}/staff`),
   updateStaff: (id: string, body: { name?: string; status?: AccountStatus }) => call<Staff>('PATCH', `/api/admin/staff/${id}`, body),
 
+  merchantFeedback: (q: { mood?: MerchantMood; vendorId?: string; page?: number; pageSize?: number }) =>
+    call<Page<MerchantFeedback> & { moods: Record<MerchantMood | 'none', number> }>('GET', `/api/admin/merchant-feedback${qs(q)}`),
   users: (q: { search?: string; status?: UserStatus; page?: number; pageSize?: number }) =>
     call<Page<UserListItem>>('GET', `/api/admin/users${qs(q)}`),
   user: (id: string) => call<UserDetail>('GET', `/api/admin/users/${id}`),
