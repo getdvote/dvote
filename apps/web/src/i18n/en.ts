@@ -82,7 +82,6 @@ export const en = {
     hint: "Leave a comment for the shop. This does not create a loyalty card or customer account.",
     name: "Your name",
     phone: "Mobile number",
-    phoneHint: "Optional Egyptian mobile number. If it matches a card at this shop, your feedback is marked as coming from a cardholder.",
     comment: "Your comment",
     send: "Send feedback",
     thanks: "Thank you! Your feedback has been sent to the shop.",

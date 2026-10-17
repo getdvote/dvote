@@ -78,7 +78,6 @@ export function FeedbackPage() {
               <Field
                 label={t("feedback.phone")}
                 optional
-                hint={t("feedback.phoneHint")}
               >
                 <Input
                   type="tel"
