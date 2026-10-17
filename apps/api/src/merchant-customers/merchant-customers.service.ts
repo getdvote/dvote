@@ -88,6 +88,20 @@ const repeatable = { isolationLevel: Prisma.TransactionIsolationLevel.Repeatable
 export class MerchantCustomersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** The same classification as Customers, projected to card IDs for a broadcast snapshot. */
+  async broadcastAudience(ctx: StaffContext, q: CustomerListQuery) {
+    return this.prisma.$transaction(async tx => {
+      if (q.customSegment) await this.segmentOr404(tx, ctx, q.customSegment);
+      const segments = await this.segments(tx, ctx.vendorId);
+      return tx.$queryRaw<{ id: string; google_object_id: string | null }[]>`
+        ${this.roster(ctx.vendorId, segments, { branchId: this.branch(ctx, q.branchId) })}
+        SELECT id, (SELECT c.google_object_id FROM cards c WHERE c.id = roster.id) AS google_object_id
+        FROM roster ${this.filters(q)}
+          AND EXISTS (SELECT 1 FROM cards c JOIN users u ON u.id=c.user_id WHERE c.id=roster.id AND u.status='active')
+        ORDER BY id`;
+    }, repeatable);
+  }
+
   private branch(ctx: StaffContext, requested?: string) {
     // merchant-wide accounts (admin, viewer) choose; branch roles are held to theirs
     return ctx.branchId ?? requested;

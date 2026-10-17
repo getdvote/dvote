@@ -63,6 +63,7 @@ describe('Add to Google Wallet (e2e)', () => {
   afterAll(async () => {
     await app.get(GoogleWalletService).onModuleDestroy();
     await prisma.cards.deleteMany({ where: { vendor_id: vendorId } });
+    await prisma.branches.deleteMany({ where: { vendor_id: vendorId } });
     await prisma.vendors.deleteMany({ where: { id: vendorId } });
     await prisma.users.deleteMany({ where: { email } });
     await app.close();
@@ -117,6 +118,43 @@ describe('Add to Google Wallet (e2e)', () => {
     expect(await sharp(storage.get('vendors', derivative)!.data).metadata()).toMatchObject({ width: 720, height: 720 });
     expect(requests.some(r => r.body.programLogo?.sourceUri.uri === storage.publicUrl('vendors', derivative))).toBe(true);
     expect(storage.get('vendors', path)!.data).toEqual(input);
+  });
+
+  it('sends a per-card notification message, skips unsaved cards, and recognizes a repeated message ID', async () => {
+    const original = fetchMock.getMockImplementation()!;
+    const posted: any[] = [];
+    let hasUsers = true;
+    let messages: { id: string }[] = [];
+    fetchMock.mockImplementation(async (url, init) => {
+      const target = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+      if (target.includes('/loyaltyObject/') && !init?.method) return new Response(JSON.stringify({ hasUsers, messages }));
+      if (target.endsWith('/addMessage')) { posted.push(JSON.parse(init.body as string)); return new Response('{}'); }
+      return original(url, init);
+    });
+    try {
+      const service = app.get(GoogleWalletService);
+      const id = `${ISSUER}.card-${publicId}`;
+      expect((await service.notifyCard(id, 'dvote-broadcast-test', 'Coffee', 'Use your points')).status).toBe('accepted');
+      expect(posted).toEqual([{ message: { id: 'dvote-broadcast-test', header: 'Coffee', body: 'Use your points', messageType: 'TEXT_AND_NOTIFY' } }]);
+      messages = [{ id: 'dvote-broadcast-test' }];
+      await service.notifyCard(id, 'dvote-broadcast-test', 'Coffee', 'Use your points');
+      expect(posted).toHaveLength(1);
+      hasUsers = false;
+      expect((await service.notifyCard(id, 'new-message', 'Coffee', 'Use your points')).status).toBe('skipped');
+      expect(posted).toHaveLength(1);
+    } finally { fetchMock.mockImplementation(original); }
+  });
+
+  it('only attaches branch map pins when nearby reminders are enabled', async () => {
+    await prisma.branches.create({ data: { vendor_id: vendorId, name: 'Nearby', address: 'Test', lat: 30.1, lng: 31.2 } });
+    await prisma.vendors.update({ where: { id: vendorId }, data: { wallet_nearby_enabled: true } });
+    requests = [];
+    await app.get(GoogleWalletService).reconcile(true);
+    expect(requests.some(r => r.body.merchantLocations?.[0]?.latitude === 30.1 && r.body.merchantLocations?.[0]?.longitude === 31.2)).toBe(true);
+    await prisma.vendors.update({ where: { id: vendorId }, data: { wallet_nearby_enabled: false } });
+    requests = [];
+    await app.get(GoogleWalletService).reconcile(true);
+    expect(requests.some(r => Array.isArray(r.body.merchantLocations) && r.body.merchantLocations.length === 0)).toBe(true);
   });
 
   it('unknown card → 404 card_not_found', async () => {

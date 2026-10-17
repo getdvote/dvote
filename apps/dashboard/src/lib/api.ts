@@ -736,6 +736,11 @@ export interface CustomerFeedback {
 }
 export const vendorApi = {
   customerFeedback: (page = 1) => call<{ items: CustomerFeedback[]; page: number; hasMore: boolean }>('GET', `/api/vendor/customer-feedback?page=${page}`),
+  broadcastPreview: (body: MerchantCustomerQuery) => call<{ matched: number; linked: number; unavailable: number; configured: boolean }>('POST', '/api/vendor/broadcasts/preview', body),
+  sendBroadcast: (body: MerchantCustomerQuery & { title: string; body: string; idempotencyKey: string }) => call<{ id: string }>('POST', '/api/vendor/broadcasts', body),
+  broadcasts: () => call<{ id: string; title: string; body: string; createdAt: string; total: number; pending: number; accepted: number; skipped: number; failed: number; unknown: number }[]>('GET', '/api/vendor/broadcasts'),
+  nearbyNotifications: () => call<{ enabled: boolean; locations: number }>('GET', '/api/vendor/broadcasts/nearby'),
+  setNearbyNotifications: (enabled: boolean) => call<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled }),
   customers: (q: MerchantCustomerQuery) => call<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
   feedback: (body: { mood?: MerchantMood; message: string }) => call<void>('POST', '/api/vendor/feedback', body),
   customersExport: (q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>) =>

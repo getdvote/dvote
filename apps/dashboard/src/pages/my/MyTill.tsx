@@ -17,7 +17,7 @@ import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { ApiError, errorMessage, vendorApi, type RedeemPreview, type StaffMe } from '../../lib/api';
 import { branchState, OPENING_HOURS, stateLabel, type BranchState } from '../../lib/hours';
 
-const QR_PREFIX = 'dvote:q1:';
+const QR_PREFIXES = ['dvote:q1:', 'dvote:c1:'];
 const BRANCH_KEY = 'dvote-till-branch';
 
 type Rule = NonNullable<StaffMe['activeRule']>;
@@ -216,7 +216,7 @@ function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; se
   async function check(raw: string) {
     const code = raw.trim();
     if (busy.current || !code || code === lastBad.current) return;
-    if (!code.startsWith(QR_PREFIX)) {
+    if (!QR_PREFIXES.some(prefix => code.startsWith(prefix))) {
       lastBad.current = code;
       setError(t('till.notDvote'));
       return;
@@ -263,7 +263,7 @@ function ScanStep({ step, setStep }: { step: Extract<Step, { kind: 'scan' }>; se
               autoFocus
               autoComplete="off"
               spellCheck={false}
-              placeholder="dvote:q1:…"
+              placeholder="dvote:c1:…"
               value={typed}
               onChange={(e) => {
                 setTyped(e.target.value);
