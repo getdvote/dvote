@@ -114,7 +114,7 @@ export function CardPage() {
         </div>
         <div className="mt-6 flex flex-col items-center gap-3 rounded-3xl bg-canvas p-5 text-center">
           <div className="rounded-2xl bg-white p-3">
-            <QRCodeSVG value={link} size={140} />
+            <QRCodeSVG value={`${link}/wallet`} size={140} />
           </div>
           <p className="text-[14px] text-muted">{t('card.openOnPhone')}</p>
         </div>
@@ -162,12 +162,12 @@ function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google'; onCli
       disabled={!onClick || busy}
       aria-busy={busy || undefined}
       onClick={onClick}
-      className="inline-flex max-w-full items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-16 w-56 max-w-full items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <img
         src={`/wallet/add-to-${kind}-wallet.svg`}
         alt={kind === 'apple' ? t('card.addApple') : t('card.addGoogle')}
-        className="h-14 max-w-full w-auto"
+        className="h-full w-full object-contain"
       />
     </button>
   );
