@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { GiftIcon as Gift, LoaderIcon as Loader2, AddIcon as Plus, CloseIcon as X } from '@solar-icons/react/linear';
-import { useRef, useState } from 'react';
+import { GiftIcon as Gift, HamburgerMenuIcon as GripIcon, LoaderIcon as Loader2, AddIcon as Plus, CloseIcon as X } from '@solar-icons/react/linear';
+import { Reorder, useDragControls } from 'motion/react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { ErrorAlert } from '../../components/ErrorAlert';
-import { Field, optionalNumber } from '../../components/Field';
+import { Field } from '../../components/Field';
 import { StatusTag } from '../../components/StatusTag';
 import { TableState } from '../../components/TableState';
 import { errorMessage, type Reward, type RewardBody } from '../../lib/api';
@@ -18,7 +19,7 @@ import { RewardAvailability } from './RewardAvailability';
 import { TabToolbar } from './TabToolbar';
 import { t } from '../../i18n';
 
-/** The reward catalogue (English + Arabic): add, edit price/texts/order, archive / restore. */
+/** The reward catalogue (English + Arabic): add, edit price/texts, drag rows to reorder, archive / restore. */
 export function RewardsTab({ scope }: { scope: VendorScope }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Reward | 'new' | null>(null);
@@ -33,6 +34,23 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
   const { data: branches } = useQuery({ queryKey: ['branches', scope.key], queryFn: () => scope.branches(), enabled: !!scope.soldOut });
   const openBranches = branches?.filter((b) => b.status === 'active') ?? [];
   const cols = scope.soldOut ? 7 : 6;
+  const canEdit = scope.can.editVendor;
+
+  // The list as shown while dragging; saved (sortOrder = position) when a row is dropped.
+  const [rows, setRows] = useState<Reward[]>([]);
+  useEffect(() => setRows(data ?? []), [data]);
+  const reorder = useMutation({
+    mutationFn: async (next: Reward[]) => {
+      const changed = next.map((r, i) => ({ r, order: i + 1 })).filter(({ r, order }) => r.sortOrder !== order);
+      await Promise.all(changed.map(({ r, order }) => scope.updateReward(r.id, { sortOrder: order })));
+    },
+    onSuccess: () => toast.success(t('rewards.orderSaved')),
+    onError: (e) => {
+      setRows(data ?? []);
+      toast.error(errorMessage(e));
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ['rewards', scope.key] }),
+  });
 
   const toggle = useMutation({
     mutationFn: (r: Reward) => scope.updateReward(r.id, { status: r.status === 'active' ? 'archived' : 'active' }),
@@ -63,7 +81,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-14 ps-4">#</TableHead>
+              <TableHead className="w-16 ps-4">#</TableHead>
               <TableHead className="w-20">{t('rewards.photo')}</TableHead>
               <TableHead>{t('rewards.reward')}</TableHead>
               <TableHead className="text-end">{t('rewards.cost')}</TableHead>
@@ -72,11 +90,15 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
               <TableHead className="pe-4" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <Reorder.Group as="tbody" axis="y" values={rows} onReorder={setRows} data-slot="table-body" className="[&_tr:last-child]:border-0">
             <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyText={t('rewards.empty')} />
-            {data?.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="ps-4 text-muted-foreground tabular-nums">{r.sortOrder}</TableCell>
+            {rows.map((r, i) => (
+              <RewardRow key={r.id} reward={r} canDrag={canEdit && !reorder.isPending} onDrop={() => {
+                if (rows.some((x, j) => x.id !== data?.[j]?.id)) reorder.mutate(rows);
+              }}>
+                <TableCell className="ps-2 text-muted-foreground tabular-nums">
+                  <DragHandle position={i + 1} />
+                </TableCell>
                 <TableCell>
                   <RewardPhoto scope={scope} reward={r} />
                 </TableCell>
@@ -124,13 +146,53 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
                     </Button>
                   </div>
                 </TableCell>
-              </TableRow>
+              </RewardRow>
             ))}
-          </TableBody>
+          </Reorder.Group>
         </Table>
       </div>
       <RewardDialog key={editing === 'new' ? 'new' : editing?.id ?? 'closed'} scope={scope} reward={editing} onClose={() => setEditing(null)} />
     </>
+  );
+}
+
+/** A table row that can be dragged by its handle (mouse or touch). */
+function RewardRow({ reward, canDrag, onDrop, children }: { reward: Reward; canDrag: boolean; onDrop: () => void; children: ReactNode }) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      as="tr"
+      value={reward}
+      dragListener={false}
+      dragControls={controls}
+      onDragEnd={onDrop}
+      data-slot="table-row"
+      className="relative border-b bg-card transition-colors hover:bg-muted/50"
+      whileDrag={{ scale: 1.01, zIndex: 10, boxShadow: '0 8px 24px rgb(0 0 0 / 0.12)' }}
+      onPointerDown={(e) => {
+        if (canDrag && (e.target as HTMLElement).closest('[data-drag-handle]')) controls.start(e);
+      }}
+    >
+      {children}
+    </Reorder.Item>
+  );
+}
+
+function DragHandle({ position }: { position: number }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        data-drag-handle
+        role="button"
+        tabIndex={-1}
+        aria-label={t('rewards.dragToReorder')}
+        title={t('rewards.dragToReorder')}
+        className="flex size-7 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/70 transition duration-100 ease-linear hover:bg-muted hover:text-foreground active:cursor-grabbing"
+      >
+        <GripIcon className="size-4" />
+      </span>
+      {position}
+    </span>
   );
 }
 
@@ -240,7 +302,6 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
               descriptionAr: text('descriptionAr'),
               pointsCost: Number(f.get('pointsCost')),
               retailValue: String(f.get('retailValue')).trim() ? Number(f.get('retailValue')) : null,
-              sortOrder: optionalNumber(f.get('sortOrder')),
             });
           }}
         >
@@ -269,9 +330,6 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
           </Field>
           <Field label={t('rewards.retailValue', { currency: scope.currency })} htmlFor="reward-retail" hint={t('rewards.retailHint')}>
             <Input id="reward-retail" name="retailValue" type="number" min={0.01} max={99999999.99} step={0.01} value={retail} onChange={(e) => setRetail(e.target.value)} />
-          </Field>
-          <Field label={t('rewards.order')} htmlFor="reward-order" hint={t('rewards.orderHint')}>
-            <Input id="reward-order" name="sortOrder" type="number" min={0} max={10000} step={1} defaultValue={current?.sortOrder ?? ''} placeholder={t('rewards.last')} />
           </Field>
           <ErrorAlert error={save.error} className="sm:col-span-2" />
         </form>

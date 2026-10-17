@@ -1,0 +1,19 @@
+{
+  "name": "@dvote/ui-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Responsive layout checks for the dashboard and the customer website, with a mocked API",
+  "scripts": {
+    "test": "rm -f test-results/issues.jsonl; playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "summary": "node lib/summary.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}
