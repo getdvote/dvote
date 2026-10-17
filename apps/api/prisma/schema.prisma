@@ -26,13 +26,14 @@ model branches {
   weekly_hours     Json?
   paused_until     DateTime?          @db.Timestamptz(6)
   vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cards            cards[]
   fraud_flags      fraud_flags[]
   point_events     point_events[]
   qr_codes         qr_codes[]
   redemptions      redemptions[]
+  reward_sold_outs reward_sold_outs[]
   staff_users      staff_users[]
   vendor_images    vendor_images[]
-  reward_sold_outs reward_sold_outs[]
 
   @@unique([id, vendor_id])
   @@index([vendor_id], map: "branches_vendor_idx")
@@ -96,6 +97,7 @@ model point_events {
   idempotency_key String           @unique @db.VarChar(100)
   created_at      DateTime         @default(now()) @db.Timestamptz(6)
   updated_at      DateTime         @default(now()) @db.Timestamptz(6)
+  scan_source     String?          @db.VarChar(12)
   branches        branches?        @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
   cards           cards            @relation(fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
   platform_admins platform_admins? @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -155,9 +157,9 @@ model staff_users {
   point_rules      point_rules[]
   qr_codes         qr_codes[]
   redemptions      redemptions[]
+  reward_sold_outs reward_sold_outs[]
   branches         branches?          @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
   vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  reward_sold_outs reward_sold_outs[]
 
   @@index([vendor_id], map: "staff_users_vendor_idx")
 }
@@ -176,26 +178,29 @@ model user_identities {
   @@index([user_id], map: "user_identities_user_idx")
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model users {
-  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String?           @db.VarChar(120)
-  email            String?           @db.VarChar(255)
-  avatar_url       String?           @db.VarChar(500)
-  phone            String?           @db.VarChar(20)
-  auth_user_id     String?           @unique @db.Uuid
-  status           user_status       @default(active)
-  created_at       DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime          @default(now()) @db.Timestamptz(6)
-  gender           user_gender?
-  birth_date       DateTime?         @db.Date
-  avatar_path      String?           @db.VarChar(300)
-  last_lat         Decimal?          @db.Decimal(9, 6)
-  last_lng         Decimal?          @db.Decimal(9, 6)
-  last_location_at DateTime?         @db.Timestamptz(6)
-  cards            cards[]
-  fraud_flags      fraud_flags[]
-  qr_codes         qr_codes[]
-  user_identities  user_identities[]
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String?           @db.VarChar(120)
+  email             String?           @db.VarChar(255)
+  avatar_url        String?           @db.VarChar(500)
+  phone             String?           @db.VarChar(20)
+  auth_user_id      String?           @unique @db.Uuid
+  status            user_status       @default(active)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  gender            user_gender?
+  birth_date        DateTime?         @db.Date
+  avatar_path       String?           @db.VarChar(300)
+  last_lat          Decimal?          @db.Decimal(9, 6)
+  last_lng          Decimal?          @db.Decimal(9, 6)
+  last_location_at  DateTime?         @db.Timestamptz(6)
+  email_verified_at DateTime?         @db.Timestamptz(6)
+  age_confirmed_at  DateTime?         @db.Timestamptz(6)
+  cards             cards[]
+  fraud_flags       fraud_flags[]
+  qr_codes          qr_codes[]
+  user_identities   user_identities[]
 }
 
 model vendors {
@@ -212,6 +217,7 @@ model vendors {
   card_design      Int?               @db.SmallInt
   banner_url       String?            @db.VarChar(500)
   banner_path      String?            @db.VarChar(300)
+  slug             String             @unique(map: "vendors_slug_uq") @default("") @db.VarChar(50)
   branches         branches[]
   cards            cards[]
   fraud_flags      fraud_flags[]
@@ -219,29 +225,41 @@ model vendors {
   point_rules      point_rules[]
   qr_codes         qr_codes[]
   redemptions      redemptions[]
+  reward_sold_outs reward_sold_outs[]
   rewards          rewards[]
   staff_users      staff_users[]
   vendor_images    vendor_images[]
-  reward_sold_outs reward_sold_outs[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model cards {
-  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id          String         @db.Uuid
-  vendor_id        String         @db.Uuid
-  balance          Int            @default(0)
-  lifetime_points  Int            @default(0)
-  last_activity_at DateTime       @default(now()) @db.Timestamptz(6)
-  created_at       DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
-  users            users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  vendors          vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  point_events     point_events[]
-  redemptions      redemptions[]
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String                 @db.Uuid
+  vendor_id            String                 @db.Uuid
+  balance              Int                    @default(0)
+  lifetime_points      Int                    @default(0)
+  last_activity_at     DateTime               @default(now()) @db.Timestamptz(6)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  public_id            String                 @unique(map: "cards_public_id_uq") @default(dbgenerated("replace((gen_random_uuid())::text, '-'::text, ''::text)")) @db.VarChar(32)
+  token_hash           String?                @unique(map: "cards_token_hash_uq", where: raw("(token_hash IS NOT NULL)")) @db.Char(64)
+  short_code           String?                @db.VarChar(8)
+  joined_via           String?                @db.VarChar(10)
+  joined_branch_id     String?                @db.Uuid
+  heard_from           String?                @db.VarChar(40)
+  google_object_id     String?                @db.VarChar(200)
+  apple_auth_token     String?                @db.VarChar(64)
+  pass_updated_at      DateTime?              @db.Timestamptz(6)
+  branches             branches?              @relation(fields: [joined_branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction, map: "cards_joined_branch_fk")
+  users                users                  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors              vendors                @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  point_events         point_events[]
+  redemptions          redemptions[]
+  wallet_registrations wallet_registrations[]
 
   @@unique([id, vendor_id])
   @@unique([user_id, vendor_id])
+  @@unique([vendor_id, short_code], map: "cards_short_code_uq", where: raw("(short_code IS NOT NULL)"))
   @@index([vendor_id], map: "cards_vendor_idx")
 }
 
@@ -328,8 +346,8 @@ model rewards {
   point_events     point_events[]
   qr_codes         qr_codes[]
   redemptions      redemptions[]
-  vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   reward_sold_outs reward_sold_outs[]
+  vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([id, vendor_id])
   @@index([vendor_id, status, sort_order], map: "rewards_vendor_idx")
@@ -350,6 +368,20 @@ model vendor_images {
   vendors      vendors           @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([vendor_id, kind, branch_id, sort_order], map: "vendor_images_vendor_idx")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model wallet_registrations {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  card_id           String   @db.Uuid
+  device_library_id String   @db.VarChar(128)
+  push_token        String   @db.VarChar(256)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+  cards             cards    @relation(fields: [card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([device_library_id, card_id])
+  @@index([card_id], map: "wallet_registrations_card_idx")
 }
 
 enum account_status {

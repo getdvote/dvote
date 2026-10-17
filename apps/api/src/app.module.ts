@@ -21,6 +21,7 @@ import { LiveModule } from './live/live.module';
 import { SystemModule } from './system/system.module';
 import { FraudFlagsModule } from './fraud-flags/fraud-flags';
 import { RateLimitModule } from './rate-limit/rate-limit';
+import { PublicJoinModule } from './public-join/public-join.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { RateLimitModule } from './rate-limit/rate-limit';
     RewardsModule,
     ReportsModule,
     MerchantCustomersModule,
+    PublicJoinModule,
   ],
 })
 export class AppModule {}

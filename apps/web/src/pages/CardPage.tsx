@@ -1,0 +1,185 @@
+import { Check, Copy } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router';
+import { LoyaltyCard } from '../components/LoyaltyCard';
+import { ErrorNote, Page, Spinner } from '../components/ui';
+import { t } from '../i18n';
+import { api, errorMessage, type PublicCard } from '../lib/api';
+import { platform } from '../lib/device';
+
+/**
+ * dvote.app/c/<publicId>: "You're enrolled!" and the card, with the wallet button for this
+ * phone only (iPhone → Apple Wallet, Android → Google Wallet; a computer sees both and a QR to
+ * open the page on the phone). Google Wallet works; Apple Wallet needs the paid Apple account.
+ */
+export function CardPage() {
+  const { publicId } = useParams();
+  const [params] = useSearchParams();
+  const [card, setCard] = useState<PublicCard | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showOther, setShowOther] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [inWallet, setInWallet] = useState<{ google: boolean; apple: boolean } | null>(null);
+  const device = platform();
+
+  useEffect(() => {
+    if (!publicId) return;
+    api.card(publicId).then(setCard, (e) => setError(errorMessage(e)));
+  }, [publicId]);
+
+  // Already in a wallet? Then the add buttons go. Checked again when the customer comes back
+  // from Google's save page (the tab becomes visible).
+  useEffect(() => {
+    if (!publicId) return;
+    const check = () => api.walletStatus(publicId).then(setInWallet, () => undefined);
+    void check();
+    const onShow = () => document.visibilityState === 'visible' && void check();
+    document.addEventListener('visibilitychange', onShow);
+    return () => document.removeEventListener('visibilitychange', onShow);
+  }, [publicId]);
+
+  if (error) {
+    return (
+      <Page>
+        <ErrorNote>{error}</ErrorNote>
+      </Page>
+    );
+  }
+  if (!card) {
+    return (
+      <Page>
+        <Spinner />
+      </Page>
+    );
+  }
+
+  const addGoogle = async () => {
+    setAdding(true);
+    setWalletError(null);
+    try {
+      window.location.href = (await api.googleWallet(card.publicId)).saveUrl;
+    } catch (e) {
+      setWalletError(errorMessage(e));
+    } finally {
+      setAdding(false);
+    }
+  };
+  const link = `${window.location.origin}/c/${card.publicId}`;
+  const heading = params.get('new') ? t('card.enrolled') : params.get('back') ? t('card.welcomeBack') : t('card.yours');
+  const apple = <WalletButton kind="apple" />;
+  const google = <WalletButton kind="google" onClick={() => void addGoogle()} busy={adding} />;
+
+  return (
+    <Page>
+      <h1 className="mb-5 text-center text-[24px] font-bold tracking-tight">{heading}</h1>
+      <LoyaltyCard card={card} />
+
+      {inWallet?.google || inWallet?.apple ? (
+        <p className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-success/10 px-4 py-3 text-center text-[15px] font-medium text-success">
+          <Check className="size-5 shrink-0" />
+          {inWallet.google ? t('card.inGoogle') : t('card.inApple')}
+        </p>
+      ) : (
+      <div className="mt-6 grid justify-items-center gap-3">
+        {device === 'ios' ? apple : device === 'android' ? google : (
+          <>
+            {apple}
+            {google}
+          </>
+        )}
+        {device !== 'other' ? (
+          showOther ? (
+            device === 'ios' ? google : apple
+          ) : (
+            <button type="button" className="text-[14px] text-muted underline underline-offset-4" onClick={() => setShowOther(true)}>
+              {t('card.otherWallet')}
+            </button>
+          )
+        ) : null}
+        <ErrorNote>{walletError}</ErrorNote>
+        {device === 'ios' || device === 'other' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.appleSoon')}</p> : null}
+      </div>
+      )}
+
+      {device === 'other' && !inWallet?.google && !inWallet?.apple ? (
+        <div className="mt-6 flex flex-col items-center gap-3 rounded-3xl bg-canvas p-5 text-center">
+          <div className="rounded-2xl bg-white p-3">
+            <QRCodeSVG value={link} size={140} />
+          </div>
+          <p className="text-[14px] text-muted">{t('card.openOnPhone')}</p>
+        </div>
+      ) : null}
+
+      <p className="mt-6 text-center text-[15px] font-medium">{t('card.atTill')}</p>
+
+      <div className="mt-6 rounded-3xl border border-line p-4">
+        <p className="text-[14px] text-muted">{t('card.keepLink')}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <code dir="ltr" className="min-w-0 flex-1 truncate rounded-xl bg-canvas px-3 py-2 text-[13px]">
+            {link}
+          </code>
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard?.writeText(link).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
+            }}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-[14px] font-medium hover:bg-canvas"
+          >
+            {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
+            {copied ? t('card.copied') : t('card.copy')}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 text-center">
+        <Link to={`/${card.vendor.slug}`} className="text-[15px] text-brand underline-offset-4 hover:underline">
+          {t('card.visitShop', { shop: card.vendor.name })}
+        </Link>
+      </div>
+    </Page>
+  );
+}
+
+/** The wallet badges. No onClick = not available yet (Apple: needs the paid Apple account). */
+function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google'; onClick?: () => void; busy?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={!onClick || busy}
+      onClick={onClick}
+      className="inline-flex h-13 min-w-64 items-center justify-center gap-3 rounded-2xl bg-black px-6 text-[16px] font-semibold text-white transition hover:bg-black/85 disabled:opacity-60"
+    >
+      {kind === 'apple' ? <AppleWalletIcon /> : <GoogleWalletIcon />}
+      {kind === 'apple' ? t('card.addApple') : t('card.addGoogle')}
+    </button>
+  );
+}
+
+function AppleWalletIcon() {
+  return (
+    <svg viewBox="0 0 28 22" className="h-5 w-6" aria-hidden>
+      <rect x="1" y="1" width="26" height="20" rx="4" fill="#fff" />
+      <rect x="3" y="4" width="22" height="3" rx="1" fill="#2DAAE1" />
+      <rect x="3" y="7" width="22" height="3" rx="1" fill="#F3B029" />
+      <rect x="3" y="10" width="22" height="3" rx="1" fill="#F37D24" />
+      <rect x="3" y="13" width="22" height="3" rx="1" fill="#E3344B" />
+    </svg>
+  );
+}
+
+function GoogleWalletIcon() {
+  return (
+    <svg viewBox="0 0 28 22" className="h-5 w-6" aria-hidden>
+      <rect x="1" y="2" width="26" height="6" rx="2" fill="#4285F4" />
+      <rect x="1" y="7" width="26" height="6" rx="2" fill="#34A853" />
+      <rect x="1" y="12" width="26" height="6" rx="2" fill="#FBBC04" />
+      <rect x="1" y="16" width="26" height="4" rx="2" fill="#EA4335" />
+    </svg>
+  );
+}

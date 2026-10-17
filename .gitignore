@@ -54,3 +54,6 @@ apps/dashboard/.vite/
 
 # Apple / signing keys (never commit)
 *.p8
+
+# API secret files (Google Wallet service-account key, ...)
+apps/api/.secrets/
