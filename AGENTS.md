@@ -43,7 +43,7 @@ dvote/
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
-│   ├── mobile/                # React Native (Expo) customer app — iOS/Android (in progress)
+│   ├── mobile/                # ARCHIVED at git tag customer-app-v1 (customer app paused 2026-10-17)
 │   └── staff/                 # React Native (Expo) staff scanner app — web + native (built)
 └── packages/
     └── api-client/            # generated TS client from OpenAPI
