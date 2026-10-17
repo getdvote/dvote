@@ -1,9 +1,10 @@
 import {
   ConflictException,
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { IMAGE_CONTENT_TYPE, newImageName, toWebp } from '../storage/images';
 import { BUCKETS, StorageService } from '../storage/storage.service';
@@ -54,6 +55,24 @@ export class VendorsService {
     });
     if (!vendor) throw new NotFoundException({ code: 'vendor_not_found' });
     return vendor;
+  }
+
+  async usernameAvailability(vendorId: string, username: string) {
+    const [result] = await this.prisma.$queryRaw<{ reserved: boolean }[]>`SELECT vendor_slug_reserved(${username}) AS reserved`;
+    if (result.reserved) return { available: false };
+    const existing = await this.prisma.vendors.findUnique({ where: { slug: username }, select: { id: true } });
+    return { available: !existing || existing.id === vendorId };
+  }
+
+  async reserveUsername(vendorId: string, username: string): Promise<VendorWithCounts> {
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(username) || username.length < 2 || username.length > 50) throw new BadRequestException({ code: 'invalid_username' });
+    if (!(await this.usernameAvailability(vendorId, username)).available) throw new ConflictException({ code: 'username_taken' });
+    try {
+      return await this.prisma.vendors.update({ where: { id: vendorId }, data: { slug: username }, include: withCounts });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException({ code: 'username_taken' });
+      throw e;
+    }
   }
 
   create(dto: CreateVendorDto): Promise<VendorWithCounts> {

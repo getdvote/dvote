@@ -1,4 +1,4 @@
-import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CameraIcon as Camera,
   CheckCircleIcon as CheckCircle,
@@ -22,6 +22,7 @@ import { categoryLabel, VENDOR_CATEGORIES } from '../../lib/cardDesigns';
 import { formatEgyptianMobile, toEgyptianMobile } from '../../lib/phone';
 import { IMAGE_ACCEPT } from '../vendor/ImagesTab';
 import { t } from '../../i18n';
+import { config } from '../../lib/config';
 import { StorefrontEditor } from './storefront-editor';
 
 const NONE = 'none';
@@ -111,6 +112,7 @@ export function ProfileEditor() {
       </CardHeader>
       <CardContent className="pt-6">
         <DetailsForm vendor={vendor} />
+        <UsernameEditor key={vendor.id} vendor={vendor} />
       </CardContent>
     </Card>
   );
@@ -273,5 +275,90 @@ function DetailsForm({ vendor }: { vendor: Vendor }) {
         />
       </Field>
     </form>
+  );
+}
+
+function UsernameEditor({ vendor }: { vendor: Vendor }) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState(vendor.slug);
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebounced(value.trim().toLowerCase()),
+      350,
+    );
+    return () => clearTimeout(timer);
+  }, [value]);
+  const username = value.trim().toLowerCase();
+  const valid =
+    /^[a-z0-9]+(-[a-z0-9]+)*$/.test(username) &&
+    username.length >= 2 &&
+    username.length <= 50;
+  const check = useQuery({
+    queryKey: ["username-availability", vendor.id, debounced],
+    queryFn: () => vendorApi.usernameAvailability(debounced),
+    enabled: valid && debounced === username,
+    staleTime: 0,
+  });
+  const save = useMutation({
+    mutationFn: vendorApi.reserveUsername,
+    onSuccess: (v) => {
+      qc.setQueryData(["vendor", "me"], v);
+      setValue(v.slug);
+      toast.success(t("profile.usernameSaved"));
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  return (
+    <div className="mt-6 border-t pt-6">
+      <Field
+        label={t("profile.username")}
+        htmlFor="storefront-username"
+        hint={t("profile.usernameHint")}
+      >
+        <div className="flex flex-wrap gap-2">
+          <Input
+            id="storefront-username"
+            dir="ltr"
+            className="min-w-48 flex-1"
+            maxLength={50}
+            value={value}
+            disabled={save.isPending}
+            onChange={(e) => setValue(e.target.value.toLowerCase())}
+            aria-invalid={!valid || undefined}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={
+              save.isPending ||
+              username === vendor.slug ||
+              !valid ||
+              debounced !== username ||
+              check.isFetching ||
+              !check.data?.available ||
+              check.isError
+            }
+            onClick={() => save.mutate(username)}
+          >
+            {t("profile.reserveUsername")}
+          </Button>
+        </div>
+        <p dir="ltr" className="break-all text-sm text-muted-foreground">
+          {config.webUrl}/{username}
+        </p>
+        <p role="status" className="text-sm text-muted-foreground">
+          {!valid
+            ? t("profile.usernameFormat")
+            : check.isError
+              ? errorMessage(check.error)
+              : debounced !== username || check.isFetching
+                ? t("profile.checkingUsername")
+                : check.data?.available
+                  ? t("profile.usernameAvailable")
+                  : t("profile.usernameTaken")}
+        </p>
+      </Field>
+    </div>
   );
 }

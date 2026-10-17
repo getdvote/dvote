@@ -389,7 +389,7 @@ function SectionFields({
         </Button>
       );
     case 'feedback':
-      return <Button variant="outline" className="w-fit" asChild><Link to="/feedback">{t('feedback.view')}</Link></Button>;
+      return <FeedbackSettings section={s} onChange={onChange} />;
     case 'branches':
       return (
         <Button variant="outline" className="w-fit" asChild>
@@ -445,4 +445,26 @@ export function StorefrontPreviewDialog({ open, onOpenChange }: { open: boolean;
       </DialogContent>
     </Dialog>
   );
+}
+
+function FeedbackSettings({ section, onChange }: { section: Extract<StorefrontSection, { type: 'feedback' }>; onChange: (s: StorefrontSection) => void }) {
+  const [en, setEn] = useState(section.placeholder?.en ?? '');
+  const [ar, setAr] = useState(section.placeholder?.ar ?? '');
+  const both = !!en.trim() && !!ar.trim();
+  const empty = !en.trim() && !ar.trim();
+  const changed = en.trim() !== (section.placeholder?.en ?? '') || ar.trim() !== (section.placeholder?.ar ?? '');
+  return <div className="grid gap-4">
+    <p className="text-sm text-muted-foreground">{t('feedback.placeholderHint')}</p>
+    <Field label={t('feedback.placeholderEn')} htmlFor="feedback-placeholder-en">
+      <Input id="feedback-placeholder-en" dir="ltr" maxLength={300} value={en} placeholder={t('feedback.defaultEn')} onChange={e => setEn(e.target.value)} />
+    </Field>
+    <Field label={t('feedback.placeholderAr')} htmlFor="feedback-placeholder-ar">
+      <Input id="feedback-placeholder-ar" dir="rtl" maxLength={300} value={ar} placeholder={t('feedback.defaultAr')} onChange={e => setAr(e.target.value)} />
+    </Field>
+    {!both && !empty ? <p role="status" className="text-sm text-destructive">{t('feedback.bothRequired')}</p> : null}
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" disabled={!changed || (!both && !empty)} onClick={() => onChange(both ? { type: 'feedback', placeholder: { en: en.trim(), ar: ar.trim() } } : { type: 'feedback' })}>{t('feedback.savePlaceholder')}</Button>
+      <Button variant="outline" asChild><Link to="/feedback">{t('feedback.view')}</Link></Button>
+    </div>
+  </div>;
 }

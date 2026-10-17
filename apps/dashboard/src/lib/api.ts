@@ -381,6 +381,7 @@ export interface ActivityItem {
 }
 
 export interface ActivityQuery {
+  eventId?: string;
   type?: PointEventType;
   branchId?: string;
   staffId?: string;
@@ -459,7 +460,7 @@ export type StorefrontSection =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
-  | { type: 'feedback' }
+  | { type: 'feedback'; placeholder?: { en: string; ar: string } }
   | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
 export interface Storefront {
   sections: StorefrontSection[];
@@ -762,6 +763,8 @@ export const vendorApi = {
   redemptions: (q: RedemptionQuery) => call<RedemptionPage>('GET', `/api/vendor/redemptions${qs({ ...q })}`),
   events: (q: ActivityQuery) => call<ActivityPage>('GET', `/api/vendor/events${qs({ ...q })}`),
 
+  usernameAvailability: (username: string) => call<{ available: boolean }>('GET', `/api/vendor/profile/username${qs({ username })}`),
+  reserveUsername: (username: string) => call<Vendor>('PUT', '/api/vendor/profile/username', { username }),
   profile: () => call<Vendor>('GET', '/api/vendor/profile'),
   storefront: () => call<StorefrontSettings>('GET', '/api/vendor/storefront'),
   saveStorefront: (body: { branchId?: string; storefront: Storefront | null }) => call<StorefrontSettings>('PUT', '/api/vendor/storefront', body),

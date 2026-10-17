@@ -76,6 +76,7 @@ export const en = {
     getBackText: "Type the email and mobile number you joined with.",
   },
   feedback: {
+    placeholder: "How was your visit? Tell us what you think.",
     title: "Feedback",
     rowHint: "Tell us about your visit",
     hint: "Leave a comment for the shop. This does not create a loyalty card or customer account.",

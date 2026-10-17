@@ -133,6 +133,15 @@ export const en = {
     footnote: 'Customers and points held count everyone with a card at {shop}. dvote never shows you who your customers are.',
   },
   profile: {
+    username: "Storefront username",
+    usernameHint: "Your unique storefront address. Changing it updates your public link.",
+    usernameSaved: "Storefront username saved",
+    reserveUsername: "Save username",
+    usernameFormat: "Use 2–50 lowercase letters, numbers and single hyphens.",
+    checkingUsername: "Checking availability…",
+    usernameAvailable: "Username available",
+    usernameTaken: "This username is taken or reserved.",
+
     subtitle: 'How your shop appears in the dvote app.',
     logoUpdated: 'Logo updated',
     logoRemoved: 'Logo removed',
@@ -982,7 +991,8 @@ export const en = {
       rewards: { title: 'Rewards', hint: 'Your active rewards and their points.' },
       menu: { title: 'Menu', hint: 'Your menu pages, opened from the page.' },
       branches: { title: 'Branches', hint: 'Your open branches, with directions.' },
-      feedback: { title: "Feedback", hint: "Comments from visitors, with an optional phone number." },
+      feedback: {
+ title: "Feedback", hint: "Comments from visitors, with an optional phone number." },
       wifi: { title: 'WiFi', hint: 'The guest network, with the password to copy.' },
     },
     buttonWording: 'Button wording',
@@ -1039,6 +1049,13 @@ export const en = {
     subtitle: 'Store QR codes, NFC links, and holders for your branches.',
   },
   feedback: {
+    placeholderHint: "Use the default comment prompt, or enter a custom version in both languages. Clear both fields to restore the default.",
+    placeholderEn: "English placeholder",
+    placeholderAr: "Arabic placeholder",
+    defaultEn: "How was your visit? Tell us what you think.",
+    defaultAr: "كيف كانت زيارتك؟ شاركنا رأيك.",
+    bothRequired: "Enter both English and Arabic versions.",
+    savePlaceholder: "Save placeholder",
     view: "View feedback",
     empty: "No feedback yet. Add the Feedback section to your storefront to start receiving comments.",
     cardholder: "Cardholder · phone match",
@@ -1144,6 +1161,9 @@ export const en = {
     continue: "Continue",
   },
   errors: {
+    username_taken: "This username is taken or reserved.",
+    invalid_username: "Choose a valid storefront username.",
+
     feedback_not_configured: "Feedback isn't set up on the server yet. Please use WhatsApp or email for now.",
     feedback_unavailable: "Couldn't send your feedback right now. Please try again.",
     segment_name_taken: "You already have a segment with this name.",

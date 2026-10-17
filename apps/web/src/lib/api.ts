@@ -29,7 +29,7 @@ export type Section =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
-  | { type: 'feedback' }
+  | { type: 'feedback'; placeholder?: { en: string; ar: string } }
   | { type: 'wifi'; ssid: string; security: 'wpa' | 'wep' | 'none'; password: string };
 
 export interface PublicCard {

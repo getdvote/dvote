@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -33,10 +34,11 @@ export function MyActivity() {
   const vendor = useMyVendor();
   const branchOnly = me.branchId !== null; // branch roles; admins and viewers see every branch
 
-  const period = usePeriod();
+  const [params] = useSearchParams();
+  const period = usePeriod(params.get('period') === 'today' ? 'today' : '7d');
   const [type, setType] = useState<PointEventType | typeof ALL>(ALL);
   const [branchId, setBranchId] = useState(ALL);
-  const [staffId, setStaffId] = useState(ALL);
+  const [staffId, setStaffId] = useState(params.get('staff') ?? ALL);
   const [receiptInput, setReceiptInput] = useState('');
   const [receipt, setReceipt] = useState('');
   const [page, setPage] = useState(1);
@@ -189,7 +191,7 @@ const rewardName = (r: { name: string; nameAr?: string | null }) => localized(r.
 const money = (s: string) => (s.endsWith('.00') ? num(Number(s)) : Number(s).toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
 /** One ledger row in full, with the list still behind it. */
-function ActivitySheet({ item, currency, onClose }: { item: ActivityItem | null; currency: string; onClose: () => void }) {
+export function ActivitySheet({ item, currency, onClose }: { item: ActivityItem | null; currency: string; onClose: () => void }) {
   return (
     <Sheet open={!!item} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=left]:w-full data-[side=right]:sm:max-w-[440px] data-[side=left]:sm:max-w-[440px]">

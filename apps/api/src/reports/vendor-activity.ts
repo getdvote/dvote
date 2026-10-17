@@ -23,6 +23,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { cairoDays, IsDay } from './cairo-days';
 
 export class VendorActivityQueryDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUuid()
+  eventId?: string;
+
   @ApiPropertyOptional({ enum: point_event_type, enumName: 'PointEventType' })
   @IsOptional()
   @IsIn(Object.values(point_event_type))
@@ -167,6 +172,7 @@ export class VendorActivityService {
 
     const where: Prisma.point_eventsWhereInput = {
       vendor_id: ctx.vendorId,
+      ...(q.eventId ? { id: q.eventId } : {}),
       ...(q.type ? { type: q.type } : {}),
       ...(branchId ? { branch_id: branchId } : {}),
       ...(q.staffId ? { staff_id: q.staffId } : {}),

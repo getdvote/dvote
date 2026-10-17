@@ -17,7 +17,7 @@ export type StorefrontSection =
   | { type: 'rewards' }
   | { type: 'menu' }
   | { type: 'branches' }
-  | { type: 'feedback' }
+  | { type: 'feedback'; placeholder?: { en: string; ar: string } }
   | { type: 'wifi'; ssid: string; security: (typeof WIFI_SECURITY)[number]; password: string };
 
 export interface Storefront {
@@ -68,6 +68,14 @@ export function checkStorefront(input: unknown): Storefront {
     switch (type) {
       case 'loyalty':
         return { type, label: pick(LOYALTY_LABELS, s.label, 'loyalty_card') };
+      case 'feedback': {
+        if (s.placeholder === undefined) return { type };
+        const p = s.placeholder as Record<string, unknown> | null;
+        if (!p || typeof p !== 'object' || typeof p.en !== 'string' || typeof p.ar !== 'string' || !p.en.trim() || !p.ar.trim() || p.en.length > 300 || p.ar.length > 300) {
+          throw bad('Feedback placeholder needs both English and Arabic (1–300 characters each)');
+        }
+        return { type, placeholder: { en: p.en.trim(), ar: p.ar.trim() } };
+      }
       case 'wifi':
         return {
           type,

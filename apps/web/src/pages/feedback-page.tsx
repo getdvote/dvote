@@ -8,7 +8,7 @@ import {
   Page,
   Spinner,
 } from "../components/ui";
-import { t } from "../i18n";
+import { getLanguage, t } from "../i18n";
 import { api, errorMessage } from "../lib/api";
 import { useTagParams, useVendor } from "./VenuePage";
 
@@ -91,6 +91,11 @@ export function FeedbackPage() {
               </Field>
               <Field label={t("feedback.comment")}>
                 <textarea
+                  placeholder={
+                    vendor.sections.find((s) => s.type === "feedback")
+                      ?.placeholder?.[getLanguage()] ??
+                    t("feedback.placeholder")
+                  }
                   required
                   maxLength={2000}
                   rows={5}

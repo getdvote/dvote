@@ -463,28 +463,26 @@ LANGUAGE sql IMMUTABLE AS $$
                  'privacy', 'terms', 'about', 'login', 'dashboard', 'staff', 'static', 'assets', 'dvote')
 $$;
 
--- A free slug from a name: "Joy Corner" -> joy-corner, then joy-corner-2, -3 ... if taken.
+-- A free slug from a name: "Joy Corner" -> joy-corner, then a random numeric suffix if taken.
 -- Names without Latin letters (e.g. Arabic) become "shop", "shop-2", ...
 CREATE FUNCTION vendor_slug_from(name text, own_id uuid) RETURNS text
 LANGUAGE plpgsql AS $$
 DECLARE
-    base text := left(trim(both '-' from regexp_replace(lower(coalesce(name, '')), '[^a-z0-9]+', '-', 'g')), 44);
-    candidate text;
-    n int := 1;
+  base text := left(trim(both '-' from regexp_replace(lower(coalesce(name, '')), '[^a-z0-9]+', '-', 'g')), 44);
+  candidate text;
 BEGIN
-    -- one slug pick at a time, so two merchants created at once never get the same slug
-    PERFORM pg_advisory_xact_lock(hashtext('vendor_slug'));
-    base := trim(both '-' from base);
-    IF length(base) < 2 THEN base := 'shop'; END IF;
-    IF vendor_slug_reserved(base) THEN base := base || '-shop'; END IF;
-    candidate := base;
-    WHILE EXISTS (SELECT 1 FROM vendors WHERE slug = candidate AND id IS DISTINCT FROM own_id) LOOP
-        n := n + 1;
-        candidate := base || '-' || n;
-    END LOOP;
-    RETURN candidate;
+  PERFORM pg_advisory_xact_lock(hashtext('vendor_slug'));
+  base := trim(both '-' from base);
+  IF length(base) < 2 THEN base := 'shop'; END IF;
+  IF vendor_slug_reserved(base) THEN base := left(base, 39) || '-shop'; END IF;
+  candidate := base;
+  WHILE EXISTS (SELECT 1 FROM vendors WHERE slug = candidate AND id IS DISTINCT FROM own_id) LOOP
+    candidate := base || '-' || (10000 + floor(random() * 90000)::int)::text;
+  END LOOP;
+  RETURN candidate;
 END;
 $$;
+
 
 -- Fill the slug of every new merchant that is created without one (admin API, tests, seeds).
 CREATE FUNCTION vendors_fill_slug() RETURNS trigger

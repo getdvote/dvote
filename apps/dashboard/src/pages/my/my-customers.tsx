@@ -1,3 +1,4 @@
+import { ActivitySheet } from './MyActivity';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DownloadMinimalisticIcon as Download, LoaderIcon as Loader2, LockIcon as LockKeyhole, UsersGroupTwoRoundedIcon as UsersRound } from '@solar-icons/react/linear';
 import { toast } from "sonner";
@@ -342,7 +343,13 @@ export function MyCustomers() {
                     </TableHeader>
                     <TableBody>
                       {data.items.map((c) => (
-                        <TableRow key={c.id}>
+                        <TableRow key={c.id} className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" tabIndex={0}
+                          onClick={e => { if (!(e.target as HTMLElement).closest('button,a')) set("customer", c.id, false); }}
+                          onKeyDown={e => {
+                            if (e.target !== e.currentTarget) return;
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); set("customer", c.id, false); }
+                          }}>
+
                           <TableCell className="ps-4">
                             <CustomerButton
                               customer={c}
@@ -374,7 +381,7 @@ export function MyCustomers() {
                 </div>
                 <div className="divide-y md:hidden">
                   {data.items.map((c) => (
-                    <div key={c.id} className="space-y-3 p-4">
+                    <div key={c.id} className="cursor-pointer space-y-3 p-4 hover:bg-muted" onClick={e => { if (!(e.target as HTMLElement).closest('button,a')) set("customer", c.id, false); }}>
                       <div className="flex items-start justify-between gap-3">
                         <CustomerButton
                           customer={c}
@@ -500,6 +507,12 @@ function CustomerProfile({
     queryFn: () => vendorApi.customer(id, { branchId, page, pageSize: 10 }),
     refetchInterval: 60_000,
   });
+  const [eventId, setEventId] = useState<string | null>(null);
+  const event = useQuery({
+    queryKey: ['customer-activity-detail', me.vendor.id, eventId],
+    queryFn: () => vendorApi.events({ eventId: eventId!, pageSize: 1 }),
+    enabled: !!eventId,
+  });
   const c = data?.customer;
   return (
     <>
@@ -586,8 +599,8 @@ function CustomerProfile({
                     {data.events.map((e) => (
                       <li
                         key={e.id}
-                        className="flex justify-between gap-3 py-3"
                       >
+                        <button type="button" onClick={() => setEventId(e.id)} className="flex w-full justify-between gap-3 rounded-lg py-3 text-start transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <div>
                           <p className="text-sm font-medium">
                             {e.type === "earn"
@@ -610,6 +623,7 @@ function CustomerProfile({
                           {e.points > 0 ? "+" : ""}
                           {num(e.points)} {t("branding.pts")}
                         </span>
+                        </button>
                       </li>
                     ))}
                   </ol>
@@ -628,7 +642,11 @@ function CustomerProfile({
             </>
           )
         )}
+        {eventId && event.isFetching ? <p role="status" className="text-sm text-muted-foreground">{t('common.loading')}</p> : null}
+        {eventId ? <ErrorAlert error={event.error} /> : null}
+        {eventId && event.isSuccess && !event.data.items.length ? <p role="status" className="text-sm text-muted-foreground">{t('activity.noMatch')}</p> : null}
       </div>
+      <ActivitySheet item={eventId ? event.data?.items[0] ?? null : null} currency={currency} onClose={() => setEventId(null)} />
     </>
   );
 }
