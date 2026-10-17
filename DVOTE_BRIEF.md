@@ -10,6 +10,11 @@
 > - Repo: `github.com/getdvote/dvote` — work happens on `develop`; merging needs Karim's approval.
 > - **This file contains no secrets.** Keys and passwords live only in each app's `.env` (never committed).
 
+> **Wallet scan fix (2026-10-17):** staff scanner and `/api/vendor/scans/preview|collect` now accept
+> `dvote:c1:` wallet card QRs as well as the app's `dvote:q1:` codes. Wallet collects are reusable
+> across visits, merchant-scoped, idempotent per submission and recorded with `scan_source=wallet_card`.
+> Wallet redemption selection, pass balance synchronization and notifications remain pending.
+
 > **⚠ Direction change 2026-10-17 — wallet passes instead of a customer app.** Customers no longer
 > install an app. At the till an **NFC tag / QR** opens a mobile web page; the customer types name,
 > email and phone and gets a **loyalty card for that merchant as a Google Wallet (Android) or Apple

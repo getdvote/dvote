@@ -9,6 +9,7 @@ import { configureApp } from './../src/app.setup';
 import { SUPABASE_JWKS } from './../src/auth/supabase-jwt.verifier';
 import type { staff_role } from './../src/generated/prisma/client.js';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { cardQr, cardSecret, hashCardSecret } from '../src/wallet/card-token';
 import { createTestSigner, type TestSigner } from './helpers/test-auth';
 
 const run = randomUUID().slice(0, 8);
@@ -183,6 +184,33 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
       await tx.users.deleteMany({ where: { id: { in: userIds } } });
     });
     await app.close();
+  });
+
+  it('wallet card: merchant isolation, repeat visits, idempotency and ledger balance', async () => {
+    await seedCustomer('wallet');
+    const user = await as('wallet', 'get', '/api/app/users/me').expect(200);
+    const card = await prisma.cards.create({ data: { user_id: user.body.id, vendor_id: ids.vendorA } });
+    const secret = cardSecret('test-wallet-secret', card.id);
+    await prisma.cards.update({ where: { id: card.id }, data: { token_hash: hashCardSecret(secret) } });
+    const code = cardQr(secret);
+    const preview = await as('staffA1', 'post', '/api/vendor/scans/preview').send({ code }).expect(200);
+    expect(preview.body).toMatchObject({ usable: true, purpose: 'collect', expiresAt: null });
+    await as('staffB1', 'post', '/api/vendor/scans/preview').send({ code }).expect(403);
+    await collect('staffB1', { code, amount: 95 }).expect(403);
+    await collect('staffA1', { code: cardQr('x'.repeat(22)), amount: 95 }).expect(404);
+    const key = randomUUID();
+    const results = await Promise.all([
+      collect('staffA1', { code, amount: 95, idempotencyKey: key }),
+      collect('staffA1', { code, amount: 95, idempotencyKey: key }),
+    ]);
+    expect(results.map(r => r.status)).toEqual([200, 200]);
+    expect(results[0].body.pointEventId).toBe(results[1].body.pointEventId);
+    await collect('staffA1', { code, amount: 95, receiptRef: `wallet-${run}` }).expect(200);
+    await collect('staffA1', { code, amount: 95, receiptRef: `wallet-${run}` }).expect(409);
+    expect((await prisma.cards.findUniqueOrThrow({ where: { id: card.id } })).balance).toBe(18);
+    await ledgerMatches(card.id);
+    await prisma.users.update({ where: { id: user.body.id }, data: { status: 'blocked' } });
+    await collect('staffA1', { code, amount: 95 }).expect(403);
   });
 
   describe('staff app context (GET /api/vendor/staff/me)', () => {

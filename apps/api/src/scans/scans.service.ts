@@ -13,6 +13,7 @@ import { LiveService } from '../live/live.service';
 import { isSoldOut } from '../rewards/reward-sold-outs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { tokenHashOf } from '../qr-codes/qr-code.token';
+import { CARD_QR_PREFIX, hashCardSecret } from '../wallet/card-token';
 import { CollectScanDto, RedeemScanDto } from './dto/scan.dto';
 import {
   CollectResponseDto,
@@ -58,6 +59,12 @@ export class ScansService {
     ctx: StaffContext,
     code: string,
   ): Promise<PreviewScanResponseDto> {
+    if (code.startsWith(CARD_QR_PREFIX)) {
+      const card = await this.findWalletCard(code, ctx);
+      const rule = await this.prisma.point_rules.findFirst({ where: { vendor_id: ctx.vendorId, is_active: true } });
+      const reason = card.users.status !== 'active' ? 'user_blocked' : !rule ? 'no_active_rule' : null;
+      return { purpose: 'collect', usable: !reason, reason, expiresAt: null, redeem: null };
+    }
     const qr = await this.findQr(code);
     const [user, rule] = await Promise.all([
       this.prisma.users.findUniqueOrThrow({
@@ -252,20 +259,22 @@ export class ScansService {
     ctx: StaffContext,
     dto: CollectScanDto,
   ): Promise<CollectResponseDto> {
-    const qr = await this.findQr(dto.code);
+    const walletCard = dto.code.startsWith(CARD_QR_PREFIX) ? await this.findWalletCard(dto.code, ctx) : null;
+    const qr = walletCard ? null : await this.findQr(dto.code);
+    const userId = walletCard?.user_id ?? qr!.user_id;
 
     // A retry of a submit that already succeeded: return the first result.
-    const replay = await this.replay(dto.idempotencyKey, qr.id);
+    const replay = await this.replay(dto.idempotencyKey, qr?.id ?? null, walletCard?.id, ctx.staffId);
     if (replay) return replay;
 
-    const problem = this.stateProblem(qr);
+    const problem = qr ? this.stateProblem(qr) : null;
     if (problem) throw new ConflictException({ code: problem });
-    if (qr.purpose !== 'collect') {
+    if (qr && qr.purpose !== 'collect') {
       throw new BadRequestException({ code: 'wrong_qr_type' });
     }
 
     // A shop QR (made on that shop's page in the app) only works at that shop.
-    if (this.wrongVendor(qr, ctx)) {
+    if (qr && this.wrongVendor(qr, ctx)) {
       throw new ForbiddenException({ code: 'vendor_mismatch' });
     }
 
@@ -273,7 +282,7 @@ export class ScansService {
     const branch = await this.resolveBranch(ctx, dto.branchId);
 
     const [user, vendor, rule] = await Promise.all([
-      this.prisma.users.findUniqueOrThrow({ where: { id: qr.user_id } }),
+      this.prisma.users.findUniqueOrThrow({ where: { id: userId } }),
       this.prisma.vendors.findUniqueOrThrow({ where: { id: ctx.vendorId } }),
       this.prisma.point_rules.findFirst({
         where: { vendor_id: ctx.vendorId, is_active: true },
@@ -317,21 +326,23 @@ export class ScansService {
     try {
       const event = await this.prisma.$transaction(async (tx) => {
         // Conditional: only one scan of this QR can ever get past this line.
-        const marked = await tx.qr_codes.updateMany({
-          where: {
-            id: qr.id,
-            status: 'active',
-            expires_at: { gt: new Date() },
-          },
-          data: {
-            status: 'used',
-            used_at: new Date(),
-            used_by_staff_id: ctx.staffId,
-            used_branch_id: branch.id,
-          },
-        });
-        if (marked.count !== 1)
-          throw new ConflictException({ code: 'qr_used' });
+        if (qr) {
+          const marked = await tx.qr_codes.updateMany({
+            where: {
+              id: qr.id,
+              status: 'active',
+              expires_at: { gt: new Date() },
+            },
+            data: {
+              status: 'used',
+              used_at: new Date(),
+              used_by_staff_id: ctx.staffId,
+              used_branch_id: branch.id,
+            },
+          });
+          if (marked.count !== 1)
+            throw new ConflictException({ code: 'qr_used' });
+        }
 
         // First purchase at this vendor creates the card (race-safe).
         const [card] = await tx.$queryRaw<{ id: string }[]>`
@@ -349,7 +360,8 @@ export class ScansService {
             purchase_amount: fromMinor(amountMinor),
             receipt_ref: dto.receiptRef ?? null,
             rule_id: rule.id,
-            qr_code_id: qr.id,
+            qr_code_id: qr?.id ?? null,
+            scan_source: walletCard ? 'wallet_card' : 'app_qr',
             staff_id: ctx.staffId,
             idempotency_key: dto.idempotencyKey,
           },
@@ -375,7 +387,7 @@ export class ScansService {
       ) {
         const target = JSON.stringify(err.meta ?? {});
         if (target.includes('idempotency')) {
-          const first = await this.replay(dto.idempotencyKey, qr.id);
+          const first = await this.replay(dto.idempotencyKey, qr?.id ?? null, walletCard?.id, ctx.staffId);
           if (first) return first;
         }
         if (target.includes('receipt')) {
@@ -388,6 +400,18 @@ export class ScansService {
   }
 
   /** The QR names a vendor (shop QR or redeem) and it isn't the scanning staff's vendor. */
+  private async findWalletCard(code: string, ctx: StaffContext) {
+    const secret = code.slice(CARD_QR_PREFIX.length);
+    if (!/^[A-Za-z0-9_-]{22}$/.test(secret)) throw new NotFoundException({ code: 'qr_invalid' });
+    const card = await this.prisma.cards.findUnique({
+      where: { token_hash: hashCardSecret(secret) },
+      include: { users: { select: { name: true, status: true } } },
+    });
+    if (!card) throw new NotFoundException({ code: 'qr_invalid' });
+    if (card.vendor_id !== ctx.vendorId) throw new ForbiddenException({ code: 'vendor_mismatch' });
+    return card;
+  }
+
   private wrongVendor(qr: qr_codes, ctx: StaffContext): boolean {
     return qr.vendor_id !== null && qr.vendor_id !== ctx.vendorId;
   }
@@ -437,14 +461,17 @@ export class ScansService {
   /** The original result for a reused idempotency key (same QR only). */
   private async replay(
     key: string,
-    qrId: string,
+    qrId: string | null,
+    walletCardId?: string,
+    staffId?: string,
   ): Promise<CollectResponseDto | null> {
     const event = await this.prisma.point_events.findUnique({
       where: { idempotency_key: key },
       include: eventWithNames,
     });
     if (!event) return null;
-    if (event.qr_code_id !== qrId || event.type !== 'earn') {
+    if (event.qr_code_id !== qrId || event.type !== 'earn' ||
+      (walletCardId && (event.card_id !== walletCardId || event.staff_id !== staffId || event.scan_source !== 'wallet_card'))) {
       throw new ConflictException({ code: 'idempotency_key_reused' });
     }
     return toResponse(event);
