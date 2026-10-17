@@ -452,7 +452,7 @@ export interface AttentionItem {
 }
 
 /** The public page (customer website): sections in order; see lib/storefront.ts. */
-export type PageStyle = 'spotlight' | 'compact' | 'branded';
+export type PageStyle = 'spotlight' | 'compact' | 'branded' | 'playful' | 'split';
 export type BrandFont = 'inter' | 'poppins' | 'montserrat' | 'dm_sans' | 'playfair' | 'lora' | 'cairo' | 'tajawal' | 'almarai' | 'ibm_plex_arabic';
 export type StorefrontSection =
   | { type: 'loyalty'; label: 'loyalty_card' | 'join_club' | 'collect_points' }

@@ -68,7 +68,7 @@ class PublicBranchDto {
 
 /** How the page looks (Settings → Branding). Colours are #rrggbb or null (= the card colours). */
 class PublicStyleDto {
-  @ApiProperty({ enum: ['spotlight', 'compact', 'branded'] }) pageStyle: 'spotlight' | 'compact' | 'branded';
+  @ApiProperty({ enum: ['spotlight', 'compact', 'branded', 'playful', 'split'] }) pageStyle: 'spotlight' | 'compact' | 'branded' | 'playful' | 'split';
   @ApiProperty({ type: String, nullable: true }) primary: string | null;
   @ApiProperty({ type: String, nullable: true }) secondary: string | null;
   @ApiProperty({ type: String, nullable: true, example: 'Playfair Display', description: 'Google Fonts family; null = default' }) font: string | null;

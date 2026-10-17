@@ -28,7 +28,7 @@ export const DEFAULT_STOREFRONT: Storefront = {
   sections: [{ type: 'loyalty', label: 'loyalty_card' }, { type: 'rewards' }, { type: 'menu' }, { type: 'branches' }],
 };
 
-export const PAGE_STYLES = ['spotlight', 'compact', 'branded'] as const;
+export const PAGE_STYLES = ['spotlight', 'compact', 'branded', 'playful', 'split'] as const;
 export type PageStyle = (typeof PAGE_STYLES)[number];
 
 /** Curated Google Fonts for the page (key → family); the Arabic ones also cover Latin. */

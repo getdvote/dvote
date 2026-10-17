@@ -1000,6 +1000,8 @@ export const en = {
     pageStyle: 'Page style',
     pageStyleHint: 'How your storefront page is laid out. Each style uses your logo, colours and font.',
     styles: {
+      playful: { name: 'Playful', hint: 'A soft colour wash and cards with a little tilt.' },
+      split: { name: 'Split', hint: 'Bold side accent, big shop name and clean sections.' },
       spotlight: { name: 'Spotlight', hint: 'Clean and centred: your logo on top. The default.' },
       compact: { name: 'Compact', hint: 'Your shop in a slim header, the sections right away.' },
       branded: { name: 'Branded card', hint: 'A full brand-colour header with the sections on a card.' },

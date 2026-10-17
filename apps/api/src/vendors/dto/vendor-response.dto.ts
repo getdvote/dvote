@@ -28,7 +28,7 @@ export class VendorResponseDto {
   @ApiProperty({ type: String, nullable: true })
   contactEmail: string | null;
 
-  @ApiProperty({ type: String, nullable: true, description: 'Public page layout: spotlight | compact | branded; null = spotlight' })
+  @ApiProperty({ type: String, nullable: true, description: 'Public page layout: spotlight | compact | branded | playful | split; null = spotlight' })
   pageStyle: string | null;
 
   @ApiProperty({ type: String, nullable: true }) brandPrimary: string | null;

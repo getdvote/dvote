@@ -18,7 +18,7 @@ const SAVE_KEY = ['vendor-style', 'save'];
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /**
- * Settings → Branding, the public page's look: page style (3 layouts), brand colours and the
+ * Settings → Branding, the public page's look: page style (5 layouts), brand colours and the
  * settings. Saves on its own; the customer page (and the Storefront preview) follow.
  */
 export function BrandStyleEditor() {
@@ -47,7 +47,7 @@ export function BrandStyleEditor() {
             <SaveStatus />
           </CardAction>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {PAGE_STYLES.map((s) => (
             <button
               key={s}
@@ -199,7 +199,20 @@ function StyleMock({
   );
   return (
     <span className="block aspect-[3/4] w-full overflow-hidden rounded-xl border bg-neutral-50 text-neutral-900" dir="ltr">
-      {style === 'branded' ? (
+      {style === 'playful' ? (
+        <span className="flex h-full flex-col items-center gap-2 p-2 pt-4" style={{ background: `color-mix(in srgb, ${primary} 10%, white)` }}>
+          <span className="-rotate-6">{logo('size-9')}</span>
+          <span className="max-w-full truncate text-[10px] font-bold">{name}</span>
+          <span className="w-full rotate-2">{lines}</span>
+        </span>
+      ) : style === 'split' ? (
+        <span className="flex h-full flex-col gap-2 border-s-4 bg-white p-2 pt-4" style={{ borderColor: primary }}>
+          {logo('size-7')}
+          <span className="truncate text-[12px] font-bold">{name}</span>
+          <span className="h-1 w-6 rounded-full" style={{ background: secondary }} />
+          {lines}
+        </span>
+      ) : style === 'branded' ? (
         <span className="flex h-full flex-col">
           <span className="flex flex-col items-center gap-1 px-3 pt-4 pb-6" style={{ background: `linear-gradient(160deg, ${primary}, ${secondary})` }}>
             {logo('size-8')}

@@ -86,7 +86,7 @@ export function VenuePage() {
   const { vendor, colors, font } = brand;
 
   const rows = (
-    <div className="grid gap-3">
+    <div className={cx('grid gap-3', vendor.style.pageStyle === 'playful' && 'px-1 [&>*:nth-child(odd)]:rotate-1 [&>*:nth-child(even)]:-rotate-1 [&>*]:shadow-sm')}>
       {vendor.sections.map((s) => (
         <SectionRow key={s.type} section={s} brand={brand} />
       ))}
@@ -95,7 +95,24 @@ export function VenuePage() {
 
   return (
     <Page>
-      {vendor.style.pageStyle === 'branded' ? (
+      {vendor.style.pageStyle === 'playful' ? (
+        <div className="rounded-3xl p-4" style={{ background: `color-mix(in srgb, ${colors.primary} 10%, white)` }}>
+          <header className="mb-7 flex flex-col items-center gap-4 text-center">
+            <Logo vendor={vendor} colors={colors} className="-rotate-6 ring-4 ring-white" />
+            <h1 className="text-2xl font-bold" style={{ fontFamily: font, color: colors.accent }}>{vendor.name}</h1>
+          </header>
+          {rows}
+        </div>
+      ) : vendor.style.pageStyle === 'split' ? (
+        <div className="border-s-8 ps-4" style={{ borderColor: colors.primary }}>
+          <header className="mb-6 flex flex-col items-start gap-4 border-b border-line pb-5">
+            <Logo vendor={vendor} colors={colors} size="size-16 rounded-2xl text-2xl" />
+            <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: font }}>{vendor.name}</h1>
+            <span className="h-1 w-12 rounded-full" style={{ background: colors.secondary }} />
+          </header>
+          {rows}
+        </div>
+      ) : vendor.style.pageStyle === 'branded' ? (
         <>
           <header
             className="-mx-5 -mt-7 flex flex-col items-center rounded-t-[28px] px-5 pt-8 pb-14 text-center sm:-mx-8 sm:px-8"

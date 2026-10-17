@@ -79,7 +79,7 @@ CREATE TABLE vendors (
     updated_at     timestamptz   NOT NULL DEFAULT now(),
     -- the public page (migration 22): sections in order, its style, brand colours and font
     storefront      jsonb         CONSTRAINT vendors_storefront_ck CHECK (storefront IS NULL OR jsonb_typeof(storefront) = 'object'),
-    page_style      varchar(20)   CONSTRAINT vendors_page_style_ck CHECK (page_style IN ('spotlight', 'compact', 'branded')),
+    page_style      varchar(20)   CONSTRAINT vendors_page_style_ck CHECK (page_style IN ('spotlight', 'compact', 'branded', 'playful', 'split')),
     brand_primary   varchar(7),
     brand_secondary varchar(7),
     brand_font      varchar(40),

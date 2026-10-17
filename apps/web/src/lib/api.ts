@@ -23,7 +23,7 @@ export interface PublicVendor {
   menu: string[];
 }
 
-export type PageStyle = 'spotlight' | 'compact' | 'branded';
+export type PageStyle = 'spotlight' | 'compact' | 'branded' | 'playful' | 'split';
 export type Section =
   | { type: 'loyalty'; label: 'loyalty_card' | 'join_club' | 'collect_points' }
   | { type: 'rewards' }
