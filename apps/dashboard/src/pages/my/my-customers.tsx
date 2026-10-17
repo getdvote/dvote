@@ -597,10 +597,8 @@ function CustomerProfile({
                 {data.events.length ? (
                   <ol className="divide-y">
                     {data.events.map((e) => (
-                      <li
-                        key={e.id}
-                      >
-                        <button type="button" onClick={() => setEventId(e.id)} className="flex w-full justify-between gap-3 rounded-lg py-3 text-start transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <li key={e.id} className="py-1">
+                        <button type="button" onClick={() => setEventId(e.id)} className="flex w-full justify-between gap-3 rounded-lg px-3 py-3 text-start transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <div>
                           <p className="text-sm font-medium">
                             {e.type === "earn"
