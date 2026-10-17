@@ -1,17 +1,19 @@
 # apps/staff — dvote staff app
 
 Expo (React Native) app for vendor staff: **one codebase for the web (any phone/PC browser)
-and iOS/Android**. Its only job: scan the customer's one-time QR, enter the bill amount,
-and let the server add the points.
+and iOS/Android**. Collect points from a receipt total, or scan a saved Wallet card to
+choose and confirm a reward. The server validates every balance change.
 
 Screens (`src/app`, Expo Router), following the designs:
 
 | Route | Screen |
 |---|---|
 | `/login` | Login with your provided account (email + password from the vendor's invite) |
-| `/home` | Welcome + vendor logo + branch, the point rule, **Start scanning** (vendor admins pick a branch) |
+| `/home` | **Collect / Redeem** tabs, vendor logo + branch, **Start scanning** (merchant admins pick a branch) |
 | `/scan` | Camera QR scanner (web and native), or "Type the code instead" |
 | `/amount` | Enter bill amount, live points estimate, the rule, **Grant points** |
+| `/rewards` | Scanned Wallet customer, points balance and merchant rewards; unavailable/unaffordable choices disabled |
+| `/redeem` | Fresh reward preview and **Give reward** confirmation |
 | `/done` | "N points granted, Thanks!" + Back home |
 
 The server decides the points (`POST /api/vendor/scans/collect`); the app only shows an estimate.

@@ -9,18 +9,17 @@ import { api, errorMessage, type PublicCard } from '../lib/api';
 import { platform } from '../lib/device';
 
 /**
- * dvote.app/c/<publicId>: "You're enrolled!" and the card, with the wallet button for this
- * phone only (iPhone → Apple Wallet, Android → Google Wallet; a computer sees both and a QR to
- * open the page on the phone). Google Wallet works; Apple Wallet needs the paid Apple account.
+ * Card and both Wallet buttons, with the phone's preferred wallet first.
+ * Only saved wallets are disabled. Apple currently explains its pending setup.
  */
 export function CardPage() {
   const { publicId } = useParams();
   const [params] = useSearchParams();
   const [card, setCard] = useState<PublicCard | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showOther, setShowOther] = useState(false);
   const [adding, setAdding] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [appleNotice, setAppleNotice] = useState(false);
   const [inWallet, setInWallet] = useState<{ google: boolean; apple: boolean } | null>(null);
   const device = platform();
 
@@ -29,7 +28,7 @@ export function CardPage() {
     api.card(publicId).then(setCard, (e) => setError(errorMessage(e)));
   }, [publicId]);
 
-  // Already in a wallet? Then the add buttons go. Checked again when the customer comes back
+  // Disable only the saved wallet. Checked again when the customer comes back
   // from Google's save page (the tab becomes visible).
   useEffect(() => {
     if (!publicId) return;
@@ -68,10 +67,9 @@ export function CardPage() {
   };
   const link = `${window.location.origin}/c/${card.publicId}`;
   const heading = params.get('new') ? t('card.enrolled') : params.get('back') ? t('card.welcomeBack') : t('card.yours');
-  const apple = <WalletButton kind="apple" />;
-  const google = <WalletButton kind="google" onClick={() => void addGoogle()} busy={adding} />;
-  // Samsung Wallet: not issued yet, shown disabled where Samsung phones are (Android, and computers)
-  const samsung = <WalletButton kind="samsung" />;
+  const apple = <WalletButton kind="apple" disabled={inWallet?.apple} onClick={() => setAppleNotice(true)} />;
+  const google = <WalletButton kind="google" onClick={() => void addGoogle()} busy={adding} disabled={inWallet?.google} />;
+  const samsung = <WalletButton kind="samsung" disabled />;
 
   return (
     <Page>
@@ -83,35 +81,16 @@ export function CardPage() {
           <Check className="size-5 shrink-0" />
           {inWallet.google ? t('card.inGoogle') : t('card.inApple')}
         </p>
-      ) : (
+      ) : null}
       <div className="mt-6 grid justify-items-center gap-3">
         <p className="text-center text-[14px] text-muted">{t('card.addWithButtons')}</p>
-        {device === 'ios' ? apple : device === 'android' ? (
-          <>
-            {google}
-            {samsung}
-          </>
-        ) : (
-          <>
-            {apple}
-            {google}
-            {samsung}
-          </>
-        )}
-        {device !== 'other' ? (
-          showOther ? (
-            device === 'ios' ? google : apple
-          ) : (
-            <button type="button" className="text-[14px] text-muted underline underline-offset-4" onClick={() => setShowOther(true)}>
-              {t('card.otherWallet')}
-            </button>
-          )
-        ) : null}
+        {device === 'ios' ? apple : google}
+        {device === 'ios' ? google : apple}
+        {device !== 'ios' ? samsung : null}
         <ErrorNote>{walletError}</ErrorNote>
-        {device === 'ios' || device === 'other' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.appleSoon')}</p> : null}
-        {device === 'android' || device === 'other' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.samsungSoon')}</p> : null}
+        {appleNotice && <p role="status" className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.appleSoon')}</p>}
+        {device !== 'ios' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.samsungSoon')}</p> : null}
       </div>
-      )}
 
       {device === 'other' && !inWallet?.google && !inWallet?.apple ? (
         <>
@@ -140,12 +119,12 @@ export function CardPage() {
   );
 }
 
-/** Official supplied badges; Apple and Samsung stay disabled until their passes are issued. */
-function WalletButton({ kind, onClick, busy }: { kind: 'apple' | 'google' | 'samsung'; onClick?: () => void; busy?: boolean }) {
+/** Official supplied badges; each wallet has its own saved status. */
+function WalletButton({ kind, onClick, busy, disabled }: { kind: 'apple' | 'google' | 'samsung'; onClick?: () => void; busy?: boolean; disabled?: boolean }) {
   return (
     <button
       type="button"
-      disabled={!onClick || busy}
+      disabled={disabled || busy}
       aria-busy={busy || undefined}
       onClick={onClick}
       className="inline-flex h-16 w-56 max-w-full items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 disabled:cursor-not-allowed disabled:opacity-60"

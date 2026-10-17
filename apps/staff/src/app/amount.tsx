@@ -1,8 +1,8 @@
 import { randomUUID } from 'expo-crypto';
 import { Redirect, router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
-import { ErrorBox, Field, PrimaryButton, Screen, TextLink, VendorHeader } from '../components/ui';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Text, ErrorBox, Field, PrimaryButton, Screen, TextLink, VendorHeader } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { describeRule, estimatePoints, parseAmount } from '../lib/points';
 import { useSession } from '../lib/session';

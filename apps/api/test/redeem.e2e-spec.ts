@@ -9,6 +9,9 @@ import { configureApp } from './../src/app.setup';
 import { SUPABASE_JWKS } from './../src/auth/supabase-jwt.verifier';
 import type { staff_role } from './../src/generated/prisma/client.js';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { cardQr, cardSecret, hashCardSecret } from '../src/wallet/card-token';
+import { GoogleWalletService } from '../src/wallet/google-wallet.service';
+import { BroadcastsService } from '../src/broadcasts/broadcasts';
 import { createTestSigner, type TestSigner } from './helpers/test-auth';
 
 const run = randomUUID().slice(0, 8);
@@ -90,6 +93,8 @@ describe('Redeem a reward: customer QR → staff confirm (e2e)', () => {
     await seedStaff('staffA1', ids.vendorA, ids.branchA1, 'staff');
     await seedStaff('adminA', ids.vendorA, null, 'vendor_admin');
     await seedStaff('staffB1', ids.vendorB, ids.branchB1, 'staff');
+    await seedStaff('managerA', ids.vendorA, ids.branchA1, 'branch_manager');
+    await seedStaff('viewerA', ids.vendorA, null, 'viewer');
     await seedCustomer('mona', 'Mona Ali');
     await seedCustomer('omar', 'Omar Hassan');
   });
@@ -99,6 +104,8 @@ describe('Redeem a reward: customer QR → staff confirm (e2e)', () => {
     const users = await prisma.users.findMany({ where: { auth_user_id: { in: customerSubs } }, select: { id: true } });
     await prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe('SET LOCAL session_replication_role = replica');
+      await tx.wallet_broadcast_recipients.deleteMany({ where: { vendor_id: { in: v } } });
+      await tx.wallet_broadcasts.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.redemptions.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.point_events.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.cards.deleteMany({ where: { vendor_id: { in: v } } });
@@ -111,6 +118,86 @@ describe('Redeem a reward: customer QR → staff confirm (e2e)', () => {
       await tx.users.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     });
     await app.close();
+  });
+
+  it('viewers cannot preview, collect or redeem, while all three till roles can collect and redeem', async () => {
+    for (const route of ['preview', 'collect', 'redeem']) {
+      const response = await as('viewerA', 'post', `/api/vendor/scans/${route}`).send({}).expect(403);
+      expect(response.body.code).toBe('forbidden_role');
+    }
+    await seedCustomer('roleAccess', 'Role Access Customer');
+    for (const who of ['adminA', 'managerA', 'staffA1']) {
+      const collect = (await as('roleAccess', 'post', '/api/app/qr-codes').send({ purpose: 'collect' }).expect(201)).body;
+      await as(who, 'post', '/api/vendor/scans/preview').send({ code: collect.code }).expect(200);
+      await as(who, 'post', '/api/vendor/scans/collect').send({ code: collect.code, amount: 4000, branchId: ids.branchA1, idempotencyKey: randomUUID() }).expect(200);
+      const redeem = (await redeemQr('roleAccess', rewards.coffee).expect(201)).body;
+      await as(who, 'post', '/api/vendor/scans/redeem').send({ code: redeem.code, branchId: ids.branchA1, idempotencyKey: randomUUID() }).expect(200);
+    }
+    expect((await cardA('roleAccess')).balance).toBe(300);
+    await expectLedgerMatches();
+  });
+
+  it('wallet: identifies the customer, lists merchant rewards and redeems safely with Wallet sync', async () => {
+    await seedCustomer('wallet', 'Wallet Customer');
+    await earn('wallet', 10000);
+    const card = await cardA('wallet');
+    const row = await prisma.cards.findUniqueOrThrow({ where: { id: card.id } });
+    const secret = cardSecret('test-wallet-redemption-secret', row.id);
+    const code = cardQr(secret);
+    await prisma.cards.update({ where: { id: row.id }, data: { token_hash: hashCardSecret(secret), google_object_id: `test.${row.id}` } });
+    const expensive = await prisma.rewards.create({ data: { vendor_id: ids.vendorA, name: 'Big reward', points_cost: 1500 } });
+    const preview = (await as('staffA1', 'post', '/api/vendor/scans/preview').send({ code, intent: 'redeem' }).expect(200)).body;
+    expect(preview.wallet).toMatchObject({ customerName: 'Wallet Customer', balance: 1000 });
+    expect(preview.wallet.rewards.find((r: { rewardId: string }) => r.rewardId === expensive.id)).toMatchObject({ usable: false, reason: 'insufficient_points' });
+    expect(preview.wallet.rewards.some((r: { rewardId: string }) => r.rewardId === rewards.other)).toBe(false);
+    const redeem = (staff: string, rewardId?: string, key = randomUUID(), extra = {}) => as(staff, 'post', '/api/vendor/scans/redeem').send({ code, rewardId, idempotencyKey: key, ...extra });
+    await prisma.reward_sold_outs.create({ data: { vendor_id: ids.vendorA, branch_id: ids.branchA1, reward_id: rewards.coffee } });
+    try {
+      const unavailable = (await as('adminA', 'post', '/api/vendor/scans/preview').send({ code, intent: 'redeem', previewBranchId: ids.branchA1 }).expect(200)).body;
+      expect(unavailable.wallet.rewards.find((r: { rewardId: string }) => r.rewardId === rewards.coffee)).toMatchObject({ usable: false, reason: 'reward_sold_out' });
+      expect((await redeem('staffA1', rewards.coffee).expect(409)).body.code).toBe('reward_sold_out');
+    } finally { await prisma.reward_sold_outs.deleteMany({ where: { reward_id: rewards.coffee } }); }
+    await redeem('staffA1').expect(400);
+    await redeem('staffB1', rewards.coffee).expect(403);
+    await redeem('staffA1', rewards.other).expect(404);
+    await redeem('staffA1', expensive.id).expect(409);
+    expect((await redeem('staffA1', rewards.coffee, randomUUID(), { expectedPointsCost: 200 }).expect(409)).body.code).toBe('reward_changed');
+    const sync = jest.spyOn(app.get(GoogleWalletService), 'userChanged');
+    const key = randomUUID();
+    const [first, repeated] = await Promise.all([redeem('staffA1', rewards.coffee, key), redeem('staffA1', rewards.coffee, key)]);
+    expect(first.status).toBe(200); expect(repeated.status).toBe(200);
+    expect(first.body).toMatchObject({ pointsRedeemed: 300, cardBalance: 700 });
+    expect(repeated.body.redemptionId).toBe(first.body.redemptionId);
+    const notifications = await prisma.wallet_broadcasts.findMany({ where: { idempotency_key: `redemption:${first.body.redemptionId}` }, include: { wallet_broadcast_recipients: true } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].body).toBe('You have redeemed your reward successfully: Free coffee. 300 points used. Your balance is 700 points.');
+    expect(notifications[0].wallet_broadcast_recipients).toHaveLength(1);
+    expect((await as('adminA', 'get', '/api/vendor/broadcasts').expect(200)).body).toEqual([]);
+    expect(sync).toHaveBeenCalledWith(row.user_id); sync.mockRestore();
+    await redeem('staffA1', rewards.cake, key).expect(409);
+    const results = await Promise.all([redeem('staffA1', rewards.cake), redeem('staffA1', rewards.cake)]);
+    expect(results.map(r => r.status).sort((a, b) => a - b)).toEqual([200, 409]);
+    expect((await cardA('wallet')).balance).toBe(200);
+    // Provider failure happens after commit and cannot reverse the successful redemption.
+    const google = app.get(GoogleWalletService);
+    const enabled = jest.spyOn(google, 'enabled', 'get').mockReturnValue(true);
+    const notify = jest.spyOn(google, 'notifyCard').mockRejectedValue(new Error('Provider unavailable'));
+    try {
+      await app.get(BroadcastsService).processPending();
+      expect(notify).toHaveBeenCalledWith(`test.${row.id}`, expect.any(String), 'Reward redeemed successfully', notifications[0].body);
+      const count = notify.mock.calls.length;
+      await app.get(BroadcastsService).processPending();
+      expect(notify).toHaveBeenCalledTimes(count);
+      expect((await cardA('wallet')).balance).toBe(200);
+    } finally { notify.mockRestore(); enabled.mockRestore(); }
+    await expectLedgerMatches();
+    const event = await prisma.point_events.findUniqueOrThrow({ where: { idempotency_key: key }, include: { redemptions: true } });
+    expect(event).toMatchObject({ qr_code_id: null, scan_source: 'wallet_card', delta: -300, redemptions: { reward_name: 'Free coffee', points_cost: 300 } });
+    await prisma.point_rules.updateMany({ where: { vendor_id: ids.vendorA }, data: { is_active: false } });
+    try {
+      expect((await as('staffA1', 'post', '/api/vendor/scans/preview').send({ code, intent: 'redeem' }).expect(200)).body.usable).toBe(true);
+      expect((await as('staffA1', 'post', '/api/vendor/scans/preview').send({ code }).expect(200)).body.reason).toBe('no_active_rule');
+    } finally { await prisma.point_rules.updateMany({ where: { vendor_id: ids.vendorA }, data: { is_active: true } }); }
   });
 
   it('no card / not enough points → the app gets 409 insufficient_points, no QR', async () => {

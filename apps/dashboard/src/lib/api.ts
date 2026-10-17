@@ -307,11 +307,18 @@ export interface VendorPatterns {
 
 /** POST /api/vendor/scans/preview: what a scanned customer QR is. Changes nothing. */
 export interface ScanPreview {
+  wallet?: WalletCardPreview | null;
   purpose: 'collect' | 'redeem';
   usable: boolean;
   reason: string | null;
-  expiresAt: string;
+  expiresAt: string | null;
   redeem?: RedeemPreview | null;
+}
+
+export interface WalletCardPreview {
+  customerName: string | null;
+  balance: number;
+  rewards: (RedeemPreview & { usable: boolean; reason: string | null })[];
 }
 
 export interface RedeemPreview {
@@ -697,6 +704,8 @@ export const api = {
   removeBanner: (id: string) => call<Vendor>('DELETE', `/api/admin/vendors/${id}/banner`),
   inviteVendorAdmin: (id: string, body: { name: string; email: string }) =>
     call<Staff & { invited: boolean }>('POST', `/api/admin/vendors/${id}/admins`, body),
+  inviteVendorStaff: (id: string, body: { name: string; email: string; role: StaffRole; branchId?: string }) =>
+    call<Staff & { invited: boolean }>('POST', `/api/admin/vendors/${id}/staff`, body),
 
   branches: (vendorId: string) => call<Branch[]>('GET', `/api/admin/vendors/${vendorId}/branches`),
   createBranch: (vendorId: string, body: Partial<Branch>) => call<Branch>('POST', `/api/admin/vendors/${vendorId}/branches`, body),
@@ -824,10 +833,10 @@ export const vendorApi = {
   deleteImage: (id: string) => call<void>('DELETE', `/api/vendor/images/${id}`),
 
   /** The till: the same scan calls as the staff app. */
-  scanPreview: (code: string) => call<ScanPreview>('POST', '/api/vendor/scans/preview', { code }),
+  scanPreview: (code: string, intent: 'collect' | 'redeem' = 'collect', previewBranchId?: string) => call<ScanPreview>('POST', '/api/vendor/scans/preview', { code, intent, previewBranchId }),
   collect: (body: { code: string; amount: number; branchId?: string; idempotencyKey: string }) =>
     call<CollectResult>('POST', '/api/vendor/scans/collect', body),
-  redeem: (body: { code: string; branchId?: string; idempotencyKey: string }) => call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
+  redeem: (body: { code: string; rewardId?: string; expectedPointsCost?: number; branchId?: string; idempotencyKey: string }) => call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
   patterns: (q: { branchId?: string }) => call<VendorPatterns>('GET', `/api/vendor/insights/patterns${qs({ ...q })}`),
   scansToday: () => call<{ collects: number; redemptions: number }>('GET', '/api/vendor/scans/today'),
 

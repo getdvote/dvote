@@ -4,6 +4,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Shared branch maps follow the dashboard theme without filtering map artwork. */
+.branch-location-map .maplibregl-map { background: var(--muted); font-family: var(--font-sans); }
+.branch-location-map .maplibregl-ctrl-group {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    box-shadow: 0 2px 10px #00000012;
+}
+.branch-location-map .maplibregl-ctrl-group button { width: 34px; height: 34px; }
+.branch-location-map .maplibregl-ctrl-group button + button { border-color: var(--border); }
+.branch-location-map .maplibregl-ctrl-group button:hover { background: var(--muted); }
+.dark .branch-location-map .maplibregl-ctrl-icon { filter: invert(1); }
+.branch-location-map .maplibregl-ctrl-attrib {
+    padding: 3px 8px;
+    border-start-start-radius: 8px;
+    background: var(--card);
+    color: var(--muted-foreground);
+    font-size: 10px;
+}
+.branch-location-map .maplibregl-ctrl-attrib a { color: inherit; text-decoration: underline; }
+.branch-map-marker { width: 34px; height: 34px; cursor: grab; }
+.branch-map-marker:active { cursor: grabbing; }
+.branch-map-pin {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--card);
+    border-radius: 50% 50% 50% 0;
+    background: var(--primary);
+    transform: rotate(-45deg);
+    box-shadow: 0 3px 12px #00000040;
+}
+.branch-map-pin span { width: 9px; height: 9px; border-radius: 50%; background: var(--primary-foreground); }
+
 /*
  * dvote design: warm stone neutrals with near-black as the one accent (white in dark mode),
  * Inter, a stone canvas with the page on a white panel and white rounded cards. Light is the default; .dark on <html> switches every token.

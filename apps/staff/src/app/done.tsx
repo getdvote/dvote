@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { PrimaryButton, Screen, VendorHeader } from '../components/ui';
+import { StyleSheet, View } from 'react-native';
+import { Text, PrimaryButton, Screen, VendorHeader } from '../components/ui';
 import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
@@ -29,11 +29,18 @@ export default function Done() {
       <View style={styles.middle} accessibilityLiveRegion="polite">
         {kind === 'redeem' ? (
           <>
-            <Text style={styles.big}>Reward given:{'\n'}{reward}</Text>
+            <Text style={styles.big}>
+              Reward given:{'\n'}
+              {reward}
+            </Text>
             <Text style={styles.detail}>
               {n.toLocaleString('en-US')} points taken{customer ? ` from ${customer}` : ''}.
             </Text>
-            {balance ? <Text style={styles.detail}>The customer has {Number(balance).toLocaleString('en-US')} points left.</Text> : null}
+            {balance ? (
+              <Text style={styles.detail}>
+                The customer has {Number(balance).toLocaleString('en-US')} points left.
+              </Text>
+            ) : null}
           </>
         ) : (
           <>
@@ -49,7 +56,12 @@ export default function Done() {
         )}
       </View>
       <View style={styles.footer}>
-        <PrimaryButton title="Back home" onPress={() => router.replace('/home')} />
+        <PrimaryButton
+          title="Back home"
+          onPress={() =>
+            router.replace({ pathname: '/home', params: { mode: kind === 'redeem' ? 'redeem' : 'collect' } })
+          }
+        />
       </View>
     </Screen>
   );

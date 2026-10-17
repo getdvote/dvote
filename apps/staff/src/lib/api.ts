@@ -10,7 +10,7 @@ export interface StaffMe {
   id: string;
   name: string;
   email: string;
-  role: 'vendor_admin' | 'branch_manager' | 'staff';
+  role: 'vendor_admin' | 'branch_manager' | 'staff' | 'viewer';
   vendor: { id: string; name: string; logoUrl: string | null; currency: string };
   branch: { id: string; name: string } | null;
   branches: { id: string; name: string }[];
@@ -30,6 +30,12 @@ export interface ScanPreview {
   expiresAt: string | null;
   /** A usable redeem QR: what to confirm (the reward and who is redeeming it). */
   redeem?: RedeemPreview | null;
+  wallet?: { customerName: string | null; balance: number; rewards: WalletRewardPreview[] } | null;
+}
+
+export interface WalletRewardPreview extends RedeemPreview {
+  usable: boolean;
+  reason: string | null;
 }
 
 export interface RedeemPreview {
@@ -109,16 +115,18 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
 
 export const api = {
   me: () => call<StaffMe>('GET', '/api/vendor/staff/me'),
-  preview: (code: string) => call<ScanPreview>('POST', '/api/vendor/scans/preview', { code }),
-  collect: (body: {
+  preview: (code: string, intent: 'collect' | 'redeem' = 'collect', previewBranchId?: string) =>
+    call<ScanPreview>('POST', '/api/vendor/scans/preview', { code, intent, previewBranchId }),
+  collect: (body: { code: string; amount: number; branchId?: string; idempotencyKey: string }) =>
+    call<CollectResult>('POST', '/api/vendor/scans/collect', body),
+  /** Give the reward: its points are taken from the customer's card. */
+  redeem: (body: {
     code: string;
-    amount: number;
     branchId?: string;
     idempotencyKey: string;
-  }) => call<CollectResult>('POST', '/api/vendor/scans/collect', body),
-  /** Give the reward: its points are taken from the customer's card. */
-  redeem: (body: { code: string; branchId?: string; idempotencyKey: string }) =>
-    call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
+    rewardId?: string;
+    expectedPointsCost?: number;
+  }) => call<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
 };
 
 /** What staff see for each error code. */
@@ -130,20 +138,26 @@ export function friendlyMessage(code: string, serverMessage?: string): string {
     qr_cancelled: 'The customer opened a newer QR. Please scan the new one.',
     wrong_qr_type: "This QR can't be used for this. Ask the customer to show the right one.",
     reward_unavailable: 'This reward is no longer available.',
-    reward_sold_out: "This reward is marked sold out at your branch. If you have it again, put it back on sale in the dashboard (Rewards).",
+    reward_changed: 'The reward price changed. Go back and select the reward again.',
+    reward_sold_out:
+      'This reward is marked sold out at your branch. If you have it again, put it back on sale in the dashboard (Rewards).',
     insufficient_points: "The customer doesn't have enough points for this reward.",
     rate_limited: 'Too many scans in a short time. Wait a minute and try again.',
     idempotency_key_reused: 'Something went wrong. Please scan the QR again.',
     // In Arabic for the counter staff (the staff app is otherwise English for now).
-    vendor_mismatch: 'هذا الرمز خاص بمتجر آخر. اطلب من العميل فتح صفحة متجرك في تطبيق dvote، أو استخدام رمزه الرئيسي.',
+    vendor_mismatch:
+      'هذا الرمز خاص بمتجر آخر. اطلب من العميل فتح صفحة متجرك في تطبيق dvote، أو استخدام رمزه الرئيسي.',
     user_blocked: "This customer's account is blocked.",
     // In Arabic for the counter staff, like vendor_mismatch.
-    no_active_rule: 'لا توجد قاعدة نقاط لمتجرك بعد. اطلب من مسؤول المتجر (merchant admin) إضافة قاعدة النقاط من لوحة التحكم حتى نتمكن من حساب نقاط العملاء.',
+    no_active_rule:
+      'لا توجد قاعدة نقاط لمتجرك بعد. اطلب من مسؤول المتجر (merchant admin) إضافة قاعدة النقاط من لوحة التحكم حتى نتمكن من حساب نقاط العملاء.',
     duplicate_receipt: 'This receipt already earned points.',
     branch_required: 'Choose your branch first.',
     invalid_branch: 'This branch is not available.',
     forbidden_branch: 'You can only add points at your own branch.',
     not_staff: 'This account is not a staff account.',
+    staff_app_not_allowed: 'Viewer accounts cannot use the staff app. Use the dashboard for read-only access.',
+    forbidden_role: 'Your role cannot collect points or redeem rewards. Ask your merchant admin.',
     staff_disabled: 'Your staff account is disabled. Ask your manager.',
     vendor_suspended: 'Your shop is suspended on dvote.',
     branch_closed: 'Your branch is closed on dvote.',
@@ -163,4 +177,6 @@ export const SIGN_OUT_CODES = new Set([
   'staff_disabled',
   'vendor_suspended',
   'branch_closed',
+  'forbidden_role',
+  'staff_app_not_allowed',
 ]);

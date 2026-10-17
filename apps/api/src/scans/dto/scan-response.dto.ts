@@ -19,8 +19,20 @@ export class PreviewRedeemDto {
   @ApiProperty({ example: 700, description: 'Points left after this redemption' }) balanceAfter: number;
 }
 
-/** What the staff app shows right after scanning. Collect: no customer personal data. */
+export class WalletRewardPreviewDto extends PreviewRedeemDto {
+  @ApiProperty() usable: boolean;
+  @ApiProperty({ type: String, nullable: true }) reason: string | null;
+}
+export class WalletCardPreviewDto {
+  @ApiProperty({ type: String, nullable: true }) customerName: string | null;
+  @ApiProperty() balance: number;
+  @ApiProperty({ type: [WalletRewardPreviewDto] }) rewards: WalletRewardPreviewDto[];
+}
+
+/** What the staff app shows right after scanning. */
 export class PreviewScanResponseDto {
+  @ApiPropertyOptional({ type: WalletCardPreviewDto, nullable: true })
+  wallet?: WalletCardPreviewDto | null;
   @ApiProperty({ enum: qr_purpose, enumName: 'QrPurpose' })
   purpose: qr_purpose;
 

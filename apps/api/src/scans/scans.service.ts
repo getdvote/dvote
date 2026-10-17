@@ -14,6 +14,7 @@ import { isSoldOut } from '../rewards/reward-sold-outs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { tokenHashOf } from '../qr-codes/qr-code.token';
 import { CARD_QR_PREFIX, hashCardSecret } from '../wallet/card-token';
+import { queueRedemptionNotification } from '../wallet/redemption-notification';
 import { CollectScanDto, RedeemScanDto } from './dto/scan.dto';
 import {
   CollectResponseDto,
@@ -58,12 +59,25 @@ export class ScansService {
   async preview(
     ctx: StaffContext,
     code: string,
+    intent: 'collect' | 'redeem' = 'collect',
+    requestedBranch?: string,
   ): Promise<PreviewScanResponseDto> {
     if (code.startsWith(CARD_QR_PREFIX)) {
       const card = await this.findWalletCard(code, ctx);
+      const branch = requestedBranch ? await this.resolveBranch(ctx, requestedBranch) : ctx.branchId ? await this.resolveBranch(ctx) : null;
       const rule = await this.prisma.point_rules.findFirst({ where: { vendor_id: ctx.vendorId, is_active: true } });
-      const reason = card.users.status !== 'active' ? 'user_blocked' : !rule ? 'no_active_rule' : null;
-      return { purpose: 'collect', usable: !reason, reason, expiresAt: null, redeem: null };
+      const reason = card.users.status !== 'active' ? 'user_blocked' : intent === 'collect' && !rule ? 'no_active_rule' : null;
+      const rewards = reason ? [] : await this.prisma.rewards.findMany({ where: { vendor_id: ctx.vendorId, status: 'active' }, orderBy: [{ sort_order: 'asc' }, { points_cost: 'asc' }, { id: 'asc' }] });
+      const choices = await Promise.all(rewards.map(async reward => {
+        const soldOut = branch ? await isSoldOut(this.prisma, reward.id, branch.id) : false;
+        const problem = soldOut ? 'reward_sold_out' : card.balance < reward.points_cost ? 'insufficient_points' : null;
+        return { rewardId: reward.id, rewardName: reward.name, rewardNameAr: reward.name_ar,
+          rewardDescription: reward.description, rewardImageUrl: reward.image_url, pointsCost: reward.points_cost,
+          customerName: card.users.name, balance: card.balance, balanceAfter: card.balance - reward.points_cost,
+          usable: !problem, reason: problem };
+      }));
+      return { purpose: 'collect', usable: !reason, reason, expiresAt: null, redeem: null,
+        wallet: reason ? null : { customerName: card.users.name, balance: card.balance, rewards: choices } };
     }
     const qr = await this.findQr(code);
     const [user, rule] = await Promise.all([
@@ -138,23 +152,30 @@ export class ScansService {
    * −cost) + redemptions row (name and cost snapshot). The customer's app is told at once.
    */
   async redeem(ctx: StaffContext, dto: RedeemScanDto): Promise<RedeemResponseDto> {
-    const qr = await this.findQr(dto.code);
+    const walletCard = dto.code.startsWith(CARD_QR_PREFIX) ? await this.findWalletCard(dto.code, ctx) : null;
+    const qr = walletCard ? null : await this.findQr(dto.code);
+    if (walletCard && !dto.rewardId) throw new BadRequestException({ code: 'reward_required' });
+    if (qr && dto.rewardId && dto.rewardId !== qr.reward_id) throw new BadRequestException({ code: 'wrong_qr_type' });
+    const rewardId = walletCard ? dto.rewardId! : qr!.reward_id;
+    const userId = walletCard?.user_id ?? qr!.user_id;
 
-    const replay = await this.replayRedeem(dto.idempotencyKey, qr.id);
+    const replay = await this.replayRedeem(dto.idempotencyKey, qr?.id ?? null, walletCard?.id, rewardId ?? undefined, ctx.staffId);
     if (replay) return replay;
 
-    const problem = this.stateProblem(qr);
+    const problem = qr ? this.stateProblem(qr) : null;
     if (problem) throw new ConflictException({ code: problem });
-    if (qr.purpose !== 'redeem') throw new BadRequestException({ code: 'wrong_qr_type' });
+    if (qr && qr.purpose !== 'redeem') throw new BadRequestException({ code: 'wrong_qr_type' });
     // The customer chose this shop's reward: only this shop's staff can give it.
-    if (this.wrongVendor(qr, ctx)) throw new ForbiddenException({ code: 'vendor_mismatch' });
+    if (qr && this.wrongVendor(qr, ctx)) throw new ForbiddenException({ code: 'vendor_mismatch' });
 
     const branch = await this.resolveBranch(ctx, dto.branchId);
     const [user, reward] = await Promise.all([
-      this.prisma.users.findUniqueOrThrow({ where: { id: qr.user_id }, select: { id: true, status: true } }),
-      this.prisma.rewards.findUniqueOrThrow({ where: { id: qr.reward_id! } }),
+      this.prisma.users.findUniqueOrThrow({ where: { id: userId }, select: { id: true, status: true } }),
+      this.prisma.rewards.findFirst({ where: { id: rewardId!, vendor_id: ctx.vendorId } }),
     ]);
     if (user.status !== 'active') throw new ForbiddenException({ code: 'user_blocked' });
+    if (!reward) throw new NotFoundException({ code: 'reward_not_found' });
+    if (dto.expectedPointsCost !== undefined && dto.expectedPointsCost !== reward.points_cost) throw new ConflictException({ code: 'reward_changed' });
     if (reward.status !== 'active') throw new ConflictException({ code: 'reward_unavailable' });
     if (await isSoldOut(this.prisma, reward.id, branch.id)) throw new ConflictException({ code: 'reward_sold_out' });
     const card = await this.prisma.cards.findUnique({
@@ -165,11 +186,13 @@ export class ScansService {
 
     try {
       const result = await this.prisma.$transaction(async (tx) => {
-        const marked = await tx.qr_codes.updateMany({
-          where: { id: qr.id, status: 'active', expires_at: { gt: new Date() } },
-          data: { status: 'used', used_at: new Date(), used_by_staff_id: ctx.staffId, used_branch_id: branch.id },
-        });
-        if (marked.count !== 1) throw new ConflictException({ code: 'qr_used' });
+        if (qr) {
+          const marked = await tx.qr_codes.updateMany({
+            where: { id: qr.id, status: 'active', expires_at: { gt: new Date() } },
+            data: { status: 'used', used_at: new Date(), used_by_staff_id: ctx.staffId, used_branch_id: branch.id },
+          });
+          if (marked.count !== 1) throw new ConflictException({ code: 'qr_used' });
+        }
 
         // Conditional decrement: never below zero, even with two confirms at once.
         const [left] = await tx.$queryRaw<{ balance: number }[]>`
@@ -186,7 +209,8 @@ export class ScansService {
             type: 'redeem',
             delta: -reward.points_cost,
             reward_id: reward.id,
-            qr_code_id: qr.id,
+            qr_code_id: qr?.id ?? null,
+            scan_source: walletCard ? 'wallet_card' : 'app_qr',
             staff_id: ctx.staffId,
             idempotency_key: dto.idempotencyKey,
           },
@@ -202,6 +226,10 @@ export class ScansService {
             reward_name: reward.name,
             points_cost: reward.points_cost,
           },
+        });
+        await queueRedemptionNotification(tx, {
+          redemptionId: redemption.id, cardId: card.id, vendorId: ctx.vendorId, staffId: ctx.staffId,
+          rewardName: redemption.reward_name, points: redemption.points_cost, balance: left.balance,
         });
         return { event, redemption, balance: left.balance };
       });
@@ -219,7 +247,7 @@ export class ScansService {
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         if (JSON.stringify(err.meta ?? {}).includes('idempotency')) {
-          const first = await this.replayRedeem(dto.idempotencyKey, qr.id);
+          const first = await this.replayRedeem(dto.idempotencyKey, qr?.id ?? null, walletCard?.id, rewardId ?? undefined, ctx.staffId);
           if (first) return first;
         }
         throw new ConflictException({ code: 'qr_used' });
@@ -229,13 +257,13 @@ export class ScansService {
   }
 
   /** The original result of a redeem retried with the same idempotency key. */
-  private async replayRedeem(key: string, qrId: string): Promise<RedeemResponseDto | null> {
+  private async replayRedeem(key: string, qrId: string | null, walletCardId?: string, rewardId?: string, staffId?: string): Promise<RedeemResponseDto | null> {
     const event = await this.prisma.point_events.findUnique({
       where: { idempotency_key: key },
       include: { redemptions: true, branches: { select: { name: true } }, cards: { select: { balance: true } } },
     });
     if (!event) return null;
-    if (event.qr_code_id !== qrId || event.type !== 'redeem' || !event.redemptions) {
+    if (event.qr_code_id !== qrId || event.type !== 'redeem' || !event.redemptions || (walletCardId && (event.card_id !== walletCardId || event.reward_id !== rewardId || event.staff_id !== staffId || event.scan_source !== 'wallet_card'))) {
       throw new ConflictException({ code: 'idempotency_key_reused' });
     }
     return {

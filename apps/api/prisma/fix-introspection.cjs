@@ -19,8 +19,15 @@ s = s.replace(
 );
 s = s.replace(/(\nmodel vendors \{[\s\S]*?\n  point_rules\s+)point_rules\?/, '$1point_rules[]');
 
+// A vendor has many staff, but only one row whose role is vendor_admin.
+s = s.replace(/(\nmodel staff_users \{[\s\S]*?\n  vendor_id\s+String\s+)@unique\(map: "staff_users_one_admin_uq", where: raw\("[^"\n]*"\)\) /, '$1');
+s = s.replace(/(\nmodel (?:vendors|branches) \{)([\s\S]*?)(\n\})/g, (_match, head, body, tail) =>
+  head + body.replace(/(\n  staff_users\s+)staff_users\?/, '$1staff_users[]') + tail,
+);
+if (s.includes('staff_users_one_admin_uq')) throw new Error('fix-introspection: staff admin partial unique still present; update this script');
+
 if (s.includes('point_rules_one_active_uq')) {
   throw new Error('fix-introspection: point_rules partial unique still present; update this script');
 }
 fs.writeFileSync(file, s);
-console.log(s === before ? 'fix-introspection: nothing to change' : 'fix-introspection: point_rules relation fixed');
+console.log(s === before ? 'fix-introspection: nothing to change' : 'fix-introspection: partial-index relations fixed');

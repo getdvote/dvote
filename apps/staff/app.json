@@ -24,8 +24,8 @@
       "output": "single",
       "name": "dvote staff",
       "shortName": "dvote staff",
-      "themeColor": "#F2F2F7",
-      "backgroundColor": "#F2F2F7"
+      "themeColor": "#F0EFEC",
+      "backgroundColor": "#F0EFEC"
     },
     "plugins": [
       "expo-router",
@@ -36,10 +36,11 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "dvotestaff",
-    "backgroundColor": "#F2F2F7",
+    "backgroundColor": "#F0EFEC",
     "experiments": {
       "typedRoutes": true
     }

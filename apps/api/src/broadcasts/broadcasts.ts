@@ -11,7 +11,7 @@ import { MerchantCustomersModule } from '../merchant-customers/merchant-customer
 import { MerchantCustomersService } from '../merchant-customers/merchant-customers.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletModule } from '../wallet/wallet.module';
-import { GoogleWalletService } from '../wallet/google-wallet.service';
+import { GoogleWalletService, WalletRequestError } from '../wallet/google-wallet.service';
 
 class SendBroadcastDto extends CustomerListQuery {
   @ApiProperty() @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -88,7 +88,8 @@ export class BroadcastsService implements OnApplicationBootstrap, OnModuleDestro
         count(*) FILTER(WHERE r.status='failed')::int AS failed,
         count(*) FILTER(WHERE r.status='unknown')::int AS unknown
       FROM wallet_broadcasts b LEFT JOIN wallet_broadcast_recipients r ON r.broadcast_id=b.id
-      WHERE b.vendor_id=${ctx.vendorId}::uuid GROUP BY b.id ORDER BY b.created_at DESC LIMIT 30`;
+      WHERE b.vendor_id=${ctx.vendorId}::uuid AND b.audience->>'type' IS DISTINCT FROM 'redemption'
+      GROUP BY b.id ORDER BY b.created_at DESC LIMIT 30`;
   }
 
   async nearby(ctx: StaffContext) {
@@ -126,8 +127,14 @@ export class BroadcastsService implements OnApplicationBootstrap, OnModuleDestro
           : eligible.quota > 3 ? { status: 'skipped', reason: 'daily_limit' }
           : await this.google.notifyCard(row.google_object_id, `dvote-broadcast-${row.broadcast_id}`, eligible.title, eligible.body);
         await this.prisma.$executeRaw`UPDATE wallet_broadcast_recipients SET status=${result.status},reason=${result.reason} WHERE id=${row.id}::uuid`;
-      } catch {
-        await this.prisma.$executeRaw`UPDATE wallet_broadcast_recipients SET status='unknown',reason='provider_error' WHERE id=${row.id}::uuid`;
+      } catch (error) {
+        // A definite Google rejection did not send a notification. Reserve quota only
+        // for accepted or ambiguous requests, rather than counting HTTP 400 as a send.
+        const rejected = error instanceof WalletRequestError && error.httpStatus >= 400 && error.httpStatus < 500;
+        const status = rejected ? 'failed' : 'unknown';
+        const reason = rejected ? `provider_http_${error.httpStatus}` : 'provider_error';
+        this.log.warn(`Wallet message ${row.id}: ${error instanceof WalletRequestError ? error.message : 'delivery outcome unknown (network or internal error)'}`);
+        await this.prisma.$executeRaw`UPDATE wallet_broadcast_recipients SET status=${status},reason=${reason} WHERE id=${row.id}::uuid`;
       }
     }
   }
