@@ -16,6 +16,11 @@ export interface PluralForms {
 
 export const en = {
   passwordSetup: {
+  "newTitle": "Choose a new password",
+  "forgotTitle": "Reset your password",
+  "forgotText": "Type the email you sign in with. We'll send you a link to choose a new password.",
+  "forgotEmail": "Your email",
+  "forgotRequest": "Send reset link",
   "title": "Set your password",
   "forEmail": "Account:",
   "password": "New password",
@@ -1246,6 +1251,7 @@ export const en = {
     next: 'Next customer',
   },
   login: {
+    forgot: "Forgot password?",
     showcaseTitle: "Your loyalty program, all in one place",
     showcaseText: "Scan cards at the till, reward regulars and see who comes back, from one dashboard.",
     dashboard: "Dashboard",

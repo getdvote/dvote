@@ -14,6 +14,8 @@ export interface PluralForms {
 export const en = {
   common: {
     poweredBy: 'Powered by',
+    privacy: 'Privacy',
+    terms: 'Terms',
     switchLanguage: 'العربية',
     loading: 'Loading…',
     tryAgain: 'Try again',

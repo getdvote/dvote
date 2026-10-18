@@ -20,6 +20,14 @@ import { StaffMeResponseDto } from './dto/staff-me-response.dto';
 import { StaffResponseDto } from './dto/staff-response.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 
+/** Role names shown in the invite email (same words as the dashboard). */
+const ROLE_NAMES: Record<staff_role, { en: string; ar: string }> = {
+  vendor_admin: { en: 'Merchant admin', ar: 'مسؤول المتجر' },
+  branch_manager: { en: 'Branch manager', ar: 'مدير الفرع' },
+  staff: { en: 'Staff', ar: 'موظف' },
+  viewer: { en: 'Viewer only', ar: 'مشاهدة فقط' },
+};
+
 /**
  * Staff management for /api/vendor/staff.
  *
@@ -295,7 +303,13 @@ export class StaffService {
     if (s.role === 'vendor_admin')
       await this.assertSingleAdmin(this.prisma, vendorId);
 
-    const account = await this.authAdmin.inviteUser(s.email);
+    const shop = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { name: true } });
+    const account = await this.authAdmin.inviteUser(s.email, {
+      full_name: s.name,
+      shop_name: shop?.name ?? '',
+      role_en: ROLE_NAMES[s.role].en,
+      role_ar: ROLE_NAMES[s.role].ar,
+    });
 
     try {
       const data = {

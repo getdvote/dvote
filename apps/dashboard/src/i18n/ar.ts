@@ -6,6 +6,11 @@ import type { Dictionary } from './en';
  */
 export const ar: Dictionary = {
   passwordSetup: {
+  "newTitle": "اختر كلمة مرور جديدة",
+  "forgotTitle": "إعادة تعيين كلمة المرور",
+  "forgotText": "اكتب البريد الذي تسجّل الدخول به. سنرسل لك رابطاً لاختيار كلمة مرور جديدة.",
+  "forgotEmail": "بريدك الإلكتروني",
+  "forgotRequest": "إرسال رابط إعادة التعيين",
   "title": "عيّن كلمة المرور",
   "forEmail": "الحساب:",
   "password": "كلمة مرور جديدة",
@@ -1246,6 +1251,7 @@ export const ar: Dictionary = {
     next: 'العميل التالي',
   },
   login: {
+    forgot: "نسيت كلمة المرور؟",
     showcaseTitle: "برنامج الولاء الخاص بك، في مكان واحد",
     showcaseText: "امسح البطاقات عند الكاشير، كافئ العملاء الدائمين واعرف من يعود، من لوحة تحكم واحدة.",
     dashboard: "لوحة التحكم",

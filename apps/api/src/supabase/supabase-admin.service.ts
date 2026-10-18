@@ -51,11 +51,16 @@ export class SupabaseAdminService {
     return this.client !== null;
   }
 
-  /** Emails an invite (the person sets their own password), or reuses an existing account. */
-  async inviteUser(email: string): Promise<AuthAccount> {
+  /**
+   * Emails an invite (the person sets their own password), or reuses an existing account.
+   * `details` become the account's user metadata, which the Supabase "Invite user" email
+   * template shows as {{ .Data.<key> }} (docs/email-templates).
+   */
+  async inviteUser(email: string, details?: Record<string, string>): Promise<AuthAccount> {
     const admin = this.admin();
     const { data, error } = await admin.inviteUserByEmail(email, {
       redirectTo: this.inviteRedirectUrl,
+      ...(details ? { data: details } : {}),
     });
     if (!error) return { authUserId: data.user.id, existing: false };
     if (isEmailExists(error)) return this.existingAccount(email);

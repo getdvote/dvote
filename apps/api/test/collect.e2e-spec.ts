@@ -213,6 +213,62 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
     await collect('staffA1', { code, amount: 95 }).expect(403);
   });
 
+  it('wallet card at the till: amounts, branches, two phones at once, collect + redeem together, changed code', async () => {
+    const walletCard = async (key: string) => {
+      await seedCustomer(key);
+      const user = await as(key, 'get', '/api/app/users/me').expect(200);
+      const card = await prisma.cards.create({ data: { user_id: user.body.id, vendor_id: ids.vendorA } });
+      const secret = cardSecret('test-wallet-secret', card.id);
+      await prisma.cards.update({ where: { id: card.id }, data: { token_hash: hashCardSecret(secret) } });
+      return { id: card.id, code: cardQr(secret) };
+    };
+    const balance = async (id: string) => (await prisma.cards.findUniqueOrThrow({ where: { id } })).balance;
+    const w = await walletCard('till');
+
+    // a bill below one point: refused, nothing written, the card keeps working
+    expect((await collect('staffA1', { code: w.code, amount: 5 }).expect(422)).body.code).toBe('no_points_earned');
+    expect(await balance(w.id)).toBe(0);
+
+    // branches: a merchant admin must say where; a cashier only books on their own branch
+    expect((await collect('adminA', { code: w.code, amount: 100 }).expect(400)).body.code).toBe('branch_required');
+    await collect('adminA', { code: w.code, amount: 100, branchId: ids.branchB1 }).expect(400);
+    expect((await collect('staffA1', { code: w.code, amount: 100, branchId: ids.branchA2 }).expect(403)).body.code).toBe('forbidden_branch');
+    const atA2 = (await collect('adminA', { code: w.code, amount: 100, branchId: ids.branchA2 }).expect(200)).body as { pointEventId: string; pointsAdded: number };
+    expect(atA2.pointsAdded).toBe(10);
+    expect((await prisma.point_events.findUniqueOrThrow({ where: { id: atA2.pointEventId } })).branch_id).toBe(ids.branchA2);
+
+    // the card QR is reusable: two phones scanning it at once for two bills both count
+    const both = await Promise.all([
+      collect('staffA1', { code: w.code, amount: 200 }),
+      collect('adminA', { code: w.code, amount: 300, branchId: ids.branchA1 }),
+    ]);
+    expect(both.map((r) => r.status)).toEqual([200, 200]);
+    expect(await balance(w.id)).toBe(10 + 20 + 30);
+
+    // a collect and a redeem on the same card at the same moment: both land, the ledger agrees
+    const coffee = await prisma.rewards.findFirstOrThrow({ where: { vendor_id: ids.vendorA, name: 'Free coffee' } });
+    const [earned, redeemed] = await Promise.all([
+      collect('staffA1', { code: w.code, amount: 100 }),
+      as('staffA1', 'post', '/api/vendor/scans/redeem').send({ code: w.code, rewardId: coffee.id, idempotencyKey: randomUUID() }),
+    ]);
+    expect([earned.status, redeemed.status]).toEqual([200, 200]);
+    expect(await balance(w.id)).toBe(60 + 10 - coffee.points_cost);
+    await ledgerMatches(w.id);
+
+    // a request key belongs to one card: reused for another card → refused, nothing booked
+    const other = await walletCard('till2');
+    const key = randomUUID();
+    await collect('staffA1', { code: w.code, amount: 100, idempotencyKey: key }).expect(200);
+    expect((await collect('staffA1', { code: other.code, amount: 100, idempotencyKey: key }).expect(409)).body.code).toBe('idempotency_key_reused');
+    expect(await balance(other.id)).toBe(0);
+
+    // the card's code changed (rotated): the old pass QR stops working
+    await prisma.cards.update({ where: { id: w.id }, data: { token_hash: hashCardSecret(cardSecret('rotated-secret', w.id)) } });
+    expect((await collect('staffA1', { code: w.code, amount: 100 }).expect(404)).body.code).toBe('qr_invalid');
+    await ledgerMatches(w.id);
+    await ledgerMatches(other.id);
+  });
+
   describe('staff app context (GET /api/vendor/staff/me)', () => {
     it('branch staff: vendor, own branch, the rule', async () => {
       const res = await as('staffA1', 'get', '/api/vendor/staff/me').expect(
@@ -656,16 +712,20 @@ describe('Collect points: QR codes, scans, cards (e2e)', () => {
         const viaShop = (await collect('staffA1', { code: shop.code, amount: 30 }).expect(200)).body as { pointsAdded: number };
 
         const after = await stats();
-        expect(after.master.collects - before.master.collects).toBe(1);
-        expect(after.shop.collects - before.shop.collects).toBe(1);
-        expect(after.master.points - before.master.points).toBe(viaMaster.pointsAdded);
-        expect(after.shop.points - before.shop.points).toBe(viaShop.pointsAdded);
-        const today = (s: Stats) => s.daily[s.daily.length - 1];
-        expect(today(after).master - today(before).master).toBe(1);
-        expect(today(after).shop - today(before).shop).toBe(1);
+        // Exact checks on this test's own shop: other test files write and clean up their own
+        // collects in parallel, so platform-wide totals can move by any amount meanwhile.
         const a = (s: Stats) => s.vendors.find((v) => v.id === ids.vendorA) ?? { master: 0, shop: 0 };
         expect(a(after).master - a(before).master).toBe(1);
         expect(a(after).shop - a(before).shop).toBe(1);
+        expect(viaMaster.pointsAdded).toBeGreaterThan(0);
+        expect(viaShop.pointsAdded).toBeGreaterThan(0);
+        // the totals, the days and the shops of one answer agree with each other
+        const sum = (xs: number[]) => xs.reduce((n, x) => n + x, 0);
+        expect(after.master.collects).toBe(sum(after.vendors.map((v) => v.master)));
+        expect(after.shop.collects).toBe(sum(after.vendors.map((v) => v.shop)));
+        expect(sum(after.daily.map((d) => d.master))).toBeLessThanOrEqual(after.master.collects);
+        expect(after.daily[after.daily.length - 1].master).toBeGreaterThanOrEqual(1);
+        expect(after.daily[after.daily.length - 1].shop).toBeGreaterThanOrEqual(1);
 
         await as('statsAdmin', 'get', '/api/admin/stats/qr-sources?days=400').expect(400);
         await as('karim', 'get', '/api/admin/stats/qr-sources').expect(403); // customers can't see it

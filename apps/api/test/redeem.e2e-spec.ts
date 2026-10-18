@@ -183,10 +183,10 @@ describe('Redeem a reward: customer QR → staff confirm (e2e)', () => {
     const enabled = jest.spyOn(google, 'enabled', 'get').mockReturnValue(true);
     const notify = jest.spyOn(google, 'notifyCard').mockRejectedValue(new Error('Provider unavailable'));
     try {
-      await app.get(BroadcastsService).processPending();
+      await app.get(BroadcastsService).processPending(ids.vendorA);
       expect(notify).toHaveBeenCalledWith(`test.${row.id}`, expect.any(String), 'Reward redeemed successfully', notifications[0].body);
       const count = notify.mock.calls.length;
-      await app.get(BroadcastsService).processPending();
+      await app.get(BroadcastsService).processPending(ids.vendorA);
       expect(notify).toHaveBeenCalledTimes(count);
       expect((await cardA('wallet')).balance).toBe(200);
     } finally { notify.mockRestore(); enabled.mockRestore(); }

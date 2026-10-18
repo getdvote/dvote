@@ -106,6 +106,11 @@ export class Env {
   @IsString()
   GOOGLE_WALLET_KEY_FILE?: string;
 
+  /** The same key pasted as one line of JSON (for hosts without files, e.g. Railway). Wins over the file. */
+  @IsOptional()
+  @IsString()
+  GOOGLE_WALLET_KEY_JSON?: string;
+
   /**
    * Secret for the card QR on the wallet passes: each card's code is derived from it, so the
    * same code can be put on the pass again later. At least 32 characters; never change it once

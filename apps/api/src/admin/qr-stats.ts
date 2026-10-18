@@ -72,7 +72,9 @@ export class QrStatsService {
              count(e.id) FILTER (WHERE q.vendor_id IS NULL)     AS master,
              count(e.id) FILTER (WHERE q.vendor_id IS NOT NULL) AS shop
       FROM d
-      LEFT JOIN point_events e ON e.type = 'earn' AND (e.created_at AT TIME ZONE ${TZ})::date = d.day
+      -- app-QR collects only, like the totals and shops (wallet-card scans have no qr_codes row
+      -- and used to be counted here as "master")
+      LEFT JOIN point_events e ON e.type = 'earn' AND e.qr_code_id IS NOT NULL AND (e.created_at AT TIME ZONE ${TZ})::date = d.day
       LEFT JOIN qr_codes q ON q.id = e.qr_code_id
       GROUP BY d.day ORDER BY d.day`;
 

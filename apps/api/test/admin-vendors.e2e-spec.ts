@@ -330,6 +330,7 @@ describe('Platform admin auth + /api/admin/vendors (e2e)', () => {
       });
       expect(fakeAuthAdmin.inviteUser).toHaveBeenCalledWith(
         email.toLowerCase(),
+        expect.objectContaining({ role_en: 'Merchant admin', role_ar: 'مسؤول المتجر', shop_name: expect.any(String) }),
       );
 
       const vendor = await api(

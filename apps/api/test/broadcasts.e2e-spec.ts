@@ -74,7 +74,7 @@ describe('Segmented Wallet broadcasts (e2e)', () => {
     await call('other', '/preview').send({ customSegment: custom }).expect(404);
     // A later segment change must not add another recipient to this queued campaign.
     await db.$executeRaw`UPDATE customer_segments SET rules='[]'::jsonb WHERE id=${custom}::uuid`;
-    await service.processPending();
+    await service.processPending(vendor);
     expect(google.notifyCard).toHaveBeenCalledTimes(1);
     const history = await call('admin', '', 'get').expect(200);
     expect(history.body[0]).toMatchObject({ id: sent.body.id, total: 1, accepted: 1, pending: 0 });
@@ -84,16 +84,16 @@ describe('Segmented Wallet broadcasts (e2e)', () => {
   it('caps each card at three notifications in a rolling day and never automatically repeats uncertain sends', async () => {
     for (let i = 0; i < 4; i++) {
       await call('admin').send(message()).expect(201);
-      await service.processPending();
+      await service.processPending(vendor);
     }
     const rows = await db.$queryRaw<{ card_id: string; n: number }[]>`SELECT card_id,count(*)::int AS n FROM wallet_broadcast_recipients WHERE vendor_id=${vendor}::uuid AND status='accepted' GROUP BY card_id`;
     expect(rows.every(r => r.n === 3)).toBe(true);
     await db.$executeRaw`UPDATE wallet_broadcast_recipients SET attempted_at=now()-interval '25 hours' WHERE vendor_id=${vendor}::uuid`;
     google.notifyCard.mockRejectedValueOnce(new Error('Network disconnected after submit') as never);
     await call('admin').send(message()).expect(201);
-    await service.processPending();
+    await service.processPending(vendor);
     const count = google.notifyCard.mock.calls.length;
-    await service.processPending();
+    await service.processPending(vendor);
     expect(google.notifyCard.mock.calls.length).toBe(count);
     expect((await db.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM wallet_broadcast_recipients WHERE vendor_id=${vendor}::uuid AND status='unknown'`)[0].n).toBe(1);
   });
@@ -102,7 +102,7 @@ describe('Segmented Wallet broadcasts (e2e)', () => {
     await db.$executeRaw`UPDATE wallet_broadcast_recipients SET attempted_at=now()-interval '25 hours' WHERE vendor_id=${vendor}::uuid`;
     google.notifyCard.mockRejectedValueOnce(new WalletRequestError('Google Wallet addMessage: HTTP 400 (invalidResource)', 400) as never);
     const sent = await call('admin').send(message()).expect(201);
-    await service.processPending();
+    await service.processPending(vendor);
     const rows = await db.$queryRaw<{ status: string; reason: string | null }[]>`SELECT status,reason FROM wallet_broadcast_recipients WHERE broadcast_id=${sent.body.id}::uuid`;
     expect(rows).toContainEqual({ status: 'failed', reason: 'provider_http_400' });
     expect(rows.some(r => r.status === 'unknown')).toBe(false);

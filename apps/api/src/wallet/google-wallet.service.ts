@@ -60,7 +60,12 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
   ) {}
 
   private get configured(): boolean {
-    return !!this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) && !!this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    return !!this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) && this.hasKey;
+  }
+
+  /** The service-account key: pasted as JSON (hosting) or a file path (local). */
+  private get hasKey(): boolean {
+    return !!this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true }) || !!this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
   }
 
   get enabled(): boolean { return this.configured; }
@@ -222,7 +227,7 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
   async saveUrl(publicId: string): Promise<string> {
     const issuerId = this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true });
     const tokenSecret = this.config.get('WALLET_TOKEN_SECRET', { infer: true });
-    if (!issuerId || !tokenSecret || !this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true })) {
+    if (!issuerId || !tokenSecret || !this.hasKey) {
       throw new ServiceUnavailableException({ code: 'wallet_not_configured', message: 'Google Wallet is not set up yet.' });
     }
     const card = await this.prisma.cards.findUnique({
@@ -272,7 +277,7 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
    * = false (the page then just shows the button).
    */
   async isSaved(objectId: string | null): Promise<boolean> {
-    if (!objectId || !this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) || !this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true })) return false;
+    if (!objectId || !this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) || !this.hasKey) return false;
     try {
       const res = await fetch(`https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${encodeURIComponent(objectId)}`, {
         headers: { Authorization: `Bearer ${await this.accessToken()}` },
@@ -311,14 +316,15 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
 
   private serviceAccount(): ServiceAccount {
     if (this.account) return this.account;
-    const file = resolve(this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true }) as string);
+    const pasted = this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true });
     try {
-      const json = JSON.parse(readFileSync(file, 'utf8')) as Partial<ServiceAccount>;
+      const text = pasted || readFileSync(resolve(this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true }) as string), 'utf8');
+      const json = JSON.parse(text) as Partial<ServiceAccount>;
       if (!json.client_email || !json.private_key) throw new Error('missing client_email / private_key');
       this.account = { client_email: json.client_email, private_key: json.private_key };
       return this.account;
     } catch (err) {
-      throw new ServiceUnavailableException({ code: 'wallet_not_configured', message: `Google Wallet key file unreadable: ${(err as Error).message}` });
+      throw new ServiceUnavailableException({ code: 'wallet_not_configured', message: `Google Wallet key unreadable: ${(err as Error).message}` });
     }
   }
 }
