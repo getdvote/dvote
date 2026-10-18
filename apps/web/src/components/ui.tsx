@@ -14,7 +14,7 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
       <main className={cx('w-full rounded-[28px] bg-white px-5 py-7 shadow-[0_1px_3px_rgba(0,0,0,0.06)] sm:px-8', wide ? 'max-w-xl' : 'max-w-md')}>
         {children}
       </main>
-      <footer className="mt-6 flex items-center gap-4 text-sm text-muted">
+      <footer className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 whitespace-nowrap text-sm text-muted">
         <Link to="/" className="flex items-center gap-1.5 py-2 hover:text-ink">
           {t('common.poweredBy')} <DvoteMark />
         </Link>
@@ -22,6 +22,13 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
         <button type="button" className="py-2 hover:text-ink" onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}>
           {t('common.switchLanguage')}
         </button>
+        <span aria-hidden className="text-line">|</span>
+        <Link to="/privacy" className="py-2 hover:text-ink">
+          {t('common.privacy')}
+        </Link>
+        <Link to="/terms" className="py-2 hover:text-ink">
+          {t('common.terms')}
+        </Link>
       </footer>
     </div>
   );

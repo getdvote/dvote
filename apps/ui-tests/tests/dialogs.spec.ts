@@ -19,6 +19,14 @@ const OPENERS: [string, string, (page: Page) => Promise<void>][] = [
   ['reward dialog', '/rewards', (p) => p.getByRole('button', { name: 'Add reward' }).click()],
   ['qr poster', '/storefront', (p) => p.getByRole('button', { name: 'Get QR' }).click()],
   ['period picker', '/activity', (p) => p.getByRole('button', { name: 'Period' }).click()],
+  [
+    'invite drawer (branch manager)',
+    '/settings?tab=team',
+    async (p) => {
+      await p.getByRole('button', { name: 'Invite', exact: true }).click();
+      await p.getByRole('radio', { name: /Branch manager/ }).click();
+    },
+  ],
 ];
 
 for (const vp of VIEWPORTS) {
@@ -54,3 +62,15 @@ for (const vp of KEY_VIEWPORTS.filter((v) => v.width < 768)) {
     });
   });
 }
+
+test('invite drawer: the branch picker comes before the role’s permissions', async ({ page }) => {
+  await mockApi(page, 'vendor_admin');
+  await signIn(page);
+  await page.goto(DASHBOARD + '/settings?tab=team');
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Invite', exact: true }).click();
+  await page.getByRole('radio', { name: /Branch manager/ }).click();
+  const branch = await page.getByText('Choose a branch').boundingBox();
+  const perms = await page.getByRole('heading', { name: /can do/ }).boundingBox();
+  expect(branch && perms && branch.y < perms.y).toBe(true);
+});

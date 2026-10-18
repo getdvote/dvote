@@ -279,6 +279,7 @@ describe('Staff auth + /api/vendor/staff (e2e)', () => {
       });
       expect(fakeAuthAdmin.inviteUser).toHaveBeenCalledWith(
         email.toLowerCase(),
+        expect.objectContaining({ full_name: 'New Manager', role_en: 'Branch manager', role_ar: 'مدير الفرع', shop_name: expect.stringContaining('Vendor A') }),
       );
       const row = await prisma.staff_users.findUniqueOrThrow({
         where: { id: res.body.id },

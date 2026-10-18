@@ -196,9 +196,9 @@ function InviteDialog({ scope, roles, branches, open, onClose }: { scope: Vendor
               </button>
             ))}
           </div>
-          <RolePermissions role={role} />
         </fieldset>
       ) : null}
+      {/* the branch comes right after the role it belongs to, before that role's permissions */}
       {pickBranch ? (
         <Field label={t('common.branch')} htmlFor="invite-branch">
           <Select value={branchId} onValueChange={setBranchId}>
@@ -215,6 +215,7 @@ function InviteDialog({ scope, roles, branches, open, onClose }: { scope: Vendor
           </Select>
         </Field>
       ) : null}
+      {roles.length > 1 ? <RolePermissions role={role} /> : null}
       <ErrorAlert error={invite.error} />
     </form>
   );

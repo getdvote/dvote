@@ -94,7 +94,8 @@ export class BroadcastsService
   ) {}
 
   onApplicationBootstrap() {
-    if (!this.google.enabled) return;
+    // tests run the worker themselves (processPending), scoped to their own shop
+    if (!this.google.enabled || process.env.NODE_ENV === 'test') return;
     this.timer = setInterval(() => this.kick(), 5_000);
     this.timer.unref();
     this.kick();
@@ -105,7 +106,7 @@ export class BroadcastsService
     await this.running;
   }
   private kick() {
-    if (this.running || this.stopped || !this.google.enabled) return;
+    if (this.running || this.stopped || !this.google.enabled || process.env.NODE_ENV === 'test') return;
     this.running = this.processPending()
       .catch(() =>
         this.log.warn('Broadcast worker failed; pending jobs will retry.'),
@@ -201,12 +202,17 @@ export class BroadcastsService
     return this.nearby(ctx);
   }
 
-  /** Accepted means Google accepted the request, never proof of device delivery. */
-  async processPending(): Promise<void> {
+  /**
+   * Accepted means Google accepted the request, never proof of device delivery.
+   * `onlyVendorId` limits the run to one shop (tests share one database across parallel files);
+   * the API's own worker passes nothing and serves every shop.
+   */
+  async processPending(onlyVendorId?: string): Promise<void> {
+    const vendor = onlyVendorId ?? null;
     if (!this.google.enabled || this.stopped) return;
     // Never blindly resend an ambiguous network operation following a crash.
     await this.prisma
-      .$executeRaw`UPDATE wallet_broadcast_recipients SET status='unknown',reason='interrupted' WHERE status='processing' AND attempted_at < now()-interval '2 minutes'`;
+      .$executeRaw`UPDATE wallet_broadcast_recipients SET status='unknown',reason='interrupted' WHERE status='processing' AND attempted_at < now()-interval '2 minutes' AND (${vendor}::uuid IS NULL OR vendor_id=${vendor}::uuid)`;
     for (let i = 0; i < 20 && !this.stopped; i++) {
       const rows = await this.prisma.$queryRaw<
         {
@@ -218,7 +224,7 @@ export class BroadcastsService
         }[]
       >`
         UPDATE wallet_broadcast_recipients r SET status='processing',attempted_at=now()
-        WHERE r.id=(SELECT id FROM wallet_broadcast_recipients WHERE status='pending' ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1)
+        WHERE r.id=(SELECT id FROM wallet_broadcast_recipients WHERE status='pending' AND (${vendor}::uuid IS NULL OR vendor_id=${vendor}::uuid) ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1)
         RETURNING r.id,r.card_id,r.vendor_id,r.broadcast_id,r.google_object_id`;
       if (!rows.length) break;
       const row = rows[0];

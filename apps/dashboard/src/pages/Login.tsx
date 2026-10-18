@@ -1,5 +1,6 @@
 import { CheckIcon as Check, CopyIcon as Copy, EyeIcon as Eye, EyeClosedIcon as EyeOff, LoaderIcon as Loader2, LockIcon as Lock, LetterIcon as Mail, ShieldCheckIcon as ShieldCheck } from '@solar-icons/react/linear';
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -169,6 +170,9 @@ function PasswordStep() {
               </Button>
             </div>
           </Field>
+          <Link to="/set-password?forgot=1" className="-mt-4 inline-flex min-h-8 items-center justify-self-end text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            {t('login.forgot')}
+          </Link>
           <ErrorAlert error={error} />
           <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : null}

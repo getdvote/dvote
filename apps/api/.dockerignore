@@ -1,0 +1,13 @@
+# never send secrets or local builds into the image
+.env
+.env.*
+!.env.example
+!.env.production.example
+.secrets
+node_modules
+dist
+test
+coverage
+dev-public
+*.tsbuildinfo
+src/generated

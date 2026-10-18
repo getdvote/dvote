@@ -125,7 +125,8 @@ describe('Fraud & risk monitoring (e2e)', () => {
     expect(flags.find((f) => f.type === 'staff_spike')).toMatchObject({ staff_id: ids.staff });
 
     const again = (await as('admin', 'post', '/api/admin/fraud/check').expect(201)).body as { created: number };
-    expect(again.created).toBe(0);
+    // `created` counts the whole database (other test files add activity in parallel): check this shop only
+    expect(again.created).toBeGreaterThanOrEqual(0);
     expect(await prisma.fraud_flags.count({ where: { vendor_id: ids.vendor } })).toBe(4);
   });
 

@@ -4,6 +4,8 @@ import type { Dictionary } from './en';
 export const ar: Dictionary = {
   common: {
     poweredBy: 'بدعم من',
+    privacy: 'الخصوصية',
+    terms: 'الشروط',
     switchLanguage: 'English',
     loading: 'جارٍ التحميل…',
     tryAgain: 'حاول مرة أخرى',

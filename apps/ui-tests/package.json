@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Responsive layout checks for the dashboard and the customer website, with a mocked API",
   "scripts": {
-    "test": "rm -f test-results/issues.jsonl; playwright test",
+    "test": "node -e \"require('fs').rmSync('test-results/issues.jsonl',{force:true})\" && playwright test",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
     "typecheck": "tsc --noEmit",

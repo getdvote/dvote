@@ -6,7 +6,7 @@ import { I18nProvider } from './i18n';
 import { configProblem } from './lib/config';
 import { CardPage } from './pages/CardPage';
 import { WalletPage } from './pages/wallet-page';
-import { HomePage, PrivacyPage } from './pages/InfoPages';
+import { HomePage, PrivacyPage, TermsPage } from './pages/InfoPages';
 import { JoinPage } from './pages/JoinPage';
 import { VenuePage, VenueSectionPage } from './pages/VenuePage';
 import './styles.css';
@@ -18,6 +18,7 @@ import './styles.css';
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/terms', element: <TermsPage /> },
   { path: '/c/:publicId/wallet', element: <WalletPage /> },
   { path: '/c/:publicId', element: <CardPage /> },
   { path: '/:slug', element: <VenuePage /> },
