@@ -108,7 +108,6 @@ export function CardPage() {
         </>
       ) : null}
 
-      <p className="mt-6 text-center text-[15px] font-medium">{t('card.atTill')}</p>
 
       <div className="mt-5 text-center">
         <Link to={`/${card.vendor.slug}`} className="inline-block py-1 text-[15px] text-brand underline-offset-4 hover:underline">

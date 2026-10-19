@@ -339,6 +339,13 @@ All embedded maps currently use the shared dashboard LocationPicker (admin/merch
 ### Automatic broadcast audience (2026-10-19)
 Broadcast in both merchant and platform-admin merchant workspaces loads target audience counts automatically on opening and whenever the audience or branch filter changes. The manual Check audience button is removed. Loading or failed previews disable sending so confirmation uses the current selection; sending still requires explicit confirmation.
 
+### Branch map and search (2026-10-19)
+Customer card page: removed the trailing “Staff add your points at the till.” line in both languages.
+
+Shared admin/merchant branch forms use the colorful OpenFreeMap Liberty style in light mode (dark theme retained). Place suggestions use Photon autocomplete after three characters with a 400 ms debounce, cancelled outdated requests, outside-click and Escape dismissal. Removed the manual search button and Google Maps link field. Pin selection, device location and reverse address lookup remain available.
+Search now accepts full Google Maps URLs containing coordinates in the same input. Short links show instructions to open and copy the expanded URL. Suggestions are restricted to Egypt with countrycode=EG plus a response country check, biased and distance-sorted toward device location (browser permission), falling back to the branch pin or Alexandria. Location detection for search does not set the branch pin.
+Location permission now has an EN/AR dialog using the camera help animation/design, an explicit Allow location action and a continue-without-location option. Blocked access shows the shared browser settings walkthrough with Location labels. Previously granted permission loads quietly; the browser prompt is requested only after Allow location.
+
 ## Platform-wide merchant operations (2026-10-18)
 
 The platform admin dashboard now includes merchant operations that were previously only available to merchant accounts. All-merchants views support search and pagination; choose a merchant to open its complete editor/workflow. Existing platform Customers, Statistics, merchant support Feedback and System pages remain separate.

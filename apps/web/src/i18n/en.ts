@@ -113,7 +113,6 @@ export const en = {
     inApple: 'Your card is in Apple Wallet. Show its QR at the till.',
     otherWallet: 'Use the other wallet',
     openOnPhone: "Scan this QR code with your phone to open this page and add your card to your wallet.",
-    atTill: 'Staff add your points at the till.',
     keepLink: 'Keep this link to see your card again:',
     copy: 'Copy link',
     copied: 'Copied',

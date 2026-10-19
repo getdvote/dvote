@@ -10,7 +10,7 @@ setWorkerUrl(workerUrl);
 
 /** OpenMapTiles-derived styles, hosted by OpenFreeMap without API keys. */
 const STYLES = {
-  light: 'https://tiles.openfreemap.org/styles/positron',
+  light: 'https://tiles.openfreemap.org/styles/liberty',
   dark: 'https://tiles.openfreemap.org/styles/dark',
 };
 

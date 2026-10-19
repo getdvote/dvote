@@ -1,4 +1,4 @@
-import { RefreshIcon, VideocameraRecordIcon } from '@solar-icons/react/linear';
+import { RefreshIcon, VideocameraRecordIcon, GpsIcon } from '@solar-icons/react/linear';
 import { motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -28,33 +28,35 @@ export function useCameraGranted(onGranted: () => void) {
  * the same three steps in words, Reload, and an arrow at the top of the window pointing to where
  * the browser keeps the site's permissions.
  */
-export function CameraBlockedHelp() {
+export function CameraBlockedHelp({ location = false }: { location?: boolean }) {
+  const prefix = location ? 'map.permission' : 'till.camera';
+  const Icon = location ? GpsIcon : VideocameraRecordIcon;
   return (
     <div className="grid gap-4 rounded-xl border bg-muted/40 p-4">
       <div className="flex items-start gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <VideocameraRecordIcon className="size-[18px]" />
+          <Icon className="size-[18px]" />
         </span>
         <div className="grid gap-0.5">
-          <p className="font-medium">{t('till.camera.deniedTitle')}</p>
-          <p className="text-sm text-muted-foreground">{t('till.camera.deniedBody')}</p>
+          <p className="font-medium">{t(`${prefix}.deniedTitle`)}</p>
+          <p className="text-sm text-muted-foreground">{t(`${prefix}.deniedBody`)}</p>
         </div>
       </div>
-      <PermissionDemo />
+      <PermissionDemo location={location} />
       <ol className="grid gap-2 text-sm">
         {(['step1', 'step2', 'step3'] as const).map((k, i) => (
           <li key={k} className="flex items-start gap-2.5">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background tabular-nums">
               {i + 1}
             </span>
-            {t(`till.camera.${k}`)}
+            {t(`${prefix}.${k}`)}
           </li>
         ))}
       </ol>
-      <Button variant="outline" onClick={() => window.location.reload()}>
+      <Button type="button" variant="outline" onClick={() => window.location.reload()}>
         <RefreshIcon /> {t('till.camera.reload')}
       </Button>
-      <BrowserArrow />
+      <BrowserArrow location={location} />
     </div>
   );
 }
@@ -62,7 +64,8 @@ export function CameraBlockedHelp() {
 const LOOP = { duration: 6, repeat: Infinity, ease: 'easeInOut' as const };
 
 /** A tiny browser window: the cursor clicks the site icon, switches Camera on, then Reload. */
-function PermissionDemo() {
+export function PermissionDemo({ location = false }: { location?: boolean }) {
+  const Icon = location ? GpsIcon : VideocameraRecordIcon;
   return (
     <div dir="ltr" aria-hidden className="relative h-44 overflow-hidden rounded-lg border bg-card shadow-xs select-none">
       {/* window bar */}
@@ -102,7 +105,7 @@ function PermissionDemo() {
       >
         <div className="flex items-center justify-between gap-2 py-1">
           <span className="flex items-center gap-1.5 font-medium">
-            <VideocameraRecordIcon className="size-3.5" /> {t('till.camera.demoCamera')}
+            <Icon className="size-3.5" /> {t(location ? 'map.permission.label' : 'till.camera.demoCamera')}
           </span>
           <span className="relative h-3.5 w-6 overflow-hidden rounded-full bg-border">
             <motion.i
@@ -182,7 +185,7 @@ function Cursor() {
  * address (left in a left-to-right browser, right in an Arabic/Hebrew one). Mouse computers only:
  * phone browsers keep it elsewhere.
  */
-function BrowserArrow() {
+function BrowserArrow({ location = false }: { location?: boolean }) {
   if (typeof window === 'undefined' || !window.matchMedia('(pointer: fine)').matches) return null;
   const rtlBrowser = /^(ar|he|fa|ur)\b/i.test(navigator.language);
   return createPortal(
@@ -208,7 +211,7 @@ function BrowserArrow() {
         animate={{ scale: [1, 1.04, 1] }}
         transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
       >
-        {t('till.camera.arrow')}
+        {t(location ? 'map.permission.arrow' : 'till.camera.arrow')}
       </motion.span>
     </div>,
     document.body,
