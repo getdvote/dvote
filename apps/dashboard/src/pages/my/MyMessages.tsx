@@ -50,14 +50,12 @@ export function MyMessages() {
     ...(audience.startsWith('custom:') ? { customSegment: audience.slice(7) } : audience === 'all' ? {} : { segment: audience as CustomerSegment }),
     ...(branchId ? { branchId } : {}),
   };
-  const audienceKey = JSON.stringify(filters);
-  const preview = useMutation({
-    mutationFn: async () => ({
-      ...(await vendorApi.broadcastPreview(filters)),
-      audienceKey,
-    }),
+  const preview = useQuery({
+    queryKey: ['broadcast-audience', me.id, filters],
+    queryFn: () => vendorApi.broadcastPreview(filters),
+    enabled: allowed,
   });
-  const currentPreview = preview.data?.audienceKey === audienceKey ? preview.data : undefined;
+  const currentPreview = !preview.isFetching && !preview.isError ? preview.data : undefined;
   const send = useMutation({
     mutationFn: () =>
       vendorApi.sendBroadcast({
@@ -71,7 +69,7 @@ export function MyMessages() {
       key.current = crypto.randomUUID();
       setTitle('');
       setBody('');
-      preview.reset();
+      void preview.refetch();
       void history.refetch();
     },
   });
@@ -83,7 +81,6 @@ export function MyMessages() {
     },
   });
   useEffect(() => {
-    preview.reset();
     key.current = crypto.randomUUID();
   }, [audience, branchId]);
   useEffect(() => {
@@ -138,9 +135,7 @@ export function MyMessages() {
                 ))}
               </select>
             </Field>
-            <Button variant="outline" disabled={preview.isPending || send.isPending || customers.isPending} onClick={() => preview.mutate()}>
-              {t('messages.preview')}
-            </Button>
+            {preview.isFetching && <p className="text-sm text-muted-foreground" role="status">{t('common.loading')}</p>}
             <ErrorAlert error={preview.error} />
             {currentPreview && (
               <p className="rounded-lg bg-muted p-3 text-sm" aria-live="polite">
