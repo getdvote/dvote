@@ -103,8 +103,6 @@ export const ar: Dictionary = {
     code: "الكود",
     addApple: 'أضف إلى Apple Wallet',
     addGoogle: 'أضف إلى Google Wallet',
-    addSamsung: 'أضف إلى Samsung Wallet',
-    samsungSoon: 'محفظة Samsung قريبًا.',
     appleSoon: 'محفظة Apple قريبًا. بطاقتك محفوظة بالفعل: يستطيع الموظفون إيجادها بالكود.',
     inGoogle: 'بطاقتك في محفظة Google. اعرض الكود عند الكاشير.',
     inApple: 'بطاقتك في محفظة Apple. اعرض الكود عند الكاشير.',
