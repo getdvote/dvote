@@ -1,7 +1,9 @@
-import { GpsIcon as Crosshair, LinkIcon as Link2, LoaderIcon as Loader2, MapPointIcon as MapPin, MagnifierIcon as Search, CloseIcon as X } from '@solar-icons/react/linear';
-import { lazy, Suspense, useRef, useState } from 'react';
+import { GpsIcon as Crosshair, LoaderIcon as Loader2, MapPointIcon as MapPin, MagnifierIcon as Search, CloseIcon as X } from '@solar-icons/react/linear';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CameraBlockedHelp, PermissionDemo } from './camera-help';
 import { t } from '../i18n';
 import { cityFromNames, type CityKey } from '../lib/cities';
 
@@ -25,7 +27,8 @@ const valid = (p: LatLng) => Number.isFinite(p.lat) && Number.isFinite(p.lng) &&
  * Short links (maps.app.goo.gl/…) carry no coordinates: open them first and copy the full link.
  */
 export function coordsFromText(text: string): LatLng | null {
-  const t = decodeURIComponent(text.trim());
+  let t = text.trim();
+  try { t = decodeURIComponent(t); } catch { /* A malformed pasted URL is not a coordinate. */ }
   const num = String.raw`(-?\d{1,3}(?:\.\d+)?)`;
   const patterns = [
     new RegExp(String.raw`!3d${num}!4d${num}`), // the exact pin of a place
@@ -70,7 +73,7 @@ export async function addressAt(p: LatLng): Promise<PlaceAddress | null> {
 }
 
 /**
- * Pick a branch's location: search a place, paste a Google Maps link, use this device's
+ * Pick a branch's location: search a place, use this device's
  * location, or click / drag the pin on the map. Latitude and longitude are filled from the
  * chosen place, never typed. `value` null = no location. `onAddress` gets the address (first
  * line and city) at each newly chosen point.
@@ -87,9 +90,16 @@ export function LocationPicker({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ name: string; at: LatLng }[] | null>(null);
   const [searching, setSearching] = useState(false);
-  const [link, setLink] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchArea = useRef<HTMLDivElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<LatLng | null>(null);
+  const [deviceLocation, setDeviceLocation] = useState<LatLng | null>(null);
+  const [permissionOpen, setPermissionOpen] = useState(false);
+  const [locationBlocked, setLocationBlocked] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const placePin = useRef(false);
+  const focus = deviceLocation ?? value ?? START;
   // Only the latest pick may fill the address (an older lookup can answer last).
   const lookup = useRef(0);
 
@@ -108,60 +118,141 @@ export function LocationPicker({
     }
   };
 
-  async function search() {
+  useEffect(() => {
+    let active = true;
+    if (!navigator.permissions) {
+      setPermissionOpen(true);
+      return;
+    }
+    navigator.permissions?.query({ name: 'geolocation' }).then((permission) => {
+      if (!active) return;
+      if (permission.state === 'granted') {
+        navigator.geolocation?.getCurrentPosition(
+          ({ coords }) => { if (active) setDeviceLocation({ lat: coords.latitude, lng: coords.longitude }); },
+          () => {}, { maximumAge: 300_000, timeout: 10_000 },
+        );
+      } else {
+        setLocationBlocked(permission.state === 'denied');
+        setPermissionOpen(true);
+      }
+    }).catch(() => { if (active) setPermissionOpen(true); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      if (!searchArea.current?.contains(event.target as Node)) setSearchOpen(false);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, []);
+
+  useEffect(() => {
+    setResults(null);
+    setSearching(false);
+    if (!searchOpen || query.trim().length < 3) return;
+    const point = coordsFromText(query);
+    if (point) {
+      choose(point);
+      setSearchOpen(false);
+      return;
+    }
+    if (/^https?:\/\//i.test(query.trim())) {
+      setProblem(t(/goo\.gl|maps\.app/i.test(query) ? 'map.shortLink' : 'map.noCoords'));
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => void search(controller.signal), 400);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [query, searchOpen, focus.lat, focus.lng]);
+
+  async function search(signal: AbortSignal) {
     const q = query.trim();
     if (!q) return;
     setSearching(true);
     setProblem(null);
     try {
-      // OpenStreetMap's free place search (no key; fine for occasional admin use).
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(q)}`, {
-        headers: { 'Accept-Language': 'en' },
+      // Photon supports search as you type; public Nominatim does not.
+      const params = new URLSearchParams({ q, limit: '15', countrycode: 'EG', lat: String(focus.lat), lon: String(focus.lng), location_bias_scale: '0.1' });
+      const res = await fetch(`https://photon.komoot.io/api/?${params}`, {
+        signal,
       });
-      const rows = (await res.json()) as { display_name: string; lat: string; lon: string }[];
-      setResults(rows.map((r) => ({ name: r.display_name, at: { lat: Number(r.lat), lng: Number(r.lon) } })));
-      if (!rows.length) setProblem(t('map.noPlace'));
+      if (!res.ok) throw new Error('Place search failed');
+      const data = (await res.json()) as { features: { geometry: { coordinates: number[] }; properties: Record<string, string> }[] };
+      if (signal.aborted) return;
+      const distance = (p: LatLng) => {
+        const radians = Math.PI / 180;
+        return Math.sin((p.lat - focus.lat) * radians / 2) ** 2
+          + Math.cos(focus.lat * radians) * Math.cos(p.lat * radians) * Math.sin((p.lng - focus.lng) * radians / 2) ** 2;
+      };
+      setResults(data.features.filter(({ properties: p }) => p.countrycode?.toUpperCase() === 'EG').map(({ geometry, properties: p }) => ({
+        name: [...new Set([p.name, [p.housenumber, p.street].filter(Boolean).join(' '), p.city, p.state, p.country].filter(Boolean))].join(', '),
+        at: { lat: geometry.coordinates[1], lng: geometry.coordinates[0] },
+      })).filter((place) => valid(place.at)).sort((a, b) => distance(a.at) - distance(b.at)).slice(0, 5));
     } catch {
-      setProblem(t('map.searchFailed'));
+      if (!signal.aborted) setProblem(t('map.searchFailed'));
     } finally {
-      setSearching(false);
-    }
-  }
-
-  function applyLink(text: string) {
-    setLink(text);
-    if (!text.trim()) return setProblem(null);
-    const p = coordsFromText(text);
-    if (p) {
-      choose(p);
-    } else if (/goo\.gl|maps\.app/.test(text)) {
-      setProblem(t('map.shortLink'));
-    } else {
-      setProblem(t('map.noCoords'));
+      if (!signal.aborted) setSearching(false);
     }
   }
 
   function locateMe() {
+    placePin.current = true;
+    setPermissionOpen(true);
+  }
+
+  function requestLocation() {
     if (!navigator.geolocation) return setProblem(t('map.noGeo'));
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => choose({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setProblem(t('map.refused')),
+      (pos) => {
+        const point = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setDeviceLocation(point);
+        if (placePin.current) choose(point);
+        placePin.current = false;
+        setLocating(false);
+        setLocationBlocked(false);
+        setPermissionOpen(false);
+      },
+      (error) => {
+        setLocating(false);
+        if (error.code === 1) setLocationBlocked(true);
+        else setProblem(t('map.refused'));
+      },
       { enableHighAccuracy: true, timeout: 10_000 },
     );
   }
 
   return (
     <div className="grid min-w-0 gap-3 rounded-xl border bg-muted/20 p-3">
-      <div className="flex gap-2">
+      <Dialog open={permissionOpen} onOpenChange={setPermissionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('map.permission.title')}</DialogTitle>
+            <DialogDescription>{t('map.permission.body')}</DialogDescription>
+          </DialogHeader>
+          {locationBlocked ? <CameraBlockedHelp location /> : <>
+            <PermissionDemo location />
+            <Button type="button" disabled={locating} onClick={requestLocation}>
+              {locating ? <Loader2 className="animate-spin" /> : <Crosshair />}
+              {t('map.permission.allow')}
+            </Button>
+          </>}
+          <Button type="button" variant="outline" onClick={() => setPermissionOpen(false)}>{t('map.permission.skip')}</Button>
+        </DialogContent>
+      </Dialog>
+      <div ref={searchArea} className="relative flex gap-2">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setSearchOpen(true)}
+            onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }}
             onKeyDown={(e) => {
+              if (e.key === 'Escape' && searchOpen) { e.stopPropagation(); setSearchOpen(false); }
               if (e.key === 'Enter') {
                 e.preventDefault();
-                void search();
+                setSearchOpen(true);
               }
             }}
             placeholder={t('map.searchPlaceholder')}
@@ -169,16 +260,12 @@ export function LocationPicker({
             aria-label={t('map.searchLabel')}
           />
         </div>
-        <Button type="button" variant="outline" size="icon" aria-label={t('common.search')} title={t('common.search')} onClick={() => void search()} disabled={searching || !query.trim()}>
-          {searching ? <Loader2 className="animate-spin" /> : <Search />}
-        </Button>
+        {searching && <Loader2 className="my-auto size-4 shrink-0 animate-spin" aria-label={t('common.loading')} />}
         <Button type="button" variant="outline" size="icon" title={t('map.myLocation')} aria-label={t('map.myLocation')} onClick={locateMe}>
           <Crosshair />
         </Button>
-      </div>
-
-      {results?.length ? (
-        <ul className="max-h-44 overflow-y-auto rounded-lg border bg-card text-sm shadow-sm">
+      {searchOpen && results?.length ? (
+        <ul className="absolute inset-x-0 top-full z-20 mt-2 max-h-52 overflow-y-auto rounded-lg border bg-card text-sm shadow-lg">
           {results.map((r, i) => (
             <li key={i}>
               <button
@@ -186,7 +273,7 @@ export function LocationPicker({
                 className="flex w-full items-start gap-2 px-3 py-2 text-start hover:bg-muted"
                 onClick={() => {
                   choose(r.at);
-                  setResults(null);
+                  setSearchOpen(false);
                 }}
               >
                 <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" />
@@ -197,13 +284,8 @@ export function LocationPicker({
         </ul>
       ) : null}
 
-      <details className="group rounded-lg border bg-card px-3 py-2">
-        <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">{t('map.linkLabel')}</summary>
-      <div className="relative mt-2">
-        <Link2 className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={link} onChange={(e) => applyLink(e.target.value)} placeholder={t('map.linkPlaceholder')} className="ps-9" dir="ltr" aria-label={t('map.linkLabel')} />
+      {searchOpen && results?.length === 0 && <p role="status" className="absolute inset-x-0 top-full z-20 mt-2 rounded-lg border bg-card p-3 text-sm shadow-lg">{t('map.noPlace')}</p>}
       </div>
-      </details>
 
       <div className="branch-location-map relative isolate h-72 overflow-hidden rounded-xl border shadow-sm sm:h-80">
         <Suspense fallback={<div className="grid size-full place-content-center bg-muted"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>}>
