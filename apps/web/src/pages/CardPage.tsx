@@ -69,7 +69,6 @@ export function CardPage() {
   const heading = params.get('new') ? t('card.enrolled') : params.get('back') ? t('card.welcomeBack') : t('card.yours');
   const apple = <WalletButton kind="apple" disabled={inWallet?.apple} onClick={() => setAppleNotice(true)} />;
   const google = <WalletButton kind="google" onClick={() => void addGoogle()} busy={adding} disabled={inWallet?.google} />;
-  const samsung = <WalletButton kind="samsung" disabled />;
 
   return (
     <Page>
@@ -86,10 +85,8 @@ export function CardPage() {
         <p className="text-center text-[14px] text-muted">{t('card.addWithButtons')}</p>
         {device === 'ios' ? apple : google}
         {device === 'ios' ? google : apple}
-        {device !== 'ios' ? samsung : null}
         <ErrorNote>{walletError}</ErrorNote>
         {appleNotice && <p role="status" className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.appleSoon')}</p>}
-        {device !== 'ios' ? <p className="max-w-xs text-center text-[14px] leading-relaxed text-muted">{t('card.samsungSoon')}</p> : null}
       </div>
 
       {device === 'other' && !inWallet?.google && !inWallet?.apple ? (
@@ -119,7 +116,7 @@ export function CardPage() {
 }
 
 /** Official supplied badges; each wallet has its own saved status. */
-function WalletButton({ kind, onClick, busy, disabled }: { kind: 'apple' | 'google' | 'samsung'; onClick?: () => void; busy?: boolean; disabled?: boolean }) {
+function WalletButton({ kind, onClick, busy, disabled }: { kind: 'apple' | 'google'; onClick?: () => void; busy?: boolean; disabled?: boolean }) {
   return (
     <button
       type="button"
@@ -130,7 +127,7 @@ function WalletButton({ kind, onClick, busy, disabled }: { kind: 'apple' | 'goog
     >
       <img
         src={`/wallet/add-to-${kind}-wallet.svg`}
-        alt={kind === 'apple' ? t('card.addApple') : kind === 'samsung' ? t('card.addSamsung') : t('card.addGoogle')}
+        alt={kind === 'apple' ? t('card.addApple') : t('card.addGoogle')}
         className="h-full w-full object-contain"
       />
     </button>
