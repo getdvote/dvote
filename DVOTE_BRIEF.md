@@ -336,6 +336,9 @@ LocationPicker uses a taller rounded map panel, softened OSM tile colors, theme-
 ### Automatic light/dark branch maps (2026-10-17)
 All embedded maps currently use the shared dashboard LocationPicker (admin/merchant Add and Edit branch forms). Replaced its Leaflet renderer with a lazy-loaded MapLibre BranchMap using OpenFreeMap's OpenMapTiles-derived Positron style in light mode and Dark Matter-derived dark style in dark mode. useTheme.resolvedTheme follows explicit light/dark and system preference; setStyle preserves camera/pin. No API key or added provider account. Provider/data attribution comes from the vector source (OpenFreeMap/OpenMapTiles/OpenStreetMap). Removed the previous raster color filter; controls and pin use dashboard theme colors. Vite worker is explicitly bundled per OpenFreeMap's quick start. Click/drag, search, link, geolocation and resize behavior are retained. WebGL failure shows localized guidance so search/link can still set coordinates. Other apps have outbound Google Maps directions links, not embedded map previews. Dashboard build passes and both style/TileJSON endpoints returned HTTP 200.
 
+### Automatic broadcast audience (2026-10-19)
+Broadcast in both merchant and platform-admin merchant workspaces loads target audience counts automatically on opening and whenever the audience or branch filter changes. The manual Check audience button is removed. Loading or failed previews disable sending so confirmation uses the current selection; sending still requires explicit confirmation.
+
 ## Platform-wide merchant operations (2026-10-18)
 
 The platform admin dashboard now includes merchant operations that were previously only available to merchant accounts. All-merchants views support search and pagination; choose a merchant to open its complete editor/workflow. Existing platform Customers, Statistics, merchant support Feedback and System pages remain separate.
