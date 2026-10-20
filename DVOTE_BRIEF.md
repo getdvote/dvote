@@ -2,7 +2,7 @@
 
 > **Read this first.** A self-contained summary of the dvote business, product, technical setup,
 > current status and working agreements, written so a new Claude session (or person) can pick up
-> the project cold. Last updated **2026-10-17**.
+> the project cold. Last updated **2026-10-20**.
 >
 > - Technical rules for coding live in [`CLAUDE.md`](CLAUDE.md) (loaded automatically by Claude Code in this repo).
 > - Full original spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; partly outdated, see §9).
@@ -385,3 +385,8 @@ Validation: API and dashboard production builds pass; 8 broadcast integration te
 
 ### Broadcast draft autosave (2026-10-19)
 New campaigns and existing drafts save automatically after a short typing pause, on composer dismissal and on page navigation. A per-merchant/per-user browser recovery copy preserves unsynced edits across refreshes and retries on reconnection. A stable client draft UUID makes creation retries idempotent; tenant-scoped upserts only update draft rows and cannot turn a sent campaign back into a draft. Partial messages without a name use a localized Untitled campaign name; untouched forms do not create drafts. Draft audience metadata preserves timing mode, first send time and repeat interval without scheduling any delivery. Explicit send waits for the draft save and then updates that same campaign. Scheduled/repeating campaigns retain their explicit Save workflow when edited. API build/dashboard typecheck, 9 broadcast integration tests and 4 browser tests pass, including failed-save refresh recovery and duplicate prevention. No additional migration required.
+
+### Public domain and holding page (2026-10-20)
+- Purchased domain: **dvote.co**, registered with **Namecheap**. This replaces the previously planned dvote.app address.
+- A standalone branded **Coming soon** page is prepared in apps/coming-soon (index.html + logo.svg); no build, API or secrets required. Deploy only this folder for the temporary holding page.
+- Publication is pending access to the domain/hosting account; the www record currently points to Namecheap parking. Do not describe the page as live until verified at the domain.
