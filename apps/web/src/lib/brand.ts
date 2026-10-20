@@ -9,12 +9,22 @@ function inkOn(hex: string): string {
   return 0.299 * r + 0.587 * g + 0.114 * b > 170 ? '#1C1C1E' : '#FFFFFF';
 }
 
+/**
+ * The colours of the merchant's loyalty card: its live look (Dashboard → Cards → Design card),
+ * else the old automatic design (merchants without a card yet).
+ */
+export function cardLook(vendor: Pick<PublicVendor, 'id' | 'cardDesign' | 'card'>) {
+  if (vendor.card) return { color: vendor.card.colors.background, color2: vendor.card.colors.background, ink: vendor.card.colors.text };
+  const design = cardDesign(vendor.id, vendor.cardDesign);
+  return { color: design.colors[0], color2: design.colors[1], ink: design.ink };
+}
+
 /** The merchant's page colours: brand colours from Settings → Branding, else the card colours. */
 export function brandColors(vendor: PublicVendor) {
-  const design = cardDesign(vendor.id, vendor.cardDesign);
-  const primary = vendor.style.primary ?? design.colors[0];
-  const secondary = vendor.style.secondary ?? design.colors[1];
-  const ink = vendor.style.primary ? inkOn(primary) : design.ink;
+  const look = cardLook(vendor);
+  const primary = vendor.style.primary ?? look.color;
+  const secondary = vendor.style.secondary ?? look.color2;
+  const ink = vendor.style.primary ? inkOn(primary) : look.ink;
   // icons and coloured text on white: the brand colour, or dark ink when the colour is too light to read
   const accent = inkOn(primary) === '#FFFFFF' ? primary : '#1C1C1E';
   return { primary, secondary, ink, accent };

@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, ApiError, errorMessage, vendorApi, type AdminMe, type StaffMe } from './api';
 import { supabase } from './supabase';
+import { AuthContext, type AuthState, type AuthStatus, type Enrollment } from './auth-context';
 
 /**
  * Platform-admin sign-in: email + password, then a 6-digit code from an authenticator app
@@ -14,29 +15,7 @@ import { supabase } from './supabase';
  *                          → mfaEnroll (none yet: scan a QR) ──code──┤→ ready
  *                          → ready (server doesn't require MFA)      ┘
  */
-export type AuthStatus = 'loading' | 'signedOut' | 'mfaVerify' | 'mfaEnroll' | 'ready';
-
-export interface Enrollment {
-  factorId: string;
-  qrCode: string; // SVG data URL to show as an image
-  secret: string; // for typing into the app by hand
-}
-
-interface AuthState {
-  status: AuthStatus;
-  admin: AdminMe | null;
-  /** Set when a vendor account (not a platform admin) is signed in. */
-  staff: StaffMe | null;
-  /** Shown on the sign-in screen (e.g. "not a dvote admin"). */
-  notice: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  verifyCode: (code: string) => Promise<void>;
-  startEnroll: () => Promise<Enrollment>;
-  confirmEnroll: (factorId: string, code: string) => Promise<void>;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthState | null>(null);
+export type { AuthStatus, Enrollment } from './auth-context';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');

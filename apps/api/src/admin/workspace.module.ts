@@ -51,6 +51,10 @@ import {
   BroadcastsModule,
 } from '../broadcasts/broadcasts';
 import { ScansController } from '../scans/scans.controller';
+import {
+  LoyaltyCardController,
+  LoyaltyCardsModule,
+} from '../loyalty-cards/loyalty-cards.module';
 import { ScansModule } from '../scans/scans.module';
 import {
   ReportsModule,
@@ -161,6 +165,7 @@ const controllers = [
   [MerchantCustomersController, 'customers'],
   [CustomerSegmentsController, 'customer-segments'],
   [StorefrontController, 'storefront'],
+  [LoyaltyCardController, 'loyalty-card'],
   [StorefrontFeedbackController, 'customer-feedback'],
   [BroadcastsController, 'broadcasts'],
   [ScansController, 'scans'],
@@ -185,6 +190,7 @@ const controllers = [
     VendorImagesModule,
     MerchantCustomersModule,
     StorefrontModule,
+    LoyaltyCardsModule,
     StorefrontFeedbackModule,
     BroadcastsModule,
     ScansModule,

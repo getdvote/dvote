@@ -83,7 +83,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
             <TableRow>
               <TableHead className="w-16 ps-4">#</TableHead>
               <TableHead className="w-20">{t('rewards.photo')}</TableHead>
-              <TableHead>{t('rewards.reward')}</TableHead>
+              <TableHead data-card="primary">{t('rewards.reward')}</TableHead>
               <TableHead className="text-end">{t('rewards.cost')}</TableHead>
               {scope.soldOut ? <TableHead>{t('rewards.availability')}</TableHead> : null}
               <TableHead>{t('common.status')}</TableHead>
@@ -91,7 +91,16 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
             </TableRow>
           </TableHeader>
           <Reorder.Group as="tbody" axis="y" values={rows} onReorder={setRows} data-slot="table-body" className="[&_tr:last-child]:border-0">
-            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyText={t('rewards.empty')} />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyTitle={t('emptyStates.rewardsTitle')}
+              emptyText={t('emptyStates.rewardsText')}
+              action={
+                scope.can.editVendor ? (
+                  <Button size="sm" onClick={() => setEditing('new')}>
+                    <Plus /> {t('emptyStates.addReward')}
+                  </Button>
+                ) : null
+              }
+            />
             {rows.map((r, i) => (
               <RewardRow key={r.id} reward={r} canDrag={canEdit && !reorder.isPending} onDrop={() => {
                 if (rows.some((x, j) => x.id !== data?.[j]?.id)) reorder.mutate(rows);

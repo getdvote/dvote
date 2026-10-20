@@ -1,3 +1,4 @@
+import { broadcastEn } from './broadcast.en';
 /**
  * English: the default language and the source of every key. ar.ts must have the same shape
  * (TypeScript checks it), so a missing Arabic text is a compile error.
@@ -14,7 +15,11 @@ export interface PluralForms {
   other: string;
 }
 
+import { cardsEn } from './cards.en';
+
 export const en = {
+  broadcast: broadcastEn,
+  cards: cardsEn,
   passwordSetup: {
   "newTitle": "Choose a new password",
   "forgotTitle": "Reset your password",
@@ -88,13 +93,14 @@ export const en = {
     blocked: 'Blocked',
   },
   nav: {
+    more: 'More',
     hubGroup: 'Management',
     loyaltyGroup: 'Loyalty',
     workspaceGroup: 'Workspace',
     accountGroup: 'Account',
     home: 'Home',
     till: 'Scan',
-    card: 'Card',
+    card: 'Cards',
     feedback: 'Feedback',
     messages: 'Broadcast',
     storeIds: 'Kit',
@@ -1157,6 +1163,41 @@ export const en = {
 
     subtitle: 'What your customers tell you about their visits.',
   },
+  emptyStates: {
+    noMatchTitle: 'No matches',
+    clearFilters: 'Clear filters',
+    openTill: 'Open the till',
+    activityTitle: 'No activity yet',
+    redemptionsTitle: 'No rewards given yet',
+    redemptionsText: 'Rewards show here when staff confirm a redemption at the till.',
+    branchesTitle: 'Add your first branch',
+    branchesText: 'Branches are where staff scan cards. Add one to start giving points.',
+    addBranch: 'Add branch',
+    homeBranchesText: 'Add a branch to see how each location performs.',
+    rewardsTitle: 'Add your first reward',
+    rewardsText: 'Rewards are what customers save points for, like a free coffee. They give people a reason to come back.',
+    addReward: 'Add reward',
+    seeRewards: 'Go to Rewards',
+    staffTitle: 'Invite your team',
+    staffText: 'Staff scan customers’ cards at the till. Invite them by email.',
+    rulesTitle: 'No points rule yet',
+    rulesText: 'Set how much customers spend to earn one point. Until then nobody can collect points.',
+    broadcastTitle: 'No campaigns yet',
+    feedbackTitle: 'No feedback yet',
+    openStorefront: 'Open Storefront',
+    shareCard: 'Share your card',
+  },
+  errorPage: {
+    notFoundCode: '404',
+    notFoundTitle: 'This page doesn’t exist',
+    notFoundText: 'The link may be old, or the page was moved. Everything you need is in the menu.',
+    crashTitle: 'Something went wrong on this page',
+    crashText: 'Your data is safe. Reload the page to try again. If it keeps happening, tell us and we’ll fix it.',
+    reload: 'Reload page',
+    home: 'Go to Home',
+    contact: 'Get help',
+    details: 'Technical details',
+  },
   placeholder: {
     empty: 'Nothing here yet',
     emptyHint: 'This page is coming soon.',
@@ -1277,6 +1318,13 @@ export const en = {
     continue: "Continue",
   },
   errors: {
+    broadcast_daily_limit: 'No notifications remaining. Schedule for later or save a draft.',
+    campaign_content_required: 'Add a campaign name and message.',
+    campaign_future_required: 'Choose a future date and time.',
+    campaign_repeat_required: 'Choose how often to repeat this campaign.',
+    campaign_not_editable: 'This campaign has already been sent, cancelled, or is sending. Refresh and try again.',
+    nearby_invalid_branches: 'Select up to 10 active branches with map locations.',
+
     reward_changed: 'The reward price changed. Scan the card again to see the latest rewards.',
     reward_required: 'Choose a reward to redeem.',
     username_taken: "This username is taken or reserved.",

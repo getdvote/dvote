@@ -1,4 +1,5 @@
-import { useVendorApi } from '../../lib/vendor-workspace';
+import { useVendorApi, WorkspaceLink } from '../../lib/vendor-workspace';
+import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,7 +84,15 @@ export function RewardPerformance({ query, money }: { query: { from?: string; to
 
 function RewardsTable({ data, balances }: { data: Performance | undefined; balances: boolean }) {
   if (!data) return <Skeleton className="m-6 h-32" />;
-  if (!data.rewards.length) return <CardContent className="py-6 text-sm text-muted-foreground">{t('insights.rewards.empty')}</CardContent>;
+  if (!data.rewards.length)
+    return (
+      <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
+        {t('insights.rewards.empty')}
+        <Button variant="outline" size="sm" asChild>
+          <WorkspaceLink to="/rewards">{t('emptyStates.seeRewards')}</WorkspaceLink>
+        </Button>
+      </CardContent>
+    );
   return (
     <Table>
       <TableHeader>

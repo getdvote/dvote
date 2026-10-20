@@ -156,10 +156,17 @@ function wording(i: AttentionItem, admin: boolean): { title: string; detail: str
     count: Number(p.count ?? 0),
     missing: p.missing ? t(`attention.missing.${p.missing}` as TKey) : '',
   };
-  return {
+  const worded = {
     title: t(`${k}.${one && KINDS[kind].oneTitle ? 'titleOne' : 'title'}` as TKey, params),
     detail: t(`${k}.detail` as TKey, params),
     action: t(`${k}.${KINDS[kind].adminAction && !admin ? 'actionView' : 'action'}` as TKey, params),
+  };
+  // a value the wording needs is missing (an older API, a new param): the API's English beats a raw {placeholder}
+  const unfilled = (text: string) => /\{\w+\}/.test(text);
+  return {
+    title: unfilled(worded.title) ? i.title : worded.title,
+    detail: unfilled(worded.detail) ? i.detail : worded.detail,
+    action: unfilled(worded.action) ? i.action.label : worded.action,
   };
 }
 

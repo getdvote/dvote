@@ -68,7 +68,16 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={OPENING_HOURS ? 7 : 6} emptyText={t('branches.empty')} />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={OPENING_HOURS ? 7 : 6} emptyTitle={t('emptyStates.branchesTitle')}
+              emptyText={t('emptyStates.branchesText')}
+              action={
+                scope.can.editVendor ? (
+                  <Button size="sm" onClick={() => setEditing('new')}>
+                    <Plus /> {t('emptyStates.addBranch')}
+                  </Button>
+                ) : null
+              }
+            />
             {data?.map((b) => (
               <TableRow key={b.id}>
                 <TableCell className="ps-4">

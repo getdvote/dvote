@@ -1,4 +1,4 @@
-import { useVendorApi } from '../../lib/vendor-workspace';
+import { useVendorApi, WorkspaceLink } from '../../lib/vendor-workspace';
 import { ActivitySheet } from './MyActivity';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -251,9 +251,13 @@ export function MyCustomers() {
                       {search || filtered ? t('customers.noMatch') : page > 1 ? t('customers.noPage') : t('customers.emptyTitle')}
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">{search || filtered ? t('customers.noMatchText') : t('customers.emptyText')}</p>
-                    {(search || filtered || page > 1) && (
+                    {search || filtered || page > 1 ? (
                       <Button variant="outline" className="mt-4" onClick={() => setParams(branchId && !manager ? { branch: branchId } : {})}>
                         {t('customers.reset')}
+                      </Button>
+                    ) : (
+                      <Button variant="outline" className="mt-4" asChild>
+                        <WorkspaceLink to="/card">{t('emptyStates.shareCard')}</WorkspaceLink>
                       </Button>
                     )}
                   </div>

@@ -293,7 +293,7 @@ export function Statistics() {
                         <TableCell className="text-right tabular-nums">
                           {num(v.shop)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell data-card="fill">
                           <ShareBar
                             master={v.master}
                             shop={v.shop}

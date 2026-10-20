@@ -4,6 +4,7 @@
  * large, so layouts are tested with realistic worst cases.
  */
 import type {
+  CardMemberPage,
   ActivityPage,
   AdminMe,
   AttentionItem,
@@ -36,6 +37,7 @@ import type {
   VendorImage,
   VendorPatterns,
   VendorSummary,
+  LoyaltyCardInfo,
 } from '../../dashboard/src/lib/api';
 import type { PublicCard, PublicVendor } from '../../web/src/lib/api';
 
@@ -174,7 +176,7 @@ export const summary: VendorSummary = {
 
 export const attention: { items: AttentionItem[] } = {
   items: [
-    { key: 'sold_out', group: 'now', tone: 'warning', title: 'Rewards sold out', detail: 'Free cheesecake slice is sold out at Gleem Bay', action: { label: 'Open rewards', to: '/rewards' }, params: { count: 1 } },
+    { key: 'sold_out', group: 'now', tone: 'warning', title: 'Rewards sold out', detail: 'Free cheesecake slice is sold out at Gleem Bay', action: { label: 'Open rewards', to: '/rewards' }, params: { count: 1, branch: 'Gleem Bay' } },
     { key: 'no_arabic', group: 'setup', tone: 'info', title: 'Rewards without an Arabic name', detail: '1 reward', action: { label: 'Add names', to: '/rewards' }, params: { count: 1 } },
   ],
 };
@@ -330,6 +332,45 @@ export const patterns: VendorPatterns = {
   cohorts: range(6).map((i) => ({ month: day(30 * (5 - i)).slice(0, 7), size: 300 + i * 40, returned: range(5 - i).map((k) => 0.6 - k * 0.08) })),
   updatedAt: iso(),
 };
+
+export const loyaltyCard: LoyaltyCardInfo = {
+  card: {
+    id: 'card-program-1',
+    name: 'Joy Corner Rewards',
+    status: 'active',
+    cancelledAt: null,
+    restorableUntil: null,
+    liveVersionId: 'version-3',
+    createdAt: '2026-10-16T10:00:00.000Z',
+  },
+  design: {
+    colors: { background: '#2048AC', text: '#FFFFFF', label: '#D4D4D8', useBrand: true, autoText: true, autoLabel: true },
+    background: { style: 'mesh', imageUrl: null, imagePath: null },
+    front: { title: { en: 'Joy Corner Rewards', ar: 'مكافآت جوي كورنر' }, pointsLabel: { en: 'Points', ar: 'النقاط' } },
+    buttons: { primaryLabel: { en: 'Offers & Rewards', ar: 'العروض والمكافآت' }, secondary: { type: 'directions', branchId: BRANCH_IDS[0] } },
+    back: {
+      about: 'Earn points on everything you spend. Show this card at the till and watch your balance grow toward your next reward.',
+      hours: [0, 1, 2, 3, 4, 6].map((day) => ({ day, opensAt: '08:00', closesAt: '23:00' })),
+      links: [
+        { platform: 'instagram', value: '@joycorner' },
+        { platform: 'whatsapp', value: '+20 100 123 4567' },
+        { platform: 'custom', value: 'https://joycorner.cafe/menu', label: 'Full menu & seasonal specials' },
+      ],
+      terms: 'One reward per visit. Rewards can’t be exchanged for cash.',
+    },
+  },
+  versions: [3, 2, 1].map((n) => ({
+    id: `version-${n}`,
+    number: n,
+    createdAt: `2026-10-1${n + 5}T12:0${n}:00.000Z`,
+    createdBy: 'Mohamed Marrouf',
+    live: n === 3,
+  })),
+  counts: { members: 12_480, active30d: 3_904 },
+  rule: { spendAmount: '10.00', pointsPerSpend: 1 },
+  canCreate: false,
+};
+
 
 export const storefront: StorefrontSettings = {
   shop: {
@@ -519,6 +560,8 @@ export const merchantFeedback: Page<MerchantFeedback> & { moods: Record<'love' |
 
 // ── customer website ──────────────────────────────────────────────────
 
+const CARD_LOOK = { status: 'active' as const, title: { en: 'Joy Corner Rewards', ar: 'مكافآت جوي كورنر' }, pointsLabel: { en: 'Points', ar: 'النقاط' }, colors: { background: '#2048AC', text: '#FFFFFF', label: '#D4D4D8' }, background: { style: 'mesh' as const, imageUrl: null } };
+
 export const publicVendor: PublicVendor = {
   id: VENDOR_ID,
   slug: 'joy-corner',
@@ -527,6 +570,7 @@ export const publicVendor: PublicVendor = {
   bannerUrl: null,
   category: 'cafe_restaurant',
   cardDesign: 3,
+  card: CARD_LOOK,
   currency: 'EGP',
   rule: { spendAmount: '10.00', pointsPerSpend: 1 },
   rewards: rewards.filter((r) => r.status === 'active').map((r) => ({ name: r.name, nameAr: r.nameAr, pointsCost: r.pointsCost, imageUrl: r.imageUrl })),
@@ -541,6 +585,19 @@ export const publicCard: PublicCard = {
   shortCode: 'CZW-QNM',
   cardholder: 'Ahmed Mohamed Abdelaziz Elshenawy',
   balance: 12_480,
-  vendor: { id: VENDOR_ID, slug: 'joy-corner', name: vendor.name, logoUrl: PIXEL, bannerUrl: null, cardDesign: 3, currency: 'EGP' },
+  vendor: { id: VENDOR_ID, slug: 'joy-corner', name: vendor.name, logoUrl: PIXEL, bannerUrl: null, cardDesign: 3, card: CARD_LOOK, currency: 'EGP' },
   createdAt: iso(30),
+};
+
+export const cardMembers: CardMemberPage = {
+  total: 7,
+  page: 1,
+  pageSize: 25,
+  items: [
+    { id: 'm1', name: 'Lucia Garcia', email: null, phone: '+201001234567', code: 'K7M-4QX', joinedAt: '2026-10-19T18:20:00Z', points: 120 },
+    { id: 'm2', name: 'Omar Hassan', email: null, phone: '+201112223334', code: 'P3R-9TW', joinedAt: '2026-10-18T10:05:00Z', points: 45 },
+    { id: 'm3', name: 'نور أحمد', email: null, phone: '+201223334445', code: 'H2C-7LN', joinedAt: '2026-10-17T12:40:00Z', points: 300 },
+    { id: 'm4', name: 'Sara Ali', email: null, phone: null, code: 'Z8D-2QF', joinedAt: '2026-10-15T09:12:00Z', points: 0 },
+    { id: 'm5', name: 'Youssef Tarek', email: null, phone: null, code: 'B5V-6KM', joinedAt: '2026-10-12T16:30:00Z', points: 860 },
+  ],
 };

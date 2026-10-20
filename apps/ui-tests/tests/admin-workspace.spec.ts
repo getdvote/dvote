@@ -25,8 +25,7 @@ for (const selected of [false, true]) {
         ).toBeVisible();
         await expect(page.getByRole('status').filter({ hasText: 'Loading merchant workspace' })).toHaveCount(0);
       } else await expect(page.getByText('Workspace record', { exact: true })).toBeVisible();
-      // Card includes an informational points-calculation preview rendered as an alert.
-      await expect(page.locator('[role="alert"]')).toHaveCount(selected && item.section === 'card' ? 1 : 0);
+      await expect(page.locator('[role="alert"]')).toHaveCount(0);
       expect(errors).toEqual([]);
       expect(merchantRequests).toEqual([]);
     });

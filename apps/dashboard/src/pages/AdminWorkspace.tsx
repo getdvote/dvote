@@ -9,11 +9,12 @@ import { VendorWorkspaceProvider } from '../lib/vendor-workspace';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useStackedRows } from '@/components/ui/table';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { MyProfile } from './my/MyProfile';
 import { MyActivity } from './my/MyActivity';
 import { MyInsights } from './my/MyInsights';
-import { MyCard } from './my/MyCard';
+import { CardsArea } from './my/cards/cards-area';
 import { MyBranches, MyRewards } from './my/MySections';
 import { MyCustomers } from './my/my-customers';
 import { MyMessages } from './my/MyMessages';
@@ -31,7 +32,7 @@ const COMPONENTS: {
   { section: 'merchant-home', label: 'Merchant overview', component: MyHome },
   { section: 'storefront', label: 'Storefronts', component: MyProfile },
   { section: 'branches', label: 'Branches', component: MyBranches },
-  { section: 'card', label: 'Loyalty cards & points', component: MyCard },
+  { section: 'card', label: 'Loyalty cards & points', component: CardsArea },
   { section: 'rewards', label: 'Rewards', component: MyRewards },
   { section: 'members', label: 'Customer segments', component: MyCustomers },
   { section: 'broadcast', label: 'Broadcast', component: MyMessages },
@@ -80,6 +81,7 @@ export function AdminWorkspace({ section }: { section: string }) {
     queryKey: ['admin-workspace-vendors'],
     queryFn: () => api.vendors(),
   });
+  const tableRef = useStackedRows();
   const rows = useQuery({
     queryKey: ['admin-workspace', section, search, page, vendorId],
     queryFn: () => api.workspace(section, { search, page, vendorId: vendorId || undefined }),
@@ -153,8 +155,8 @@ export function AdminWorkspace({ section }: { section: string }) {
               <p role="status">Loading…</p>
             ) : (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                <div data-slot="table-container" className="overflow-x-auto">
+                  <table ref={tableRef} data-slot="table" className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b">
                         <th className="p-3">Merchant</th>

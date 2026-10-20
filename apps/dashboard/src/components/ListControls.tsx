@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { ReactNode } from 'react';
 import { t } from '../i18n';
 
 /** Search box with a magnifier and a clear button. */
@@ -34,7 +35,7 @@ export function StatusFilter<T extends string>({
 }: {
   value: T;
   onChange: (v: T) => void;
-  options: { value: T; label: string }[];
+  options: { value: T; label: ReactNode }[];
 }) {
   return (
     <ToggleGroup

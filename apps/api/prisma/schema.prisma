@@ -67,21 +67,22 @@ model fraud_flags {
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model platform_admins {
-  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name              String              @db.VarChar(120)
-  email             String              @db.VarChar(255)
-  password_hash     String?             @db.VarChar(255)
-  totp_secret_ref   String?             @db.VarChar(255)
-  auth_user_id      String?             @unique @db.Uuid
-  status            account_status      @default(active)
-  created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
-  admin_actions     admin_actions[]
-  fraud_flags       fraud_flags[]
-  point_events      point_events[]
-  qr_codes          qr_codes[]
-  redemptions       redemptions[]
-  wallet_broadcasts wallet_broadcasts[]
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String                  @db.VarChar(120)
+  email                 String                  @db.VarChar(255)
+  password_hash         String?                 @db.VarChar(255)
+  totp_secret_ref       String?                 @db.VarChar(255)
+  auth_user_id          String?                 @unique @db.Uuid
+  status                account_status          @default(active)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  admin_actions         admin_actions[]
+  fraud_flags           fraud_flags[]
+  point_events          point_events[]
+  qr_codes              qr_codes[]
+  redemptions           redemptions[]
+  wallet_broadcasts     wallet_broadcasts[]
+  loyalty_card_versions loyalty_card_versions[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -173,6 +174,8 @@ model staff_users {
   vendors                  vendors                    @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   wallet_broadcasts        wallet_broadcasts[]
 
+  loyalty_card_versions loyalty_card_versions[]
+
   @@index([vendor_id], map: "staff_users_vendor_idx")
 }
 
@@ -236,6 +239,7 @@ model vendors {
   brand_primary         String?             @db.VarChar(7)
   brand_secondary       String?             @db.VarChar(7)
   brand_font            String?             @db.VarChar(40)
+  wallet_nearby_branch_ids String[] @db.Uuid
   wallet_nearby_enabled Boolean             @default(false)
   admin_actions         admin_actions[]
   branches              branches[]
@@ -253,6 +257,8 @@ model vendors {
   vendor_feedback       vendor_feedback[]
   vendor_images         vendor_images[]
   wallet_broadcasts     wallet_broadcasts[]
+  loyalty_cards         loyalty_cards?
+  wallet_campaigns wallet_campaigns[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -478,7 +484,7 @@ model wallet_broadcasts {
   vendor_id                   String                        @db.Uuid
   created_by                  String?                       @db.Uuid
   title                       String                        @db.VarChar(80)
-  body                        String                        @db.VarChar(500)
+  body                        String                        @db.VarChar(2000)
   audience                    Json
   idempotency_key             String                        @db.VarChar(100)
   created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
@@ -617,4 +623,58 @@ enum user_gender {
 enum vendor_image_kind {
   menu
   branch_photo
+}
+
+/// The merchant's loyalty card (one per merchant, migration 29). This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model loyalty_cards {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id       String                  @unique(map: "loyalty_cards_vendor_uq") @db.Uuid
+  name            String                  @db.VarChar(60)
+  status          String                  @default("active") @db.VarChar(10)
+  cancelled_at    DateTime?               @db.Timestamptz(6)
+  live_version_id String?                 @db.Uuid
+  created_at      DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime                @default(now()) @db.Timestamptz(6)
+  versions        loyalty_card_versions[] @relation("loyalty_card_versions_card")
+  live_version    loyalty_card_versions?  @relation("loyalty_cards_live_version", fields: [live_version_id, id], references: [id, card_id], onDelete: NoAction, onUpdate: NoAction, map: "loyalty_cards_live_version_fk")
+  vendors         vendors                 @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, vendor_id], map: "loyalty_cards_id_vendor_uq")
+}
+
+/// Immutable versions of a loyalty card's look (V1, V2, ...). This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model loyalty_card_versions {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  card_id             String           @db.Uuid
+  vendor_id           String           @db.Uuid
+  number              Int
+  design              Json
+  created_by_staff_id String?          @db.Uuid
+  created_by_admin_id String?          @db.Uuid
+  created_at          DateTime         @default(now()) @db.Timestamptz(6)
+  card                loyalty_cards    @relation("loyalty_card_versions_card", fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  live_of             loyalty_cards[]  @relation("loyalty_cards_live_version")
+  platform_admins     platform_admins? @relation(fields: [created_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users         staff_users?     @relation(fields: [created_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, card_id], map: "loyalty_card_versions_id_card_uq")
+  @@unique([card_id, number], map: "loyalty_card_versions_number_uq")
+}
+
+// Check constraints and due-work index are maintained by migration 30.
+model wallet_campaigns {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id   String    @db.Uuid
+  actor       Json
+  name        String    @db.VarChar(80)
+  body        String    @db.VarChar(2000)
+  audience    Json      @default("{}")
+  status      String
+  next_at     DateTime? @db.Timestamptz(6)
+  repeat_days Int?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  vendors     vendors   @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([next_at], map: "wallet_campaigns_due", where: raw("(status = ANY (ARRAY['scheduled'::text, 'repeating'::text, 'processing'::text]))"))
 }

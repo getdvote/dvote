@@ -53,6 +53,14 @@ export class Env {
   STAFF_INVITE_REDIRECT_URL?: string;
 
   /**
+   * The public customer site (storefronts at <url>/<slug>): the first button on the wallet
+   * pass opens the merchant's storefront there. Default https://dvote.app.
+   */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  PUBLIC_WEB_URL?: string;
+
+  /**
    * Websites the admin "System status" page checks, as "Name=https://url" pairs separated
    * by commas, e.g. "Dashboard=https://admin.dvote.app,Staff web app=https://staff.dvote.app".
    * The API itself, the database and Supabase Auth / Storage are always checked.

@@ -26,6 +26,7 @@ import { RateLimitModule } from './rate-limit/rate-limit';
 import { PublicJoinModule } from './public-join/public-join.module';
 import { BroadcastsModule } from './broadcasts/broadcasts';
 import { AdminWorkspaceModule } from './admin/workspace.module';
+import { LoyaltyCardsModule } from './loyalty-cards/loyalty-cards.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { AdminWorkspaceModule } from './admin/workspace.module';
     ReportsModule,
     MerchantCustomersModule,
     StorefrontModule,
+    LoyaltyCardsModule,
     PublicJoinModule,
     BroadcastsModule,
     AdminWorkspaceModule,

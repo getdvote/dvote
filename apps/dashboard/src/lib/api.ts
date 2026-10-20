@@ -882,6 +882,71 @@ export interface CustomerFeedback {
   branchName: string | null;
   existingCustomer: boolean;
 }
+// ---- Loyalty card (one per merchant): /api/vendor/loyalty-card. Shape = apps/api/src/loyalty-cards/card-design.ts
+
+export type CardBackgroundStyle = 'solid' | 'gradient' | 'mesh' | 'waves' | 'dots';
+export type CardLinkPlatform = 'instagram' | 'facebook' | 'tiktok' | 'x' | 'snapchat' | 'whatsapp' | 'youtube' | 'linkedin' | 'website' | 'custom';
+export interface Bilingual {
+  en: string;
+  ar: string;
+}
+export type CardSecondaryButton = { type: 'none' } | { type: 'directions'; branchId: string } | { type: 'call'; phone: string };
+export interface CardLink {
+  platform: CardLinkPlatform;
+  value: string;
+  label?: string;
+}
+export interface CardDesign {
+  colors: { background: string; text: string; label: string; useBrand: boolean; autoText: boolean; autoLabel: boolean };
+  background: { style: CardBackgroundStyle; imageUrl: string | null; imagePath: string | null };
+  front: { title: Bilingual; pointsLabel: Bilingual };
+  buttons: { primaryLabel: Bilingual; secondary: CardSecondaryButton };
+  back: { about: string; hours: HoursSlot[]; links: CardLink[]; terms: string };
+}
+export type LoyaltyCardStatus = 'active' | 'paused' | 'cancelled';
+export interface LoyaltyCardInfo {
+  card: {
+    id: string;
+    name: string;
+    status: LoyaltyCardStatus;
+    cancelledAt: string | null;
+    restorableUntil: string | null;
+    liveVersionId: string | null;
+    createdAt: string;
+  } | null;
+  design: CardDesign | null;
+  versions: { id: string; number: number; createdAt: string; createdBy: string | null; live: boolean }[];
+  counts: { members: number; active30d: number };
+  rule: { spendAmount: string; pointsPerSpend: number } | null;
+  canCreate: boolean;
+}
+export interface CardMember {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  code: string | null;
+  joinedAt: string;
+  /** null for branch managers (balances are merchant-wide). */
+  points: number | null;
+}
+export interface CardMemberPage {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: CardMember[];
+}
+
+export interface BroadcastCampaign {
+  id: string; name: string; body: string; audience: MerchantCustomerQuery & { draftMode?: 'now' | 'schedule' | 'repeat'; draftNextAt?: string; draftRepeatDays?: number };
+  status: 'draft' | 'scheduled' | 'repeating' | 'processing' | 'sent' | 'failed' | 'cancelled';
+  nextAt: string | null; repeatDays: number | null; createdAt: string; accepted: number; deliveryStatus?: 'processing' | 'failed' | 'sent';
+}
+export interface BroadcastCampaignInput extends MerchantCustomerQuery {
+  clientDraftId?: string; draftMode?: 'now' | 'schedule' | 'repeat';
+  name: string; body: string; mode: 'draft' | 'now' | 'schedule' | 'repeat'; nextAt?: string; repeatDays?: number;
+}
+
 export function createVendorApi(prefix = '/api/vendor') {
   const request = <T>(method: Method, url: string, body?: unknown) => call<T>(method, url.replace(/^\/api\/vendor(?=\/|$)/, prefix), body);
   return {
@@ -906,6 +971,7 @@ export function createVendorApi(prefix = '/api/vendor') {
         {
           id: string;
           title: string;
+          audience?: MerchantCustomerQuery;
           body: string;
           createdAt: string;
           total: number;
@@ -916,9 +982,13 @@ export function createVendorApi(prefix = '/api/vendor') {
           unknown: number;
         }[]
       >('GET', '/api/vendor/broadcasts'),
-    nearbyNotifications: () => request<{ enabled: boolean; locations: number }>('GET', '/api/vendor/broadcasts/nearby'),
-    setNearbyNotifications: (enabled: boolean) =>
-      request<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled }),
+    broadcastQuota: () => request<{ used: number; nearby: boolean; remaining: number; resetsAt: string | null }>('GET', '/api/vendor/broadcasts/quota'),
+    campaigns: () => request<BroadcastCampaign[]>('GET', '/api/vendor/broadcasts/campaigns'),
+    saveCampaign: (body: BroadcastCampaignInput, id?: string) => request<{ id: string }>(id ? 'PATCH' : 'POST', `/api/vendor/broadcasts/campaigns${id ? `/${id}` : ''}`, body),
+    cancelCampaign: (id: string) => request<{ id: string }>('POST', `/api/vendor/broadcasts/campaigns/${id}/cancel`),
+    nearbyNotifications: () => request<{ enabled: boolean; locations: number; branchIds: string[] | null }>('GET', '/api/vendor/broadcasts/nearby'),
+    setNearbyNotifications: (enabled: boolean, branchIds?: string[]) =>
+      request<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled, branchIds }),
     customers: (q: MerchantCustomerQuery) => request<MerchantCustomerList>('GET', `/api/vendor/customers${qs({ ...q })}`),
     feedback: (body: { mood?: MerchantMood; message: string }) => request<void>('POST', '/api/vendor/feedback', body),
     customersExport: (q: Omit<MerchantCustomerQuery, 'page' | 'pageSize'>) =>
@@ -949,6 +1019,21 @@ export function createVendorApi(prefix = '/api/vendor') {
     usernameAvailability: (username: string) => request<{ available: boolean }>('GET', `/api/vendor/profile/username${qs({ username })}`),
     reserveUsername: (username: string) => request<Vendor>('PUT', '/api/vendor/profile/username', { username }),
     profile: () => request<Vendor>('GET', '/api/vendor/profile'),
+    loyaltyCard: () => request<LoyaltyCardInfo>('GET', '/api/vendor/loyalty-card'),
+    createLoyaltyCard: (body: { name: string; spendAmount: number; design: CardDesign }) =>
+      request<LoyaltyCardInfo>('POST', '/api/vendor/loyalty-card', body),
+    updateLoyaltyCardSettings: (body: { name?: string; spendAmount?: number }) =>
+      request<LoyaltyCardInfo>('PATCH', '/api/vendor/loyalty-card/settings', body),
+    pauseLoyaltyCard: () => request<LoyaltyCardInfo>('POST', '/api/vendor/loyalty-card/pause'),
+    resumeLoyaltyCard: () => request<LoyaltyCardInfo>('POST', '/api/vendor/loyalty-card/resume'),
+    cancelLoyaltyCard: () => request<LoyaltyCardInfo>('POST', '/api/vendor/loyalty-card/cancel'),
+    restoreLoyaltyCard: () => request<LoyaltyCardInfo>('POST', '/api/vendor/loyalty-card/restore'),
+    saveLoyaltyCardVersion: (design: CardDesign) => request<LoyaltyCardInfo>('POST', '/api/vendor/loyalty-card/versions', { design }),
+    makeLoyaltyCardVersionLive: (id: string) =>
+      request<LoyaltyCardInfo>('POST', `/api/vendor/loyalty-card/versions/${encodeURIComponent(id)}/live`),
+    loyaltyCardMembers: (q: { page?: number; search?: string } = {}) =>
+      request<CardMemberPage>('GET', `/api/vendor/loyalty-card/members${qs({ ...q })}`),
+    uploadCardBackground: (f: File) => request<{ imageUrl: string; imagePath: string }>('PUT', '/api/vendor/loyalty-card/background', file(f)),
     storefront: () => request<StorefrontSettings>('GET', '/api/vendor/storefront'),
     saveStorefront: (body: { branchId?: string; storefront: Storefront | null }) =>
       request<StorefrontSettings>('PUT', '/api/vendor/storefront', body),
