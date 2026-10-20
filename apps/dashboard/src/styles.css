@@ -426,3 +426,94 @@
     border-top: 1px solid var(--border);
   }
 }
+
+/* On phones and small tablets, each table row becomes a card: the heading cell
+   on top, every other column as a label/value line, row actions at the bottom.
+   Labels come from the column headers (see useStackedRows in ui/table.tsx). */
+@media (max-width: 767px) {
+  [data-slot="table-container"]:has(> table[data-slot="table"]) { overflow-x: visible; }
+  table[data-slot="table"],
+  table[data-slot="table"] > tbody { display: block; width: 100%; }
+  table[data-slot="table"] > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  table[data-slot="table"] > tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  table[data-slot="table"] > tbody > tr {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+  }
+  table[data-slot="table"] > tbody > tr:last-child { border-width: 1px; }
+  table[data-slot="table"] > tbody > tr > td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
+    padding: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: end;
+  }
+  table[data-slot="table"] > tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 50%;
+    margin-inline-end: auto;
+    padding-inline-end: 0.5rem;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: start;
+  }
+  table[data-slot="table"] > tbody > tr > td > * { min-width: 0; max-width: 100%; }
+  /* data-card="fill" on a cell: its value (a bar, a chart) takes the free width. */
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="fill"] > * { flex: 1 1 8rem; }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="primary"] {
+    display: block;
+    order: -1;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9375rem;
+    text-align: start;
+  }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="primary"]::before,
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="actions"]::before { content: none; }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="actions"] {
+    order: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  /* An actions cell with nothing visible in it (no permission) adds no divider. */
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="actions"]:not(:has(:is(button, a, input):not(.hidden, .hidden *))) {
+    display: none;
+  }
+  /* Loading and empty rows span every column; they stay plain, not cards. */
+  table[data-slot="table"] > tbody > tr:has(> td[data-cell-role="full"]) {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="full"] {
+    display: block;
+    text-align: center;
+  }
+}

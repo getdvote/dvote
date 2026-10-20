@@ -112,8 +112,9 @@ export async function audit(page: Page): Promise<Issue[]> {
         if (a.layer !== b.layer || a.el.contains(b.el) || b.el.contains(a.el)) continue;
         // shadcn sidebar: an action button placed on its menu row on purpose
         if (a.el.closest('[data-sidebar=menu-action]') || b.el.closest('[data-sidebar=menu-action]')) continue;
-        // a pinned action bar (phone dialogs) over the form that scrolls under it
-        if ([a.el, b.el].some((el) => el.closest('[data-mobile-dialog-actions], [data-slot=dialog-footer], [data-slot=alert-dialog-footer]'))) continue;
+        // a pinned bar over content that scrolls under it (phone dialog actions, the phone bottom nav;
+        // pages leave room for the nav at the end, so nothing stays hidden behind it)
+        if ([a.el, b.el].some((el) => el.closest('[data-mobile-dialog-actions], [data-slot=dialog-footer], [data-slot=alert-dialog-footer], [data-bottom-nav]'))) continue;
         // a button placed inside its own field (show password, clear search…)
         const field = [a.el, b.el].find((el) => el.matches('input, textarea'));
         const other = field === a.el ? b.el : a.el;

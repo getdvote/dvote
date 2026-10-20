@@ -22,6 +22,7 @@ export function ConfirmAction({
   title,
   description,
   actionLabel,
+  variant = 'destructive',
   onConfirm,
   open: controlledOpen,
   onOpenChange,
@@ -32,6 +33,7 @@ export function ConfirmAction({
   title: string;
   description?: ReactNode;
   actionLabel: string;
+  variant?: 'default' | 'destructive';
   onConfirm: () => Promise<unknown>;
 }) {
   const [ownOpen, setOwnOpen] = useState(false);
@@ -49,7 +51,7 @@ export function ConfirmAction({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>{t('common.cancel')}</AlertDialogCancel>
           <Button
-            variant="destructive"
+            variant={variant}
             disabled={busy}
             onClick={async () => {
               setBusy(true);

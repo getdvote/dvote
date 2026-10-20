@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
 import type { PublicCard } from '../lib/api';
 import { cardDesign, type CardDesign } from '../lib/cardDesigns';
-import { t } from '../i18n';
+import { localized, t } from '../i18n';
+import { cardBackground } from '../lib/card-look';
 
 /**
  * The loyalty card as it will look in the wallet: the merchant's card design (gradient +
@@ -9,29 +10,34 @@ import { t } from '../i18n';
  * left-to-right in Arabic too (like a physical card).
  */
 export function LoyaltyCard({ card }: { card: PublicCard }) {
+  const look = card.vendor.card;
   const d = cardDesign(card.vendor.id, card.vendor.cardDesign);
-  const soft = d.ink === '#FFFFFF' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)';
+  // the merchant's card design (Dashboard → Cards); the old 10 designs before it existed
+  const ink = look?.colors.text ?? d.ink;
+  const soft = look?.colors.label ?? (d.ink === '#FFFFFF' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)');
+  const title = look ? localized(look.title.en, look.title.ar) : card.vendor.name;
+  const pointsLabel = look ? localized(look.pointsLabel.en, look.pointsLabel.ar) : t('card.points');
   return (
     <div
       dir="ltr"
       className="relative w-full overflow-hidden rounded-[22px] p-5 text-left shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
-      style={{ background: `linear-gradient(135deg, ${d.colors[0]}, ${d.colors[1]})`, color: d.ink }}
+      style={look ? { ...cardBackground(look), color: ink } : { background: `linear-gradient(135deg, ${d.colors[0]}, ${d.colors[1]})`, color: ink }}
     >
-      <Pattern design={d} />
+      {look ? null : <Pattern design={d} />}
       <div className="relative flex items-center gap-3">
         {card.vendor.logoUrl ? (
           <img src={card.vendor.logoUrl} alt="" className="size-10 rounded-xl bg-white object-cover" />
         ) : (
-          <span className="flex size-10 items-center justify-center rounded-xl bg-white/90 font-bold" style={{ color: d.colors[0] }}>
+          <span className="flex size-10 items-center justify-center rounded-xl bg-white/90 font-bold" style={{ color: look?.colors.background ?? d.colors[0] }}>
             {card.vendor.name.slice(0, 1).toUpperCase()}
           </span>
         )}
-        <span className="min-w-0 flex-1 truncate text-[17px] font-semibold">{card.vendor.name}</span>
+        <span className="min-w-0 flex-1 truncate text-[17px] font-semibold" dir="auto">{title}</span>
       </div>
 
       <div className="relative mt-7 text-center">
         <div className="text-[12px] font-semibold tracking-[0.25em]" style={{ color: soft }}>
-          {t('card.points').toUpperCase()}
+          {pointsLabel.toUpperCase()}
         </div>
         <div className="text-[56px] leading-none font-extrabold tabular-nums">{card.balance.toLocaleString('en-US')}</div>
         <div className="mx-auto mt-4 h-1.5 w-2/3 rounded-full" style={{ background: soft }} />

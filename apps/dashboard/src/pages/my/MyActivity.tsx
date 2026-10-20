@@ -1,4 +1,5 @@
-import { useVendorApi } from '../../lib/vendor-workspace';
+import { useVendorApi, WorkspaceLink } from '../../lib/vendor-workspace';
+import { Button } from '@/components/ui/button';
 import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -89,6 +90,14 @@ export function MyActivity() {
     };
 
   const filtered = type !== ALL || branchId !== ALL || staffId !== ALL || !!receipt;
+  const clearFilters = () => {
+    setType(ALL);
+    setBranchId(ALL);
+    setStaffId(ALL);
+    setReceiptInput('');
+    setReceipt('');
+    setPage(1);
+  };
   const totals = data?.totals;
 
   return (
@@ -146,7 +155,7 @@ export function MyActivity() {
             <TableHeader>
               <TableRow>
                 <TableHead className="ps-4">{t('activity.time')}</TableHead>
-                <TableHead>{t('activity.type')}</TableHead>
+                <TableHead data-card="primary">{t('activity.type')}</TableHead>
                 <TableHead className="text-end">{t('common.points')}</TableHead>
                 <TableHead className="text-end">{t('activity.bill')}</TableHead>
                 <TableHead>{t('activity.receipt')}</TableHead>
@@ -160,7 +169,19 @@ export function MyActivity() {
                 loading={isLoading}
                 empty={!data?.items.length}
                 colSpan={branchOnly ? 7 : 8}
+                emptyTitle={filtered ? t('emptyStates.noMatchTitle') : t('emptyStates.activityTitle')}
                 emptyText={filtered ? t('activity.noMatch') : t('activity.empty')}
+                action={
+                  filtered ? (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      {t('emptyStates.clearFilters')}
+                    </Button>
+                  ) : me.role !== 'viewer' ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <WorkspaceLink to="/scan">{t('emptyStates.openTill')}</WorkspaceLink>
+                    </Button>
+                  ) : null
+                }
               />
               {data?.items.map((e) => (
                 <TableRow key={e.id} className="cursor-pointer" onClick={() => setOpen(e)}>

@@ -1,4 +1,5 @@
-import { useVendorApi } from '../../lib/vendor-workspace';
+import { useVendorApi, WorkspaceLink } from '../../lib/vendor-workspace';
+import { useMe } from '../../layouts/VendorLayout';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ import { t } from '../../i18n';
 
 export function MyFeedback() {
   const vendorApi = useVendorApi();
+  const me = useMe();
   const [page, setPage] = useState(1);
   const { data, error, isPending } = useQuery({
     queryKey: ['customer-feedback', page],
@@ -26,7 +28,15 @@ export function MyFeedback() {
       ) : data ? (
         <div className="grid gap-4">
           {!data.items.length ? (
-            <Card className="p-6 text-sm text-muted-foreground">{t('feedback.empty')}</Card>
+            <Card className="items-center gap-1.5 px-6 py-12 text-center">
+              <p className="font-medium">{t('emptyStates.feedbackTitle')}</p>
+              <p className="max-w-md text-sm text-muted-foreground">{t('feedback.empty')}</p>
+              {me.role === 'vendor_admin' ? (
+                <Button variant="outline" size="sm" className="mt-2" asChild>
+                  <WorkspaceLink to="/storefront">{t('emptyStates.openStorefront')}</WorkspaceLink>
+                </Button>
+              ) : null}
+            </Card>
           ) : (
             data.items.map((f) => (
               <Card key={f.id} className="gap-3 p-5">

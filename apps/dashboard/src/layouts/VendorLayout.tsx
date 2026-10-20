@@ -107,14 +107,14 @@ export function VendorLayout({ children }: { children: ReactNode }) {
     to: '/scan',
     icon: ScanLine,
     activeIcon: ScanLineActive,
-    label: t('nav.till'),
+    label: t('nav.till'), tab: true,
   };
   const cashier = me.role === 'staff';
   const viewer = me.role === 'viewer'; // read-only: no till, no team
   const nav: NavItem[] = cashier
     ? [till]
     : [
-        { to: '/', icon: House, activeIcon: HouseActive, label: t('nav.home') },
+        { to: '/', icon: House, activeIcon: HouseActive, label: t('nav.home'), tab: true },
         ...(viewer ? [] : [till]),
         // The shop as customers see it.
         ...(isAdmin
@@ -153,7 +153,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
           to: '/card',
           icon: CreditCard,
           activeIcon: CreditCardActive,
-          label: t('nav.card'),
+          label: t('nav.card'), tab: true,
           group: t('nav.loyaltyGroup'),
         },
         {
@@ -182,14 +182,14 @@ export function VendorLayout({ children }: { children: ReactNode }) {
           to: '/customers',
           icon: Users,
           activeIcon: UsersActive,
-          label: t('nav.customers'),
+          label: t('nav.customers'), tab: true,
           group: t('nav.workspaceGroup'),
         },
         {
           to: '/activity',
           icon: ReceiptText,
           activeIcon: ReceiptTextActive,
-          label: t('nav.activity'),
+          label: t('nav.activity'), tab: true,
           group: t('nav.workspaceGroup'),
         },
       ];

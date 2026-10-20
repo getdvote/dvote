@@ -3,6 +3,7 @@ import { WORKSPACE_PAGES } from './lib/workspace-pages';
 import { LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { createBrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { SetPassword } from './pages/SetPassword';
+import { NotFoundPage, RouteErrorPage } from './components/ErrorPage';
 import { AdminLayout } from './layouts/AdminLayout';
 import { VendorLayout } from './layouts/VendorLayout';
 import { useAuth } from './lib/auth';
@@ -13,7 +14,7 @@ import { MyCustomers } from './pages/my/my-customers';
 import { MyHome } from './pages/my/MyHome';
 import { MyInsights } from './pages/my/MyInsights';
 import { MyProfile } from './pages/my/MyProfile';
-import { MyCard } from './pages/my/MyCard';
+import { CardsArea } from './pages/my/cards/cards-area';
 import { MyFeedback } from './pages/my/MyFeedback';
 import { MyMessages } from './pages/my/MyMessages';
 import { MyStoreIds } from './pages/my/MyStoreIds';
@@ -60,7 +61,8 @@ function Shell() {
           {WORKSPACE_PAGES.map((p) => (
             <Route key={p.section} path={`/${p.section}`} element={<AdminWorkspace section={p.section} />} />
           ))}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/card/design" element={<AdminWorkspace section="card" />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AdminLayout>
     );
@@ -72,7 +74,8 @@ function Shell() {
       <VendorLayout>
         <Routes>
           <Route path="/scan" element={<MyTill />} />
-          <Route path="*" element={<Navigate to="/scan" replace />} />
+          <Route path="/" element={<Navigate to="/scan" replace />} />
+          <Route path="*" element={<NotFoundPage home="/scan" />} />
         </Routes>
       </VendorLayout>
     );
@@ -88,7 +91,8 @@ function Shell() {
           <Route path="/insights" element={<MyInsights />} />
           <Route path="/activity" element={<MyActivity />} />
           <Route path="/branches" element={<MyBranches />} />
-          <Route path="/card" element={<MyCard />} />
+          <Route path="/card" element={<CardsArea />} />
+          <Route path="/card/design" element={<CardsArea />} />
           <Route path="/rule" element={<Navigate to="/card" replace />} />
           <Route path="/rewards" element={<MyRewards />} />
           <Route path="/redemptions" element={<Navigate to="/rewards?tab=redemptions" replace />} />
@@ -107,7 +111,7 @@ function Shell() {
           {/* old names of this page */}
           <Route path="/info-chips" element={<Navigate to="/kit" replace />} />
           <Route path="/store-ids" element={<Navigate to="/kit" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </VendorLayout>
     );
@@ -115,4 +119,4 @@ function Shell() {
   return <Login />;
 }
 
-export const router = createBrowserRouter([{ path: '*', element: <Shell /> }]);
+export const router = createBrowserRouter([{ path: '*', element: <Shell />, errorElement: <RouteErrorPage /> }]);

@@ -1,4 +1,5 @@
-import { useVendorApi } from '../../lib/vendor-workspace';
+import { useVendorApi, WorkspaceLink } from '../../lib/vendor-workspace';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { SelectFilter } from '../../components/ListControls';
 import { useQuery } from '@tanstack/react-query';
@@ -153,7 +154,16 @@ export function MyHome() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableState loading={false} empty={!data.branches.length} colSpan={3} emptyText={t('home.noBranches')} />
+                    <TableState loading={false} empty={!data.branches.length} colSpan={3} emptyTitle={t('home.noBranches')}
+                      emptyText={t('emptyStates.homeBranchesText')}
+                      action={
+                        isAdmin ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <WorkspaceLink to="/branches">{t('emptyStates.addBranch')}</WorkspaceLink>
+                          </Button>
+                        ) : null
+                      }
+                    />
                     {data.branches.map((b) => (
                       <TableRow key={b.id}>
                         <TableCell className="ps-4 font-semibold">{b.name}</TableCell>

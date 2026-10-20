@@ -18,6 +18,15 @@ const OPENERS: [string, string, (page: Page) => Promise<void>][] = [
   ],
   ['reward dialog', '/rewards', (p) => p.getByRole('button', { name: 'Add reward' }).click()],
   ['qr poster', '/storefront', (p) => p.getByRole('button', { name: 'Get QR' }).click()],
+  ['card actions menu', '/card', (p) => p.getByRole('button', { name: 'Card actions' }).click()],
+  [
+    'card settings',
+    '/card',
+    async (p) => {
+      await p.getByRole('button', { name: 'Card actions' }).click();
+      await p.getByRole('menuitem', { name: 'Card settings' }).click();
+    },
+  ],
   ['period picker', '/activity', (p) => p.getByRole('button', { name: 'Period' }).click()],
   [
     'invite drawer (branch manager)',
@@ -51,13 +60,19 @@ for (const vp of VIEWPORTS) {
 for (const vp of KEY_VIEWPORTS.filter((v) => v.width < 768)) {
   test.describe(`mobile menu · ${vp.name}`, () => {
     test.use({ viewport: { width: vp.width, height: vp.height } });
-    test('sidebar sheet', async ({ page }, testInfo) => {
+    test('bottom nav · more sheet', async ({ page }, testInfo) => {
       await mockApi(page, 'vendor_admin');
       await signIn(page);
       await page.goto(DASHBOARD + '/');
       await page.waitForLoadState('networkidle');
-      await page.getByRole('button', { name: /toggle sidebar|menu/i }).first().click();
-      await expect(page.locator('[role=dialog]').first()).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'More', exact: true }).click();
+      const sheet = page.getByRole('dialog', { name: 'More' });
+      await expect(sheet).toBeVisible();
+      await sheet.getByRole('link', { name: 'Rewards', exact: true }).click();
+      await expect(page).toHaveURL(DASHBOARD + '/rewards');
+      await expect(sheet).toBeHidden();
+      await page.getByRole('button', { name: 'More', exact: true }).click();
       await expectGoodLayout(page, testInfo);
     });
   });

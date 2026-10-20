@@ -174,7 +174,7 @@ describe('Add to Google Wallet (e2e)', () => {
     // Notices schedule without blocking the till's response.
     for (let i = 0; i < 100 && !requests.some(r => r.body.loyaltyPoints); i++) await new Promise(r => setTimeout(r, 10));
     expect(requests).toEqual(expect.arrayContaining([
-      expect.objectContaining({ url: expect.stringContaining(`/loyaltyObject/${ISSUER}.card-${publicId}`), body: expect.objectContaining({ loyaltyPoints: { label: 'Points', balance: { int: 29 } } }) }),
+      expect.objectContaining({ url: expect.stringContaining(`/loyaltyObject/${ISSUER}.card-${publicId}`), body: expect.objectContaining({ loyaltyPoints: expect.objectContaining({ label: 'Points', balance: { int: 29 } }) }) }),
       expect.objectContaining({ body: expect.objectContaining({ hexBackgroundColor: '#0E8C99', programLogo: { sourceUri: { uri: 'https://example.com/new.webp' }, contentDescription: expect.anything() }, heroImage: { sourceUri: { uri: 'https://example.com/banner.webp' }, contentDescription: expect.anything() } }) }),
     ]));
   });

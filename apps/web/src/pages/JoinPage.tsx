@@ -4,7 +4,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Button, ErrorNote, Field, Input, MerchantHeader, Page, Spinner } from '../components/ui';
 import { t } from '../i18n';
 import { api, errorMessage, type JoinSource } from '../lib/api';
-import { cardDesign } from '../lib/cardDesigns';
+import { cardLook } from '../lib/brand';
+import { LoyaltyCard } from '../components/LoyaltyCard';
 import { useVendor } from './VenuePage';
 
 /**
@@ -39,7 +40,7 @@ export function JoinPage() {
     );
   }
 
-  const design = cardDesign(vendor.id, vendor.cardDesign);
+  const design = cardLook(vendor);
   const keep = new URLSearchParams([...params].filter(([k]) => k === 'b' || k === 's'));
 
   const submit = async (ev: FormEvent) => {
@@ -63,11 +64,27 @@ export function JoinPage() {
       <MerchantHeader
         name={vendor.name}
         logoUrl={vendor.logoUrl}
-        color={design.colors[0]}
+        color={design.color}
         ink={design.ink}
         title={t('venue.loyalty')}
         subtitle={t('join.subtitle')}
       />
+
+      {/* the card they are about to get, in the merchant's card design */}
+      {vendor.card ? (
+        <div className="mx-auto mt-6 w-full max-w-[320px]" aria-hidden>
+          <LoyaltyCard
+            card={{
+              publicId: '',
+              shortCode: '•••-•••',
+              cardholder: name.trim() || t('join.namePlaceholder'),
+              balance: 0,
+              vendor: { id: vendor.id, slug: vendor.slug, name: vendor.name, logoUrl: vendor.logoUrl, bannerUrl: vendor.bannerUrl, cardDesign: vendor.cardDesign, card: vendor.card, currency: vendor.currency },
+              createdAt: '',
+            }}
+          />
+        </div>
+      ) : null}
 
       <form className="mt-7 grid gap-5" onSubmit={(e) => void submit(e)}>
         <Field label={t('join.name')}>

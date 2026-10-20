@@ -14,6 +14,7 @@ const PAGES = [
   ['activity', '/activity'],
   ['branches', '/branches'],
   ['card', '/card'],
+  ['card-design', '/card/design'],
   ['rewards', '/rewards'],
   ['rewards-redemptions', '/rewards?tab=redemptions'],
   ['storefront', '/storefront'],

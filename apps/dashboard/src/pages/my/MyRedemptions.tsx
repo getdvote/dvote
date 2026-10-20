@@ -1,4 +1,4 @@
-import { useVendorApi } from '../../lib/vendor-workspace';
+import { useVendorApi, WorkspaceLink } from '../../lib/vendor-workspace';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { GiftIcon as Gift, CloseIcon as X } from '@solar-icons/react/linear';
@@ -68,6 +68,12 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
   const totals = data?.totals;
   const top = data?.byReward[0];
   const filtered = rewardId !== ALL || branchId !== ALL || staffId !== ALL;
+  const clearFilters = () => {
+    setRewardId(ALL);
+    setBranchId(ALL);
+    setStaffId(ALL);
+    setPage(1);
+  };
 
   return (
     <>
@@ -132,7 +138,7 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="ps-4">{t('activity.time')}</TableHead>
-                  <TableHead>{t('rewards.reward')}</TableHead>
+                  <TableHead data-card="primary">{t('rewards.reward')}</TableHead>
                   <TableHead className="text-end">{t('common.points')}</TableHead>
                   {branchOnly ? null : <TableHead>{t('common.branch')}</TableHead>}
                   <TableHead>{t('redemptions.givenBy')}</TableHead>
@@ -144,7 +150,19 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
                   loading={isLoading}
                   empty={!data?.items.length}
                   colSpan={branchOnly ? 5 : 6}
-                  emptyText={filtered ? t('activity.noMatch') : t('redemptions.empty')}
+                  emptyTitle={filtered ? t('emptyStates.noMatchTitle') : t('emptyStates.redemptionsTitle')}
+                  emptyText={filtered ? t('activity.noMatch') : t('emptyStates.redemptionsText')}
+                  action={
+                    filtered ? (
+                      <Button variant="outline" size="sm" onClick={clearFilters}>
+                        {t('emptyStates.clearFilters')}
+                      </Button>
+                    ) : me.role !== 'viewer' ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <WorkspaceLink to="/scan">{t('emptyStates.openTill')}</WorkspaceLink>
+                      </Button>
+                    ) : null
+                  }
                 />
                 {data?.items.map((r) => (
                   <TableRow key={r.id}>

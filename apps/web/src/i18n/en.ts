@@ -123,6 +123,8 @@ export const en = {
     body3: 'Your points and visits are recorded only when staff scan your card at the till.',
   },
   errors: {
+    card_paused: "This card is paused: new members can't join right now. Ask the staff when it's back.",
+    card_cancelled: 'This loyalty card is no longer available.',
     feedback_unavailable: "Feedback is not available for this storefront.",
     wallet_not_configured: 'Google Wallet is not set up yet. Your card is saved: staff can find it by its code.',
     network: "Can't reach dvote right now. Check your connection and try again.",

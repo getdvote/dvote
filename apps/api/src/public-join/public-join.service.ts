@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import { Prisma, type users } from '../generated/prisma/client.js';
 import { fromMinor, toMinor } from '../points/points';
@@ -7,6 +7,8 @@ import { BUCKETS, StorageService } from '../storage/storage.service';
 import { GoogleWalletService } from '../wallet/google-wallet.service';
 import { egyptianMobile } from './egyptian-phone';
 import { BRAND_FONTS, readStorefront, type BrandFont, type PageStyle } from '../storefront/storefront';
+import { readDesign } from '../loyalty-cards/card-design';
+import type { PublicCardLookDto } from './dto/public-join.dto';
 import type { JoinResultDto, JoinVendorDto, PublicCardDto, PublicVendorDto } from './dto/public-join.dto';
 
 /** Letters and digits that can't be confused when read aloud or typed (no 0/O, 1/I/L). */
@@ -17,9 +19,30 @@ const shortCode = () => {
 };
 const isUniqueViolation = (err: unknown) => err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 
+const lookSelect = { name: true, status: true, live_version: { select: { design: true } } } satisfies Prisma.loyalty_cardsSelect;
+type LookRow = Prisma.loyalty_cardsGetPayload<{ select: typeof lookSelect }>;
+
+/** What the web pages draw of the merchant's card (null = no card yet: the old design). */
+function look(card: LookRow | null): PublicCardLookDto | null {
+  if (!card) return null;
+  const d = readDesign(card.live_version?.design, card.name);
+  return {
+    status: card.status as PublicCardLookDto['status'],
+    title: d.front.title,
+    pointsLabel: d.front.pointsLabel,
+    colors: { background: d.colors.background, text: d.colors.text, label: d.colors.label },
+    background: { style: d.background.style, imageUrl: d.background.imageUrl },
+  };
+}
+
 const cardInclude = {
   users: { select: { name: true } },
-  vendors: { select: { id: true, slug: true, name: true, logo_url: true, banner_url: true, card_design: true, currency: true, status: true } },
+  vendors: {
+    select: {
+      id: true, slug: true, name: true, logo_url: true, banner_url: true, card_design: true, currency: true, status: true,
+      loyalty_cards: { select: lookSelect },
+    },
+  },
 } satisfies Prisma.cardsInclude;
 type CardRow = Prisma.cardsGetPayload<{ include: typeof cardInclude }>;
 
@@ -59,6 +82,7 @@ export class PublicJoinService {
           select: { id: true, name: true, address: true, lat: true, lng: true, storefront: true },
         },
         vendor_images: { where: { kind: 'menu' }, orderBy: { sort_order: 'asc' }, select: { storage_path: true } },
+        loyalty_cards: { select: lookSelect },
       },
     });
     if (!v || v.status !== 'active') throw new NotFoundException({ code: 'vendor_not_found' });
@@ -71,6 +95,7 @@ export class PublicJoinService {
       bannerUrl: v.banner_url,
       category: v.category,
       cardDesign: v.card_design,
+      card: look(v.loyalty_cards),
       currency: v.currency,
       rule: rule ? { spendAmount: fromMinor(toMinor(rule.spend_amount)), pointsPerSpend: rule.points_per_spend } : null,
       rewards: v.rewards.map((r) => ({ name: r.name, nameAr: r.name_ar, pointsCost: r.points_cost, imageUrl: r.image_url })),
@@ -98,8 +123,14 @@ export class PublicJoinService {
    * the entered name. A new mobile creates the customer; an existing name is never overwritten.
    */
   async join(slug: string, dto: JoinVendorDto): Promise<JoinResultDto> {
-    const vendor = await this.prisma.vendors.findUnique({ where: { slug }, select: { id: true, status: true } });
+    const vendor = await this.prisma.vendors.findUnique({
+      where: { slug },
+      select: { id: true, status: true, loyalty_cards: { select: { status: true } } },
+    });
     if (!vendor || vendor.status !== 'active') throw new NotFoundException({ code: 'vendor_not_found' });
+    // a cancelled card takes nothing at all ("get it back" too)
+    const cardStatus = vendor.loyalty_cards?.status;
+    if (cardStatus === 'cancelled') throw new ConflictException({ code: 'card_cancelled' });
 
     const phone = egyptianMobile(dto.phone);
     if (!phone) throw new BadRequestException({ code: 'invalid_phone', message: 'Use an Egyptian mobile number (010, 011, 012 or 015).' });
@@ -112,6 +143,12 @@ export class PublicJoinService {
         select: { id: true },
       });
       if (!branch) throw new BadRequestException({ code: 'invalid_branch' });
+    }
+
+    // a paused card takes no new members; existing ones still get their card back
+    if (cardStatus === 'paused') {
+      const known = await this.prisma.users.findFirst({ where: { phone }, orderBy: { created_at: 'asc' }, select: { id: true } });
+      if (!known || !(await this.findCard(known.id, vendor.id))) throw new ConflictException({ code: 'card_paused' });
     }
 
     const user = await this.customer(name, phone, dto);
@@ -188,7 +225,7 @@ export class PublicJoinService {
       shortCode: c.short_code ?? '',
       cardholder: c.users.name ?? '',
       balance: c.balance,
-      vendor: { id: v.id, slug: v.slug, name: v.name, logoUrl: v.logo_url, bannerUrl: v.banner_url, cardDesign: v.card_design, currency: v.currency },
+      vendor: { id: v.id, slug: v.slug, name: v.name, logoUrl: v.logo_url, bannerUrl: v.banner_url, cardDesign: v.card_design, card: look(v.loyalty_cards), currency: v.currency },
       createdAt: c.created_at.toISOString(),
     };
   }

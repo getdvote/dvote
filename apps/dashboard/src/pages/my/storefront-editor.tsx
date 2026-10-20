@@ -6,6 +6,7 @@ import {
   ArrowUpIcon as ArrowUp,
   ChefHatIcon,
   CopyIcon,
+  EyeIcon,
   QrCodeIcon,
   CheckCircleIcon as CheckCircle,
   GiftIcon,
@@ -17,7 +18,7 @@ import {
   WalletIcon,
   WiFiRouterIcon,
 } from '@solar-icons/react/linear';
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { useNavigate } from 'react-router';
 import { WorkspaceLink as Link } from '../../lib/vendor-workspace';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
@@ -71,6 +73,8 @@ export function StorefrontEditor() {
   const [scope, setScope] = useState<string>(SHOP);
   const [previewKey, setPreviewKey] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const wide = useWide();
 
   const branch = scope === SHOP ? null : data?.branches.find((b) => b.id === scope);
   const current: Storefront | null = !data ? null : scope === SHOP ? data.shop : (branch?.storefront ?? null);
@@ -88,7 +92,7 @@ export function StorefrontEditor() {
   const url = storefrontUrl(vendor, branchId);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 pb-20 lg:pb-0">
       {/* the shop and its page address, with the ways to share it */}
       <Card className="flex-row flex-wrap items-center gap-4 p-4 sm:p-5">
         <div className="flex min-w-0 flex-1 basis-64 items-center gap-4">
@@ -151,12 +155,14 @@ export function StorefrontEditor() {
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="grid justify-items-center gap-5 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1">
-          <IPhoneMockup src={url} width={300} reloadKey={previewKey} title={t('storefront.preview')} empty={t('storefront.noSlug')} />
-          <PreviewFooter url={url} />
-        </div>
+        {wide ? (
+          <div className="grid justify-items-center gap-5 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1">
+            <IPhoneMockup src={url} width={300} reloadKey={previewKey} title={t('storefront.preview')} empty={t('storefront.noSlug')} />
+            <PreviewFooter url={url} />
+          </div>
+        ) : null}
 
-        <div className="grid min-w-0 gap-4 lg:col-start-1 lg:row-start-1">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:col-start-1 lg:row-start-1">
           <Card>
             <CardHeader>
               <CardTitle>{t('storefront.appliesTo')}</CardTitle>
@@ -220,8 +226,82 @@ export function StorefrontEditor() {
           ) : null}
         </div>
       </div>
+
+      {/* phones and tablets: the settings take the page; the phone opens from a floating button */}
+      {wide ? null : (
+        <>
+          <div
+            data-mobile-dialog-actions
+            className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex justify-center"
+          >
+            <Button size="lg" className="pointer-events-auto rounded-full px-5 shadow-lg" onClick={() => setPreviewOpen(true)}>
+              <EyeIcon /> {t('storefront.previewLink')}
+            </Button>
+          </div>
+          <StorefrontPreviewSheet open={previewOpen} onOpenChange={setPreviewOpen} url={url} reloadKey={previewKey} />
+        </>
+      )}
     </div>
   );
+}
+
+/** Phones and tablets: the live page in an iPhone, in a bottom sheet over the settings. */
+function StorefrontPreviewSheet({
+  open,
+  onOpenChange,
+  url,
+  reloadKey,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  url: string | null;
+  reloadKey: number;
+}) {
+  const width = usePhoneFit(260);
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-dvh gap-0 overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
+        <SheetHeader className="pe-12">
+          <SheetTitle>{t('storefront.preview')}</SheetTitle>
+          <SheetDescription asChild>
+            <div>
+              <SaveStatus />
+            </div>
+          </SheetDescription>
+        </SheetHeader>
+        <div className="grid justify-items-center gap-4 px-4 pb-4">
+          {open ? <IPhoneMockup src={url} width={width} reloadKey={reloadKey} title={t('storefront.preview')} empty={t('storefront.noSlug')} /> : null}
+          <PreviewFooter url={url} onNavigate={() => onOpenChange(false)} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** lg and up (1024 px): the phone sits beside the settings; below, it opens from the Preview button. */
+const WIDE = '(min-width: 1024px)';
+function useWide() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia(WIDE);
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    },
+    () => window.matchMedia(WIDE).matches,
+  );
+}
+
+/** The phone width that fits the window (screen ratio 393 × 852), leaving `reserved` px of height for the rest. */
+function usePhoneFit(reserved: number) {
+  const [width, setWidth] = useState(300);
+  useEffect(() => {
+    const fit = () =>
+      setWidth(Math.max(200, Math.min(320, window.innerWidth - 48, Math.floor(((window.innerHeight - reserved) * 393) / 852))));
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [reserved]);
+  return width;
 }
 
 /** Under the phone, like the footer of the page itself: Preview (the live page) | Change style. */
@@ -291,7 +371,7 @@ function SectionsEditor({ value, onChange }: { value: Storefront; onChange: (s: 
     );
 
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       {sections.map((s, i) => {
         const Icon = ICONS[s.type];
         const core = s.type === 'loyalty';

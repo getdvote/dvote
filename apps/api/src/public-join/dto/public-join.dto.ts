@@ -75,6 +75,15 @@ class PublicStyleDto {
 }
 
 /** What the venue page and the join form show about a merchant (no private data). */
+export class PublicCardLookDto {
+  @ApiProperty({ enum: ['active', 'paused', 'cancelled'] }) status: 'active' | 'paused' | 'cancelled';
+  @ApiProperty({ example: { en: 'Joy Corner', ar: '' } }) title: { en: string; ar: string };
+  @ApiProperty({ example: { en: 'Points', ar: 'النقاط' } }) pointsLabel: { en: string; ar: string };
+  @ApiProperty() colors: { background: string; text: string; label: string };
+  @ApiProperty({ description: 'style solid | gradient | mesh | waves | dots; imageUrl = uploaded background' })
+  background: { style: string; imageUrl: string | null };
+}
+
 export class PublicVendorDto {
   @ApiProperty({ format: 'uuid', description: 'Picks the automatic card colours when cardDesign is null' }) id: string;
   @ApiProperty({ example: 'joy-corner' }) slug: string;
@@ -83,6 +92,8 @@ export class PublicVendorDto {
   @ApiProperty({ type: String, nullable: true }) bannerUrl: string | null;
   @ApiProperty({ type: String, nullable: true }) category: string | null;
   @ApiProperty({ type: Number, nullable: true, description: 'Loyalty-card design 1-10, null = automatic' }) cardDesign: number | null;
+  @ApiProperty({ type: PublicCardLookDto, nullable: true, description: "The merchant's loyalty card look (null = none yet)" })
+  card: PublicCardLookDto | null;
   @ApiProperty({ example: 'EGP' }) currency: string;
   @ApiProperty({ type: PublicRuleDto, nullable: true, description: 'null = not earning yet' }) rule: PublicRuleDto | null;
   @ApiProperty({ type: [PublicRewardDto] }) rewards: PublicRewardDto[];
@@ -98,7 +109,7 @@ export class PublicCardDto {
   @ApiProperty({ example: 'CZW-QNM' }) shortCode: string;
   @ApiProperty({ example: 'Mona Ali' }) cardholder: string;
   @ApiProperty() balance: number;
-  @ApiProperty({ type: PublicVendorDto }) vendor: Pick<PublicVendorDto, 'id' | 'slug' | 'name' | 'logoUrl' | 'bannerUrl' | 'cardDesign' | 'currency'>;
+  @ApiProperty({ type: PublicVendorDto }) vendor: Pick<PublicVendorDto, 'id' | 'slug' | 'name' | 'logoUrl' | 'bannerUrl' | 'cardDesign' | 'card' | 'currency'>;
   @ApiProperty() createdAt: string;
 }
 

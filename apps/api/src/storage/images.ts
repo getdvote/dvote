@@ -19,6 +19,8 @@ export const IMAGE_PRESETS = {
   branch_photo: { width: 1280, height: 1280, fit: 'inside' },
   /** Photo of a reward (the coffee, the cake): shown on reward cards in the app. */
   reward: { width: 1000, height: 1000, fit: 'inside' },
+  /** Loyalty card background (behind the points on the pass and the card pages). */
+  card_background: { width: 1200, height: 760, fit: 'cover' },
 } as const satisfies Record<string, { width: number; height: number; fit: 'cover' | 'inside' }>;
 export type ImagePreset = keyof typeof IMAGE_PRESETS;
 

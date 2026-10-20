@@ -11,6 +11,8 @@ export interface PublicVendor {
   bannerUrl: string | null;
   category: string | null;
   cardDesign: number | null;
+  /** The merchant's loyalty card look (Dashboard → Cards → Design card); null/absent = the old design. */
+  card?: PublicCardLook | null;
   currency: string;
   rule: { spendAmount: string; pointsPerSpend: number } | null;
   rewards: { name: string; nameAr: string | null; pointsCost: number; imageUrl: string | null }[];
@@ -21,6 +23,15 @@ export interface PublicVendor {
   sections: Section[];
   /** Menu page images, in order. */
   menu: string[];
+}
+
+/** Same shape as the API's PublicCardLookDto; drawn by lib/card-look.ts. */
+export interface PublicCardLook {
+  status: 'active' | 'paused' | 'cancelled';
+  title: { en: string; ar: string };
+  pointsLabel: { en: string; ar: string };
+  colors: { background: string; text: string; label: string };
+  background: { style: 'solid' | 'gradient' | 'mesh' | 'waves' | 'dots'; imageUrl: string | null };
 }
 
 export type PageStyle = 'spotlight' | 'compact' | 'branded' | 'playful' | 'split';
@@ -37,7 +48,7 @@ export interface PublicCard {
   shortCode: string;
   cardholder: string;
   balance: number;
-  vendor: Pick<PublicVendor, 'id' | 'slug' | 'name' | 'logoUrl' | 'bannerUrl' | 'cardDesign' | 'currency'>;
+  vendor: Pick<PublicVendor, 'id' | 'slug' | 'name' | 'logoUrl' | 'bannerUrl' | 'cardDesign' | 'card' | 'currency'>;
   createdAt: string;
 }
 

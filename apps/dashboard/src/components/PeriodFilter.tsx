@@ -190,6 +190,93 @@ export function PeriodPicker({ state, onChange, children }: { state: ReturnType<
   );
 }
 
+/** Single-date version of the Activity calendar, with the same popover and Apply flow. */
+export function DatePicker({ id, value, onChange, label, placeholder, minDate }: {
+  id: string; value: string; onChange: (date: string) => void; label: string; placeholder: string; minDate?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [month, setMonth] = useState(() => dayjs(value || undefined).startOf('month'));
+  const today = dayjs().startOf('day');
+  return (
+    <Popover open={open} onOpenChange={next => {
+      if (next) { setDraft(value); setMonth(dayjs(value || undefined).startOf('month')); }
+      setOpen(next);
+    }}>
+      <PopoverTrigger asChild>
+        <Button id={id} variant="outline" aria-label={label} className="h-10 w-full justify-between gap-2 font-normal">
+          <span className={cn('flex items-center gap-2', !value && 'text-muted-foreground')}>
+            <CalendarIcon className="size-4" />
+            {value ? dayjs(value).format('D MMM YYYY') : placeholder}
+          </span>
+          <AltArrowDownIcon className="size-4 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="max-h-(--radix-popover-content-available-height) w-auto max-w-[calc(100vw-1.5rem)] overflow-y-auto p-0">
+        <div className="relative flex gap-6 p-3 sm:px-4">
+          <Button variant="ghost" size="icon-sm" className="absolute start-3 top-3" aria-label={t('period.prevMonth')}
+            disabled={!!minDate && !month.isAfter(dayjs(minDate), 'month')}
+            onClick={() => setMonth(month.subtract(1, 'month'))}><AltArrowLeftIcon className="rtl:rotate-180" /></Button>
+          <Button variant="ghost" size="icon-sm" className="absolute end-3 top-3" aria-label={t('period.nextMonth')}
+            onClick={() => setMonth(month.add(1, 'month'))}><AltArrowRightIcon className="rtl:rotate-180" /></Button>
+          <Month className="max-w-full" month={month} today={today} range={{ from: draft || null, to: draft || null }} onPick={setDraft} onHover={() => {}} minDate={minDate} allowFuture />
+          <Month className="hidden sm:block" month={month.add(1, 'month')} today={today} range={{ from: draft || null, to: draft || null }} onPick={setDraft} onHover={() => {}} minDate={minDate} allowFuture />
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t p-3">
+          <DayBox value={draft || null} placeholder={placeholder} />
+          <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
+          <Button size="sm" disabled={!draft || (!!minDate && draft < minDate)} onClick={() => { onChange(draft); setOpen(false); }}>{t('period.apply')}</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** The dashboard popover treatment for time selection; no browser-native picker. */
+export function TimePicker({ id, value, onChange, label, hoursLabel, minutesLabel }: {
+  id: string; value: string; onChange: (time: string) => void; label: string; hoursLabel: string; minutesLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [hour, minute] = draft.split(':');
+  return (
+    <Popover open={open} onOpenChange={next => { if (next) setDraft(value); setOpen(next); }}>
+      <PopoverTrigger asChild>
+        <Button id={id} variant="outline" aria-label={label} className="h-10 w-full justify-between gap-2 font-normal">
+          <span dir="ltr" className="tabular-nums">{value}</span>
+          <AltArrowDownIcon className="size-4 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 max-w-[calc(100vw-1.5rem)] gap-0 p-0">
+        <div className="border-b px-3 py-2 text-sm font-medium">{label}</div>
+        <div className="grid grid-cols-2 gap-3 p-3">
+          {[{ label: hoursLabel, count: 24, value: hour, choose: (v: string) => setDraft(`${v}:${minute}`) },
+            { label: minutesLabel, count: 60, value: minute, choose: (v: string) => setDraft(`${hour}:${v}`) }].map(column => (
+              <div key={column.label} className="min-w-0">
+                <p className="mb-2 text-center text-xs text-muted-foreground">{column.label}</p>
+                <div role="group" aria-label={column.label} className="max-h-48 space-y-1 overflow-y-auto overscroll-contain p-1">
+                  {Array.from({ length: column.count }, (_, n) => String(n).padStart(2, '0')).map(option => (
+                    <Button key={option} type="button" size="sm" variant={column.value === option ? 'default' : 'ghost'} aria-pressed={column.value === option}
+                      className="w-full tabular-nums" ref={node => { if (node && column.value === option) node.scrollIntoView({ block: 'nearest' }); }} onClick={() => column.choose(option)}>{option}</Button>
+                  ))}
+                </div>
+              </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t p-3">
+          <span dir="ltr" className="text-sm tabular-nums">{draft}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
+            <Button size="sm" onClick={() => { onChange(draft); setOpen(false); }}>{t('period.apply')}</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function DayBox({ value, placeholder }: { value: string | null; placeholder: string }) {
   return (
     <span className={cn('flex h-8 w-32 items-center rounded-md border px-2.5 text-sm tabular-nums', !value && 'text-muted-foreground')}>
@@ -208,6 +295,8 @@ function Month({
   onPick,
   onHover,
   className,
+  minDate,
+  allowFuture = false,
 }: {
   month: Dayjs;
   today: Dayjs;
@@ -215,6 +304,8 @@ function Month({
   onPick: (day: string) => void;
   onHover: (day: string | null) => void;
   className?: string;
+  minDate?: string;
+  allowFuture?: boolean;
 }) {
   const language = getLanguage();
   const weekdays = useMemo(() => {
@@ -243,7 +334,7 @@ function Month({
         {cells.map((d, i) => {
           if (!d) return <div key={`blank-${i}`} />;
           const key = d.format(DAY);
-          const future = d.isAfter(today, 'day');
+          const future = (!allowFuture && d.isAfter(today, 'day')) || (!!minDate && key < minDate);
           const isStart = key === r.from;
           const isEnd = key === end;
           const inside = !!r.from && !!end && key > r.from && key < end;

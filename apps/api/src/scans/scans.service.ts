@@ -594,6 +594,13 @@ export class ScansService {
     if (!card) throw new NotFoundException({ code: 'qr_invalid' });
     if (card.vendor_id !== ctx.vendorId)
       throw new ForbiddenException({ code: 'vendor_mismatch' });
+    // a cancelled loyalty card earns and redeems nothing until it is restored
+    const program = await this.prisma.loyalty_cards.findUnique({
+      where: { vendor_id: ctx.vendorId },
+      select: { status: true },
+    });
+    if (program?.status === 'cancelled')
+      throw new ForbiddenException({ code: 'card_cancelled' });
     return card;
   }
 

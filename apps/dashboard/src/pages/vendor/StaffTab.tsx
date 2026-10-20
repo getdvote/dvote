@@ -79,7 +79,16 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyText={t('staff.empty')} />
+            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyTitle={t('emptyStates.staffTitle')}
+              emptyText={t('emptyStates.staffText')}
+              action={
+                scope.can.inviteRoles.length ? (
+                  <Button size="sm" onClick={() => setInviting(true)}>
+                    <UserPlus /> {onlyAdmins ? t('staff.inviteAdmin') : t('staff.invite')}
+                  </Button>
+                ) : null
+              }
+            />
             {data?.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="ps-4">

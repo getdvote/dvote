@@ -1,10 +1,15 @@
+import { broadcastAr } from './broadcast.ar';
 import type { Dictionary } from './en';
 
 /**
  * Arabic (Egypt). Same keys as en.ts: TypeScript fails the build when one is missing.
  * Numbers stay in Western digits (0-9).
  */
+import { cardsAr } from './cards.ar';
+
 export const ar: Dictionary = {
+  broadcast: broadcastAr,
+  cards: cardsAr,
   passwordSetup: {
   "newTitle": "اختر كلمة مرور جديدة",
   "forgotTitle": "إعادة تعيين كلمة المرور",
@@ -78,13 +83,14 @@ export const ar: Dictionary = {
     blocked: 'محظور',
   },
   nav: {
+    more: 'المزيد',
     hubGroup: 'الإدارة',
     loyaltyGroup: 'الولاء',
     workspaceGroup: 'مساحة العمل',
     accountGroup: 'الحساب',
     home: 'الرئيسية',
     till: 'المسح',
-    card: 'البطاقة',
+    card: 'البطاقات',
     feedback: 'الآراء',
     messages: 'البث',
     storeIds: 'التجهيزات',
@@ -1157,6 +1163,41 @@ export const ar: Dictionary = {
 
     subtitle: 'ما يقوله عملاؤك عن زياراتهم.',
   },
+  emptyStates: {
+    noMatchTitle: 'لا نتائج',
+    clearFilters: 'مسح الفلاتر',
+    openTill: 'افتح الكاشير',
+    activityTitle: 'لا نشاط بعد',
+    redemptionsTitle: 'لم تُصرف مكافآت بعد',
+    redemptionsText: 'تظهر المكافآت هنا عندما يؤكد الموظفون صرفها عند الكاشير.',
+    branchesTitle: 'أضف فرعك الأول',
+    branchesText: 'الفروع هي حيث يمسح الموظفون البطاقات. أضف فرعًا لتبدأ في منح النقاط.',
+    addBranch: 'إضافة فرع',
+    homeBranchesText: 'أضف فرعًا لترى أداء كل موقع.',
+    rewardsTitle: 'أضف مكافأتك الأولى',
+    rewardsText: 'المكافآت هي ما يجمع العملاء النقاط من أجله، مثل قهوة مجانية. تعطيهم سببًا للعودة.',
+    addReward: 'إضافة مكافأة',
+    seeRewards: 'الذهاب إلى المكافآت',
+    staffTitle: 'ادعُ فريقك',
+    staffText: 'يمسح الموظفون بطاقات العملاء عند الكاشير. ادعهم عبر البريد الإلكتروني.',
+    rulesTitle: 'لا توجد قاعدة نقاط بعد',
+    rulesText: 'حدد المبلغ الذي ينفقه العميل ليكسب نقطة واحدة. حتى ذلك الحين لا يمكن لأحد جمع النقاط.',
+    broadcastTitle: 'لا حملات بعد',
+    feedbackTitle: 'لا آراء بعد',
+    openStorefront: 'افتح واجهة المتجر',
+    shareCard: 'شارك بطاقتك',
+  },
+  errorPage: {
+    notFoundCode: '404',
+    notFoundTitle: 'هذه الصفحة غير موجودة',
+    notFoundText: 'قد يكون الرابط قديمًا أو نُقلت الصفحة. كل ما تحتاجه موجود في القائمة.',
+    crashTitle: 'حدث خطأ في هذه الصفحة',
+    crashText: 'بياناتك آمنة. أعد تحميل الصفحة للمحاولة مرة أخرى. إذا تكرر الأمر، أخبرنا وسنصلحه.',
+    reload: 'إعادة تحميل الصفحة',
+    home: 'الذهاب إلى الرئيسية',
+    contact: 'طلب المساعدة',
+    details: 'تفاصيل تقنية',
+  },
   placeholder: {
     empty: 'لا شيء هنا بعد',
     emptyHint: 'هذه الصفحة قادمة قريبًا.',
@@ -1277,6 +1318,13 @@ export const ar: Dictionary = {
     continue: "متابعة",
   },
   errors: {
+    broadcast_daily_limit: 'لا توجد إشعارات متبقية. جدول الإرسال لاحقاً أو احفظ مسودة.',
+    campaign_content_required: 'أضف اسم الحملة والرسالة.',
+    campaign_future_required: 'اختر تاريخاً ووقتاً في المستقبل.',
+    campaign_repeat_required: 'اختر معدل تكرار الحملة.',
+    campaign_not_editable: 'تم إرسال الحملة أو إلغاؤها أو يجري إرسالها. حدّث الصفحة وحاول مجدداً.',
+    nearby_invalid_branches: 'اختر حتى 10 فروع نشطة لها موقع على الخريطة.',
+
     reward_changed: 'تغيّر سعر المكافأة. امسح البطاقة مرة أخرى لعرض أحدث المكافآت.',
     reward_required: 'اختر مكافأة للاستبدال.',
     username_taken: "اسم المستخدم مستخدم أو محجوز.",

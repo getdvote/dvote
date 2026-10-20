@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Injectable, Logger, NotFoundException, ServiceUnavailableException, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,6 +7,8 @@ import type { Env } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
 import { cardQr, cardSecret, hashCardSecret } from './card-token';
 import { WalletLogoService } from '../storage/wallet-logo.service';
+import { defaultDesign, readDesign, type CardDesign } from '../loyalty-cards/card-design';
+import { passClassFields, passPoints } from './card-pass';
 
 /** First colour of each card design (1-10), same order as CARD_DESIGNS in the dashboard and web. */
 const DESIGN_COLORS = ['#1C1C1E', '#2E9E6B', '#2F6BDE', '#F2B33D', '#6155F5', '#E0533D', '#0E8C99', '#3E2723', '#AD1457', '#E9DCC9'];
@@ -23,6 +25,13 @@ interface ServiceAccount {
 }
 
 /** Only controlled diagnostics reach logs; never dump credentials, request bodies or tokens. */
+/** First line of an unexpected error, for logs (Prisma and Node errors can be many lines long). */
+export function errorLine(error: unknown): string {
+  const lines = (error instanceof Error ? error.message : String(error)).split('\n').map((l) => l.trim()).filter(Boolean);
+  const name = error instanceof Error ? error.name : 'Error';
+  return `${name}: ${(lines[lines.length - 1] ?? 'unknown').slice(0, 300)}`;
+}
+
 export class WalletRequestError extends Error {
   constructor(message: string, readonly httpStatus: number) { super(message); }
 }
@@ -63,9 +72,16 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     return !!this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) && this.hasKey;
   }
 
-  /** The service-account key: pasted as JSON (hosting) or a file path (local). */
+  /**
+   * The service-account key: pasted as JSON (hosting) or a file path (local). A path to a file
+   * that isn't there counts as not set up: otherwise this API would claim wallet jobs from the
+   * shared database (broadcasts, pass updates) and fail them all, instead of leaving them to an
+   * API that has the key.
+   */
   private get hasKey(): boolean {
-    return !!this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true }) || !!this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    if (this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true })) return true;
+    const file = this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    return !!file && existsSync(resolve(file));
   }
 
   get enabled(): boolean { return this.configured; }
@@ -99,6 +115,10 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
   }
 
   onApplicationBootstrap(): void {
+    const file = this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    if (file && !this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true }) && !existsSync(resolve(file))) {
+      this.log.warn(`Google Wallet is off: GOOGLE_WALLET_KEY_FILE points to ${file}, which does not exist. Pass updates and notifications are left to an API that has the key.`);
+    }
     if (!this.configured) return;
     this.timer = setInterval(() => void this.reconcile(), 60_000);
     this.timer.unref();
@@ -164,7 +184,9 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
             : error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'request timed out'
             : error instanceof TypeError ? 'network request failed'
             : 'local configuration or database error';
-          this.log.warn(`Google Wallet update failed for card ${id}: ${reason}; reconciliation will retry.`);
+          // the underlying message (first line only) says which: a missing key file, a bad design row, a DB error…
+          const detail = error instanceof WalletRequestError ? '' : ` [${errorLine(error)}]`;
+          this.log.warn(`Google Wallet update failed for card ${id}: ${reason}${detail}; reconciliation will retry.`);
         }
       }
     })().finally(() => { this.running = undefined; });
@@ -178,12 +200,13 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     const issuer = this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true });
     if (!card.google_object_id.startsWith(`${issuer}.`)) return;
     const v = card.vendors;
+    const program = await this.program(v);
     if (!await this.patch('loyaltyObject', card.google_object_id, {
-      loyaltyPoints: { label: 'Points', balance: { int: card.balance } },
+      loyaltyPoints: passPoints(program.design, card.balance),
       accountName: card.users.name ?? '',
-      state: v.status === 'active' ? 'ACTIVE' : 'INACTIVE',
+      state: v.status === 'active' && !program.cancelled ? 'ACTIVE' : 'INACTIVE',
     })) return;
-    if (!await this.patch('loyaltyClass', `${issuer}.vendor-${v.id}`, await this.branding(v))) return;
+    if (!await this.patch('loyaltyClass', `${issuer}.vendor-${v.id}`, await this.branding(v, program))) return;
     // now() also equals the updated_at trigger's timestamp. Do not checkpoint a newer
     // balance/branding change that happened while Google was processing this snapshot.
     await this.prisma.$executeRaw`
@@ -207,20 +230,49 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     return true;
   }
 
-  private async branding(v: { id: string; name: string; logo_url: string | null; logo_path: string | null; banner_url: string | null; card_design: number | null; wallet_nearby_enabled?: boolean }) {
+  /**
+   * The merchant's loyalty card (migration 29): its live look and whether it is cancelled.
+   * A merchant without a card row yet (should not happen after the migration) keeps the old look.
+   */
+  private async program(v: { id: string; name: string; slug: string; card_design: number | null }): Promise<{ design: CardDesign; cancelled: boolean; directionsUrl: string | null; storefrontUrl: string }> {
+    const card = await this.prisma.loyalty_cards.findUnique({
+      where: { vendor_id: v.id },
+      select: { name: true, status: true, live_version: { select: { design: true } } },
+    });
+    const design = card ? readDesign(card.live_version?.design, card.name) : defaultDesign(v.name, designColor(v.id, v.card_design));
+    const second = design.buttons.secondary;
+    const branch = second.type === 'directions'
+      ? await this.prisma.branches.findFirst({ where: { id: second.branchId, vendor_id: v.id, status: 'active' }, select: { lat: true, lng: true } })
+      : null;
+    const web = (this.config.get('PUBLIC_WEB_URL', { infer: true }) ?? 'https://dvote.app').replace(/\/$/, '');
+    return {
+      design,
+      cancelled: card?.status === 'cancelled',
+      directionsUrl: branch?.lat != null && branch.lng != null
+        ? `https://www.google.com/maps/dir/?api=1&destination=${String(branch.lat)},${String(branch.lng)}` : null,
+      storefrontUrl: `${web}/${v.slug}`,
+    };
+  }
+
+  private async branding(
+    v: { id: string; name: string; slug: string; logo_url: string | null; logo_path: string | null; banner_url: string | null; card_design: number | null; wallet_nearby_enabled?: boolean },
+    program: Awaited<ReturnType<GoogleWalletService['program']>>,
+  ) {
     const logo = v.logo_path ? await this.walletLogos.ensure(v.logo_path) : v.logo_url ?? this.config.get('WALLET_DEFAULT_LOGO_URL', { infer: true });
+    const [nearbySelection] = await this.prisma.$queryRaw<{ ids: string[] | null }[]>`SELECT wallet_nearby_branch_ids AS ids FROM vendors WHERE id=${v.id}::uuid`;
     const branches = v.wallet_nearby_enabled ? await this.prisma.branches.findMany({
-      where: { vendor_id: v.id, status: 'active', lat: { not: null }, lng: { not: null } },
+      where: { vendor_id: v.id, ...(nearbySelection?.ids ? { id: { in: nearbySelection.ids } } : {}), status: 'active', lat: { not: null }, lng: { not: null } },
       select: { lat: true, lng: true }, orderBy: { id: 'asc' }, take: 10,
     }) : [];
+    const hero = program.design.background.imageUrl ?? v.banner_url;
     return {
       merchantLocations: branches.map(b => ({ latitude: Number(b.lat), longitude: Number(b.lng) })),
       // Required even when PATCHing an already approved class.
       reviewStatus: 'UNDER_REVIEW',
-      issuerName: v.name, programName: `${v.name} loyalty`,
+      issuerName: v.name,
       ...(logo ? { programLogo: { sourceUri: { uri: logo }, contentDescription: { defaultValue: { language: 'en-US', value: v.name } } } } : {}),
-      heroImage: v.banner_url ? { sourceUri: { uri: v.banner_url }, contentDescription: { defaultValue: { language: 'en-US', value: v.name } } } : null,
-      hexBackgroundColor: designColor(v.id, v.card_design),
+      heroImage: hero ? { sourceUri: { uri: hero }, contentDescription: { defaultValue: { language: 'en-US', value: v.name } } } : null,
+      ...passClassFields(program),
     };
   }
 
@@ -241,17 +293,18 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     const classId = `${issuerId}.vendor-${v.id}`;
     const objectId = `${issuerId}.card-${card.public_id}`;
 
+    const program = await this.program(v);
     const loyaltyClass = {
       id: classId,
-      ...await this.branding(v),
+      ...await this.branding(v, program),
     };
     const loyaltyObject = {
       id: objectId,
       classId,
-      state: 'ACTIVE',
+      state: program.cancelled ? 'INACTIVE' : 'ACTIVE',
       accountId: card.short_code ?? '',
       accountName: card.users.name ?? '',
-      loyaltyPoints: { label: 'Points', balance: { int: card.balance } },
+      loyaltyPoints: passPoints(program.design, card.balance),
       barcode: { type: 'QR_CODE', value: cardQr(secret), alternateText: card.short_code ?? '' },
     };
 

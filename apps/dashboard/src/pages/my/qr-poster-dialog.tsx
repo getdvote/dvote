@@ -10,7 +10,7 @@ import { DvoteLogo } from '../../components/DvoteLogo';
 import { Field } from '../../components/Field';
 import { Segmented } from '../../components/segmented';
 import { initial } from '../../components/PageHeader';
-import { cardDesign } from '../../lib/cardDesigns';
+import { useCardColors } from '../../lib/use-card-colors';
 import type { Vendor } from '../../lib/api';
 import { t, useI18n } from '../../i18n';
 
@@ -258,7 +258,7 @@ function ScaledSheet({ children }: { children: ReactNode }) {
 }
 
 function useBrand(vendor: Vendor) {
-  const design = cardDesign(vendor.id, vendor.cardDesign);
+  const design = useCardColors(vendor);
   const bg = vendor.brandPrimary ?? design.colors[0];
   return { bg, ink: vendor.brandPrimary ? inkOn(vendor.brandPrimary) : design.ink };
 }
