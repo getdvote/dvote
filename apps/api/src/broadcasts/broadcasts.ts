@@ -41,6 +41,7 @@ import { MerchantCustomersService } from '../merchant-customers/merchant-custome
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletModule } from '../wallet/wallet.module';
 import {
+  errorLine,
   GoogleWalletService,
   WalletRequestError,
 } from '../wallet/google-wallet.service';
@@ -504,7 +505,7 @@ export class BroadcastsService
           ? `provider_http_${error.httpStatus}`
           : 'provider_error';
         this.log.warn(
-          `Wallet message ${row.id}: ${error instanceof WalletRequestError ? error.message : 'delivery outcome unknown (network or internal error)'}`,
+          `Wallet message ${row.id}: ${error instanceof WalletRequestError ? error.message : `delivery outcome unknown (network or internal error) [${errorLine(error)}]`}`,
         );
         await this.prisma
           .$executeRaw`UPDATE wallet_broadcast_recipients SET status=${status},reason=${reason} WHERE id=${row.id}::uuid`;

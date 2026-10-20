@@ -11,7 +11,7 @@ import { Field } from '../../components/Field';
 import { initial } from '../../components/PageHeader';
 import { useMyVendor } from '../../layouts/VendorLayout';
 import { errorMessage, type PageStyle, type Vendor } from '../../lib/api';
-import { cardDesign } from '../../lib/cardDesigns';
+import { useCardColors } from '../../lib/use-card-colors';
 import { BRAND_FONTS, loadFonts, PAGE_STYLES } from '../../lib/storefront';
 import { t } from '../../i18n';
 
@@ -32,7 +32,7 @@ export function BrandStyleEditor() {
     onSuccess: (v: Vendor) => qc.setQueryData(['vendor', 'me'], v),
     onError: (e) => void toast.error(errorMessage(e)),
   });
-  const design = cardDesign(vendor.id, vendor.cardDesign);
+  const design = useCardColors(vendor);
   const primary = vendor.brandPrimary ?? design.colors[0];
   const secondary = vendor.brandSecondary ?? design.colors[1];
   const style = vendor.pageStyle ?? 'spotlight';

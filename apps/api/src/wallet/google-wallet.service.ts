@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Injectable, Logger, NotFoundException, ServiceUnavailableException, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +25,13 @@ interface ServiceAccount {
 }
 
 /** Only controlled diagnostics reach logs; never dump credentials, request bodies or tokens. */
+/** First line of an unexpected error, for logs (Prisma and Node errors can be many lines long). */
+export function errorLine(error: unknown): string {
+  const lines = (error instanceof Error ? error.message : String(error)).split('\n').map((l) => l.trim()).filter(Boolean);
+  const name = error instanceof Error ? error.name : 'Error';
+  return `${name}: ${(lines[lines.length - 1] ?? 'unknown').slice(0, 300)}`;
+}
+
 export class WalletRequestError extends Error {
   constructor(message: string, readonly httpStatus: number) { super(message); }
 }
@@ -65,9 +72,16 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     return !!this.config.get('GOOGLE_WALLET_ISSUER_ID', { infer: true }) && this.hasKey;
   }
 
-  /** The service-account key: pasted as JSON (hosting) or a file path (local). */
+  /**
+   * The service-account key: pasted as JSON (hosting) or a file path (local). A path to a file
+   * that isn't there counts as not set up: otherwise this API would claim wallet jobs from the
+   * shared database (broadcasts, pass updates) and fail them all, instead of leaving them to an
+   * API that has the key.
+   */
   private get hasKey(): boolean {
-    return !!this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true }) || !!this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    if (this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true })) return true;
+    const file = this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    return !!file && existsSync(resolve(file));
   }
 
   get enabled(): boolean { return this.configured; }
@@ -101,6 +115,10 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
   }
 
   onApplicationBootstrap(): void {
+    const file = this.config.get('GOOGLE_WALLET_KEY_FILE', { infer: true });
+    if (file && !this.config.get('GOOGLE_WALLET_KEY_JSON', { infer: true }) && !existsSync(resolve(file))) {
+      this.log.warn(`Google Wallet is off: GOOGLE_WALLET_KEY_FILE points to ${file}, which does not exist. Pass updates and notifications are left to an API that has the key.`);
+    }
     if (!this.configured) return;
     this.timer = setInterval(() => void this.reconcile(), 60_000);
     this.timer.unref();
@@ -166,7 +184,9 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
             : error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'request timed out'
             : error instanceof TypeError ? 'network request failed'
             : 'local configuration or database error';
-          this.log.warn(`Google Wallet update failed for card ${id}: ${reason}; reconciliation will retry.`);
+          // the underlying message (first line only) says which: a missing key file, a bad design row, a DB error…
+          const detail = error instanceof WalletRequestError ? '' : ` [${errorLine(error)}]`;
+          this.log.warn(`Google Wallet update failed for card ${id}: ${reason}${detail}; reconciliation will retry.`);
         }
       }
     })().finally(() => { this.running = undefined; });
