@@ -20,6 +20,7 @@
     "web:install": "npm --prefix apps/web install",
     "web:dev": "npm --prefix apps/web run dev",
     "ui:install": "npm --prefix apps/ui-tests install && npx --prefix apps/ui-tests playwright install chromium",
-    "ui:test": "npm --prefix apps/ui-tests test"
+    "ui:test": "npm --prefix apps/ui-tests test",
+    "db:backup": "npm --prefix apps/api run db:backup --"
   }
 }

@@ -57,3 +57,7 @@ apps/dashboard/.vite/
 
 # API secret files (Google Wallet service-account key, ...)
 apps/api/.secrets/
+
+# database backups (npm run db:backup)
+apps/api/backups/
+*.dump
