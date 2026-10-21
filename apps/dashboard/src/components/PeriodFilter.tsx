@@ -360,7 +360,7 @@ function Month({
                 className={cn(
                   'relative flex size-9 items-center justify-center rounded-lg text-sm tabular-nums transition duration-100 ease-linear',
                   'hover:bg-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent',
-                  (isStart || isEnd) && 'bg-primary font-medium text-primary-foreground hover:bg-primary',
+                  (isStart || isEnd) && 'bg-brand font-medium text-brand-foreground hover:bg-brand',
                 )}
               >
                 {d.date()}
