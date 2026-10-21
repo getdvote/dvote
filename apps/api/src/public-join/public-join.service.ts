@@ -47,7 +47,7 @@ const cardInclude = {
 type CardRow = Prisma.cardsGetPayload<{ include: typeof cardInclude }>;
 
 /**
- * The public side of joining a merchant (dvote.app/<slug>): the venue page data, joining
+ * The public side of joining a merchant (m.dvote.co/<slug>): the venue page data, joining
  * (creates the customer's card for that merchant, balance 0) and the card page.
  *
  * No sign-in (decided 2026-10-17): the customer is identified by the normalized mobile number.
@@ -180,7 +180,7 @@ export class PublicJoinService {
     throw new Error('could not pick a free short code');
   }
 
-  /** The card page (dvote.app/c/<publicId>): anyone with the link can see it, like the pass. */
+  /** The card page (m.dvote.co/c/<publicId>): anyone with the link can see it, like the pass. */
   async card(publicId: string): Promise<PublicCardDto> {
     const card = await this.prisma.cards.findUnique({ where: { public_id: publicId }, include: cardInclude });
     if (!card || card.vendors.status !== 'active') throw new NotFoundException({ code: 'card_not_found' });

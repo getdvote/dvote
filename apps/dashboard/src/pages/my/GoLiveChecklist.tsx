@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { WorkspaceLink as Link } from '../../lib/vendor-workspace';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { BrandIllustration, BrandPattern } from '../../components/BrandArt';
 
 import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
@@ -56,8 +57,11 @@ export function GoLiveChecklist({ className }: { className?: string }) {
   const next = data.steps.find((s) => !s.done);
 
   return (
-    <Card className={cn('gap-0 px-4 py-3', className)}>
+    <Card className={cn('relative isolate gap-0 overflow-hidden px-4 py-3', className)}>
+      {/* welcome moment: a quiet dot grid at the far end, away from the text */}
+      <BrandPattern name="paper-grid" fade="start" className="-z-10" />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <BrandIllustration name="welcome" className="hidden w-20 sm:w-20 md:block" />
         <div className="min-w-48 flex-1">
           <div className="flex items-baseline gap-2">
             <h2 className="text-sm font-semibold">{t('goLive.title')}</h2>

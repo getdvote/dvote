@@ -169,6 +169,7 @@ export function MyActivity() {
                 loading={isLoading}
                 empty={!data?.items.length}
                 colSpan={branchOnly ? 7 : 8}
+                illustration={filtered ? undefined : 'earn-stamps'}
                 emptyTitle={filtered ? t('emptyStates.noMatchTitle') : t('emptyStates.activityTitle')}
                 emptyText={filtered ? t('activity.noMatch') : t('activity.empty')}
                 action={

@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { t } from '../../i18n';
 import { RewardPerformance } from './RewardPerformance';
 import { InsightsPattern } from './InsightsPatterns';
+import { BrandIllustration } from '../../components/BrandArt';
 import { CustomLayout, useCustomLayout, type LayoutSection } from '../../components/CustomLayout';
 import { Button } from '@/components/ui/button';
 
@@ -169,6 +170,12 @@ export function MyInsights() {
           <CardContent>
             {!chart ? (
               <Skeleton className="h-[280px] w-full" />
+            ) : !chart.some((d) => d.current || d.previous) ? (
+              // nothing in the period (or the one before): a calm scene instead of a flat line
+              <div className="flex h-[280px] flex-col items-center justify-center gap-3 text-center">
+                <BrandIllustration name="insights" size="sm" />
+                <p className="max-w-sm text-sm text-muted-foreground">{t('activity.empty')}</p>
+              </div>
             ) : (
               <ChartContainer config={chartConfig()} className="aspect-auto h-[280px] w-full">
                 <AreaChart data={chart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>

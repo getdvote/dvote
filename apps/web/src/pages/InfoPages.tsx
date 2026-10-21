@@ -4,7 +4,7 @@ import { Page } from '../components/ui';
 import { t, useI18n } from '../i18n';
 import { PRIVACY, TERMS, type LegalDoc } from '../legal/legal-text';
 
-/** dvote.app: there is no shop list; customers arrive from a shop's tag or QR. */
+/** m.dvote.co: there is no shop list; customers arrive from a shop's tag or QR. */
 export function HomePage() {
   return (
     <Page>
@@ -19,7 +19,7 @@ export function HomePage() {
   );
 }
 
-/** dvote.app/privacy ("How your data is used", linked from the join form) and dvote.app/terms. */
+/** m.dvote.co/privacy ("How your data is used", linked from the join form) and m.dvote.co/terms. */
 export function PrivacyPage() {
   return <LegalPage doc={PRIVACY} />;
 }

@@ -5,7 +5,7 @@ import { publicCard } from '../lib/fixtures';
 import { mockApi, setLanguage } from '../lib/mock-api';
 import { KEY_VIEWPORTS, VIEWPORTS } from '../lib/viewports';
 
-/** The customer website (dvote.app): mobile first, but must hold up on laptops too. */
+/** The customer website (m.dvote.co): mobile first, but must hold up on laptops too. */
 const PAGES = [
   ['home', '/'],
   ['venue', '/joy-corner'],

@@ -147,7 +147,8 @@ function IPhoneWalletFront(p: Rendered) {
           <MenuDotsIcon className="size-4" />
         </span>
       </div>
-      <CardFace {...p} width={268} />
+      {/* the phone's 260 px content width (300 frame − p-2 − px-3) */}
+      <CardFace {...p} width={260} />
       <div className="mt-3 flex justify-center gap-1" aria-hidden>
         <span className="size-1.5 rounded-full bg-white" />
         <span className="size-1.5 rounded-full bg-white/40" />
@@ -239,7 +240,7 @@ function IPhoneBack(p: Rendered) {
         ))}
         {d.back.terms ? <Row title={w.terms}>{d.back.terms}</Row> : null}
         <LinkRow title={w.cardCode} value="K7M-4QX" />
-        <LinkRow title={`${w.poweredBy} dvote`} value="dvote.app" />
+        <LinkRow title={`${w.poweredBy} dvote`} value="dvote.co" />
       </div>
     </div>
   );

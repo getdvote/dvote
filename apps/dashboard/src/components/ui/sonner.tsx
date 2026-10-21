@@ -19,7 +19,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={resolvedTheme}
       className="toaster group"
-      // Sonner sets its own system font on the container: use the dashboard's (Inter / IBM Plex Sans Arabic)
+      // Sonner sets its own system font on the container: use the dashboard's (Inter / Cairo)
       style={{ fontFamily: "inherit" }}
       closeButton
       icons={{

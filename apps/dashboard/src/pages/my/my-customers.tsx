@@ -25,6 +25,7 @@ import { useMe, useMyScope, useMyVendor } from '../../layouts/VendorLayout';
 import { errorMessage, type CustomerSegment, type CustomSegment, type MerchantCustomer, type MerchantCustomerQuery } from '../../lib/api';
 import { localeOf, t } from '../../i18n';
 import { formatEgyptianMobile } from '../../lib/phone';
+import { BrandIllustration } from '../../components/BrandArt';
 import { CustomSegmentBadge, exportCustomers, SegmentBadge, segmentLabel, Segmentation, SEGMENTS, segmentText } from './customer-segments';
 
 const PAGE_SIZE = 25;
@@ -246,7 +247,11 @@ export function MyCustomers() {
                   </div>
                 ) : !data?.items.length ? (
                   <div className="px-4 py-12 text-center">
-                    <UsersRound className="mx-auto mb-3 size-8 text-muted-foreground" aria-hidden />
+                    {search || filtered || page > 1 ? (
+                      <UsersRound className="mx-auto mb-3 size-8 text-muted-foreground" aria-hidden />
+                    ) : (
+                      <BrandIllustration name="invite-customers" size="sm" className="mx-auto mb-3" />
+                    )}
                     <h2 className="font-semibold">
                       {search || filtered ? t('customers.noMatch') : page > 1 ? t('customers.noPage') : t('customers.emptyTitle')}
                     </h2>
@@ -388,7 +393,7 @@ function CustomerButton({ customer: c, onClick }: { customer: MerchantCustomer; 
       className="flex items-center gap-3 rounded-md text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Avatar className="size-9">
-        <AvatarFallback className="bg-brand-soft text-accent-foreground">{c.name?.trim().slice(0, 1).toUpperCase() || '?'}</AvatarFallback>
+        <AvatarFallback className="bg-secondary text-accent-foreground">{c.name?.trim().slice(0, 1).toUpperCase() || '?'}</AvatarFallback>
       </Avatar>
       <span>
         <span className="block font-medium hover:underline">{displayName(c)}</span>

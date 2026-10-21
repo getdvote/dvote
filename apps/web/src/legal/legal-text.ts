@@ -1,5 +1,5 @@
 /**
- * Privacy policy and terms of use shown at dvote.app/privacy and dvote.app/terms.
+ * Privacy policy and terms of use shown at m.dvote.co/privacy and m.dvote.co/terms.
  * Kept here, not in the i18n dictionaries: long legal text, one block per language.
  * Draft written 2026-10-18 for launch; have it reviewed by a lawyer before going live.
  * Keep the English and Arabic versions saying the same thing.
@@ -202,7 +202,7 @@ export const PRIVACY: Record<'en' | 'ar', LegalDoc> = {
 export const TERMS: Record<'en' | 'ar', LegalDoc> = {
   en: {
     title: 'Terms of use',
-    updated: 'Last updated: 18 October 2026',
+    updated: 'Last updated: 21 October 2026',
     intro:
       'These terms apply when you join a shop’s loyalty card on dvote, use the card in Google Wallet or Apple Wallet, or use this website. By joining, you agree to them.',
     sections: [
@@ -266,6 +266,15 @@ export const TERMS: Record<'en' | 'ar', LegalDoc> = {
         ],
       },
       {
+        heading: 'For shops: accounts and the free trial',
+        bullets: [
+          'A shop can create a dvote account on the merchant dashboard and use every feature free for 7 days. No payment card is needed for the trial.',
+          'When the 7 days end, the account is locked until the shop subscribes to a paid plan: the dashboard shows only the subscription message, staff cannot scan cards, and the shop’s page and new sign-ups stop.',
+          'If no paid plan is active 30 days after sign-up, the shop’s account and all of its data are deleted for good and cannot be recovered: its branches, team, rewards, images, and its customers’ cards, points and history at that shop. Customers’ cards at other shops are not affected.',
+          'Plans are monthly and priced by the number of branches (see the pricing page on dvote.co). The shop is responsible for its own rewards and for what it tells its customers.',
+        ],
+      },
+      {
         heading: 'Changes to these terms',
         paragraphs: ['We may update these terms. The date at the top shows the latest version. If you keep using your card after a change, the new terms apply.'],
       },
@@ -277,7 +286,7 @@ export const TERMS: Record<'en' | 'ar', LegalDoc> = {
   },
   ar: {
     title: 'شروط الاستخدام',
-    updated: 'آخر تحديث: 18 أكتوبر 2026',
+    updated: 'آخر تحديث: 21 أكتوبر 2026',
     intro:
       'تنطبق هذه الشروط عند اشتراكك في بطاقة ولاء أحد المحلات على dvote، أو استخدام البطاقة في محفظة Google أو Apple، أو استخدام هذا الموقع. باشتراكك، أنت توافق عليها.',
     sections: [
@@ -338,6 +347,15 @@ export const TERMS: Record<'en' | 'ar', LegalDoc> = {
         heading: 'مسؤوليتنا',
         paragraphs: [
           'نعمل على استمرار الخدمة وصحة نقاطك، لكنها تُقدَّم «كما هي» وقد تتوقّف أحيانًا. في الحدود التي يسمح بها القانون، لا تتحمّل dvote مسؤولية منتجات التاجر أو أسعاره أو خدمته، ولا الخسائر غير المباشرة. لا شيء هنا يحدّ من حقوقك وفق قانون حماية المستهلك المصري.',
+        ],
+      },
+      {
+        heading: 'للمحلات: الحسابات والتجربة المجانية',
+        bullets: [
+          'يمكن للمحل إنشاء حساب على dvote من لوحة تحكم التاجر واستخدام كل المميزات مجاناً لمدة 7 أيام، دون الحاجة إلى بطاقة دفع.',
+          'عند انتهاء الأيام السبعة، يُقفل الحساب حتى يشترك المحل في باقة مدفوعة: لا تعرض لوحة التحكم إلا رسالة الاشتراك، ولا يستطيع الموظفون مسح البطاقات، وتتوقف صفحة المحل والاشتراكات الجديدة.',
+          'إذا لم تكن هناك باقة مدفوعة مفعّلة بعد 30 يوماً من التسجيل، يُحذف حساب المحل وكل بياناته نهائياً ولا يمكن استرجاعها: فروعه وفريقه ومكافآته وصوره، وبطاقات عملائه ونقاطهم وسجلهم في هذا المحل. لا تتأثر بطاقات العملاء في المحلات الأخرى.',
+          'الباقات شهرية وتُسعّر حسب عدد الفروع (راجع صفحة الأسعار على dvote.co). المحل مسؤول عن مكافآته وعما يخبر به عملاءه.',
         ],
       },
       {

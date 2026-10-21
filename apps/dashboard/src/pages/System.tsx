@@ -258,7 +258,7 @@ function Tile({ icon, title, value, note }: { icon: ReactNode; title: string; va
   return (
     <Card>
       <CardContent className="flex items-start gap-3.5">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-accent-foreground">{icon}</div>
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-accent-foreground">{icon}</div>
         <div className="min-w-0">
           <div className="text-sm font-medium text-muted-foreground">{title}</div>
           <div className="mt-0.5 text-2xl font-bold tracking-tight tabular-nums">{value}</div>

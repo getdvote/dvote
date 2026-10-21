@@ -1,6 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { StaffResponseDto } from './staff-response.dto';
 
+/** The shop's plan: a self sign-up is on a free trial until an admin activates a plan. */
+export class StaffMePlanDto {
+  @ApiProperty({ enum: ['trial', 'active'] })
+  status: 'trial' | 'active';
+
+  @ApiProperty({ type: String, nullable: true, enum: ['starter', 'growth', 'chain'] })
+  plan: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'When the free trial ends (trial only)' })
+  trialEndsAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'When an unpaid trial shop is deleted for good (trial only)' })
+  deleteAt: string | null;
+}
+
 export class StaffMeVendorDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
@@ -13,6 +28,9 @@ export class StaffMeVendorDto {
 
   @ApiProperty({ example: 'EGP' })
   currency: string;
+
+  @ApiProperty({ type: StaffMePlanDto })
+  plan: StaffMePlanDto;
 }
 
 export class StaffMeBranchDto {

@@ -3,7 +3,9 @@ import { WORKSPACE_PAGES } from './lib/workspace-pages';
 import { LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { createBrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { SetPassword } from './pages/SetPassword';
-import { NotFoundPage, RouteErrorPage } from './components/ErrorPage';
+import { NotFoundPage, RouteErrorPage, TrialEndedPage, WrongSitePage } from './components/ErrorPage';
+import { Signup } from './pages/Signup';
+import { config, site } from './lib/config';
 import { AdminLayout } from './layouts/AdminLayout';
 import { VendorLayout } from './layouts/VendorLayout';
 import { useAuth } from './lib/auth';
@@ -38,6 +40,8 @@ function Shell() {
   const { status, admin, staff } = useAuth();
   const location = useLocation();
   if (location.pathname === '/set-password') return <SetPassword />;
+  // self sign-up lives on the merchant dashboard only (not admin.dvote.co); signed-in people go home
+  if (location.pathname === '/signup' && site !== 'admin' && status !== 'ready' && status !== 'loading') return <Signup />;
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -45,7 +49,12 @@ function Shell() {
       </div>
     );
   }
+  if (status === 'trialEnded') return <TrialEndedPage />;
   if (status !== 'ready') return <Login />;
+
+  // admin.dvote.co is for platform admins only, merchant.dvote.co for merchant accounts only
+  if (site === 'merchant' && admin) return <WrongSitePage belongsTo="admin" href={config.adminUrl} />;
+  if (site === 'admin' && !admin) return <WrongSitePage belongsTo="merchant" href={config.merchantUrl} />;
 
   if (admin) {
     return (

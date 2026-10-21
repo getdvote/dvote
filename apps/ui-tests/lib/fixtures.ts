@@ -418,7 +418,7 @@ export const broadcasts = range(3).map((i) => ({
 
 // ── admin ─────────────────────────────────────────────────────────────
 
-export const adminMe: AdminMe = { id: 'admin-1', name: 'Karim Desouki', email: 'karim@dvote.app' };
+export const adminMe: AdminMe = { id: 'admin-1', name: 'Karim Desouki', email: 'karim@dvote.co' };
 
 export const overview: Overview = {
   vendorsActive: 42,
@@ -509,7 +509,7 @@ export const systemStatus: SystemStatus = {
     { name: 'Database', kind: 'database', up: true, latencyMs: 31, detail: 'SELECT 1' },
     { name: 'Supabase Auth', kind: 'auth', up: true, latencyMs: 120, detail: 'healthy' },
     { name: 'Storage', kind: 'storage', up: false, latencyMs: 5000, detail: 'Timed out after 5 s while connecting to the storage endpoint' },
-    { name: 'Customer website', kind: 'website', up: true, latencyMs: 88, detail: '200 OK', url: 'https://dvote.app/joy-corner' },
+    { name: 'Customer website', kind: 'website', up: true, latencyMs: 88, detail: '200 OK', url: 'https://m.dvote.co/joy-corner' },
   ],
   checkedAt: iso(),
 };

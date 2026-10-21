@@ -91,7 +91,7 @@ export function Vendors() {
                   <div className="flex items-center gap-3">
                     <Avatar className="size-10">
                       <AvatarImage src={v.logoUrl ?? undefined} alt="" />
-                      <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{initial(v.name)}</AvatarFallback>
+                      <AvatarFallback className="bg-secondary font-semibold text-accent-foreground">{initial(v.name)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-semibold">{v.name}</div>
