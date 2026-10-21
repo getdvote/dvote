@@ -1,5 +1,6 @@
-// Renders the email images (animated hero cards, pattern tile, logos) into apps/web/public/email.
-// They are served from https://dvote.co/email/… once the customer website is deployed.
+// Renders the email images (animated hero cards, pattern tile, logos) into apps/web/public/email,
+// then copies them to apps/landing/public/email. The emails load them from https://dvote.co/email/…,
+// which today is the customer website and later the landing page (DEPLOY.md), so both ship them.
 // Run: node docs/email-templates/src/build-assets.mjs
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync, statSync } from 'node:fs';
@@ -162,3 +163,7 @@ await sharp(Buffer.from(underline)).resize(480).png().toFile(join(out, 'underlin
 for (const f of ['pattern-ink.png', 'logo-electric.png', 'symbol-electric.png', 'underline.png', ...Object.keys(cards).map((n) => `${n}.gif`)]) {
   console.log(f.padEnd(26), `${(statSync(join(out, f)).size / 1024).toFixed(0)} KB`);
 }
+
+// dvote.co moves from apps/web to apps/landing: keep the same files in both.
+const { cpSync } = await import('node:fs');
+cpSync(out, join(repo, 'apps/landing/public/email'), { recursive: true });
