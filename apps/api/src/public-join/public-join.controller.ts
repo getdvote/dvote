@@ -14,7 +14,7 @@ import { PublicJoinService } from './public-join.service';
 import { GoogleWalletService } from '../wallet/google-wallet.service';
 
 /**
- * The public web site (dvote.app): a merchant's venue page and join form, and the card page.
+ * The public web site (m.dvote.co): a merchant's venue page and join form, and the card page.
  * No sign-in anywhere (decided 2026-10-17: no email code either); the customer is identified by the
  * normalized mobile number typed on the form.
  */
@@ -26,7 +26,7 @@ export class PublicJoinController {
     private readonly google: GoogleWalletService,
   ) {}
 
-  /** dvote.app/<slug>: the merchant's logo, colours, rule, rewards and branches. */
+  /** m.dvote.co/<slug>: the merchant's logo, colours, rule, rewards and branches. */
   @Get('vendors/:slug')
   @ApiOkResponse({ type: PublicVendorDto })
   @ApiNotFoundResponse({ description: 'vendor_not_found (unknown or suspended)' })
@@ -50,7 +50,7 @@ export class PublicJoinController {
     return this.join.join(slug.toLowerCase(), dto);
   }
 
-  /** dvote.app/c/<publicId>: the card page (balance, cardholder, short code). */
+  /** m.dvote.co/c/<publicId>: the card page (balance, cardholder, short code). */
   @Get('cards/:publicId')
   @ApiOkResponse({ type: PublicCardDto })
   @ApiNotFoundResponse({ description: 'card_not_found' })

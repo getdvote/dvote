@@ -97,6 +97,12 @@ export class StaffService {
         name: vendor.name,
         logoUrl: vendor.logo_url,
         currency: vendor.currency,
+        plan: {
+          status: vendor.plan_status === 'trial' ? 'trial' : 'active',
+          plan: vendor.plan,
+          trialEndsAt: vendor.trial_ends_at?.toISOString() ?? null,
+          deleteAt: vendor.delete_at?.toISOString() ?? null,
+        },
       },
       branch: ctx.branchId
         ? (branches.find((b) => b.id === ctx.branchId) ?? null)

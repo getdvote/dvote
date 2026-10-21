@@ -191,21 +191,28 @@ const templates = {
     footerEn: 'You received this because someone asked to reset the password for {{ .Email }}.',
     footerAr: `وصلتك هذه الرسالة لأن أحدهم طلب إعادة تعيين كلمة مرور ${ltr('{{ .Email }}')}.`,
   },
+  // Merchant self sign-up (dashboard Signup.tsx sends full_name and shop_name) that starts the free trial.
   'confirm-signup': {
-    preheader: 'Confirm your email to finish creating your dvote account.',
+    preheader: 'Confirm your email to open {{ if .Data.shop_name }}{{ .Data.shop_name }}{{ else }}your shop{{ end }} and start your 7-day free trial.',
     en: {
-      eyebrow: 'Confirm email',
-      title: 'One tap to confirm',
-      body: [hiEn, `Thanks for signing up to dvote. Confirm that ${ltr('{{ .Email }}')} is your email address and your account is ready: your loyalty cards, points and rewards in one place.`],
-      action: button('Confirm my email', 'en') + small(ignoreEn, 'en') + fallbackLink('en'),
+      eyebrow: 'Free trial',
+      title: 'Your shop is almost ready',
+      body: [
+        hiEn,
+        `Welcome to dvote! Confirm your email to open {{ if .Data.shop_name }}<strong style="color:${C.ink}">{{ .Data.shop_name }}</strong>{{ else }}your shop{{ end }} and start your <strong style="color:${C.ink}">7-day free trial</strong> with every feature.`,
+      ],
+      action: button('Confirm my email', 'en') + small('Wasn’t you? Ignore this email: no shop is created.', 'en') + fallbackLink('en'),
     },
     ar: {
-      eyebrow: 'تأكيد البريد',
-      title: 'تأكيد بنقرة واحدة',
-      body: [hiAr, `شكرًا لتسجيلك في ${ltr('dvote')}. أكّد أن ${ltr('{{ .Email }}')} هو بريدك الإلكتروني ليصبح حسابك جاهزًا: بطاقات الولاء والنقاط والمكافآت في مكان واحد.`],
-      action: button('تأكيد بريدي', 'ar') + small(ignoreAr, 'ar'),
+      eyebrow: 'تجربة مجانية',
+      title: 'محلك جاهز تقريبًا',
+      body: [
+        hiAr,
+        `مرحبًا بك في ${ltr('dvote')}! أكّد بريدك لفتح {{ if .Data.shop_name }}<strong style="color:${C.ink}">{{ .Data.shop_name }}</strong>{{ else }}محلك{{ end }} وبدء <strong style="color:${C.ink}">تجربتك المجانية لمدة 7 أيام</strong> بكل المميزات.`,
+      ],
+      action: button('أكّد بريدي', 'ar') + small('لم تكن أنت؟ تجاهل هذه الرسالة، ولن يُنشأ أي محل.', 'ar'),
     },
-    footerEn: 'You received this because {{ .Email }} was used to sign up to dvote.',
+    footerEn: 'You received this because {{ .Email }} was used to sign up on dvote.',
     footerAr: `وصلتك هذه الرسالة لأن ${ltr('{{ .Email }}')} استُخدم للتسجيل في ${ltr('dvote')}.`,
   },
   'magic-link': {

@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 import type { AdminMe, StaffMe } from './api';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'mfaVerify' | 'mfaEnroll' | 'ready';
+export type AuthStatus = 'loading' | 'signedOut' | 'mfaVerify' | 'mfaEnroll' | 'ready' | 'trialEnded';
 
 export interface Enrollment {
   factorId: string;
@@ -16,6 +16,8 @@ export interface AuthState {
   staff: StaffMe | null;
   /** Shown on the sign-in screen (e.g. "not a dvote admin"). */
   notice: string | null;
+  /** Set with status 'trialEnded': the shop's free trial is over. */
+  trial: { trialEndedAt: string | null; deleteAt: string | null } | null;
   signIn: (email: string, password: string) => Promise<void>;
   verifyCode: (code: string) => Promise<void>;
   startEnroll: () => Promise<Enrollment>;

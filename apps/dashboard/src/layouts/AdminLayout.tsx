@@ -350,7 +350,7 @@ function IdentityRow({
     <>
       <Avatar className="size-10 rounded-lg after:rounded-lg">
         {identity.imageUrl ? <AvatarImage src={identity.imageUrl} alt="" className="rounded-lg" /> : null}
-        <AvatarFallback className="rounded-lg bg-brand-soft font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
+        <AvatarFallback className="rounded-lg bg-secondary font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 text-start group-data-[collapsible=icon]:hidden">
         <div className="truncate text-sm font-semibold">{identity.name}</div>
@@ -538,7 +538,7 @@ function MobileHeader({
         >
           <Avatar className="size-8 rounded-full after:rounded-full">
             {identity.imageUrl ? <AvatarImage src={identity.imageUrl} alt="" className="rounded-full" /> : null}
-            <AvatarFallback className="rounded-full bg-brand-soft text-sm font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
+            <AvatarFallback className="rounded-full bg-secondary text-sm font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
           </Avatar>
           <span className="max-w-32 truncate text-sm font-semibold">{identity.name}</span>
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />

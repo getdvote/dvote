@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarcodeScanIcon as BarcodeScan,
   CameraIcon as Camera,
-  CheckCircleIcon as CheckCircle2,
   GiftIcon as Gift,
   LoaderIcon as Loader2,
   ScannerIcon as ScanLine,
@@ -16,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { BrandIllustration, type IllustrationName } from '../../components/BrandArt';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Field } from '../../components/Field';
 import { Segmented } from '../../components/segmented';
@@ -147,11 +147,11 @@ export function MyTill() {
         type="button"
         disabled={!ready}
         onClick={() => setStep({ kind: 'scan', rewardOnly: false })}
-        className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-14 text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:ring-4 focus-visible:ring-ring/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl bg-brand px-6 py-14 text-brand-foreground shadow-sm transition hover:bg-brand-hover active:bg-brand-pressed focus-visible:ring-4 focus-visible:ring-ring/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ScanLine className="size-9" strokeWidth={1.75} aria-hidden />
         <span className="text-2xl font-medium">{t('till.scan')}</span>
-        <span className="text-sm text-primary-foreground/80">{t('till.scanHint')}</span>
+        <span className="text-sm text-brand-foreground/80">{t('till.scanHint')}</span>
       </button>
 
       <div className="mt-4 grid gap-4">
@@ -176,15 +176,19 @@ export function MyTill() {
 
       <Link
         to={`/activity?period=today&staff=${me.id}`}
-        className="mt-10 block rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-10 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <div className="font-medium">
-          {t('till.today', {
-            collects: num(today?.collects ?? 0),
-            redemptions: num(today?.redemptions ?? 0),
-          })}
+        {/* nothing scanned yet today: the idle till gets its scene */}
+        {today && !today.collects && !today.redemptions ? <BrandIllustration name="scan-and-earn" className="w-20 sm:w-24" /> : null}
+        <div className="min-w-0">
+          <div className="font-medium">
+            {t('till.today', {
+              collects: num(today?.collects ?? 0),
+              redemptions: num(today?.redemptions ?? 0),
+            })}
+          </div>
+          <div className="text-sm text-muted-foreground">{t('till.todayBy')}</div>
         </div>
-        <div className="text-sm text-muted-foreground">{t('till.todayBy')}</div>
       </Link>
 
       <Dialog open={!!step} onOpenChange={(o) => (o ? null : setStep(null))}>
@@ -269,6 +273,7 @@ function TillFlow({
     case 'collected':
       return (
         <Result
+          illustration="earn-stamps"
           title={t('till.granted', { n: num(step.points) })}
           detail={t('till.grantedFor', {
             amount: money(step.amount),
@@ -280,6 +285,7 @@ function TillFlow({
     case 'given':
       return (
         <Result
+          illustration="reward-unlocked"
           title={t('till.given', { reward: step.reward })}
           detail={t('till.givenDetail', {
             n: num(step.points),
@@ -725,10 +731,10 @@ function RedeemStep({
   );
 }
 
-function Result({ title, detail, onNext }: { title: string; detail: string; onNext: () => void }) {
+function Result({ title, detail, illustration, onNext }: { title: string; detail: string; illustration: IllustrationName; onNext: () => void }) {
   return (
     <div className="grid justify-items-center gap-3 py-4 text-center" aria-live="polite">
-      <CheckCircle2 className="size-12 text-success" />
+      <BrandIllustration name={illustration} />
       <DialogTitle className="text-2xl">{title}</DialogTitle>
       <DialogDescription>{detail}</DialogDescription>
       <div data-mobile-dialog-actions className="grid">

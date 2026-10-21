@@ -1,0 +1,11 @@
+// Cloudflare (Workers static assets) settings for the dashboard: ONE build served at
+// admin.dvote.co (platform admins) and merchant.dvote.co (merchants + staff Scan page).
+// Build: `npm run build` (Vite → dist/). Every unknown path returns index.html for the React router.
+{
+  "name": "dvote-dashboard",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

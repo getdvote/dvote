@@ -67,6 +67,53 @@ export class SupabaseAdminService {
     throw this.failed('invite', error);
   }
 
+  /**
+   * Merchant self sign-up (after the captcha): an UNCONFIRMED email + password account, marked
+   * app_metadata.dvote_signup (only the server can set app_metadata, so accounts made by calling
+   * Supabase directly can't open a trial shop), then Supabase's "Confirm signup" email.
+   * An unconfirmed earlier sign-up with the same email gets the new details and a fresh email;
+   * any other existing account → 'taken'.
+   */
+  async createSignupAccount(
+    email: string,
+    password: string,
+    details: Record<string, string>,
+    redirectTo?: string,
+  ): Promise<'created' | 'resent' | 'taken'> {
+    const admin = this.admin();
+    const { error } = await admin.createUser({
+      email,
+      password,
+      email_confirm: false,
+      user_metadata: details,
+      app_metadata: { dvote_signup: true },
+    });
+    let outcome: 'created' | 'resent' = 'created';
+    if (error) {
+      if (!isEmailExists(error)) throw this.failed('create sign-up account', error);
+      const { authUserId } = await this.existingAccount(email);
+      const { data: found, error: getError } = await admin.getUserById(authUserId);
+      if (getError || !found.user) throw this.failed('look up user', getError);
+      if (found.user.email_confirmed_at || found.user.app_metadata?.dvote_signup !== true) return 'taken';
+      const { error: updateError } = await admin.updateUserById(authUserId, { password, user_metadata: details });
+      if (updateError) throw this.failed('update sign-up account', updateError);
+      outcome = 'resent';
+    }
+    const { error: mailError } = await this.client!.auth.resend({
+      type: 'signup',
+      email,
+      ...(redirectTo ? { options: { emailRedirectTo: redirectTo } } : {}),
+    });
+    if (mailError) throw this.failed('send confirmation email', mailError);
+    return outcome;
+  }
+
+  /** Deletes a sign-in account for good (a deleted trial shop's team). Missing = already gone. */
+  async deleteUser(authUserId: string): Promise<void> {
+    const { error } = await this.admin().deleteUser(authUserId);
+    if (error && error.status !== 404) throw this.failed('delete user', error);
+  }
+
   /** Creates a confirmed account with a password, no email sent. For local bootstrap only. */
   async createUserWithPassword(
     email: string,

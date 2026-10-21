@@ -36,6 +36,8 @@ export const LIMITS = {
   uploads: 10,
   /** Joining a merchant from the public site, per IP (no sign-in): a busy café's Wi-Fi is one IP. */
   join: 30,
+  /** Merchant sign-up from the public page, per IP (each one sends an email). */
+  signup: 5,
 } as const;
 
 /** A stricter per-user limit on one endpoint (the per-IP limit still applies too). */

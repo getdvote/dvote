@@ -10,7 +10,8 @@ const MOCK_ENV = {
   VITE_API_URL: 'http://api.mock',
   VITE_SUPABASE_URL: 'http://supabase.mock',
   VITE_SUPABASE_PUBLISHABLE_KEY: 'mock-publishable-key',
-  VITE_WEB_URL: 'https://dvote.app',
+  VITE_WEB_URL: 'https://m.dvote.co',
+  VITE_LANDING_URL: 'https://dvote.co',
 };
 
 export default defineConfig({

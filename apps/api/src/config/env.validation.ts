@@ -54,7 +54,7 @@ export class Env {
 
   /**
    * The public customer site (storefronts at <url>/<slug>): the first button on the wallet
-   * pass opens the merchant's storefront there. Default https://dvote.app.
+   * pass opens the merchant's storefront there. Default https://m.dvote.co.
    */
   @IsOptional()
   @IsUrl({ require_tld: false, require_protocol: true })
@@ -62,7 +62,7 @@ export class Env {
 
   /**
    * Websites the admin "System status" page checks, as "Name=https://url" pairs separated
-   * by commas, e.g. "Dashboard=https://admin.dvote.app,Staff web app=https://staff.dvote.app".
+   * by commas, e.g. "Admin=https://admin.dvote.co,Merchants=https://merchant.dvote.co".
    * The API itself, the database and Supabase Auth / Storage are always checked.
    */
   @IsOptional()
@@ -128,6 +128,15 @@ export class Env {
   @IsString()
   @MinLength(32)
   WALLET_TOKEN_SECRET?: string;
+
+  /**
+   * Cloudflare Turnstile secret for the merchant sign-up captcha. Unset: the captcha is skipped
+   * in development and sign-up is refused in production (503 captcha_not_configured).
+   * Cloudflare's always-pass test secret: 1x0000000000000000000000000000000AA.
+   */
+  @IsOptional()
+  @IsString()
+  TURNSTILE_SECRET_KEY?: string;
 
   /** Logo on the Google pass for a merchant without its own logo (public https image). */
   @IsOptional()

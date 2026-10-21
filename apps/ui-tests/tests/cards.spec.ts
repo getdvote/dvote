@@ -65,7 +65,7 @@ for (const vp of KEY_VIEWPORTS) {
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/editor-look-${vp.name}.png` });
 
     // back of the card: Sunday first, one time per day, picked in a popover
-    await page.getByRole('tab', { name: 'Back of the card' }).click();
+    await page.getByRole('tab', { name: 'Back', exact: true }).click();
     const days = page.locator('fieldset', { hasText: 'Opening hours' }).locator('li');
     await expect(days).toHaveCount(7);
     await expect(days.first()).toContainText('Sunday');
@@ -87,7 +87,7 @@ for (const vp of KEY_VIEWPORTS) {
     await expect(history).toHaveCount(2);
 
     // leaving with unsaved changes asks in the dashboard's own dialog
-    await page.getByRole('link', { name: 'Cards' }).first().click();
+    await page.getByRole('link', { name: 'Loyalty card' }).first().click();
     const leave = page.getByRole('alertdialog');
     await expect(leave).toContainText('Leave without saving?');
     await expectGoodLayout(page, testInfo);

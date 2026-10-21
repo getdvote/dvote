@@ -170,7 +170,7 @@ export function RulesTab({ scope }: { scope: VendorScope }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableState loading={isLoading} empty={!data?.length} colSpan={5} emptyTitle={t('emptyStates.rulesTitle')} emptyText={t('emptyStates.rulesText')} />
+              <TableState loading={isLoading} empty={!data?.length} colSpan={5} illustration="earn-stamps" emptyTitle={t('emptyStates.rulesTitle')} emptyText={t('emptyStates.rulesText')} />
               {data?.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="ps-4">

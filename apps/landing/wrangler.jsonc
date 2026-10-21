@@ -1,0 +1,10 @@
+// Cloudflare (Workers static assets) settings for the landing page dvote.co.
+// Build: `npm run build` (Vite → dist/). Every unknown path returns index.html for the React router.
+{
+  "name": "dvote-landing",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

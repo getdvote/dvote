@@ -1,15 +1,17 @@
 import { CheckIcon as Check, CopyIcon as Copy, EyeIcon as Eye, EyeClosedIcon as EyeOff, LoaderIcon as Loader2, LockIcon as Lock, LetterIcon as Mail, ShieldCheckIcon as ShieldCheck } from '@solar-icons/react/linear';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { BrandIllustration, BrandPattern } from '../components/BrandArt';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { Field } from '../components/Field';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { t } from '../i18n';
+import { site } from '../lib/config';
 import { errorMessage } from '../lib/api';
 import { useAuth, type Enrollment } from '../lib/auth';
 
@@ -21,6 +23,16 @@ import { useAuth, type Enrollment } from '../lib/auth';
 export function Login() {
   const { status, notice } = useAuth();
   return (
+    <AuthShell>
+      {notice ? <ErrorAlert error={notice} /> : null}
+      {status === 'mfaVerify' ? <CodeStep /> : status === 'mfaEnroll' ? <EnrollStep /> : <PasswordStep />}
+    </AuthShell>
+  );
+}
+
+/** The sign-in / sign-up frame: logo and switches, the form in the middle, the dashboard picture. */
+export function AuthShell({ children }: { children: ReactNode }) {
+  return (
     <div className="grid min-h-screen bg-card p-3 lg:grid-cols-2">
       <div className="relative flex flex-col px-4 py-5 sm:px-8">
         <div className="flex items-center justify-between">
@@ -31,8 +43,9 @@ export function Login() {
           </div>
         </div>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 py-10">
-          {notice ? <ErrorAlert error={notice} /> : null}
-          {status === 'mfaVerify' ? <CodeStep /> : status === 'mfaEnroll' ? <EnrollStep /> : <PasswordStep />}
+          {/* small screens have no brand panel: the welcome scene stands in */}
+          <BrandIllustration name="welcome" size="sm" className="mx-auto lg:hidden" />
+          {children}
         </div>
         <p className="text-center text-xs text-muted-foreground">{t('login.footer')}</p>
       </div>
@@ -41,27 +54,25 @@ export function Login() {
   );
 }
 
-/** The right half: a hatched panel with a line about dvote and a tilted look at the dashboard. */
+/** The right half: an ink brand panel with a line about dvote and a tilted look at the dashboard. */
 function Showcase() {
   const bars = [30, 44, 38, 52, 47, 60, 55, 70, 64, 78, 72, 90, 84, 96];
   return (
-    <div
-      className="relative hidden overflow-hidden rounded-3xl border bg-muted lg:block"
-      style={{ backgroundImage: 'repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in oklch, var(--foreground) 4%, transparent) 7px 8px)' }}
-      aria-hidden
-    >
+    <div className="relative isolate hidden overflow-hidden rounded-3xl bg-ink text-paper lg:block" aria-hidden>
+      {/* brand moment: the kit's orbit pattern, faded out under the heading so the text stays crisp */}
+      <BrandPattern name="orbit-ink" fade="top" className="-z-10 bg-[position:70%_75%] opacity-70" />
       <div className="max-w-md px-12 pt-14">
         <h2 className="text-2xl font-semibold tracking-tight">{t('login.showcaseTitle')}</h2>
-        <p className="mt-2 text-muted-foreground">{t('login.showcaseText')}</p>
+        <p className="mt-2 text-paper/75">{t('login.showcaseText')}</p>
       </div>
       {/* a small, still picture of the merchant dashboard */}
       <div className="absolute start-14 top-60 w-[760px] origin-top-left [transform:perspective(1800px)_rotateY(-12deg)_rotateX(5deg)_rotateZ(-2deg)] rtl:origin-top-right rtl:[transform:perspective(1800px)_rotateY(12deg)_rotateX(5deg)_rotateZ(2deg)]">
-        <div className="overflow-hidden rounded-2xl border bg-card shadow-2xl" dir="ltr">
+        <div className="overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-2xl" dir="ltr">
           <div className="flex items-center gap-1.5 border-b px-4 py-2.5">
             <span className="size-2.5 rounded-full bg-foreground/15" />
             <span className="size-2.5 rounded-full bg-foreground/15" />
             <span className="size-2.5 rounded-full bg-foreground/15" />
-            <span className="ms-4 rounded-md bg-muted px-3 py-0.5 text-[10px] text-muted-foreground">dashboard.dvote.app</span>
+            <span className="ms-4 rounded-md bg-muted px-3 py-0.5 text-[10px] text-muted-foreground">merchant.dvote.co</span>
           </div>
           <div className="grid grid-cols-[150px_1fr]">
             <div className="grid content-start gap-1 border-e bg-muted/50 p-3 text-xs">
@@ -107,7 +118,7 @@ function Showcase() {
   );
 }
 
-function StepHeader({ title, description }: { title: string; description: string }) {
+export function StepHeader({ title, description }: { title: string; description: string }) {
   return (
     <div className="grid gap-1">
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
@@ -138,7 +149,7 @@ function PasswordStep() {
 
   return (
     <>
-      <StepHeader title={t('login.title')} description={t('login.description')} />
+      <StepHeader title={t('login.title')} description={site === 'admin' ? t('login.adminDescription') : t('login.description')} />
       <div>
         <form onSubmit={submit} className="grid gap-5">
           <Field label={t('staff.email')} htmlFor="email">
@@ -174,11 +185,19 @@ function PasswordStep() {
             {t('login.forgot')}
           </Link>
           <ErrorAlert error={error} />
-          <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
+          <Button type="submit" variant="brand" size="lg" className="h-11 w-full" disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : null}
             {t('login.continue')}
           </Button>
         </form>
+        {site !== 'admin' ? (
+          <p className="mt-5 text-center text-sm text-muted-foreground">
+            {t('login.newHere')}{' '}
+            <Link to="/signup" className="font-medium text-foreground underline underline-offset-4">
+              {t('login.startTrial')}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </>
   );
@@ -203,7 +222,7 @@ function CodeInput({ onSubmit, busy }: { onSubmit: (code: string) => void; busy:
           </InputOTPGroup>
         </InputOTP>
       </div>
-      <Button type="submit" size="lg" className="h-10 w-full" disabled={busy || code.length !== 6}>
+      <Button type="submit" variant="brand" size="lg" className="h-10 w-full" disabled={busy || code.length !== 6}>
         {busy ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
         Verify
       </Button>
