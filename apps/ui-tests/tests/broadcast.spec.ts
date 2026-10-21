@@ -20,9 +20,9 @@ for (const width of [390, 1440]) {
       await expect(page.getByText("Notifications left")).toBeVisible();
       await expect(page.getByText("of 3", { exact: true })).toBeVisible();
       await page
-        .getByRole("button", { name: "New notification", exact: true })
+        .getByRole("button", { name: "New campaign", exact: true })
         .click();
-      const d = page.getByRole("dialog", { name: "New notification" });
+      const d = page.getByRole("dialog", { name: "New campaign" });
       await d
         .getByLabel("Campaign name", { exact: true })
         .fill("Friday coffee");
@@ -31,7 +31,7 @@ for (const width of [390, 1440]) {
         .fill("Fresh coffee awaits.");
       await expect(d.getByText("20 / 2000")).toBeVisible();
       await d.getByRole("button", { name: "Continue", exact: true }).click();
-      await expect(d.getByText("Selected by default")).toBeVisible();
+      await expect(d.getByText("Selected", { exact: true })).toBeVisible();
       await d.getByRole("radio", { name: /Saved segment/ }).check();
       await expect(
         d.getByRole("combobox", { name: "Saved segment" }),
@@ -93,11 +93,11 @@ for (const width of [390, 1440]) {
         .getByRole("tab", { name: "Nearby reminders", exact: true })
         .click();
       await expect(
-        page.getByText("Select branches", { exact: true }),
+        page.getByText("Choose branches", { exact: true }),
       ).toBeVisible();
       await expect(
         page.getByText(
-          "Nearby reminders use one of your 3 notification slots per card every 24 hours, leaving up to 2 for campaigns.",
+          "Nearby reminders use 1 of the 3 notifications each card gets every 24 hours, leaving up to 2 for campaigns.",
         ),
       ).toBeVisible();
       expect(
@@ -124,9 +124,9 @@ test("Arabic dark mode retains RTL layout and preview controls", async ({
   await signIn(page);
   await page.goto(DASHBOARD + "/broadcast");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await page.getByRole("button", { name: "إشعار جديد", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "إشعار جديد" });
-  await expect(dialog.getByText("معاينة مباشرة")).toBeVisible();
+  await page.getByRole("button", { name: "حملة جديدة", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "حملة جديدة" });
+  await expect(dialog.getByText("معاينة", { exact: true })).toBeVisible();
   await expect(
     dialog.getByRole("radio", { name: "Google Wallet" }),
   ).toBeVisible();
@@ -181,15 +181,15 @@ test("autosaves on close, updates one draft, and recovers unsynced text after re
   });
   await page.goto(DASHBOARD + "/broadcast");
   await page
-    .getByRole("button", { name: "New notification", exact: true })
+    .getByRole("button", { name: "New campaign", exact: true })
     .click();
-  let dialog = page.getByRole("dialog", { name: "New notification" });
+  let dialog = page.getByRole("dialog", { name: "New campaign" });
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   expect(creates).toBe(0);
   await page
-    .getByRole("button", { name: "New notification", exact: true })
+    .getByRole("button", { name: "New campaign", exact: true })
     .click();
-  dialog = page.getByRole("dialog", { name: "New notification" });
+  dialog = page.getByRole("dialog", { name: "New campaign" });
   await dialog
     .getByLabel("Message", { exact: true })
     .fill("Keep this unfinished message.");
@@ -203,7 +203,7 @@ test("autosaves on close, updates one draft, and recovers unsynced text after re
     .getByLabel("Campaign name", { exact: true })
     .fill("Saved automatically");
   await expect(
-    dialog.getByText("Draft saved automatically", { exact: true }),
+    dialog.getByText("Draft saved", { exact: true }),
   ).toBeVisible();
   expect(creates).toBe(1);
   offline = true;
@@ -212,7 +212,7 @@ test("autosaves on close, updates one draft, and recovers unsynced text after re
     .fill("Recover this text after reload.");
   await expect(
     dialog.getByText(
-      "Draft kept on this device. We will retry when you are back online.",
+      "Draft saved on this device. We'll try again when you're back online.",
     ),
   ).toBeVisible();
   offline = false;
