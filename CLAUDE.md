@@ -1,44 +1,225 @@
-# dvote — Coffee Loyalty Platform
+# dvote — Loyalty Platform
 
-NFC-based "buy N coffees, get 1 free" loyalty platform for coffee vendors.
-Customers tap **Request a point** in the mobile app; the barista taps the branch's NFC card on the phone; the backend awards the point. Each vendor sets its own rule (e.g. Joy Corner: 10 points → 1 free coffee).
+Spend-based loyalty points and vendor rewards for coffee shops. **Since 2026-10-17 customers get a Google/Apple Wallet pass from a web page (no app install)**; see "Direction change" below. The paused customer app uses **one-time QR codes**.
+Each vendor sets a **point rule** (e.g. every 10 EGP = 1 point) and a **reward catalogue** priced in points (e.g. free coffee 300, free cheesecake 500, coffee + cheesecake 750). The customer shows a QR in the app; vendor staff scan it in the staff app and enter the receipt total (collect) or confirm the reward (redeem); the backend decides and records everything.
 
-Three clients:
+Clients:
 
 | Client | Users | Purpose |
 |---|---|---|
-| Mobile app (Flutter, iOS + Android) | Customers | Sign in, request a point, see wallets/history, claim free coffee |
-| Vendor dashboard (React, web) | Vendor admins, branch managers, staff | Own branches, staff, NFC cards, program rules, reports |
-| Admin dashboard (React, web) | Platform admins | All vendors, onboarding, tags, fraud review, support |
+| **Public web site + wallet pass** (`apps/web` built 2026-10-17; wallet passes to build) | Customers | Open from the NFC tag / QR at the till, join a merchant, add the loyalty card to Google or Apple Wallet; the pass shows points + the QR staff scan |
+| Customer app (React Native + Expo, iOS + Android) — **paused 2026-10-17** | Customers | Kept in the repo for a later release: sign in, cards, shops, collect / redeem QR, home-screen widgets |
+| Staff app (React Native + Expo, separate app) | Staff, branch managers, vendor admins | Scan customer QR, enter receipt total, confirm redemptions |
+| Vendor dashboard (React, web) | Vendor admins, branch managers | Branches, staff, point rule, rewards, reports |
+| Admin dashboard (React, web) | Platform admins | All vendors, onboarding, support, point corrections, fraud review |
 
-Full spec: `docs/Coffee_Loyalty_Platform_Documentation_v1.2.pdf`. Database source of truth: `database/dvote_schema.sql`.
+**Read "Direction change (decided 2026-10-17)" below first: it overrides the customer-app parts of this file.**
+
+**Business + status handoff: [`DVOTE_BRIEF.md`](DVOTE_BRIEF.md)** (read it first; keep it updated). Full spec: `docs/Coffee_Loyalty_Platform_Documentation.pdf` (v2.0; source `docs/src/documentation.html`, rebuild with `node docs/src/build-pdf.mjs`). Database source of truth: `database/dvote_schema.sql`.
+
+---
+
+## Direction change (decided 2026-10-17): wallet passes instead of a customer app
+
+**Why:** asking a walk-in customer to install an app just to collect coffee points is a hard sell. Customers now get their loyalty card as a **Google Wallet / Apple Wallet pass** from a web page; no app install. The customer app (`apps/mobile`) is **paused, not deleted** (see below). Reference product the user showed: tappi (`thetappi.com`): venue page, join form, wallet pass with points + QR.
+
+### Customer journey (target)
+
+1. At each merchant's till there is an **NFC tag and a printed QR** (one per branch). Both just hold a URL: `https://dvote.co/<vendor-slug>` (+ `?b=<branch>`) (plain NFC NDEF URL: no Apple/Google NFC pass certification needed).
+2. The phone opens the **venue page** (mobile first, works on laptop): merchant logo + name, buttons **Loyalty card** (main), Menu, and later Leave a review (Google), Message us, Wi-Fi password.
+3. **Join form** (`dvote.co/<vendor-slug>/join`): name*, email*, mobile phone, "How did you hear about us?" (optional), "I'm 14 or older" checkbox, link "How your data is used", button **Get my loyalty card**, and **Already have a card? Get it back** (sends the card link to the email again).
+4. **"You're enrolled!"**: a preview of the card (merchant colours/logo, points 0, cardholder name, short code like `CZW-QNM`) and the wallet button **for the customer's phone only**: iPhone/iPad (Safari user agent) → **Add to Apple Wallet**; Android → **Add to Google Wallet**; desktop/unknown → both, plus "open this page on your phone" (QR of the page). A small "Use the other wallet" link stays as a fallback (detection can be wrong).
+5. The pass lives in the wallet: **merchant branding, points balance, cardholder name, short code, and a QR**. At the till the cashier scans that QR in the staff app. After every collect/redeem the **pass updates itself** with the new balance (and can show a notification).
+
+### What changes per app
+
+| App | Change |
+|---|---|
+| **New `apps/web`** (to build) | Public, mobile-first site: venue page, join form, enrolled page with the wallet button, "get it back" page, privacy page. English + Arabic (RTL), same rules as the dashboard i18n. Stack like the dashboard (React + Vite + Tailwind + shadcn), deployed as a static site; talks only to `/api/public/*`. |
+| **`apps/api`** | New public join API, wallet pass issuing (Google + Apple), Apple PassKit web service, pass updates after every balance change, staff scans accept the wallet card QR, staff-side redeem. Details below. |
+| **`apps/staff`** | Scanner reads the **wallet card QR** too. Collect: unchanged (type the bill). **Redeem is started by staff**: after scanning the card, staff see the customer's name, balance and the rewards they can afford, pick one, confirm. |
+| **`apps/dashboard`** | Per merchant/branch: the join link, a printable **QR poster** and the NFC tag URL; wallet card look (uses the existing logo, banner and card colours); join source stats (NFC vs QR, "how did you hear"). Customers page shows the customer email and phone (decided 2026-10-17). |
+| **`apps/mobile`** (customer app) | **Paused**: kept in the repo, not released. See "Customer app while paused". |
+
+### Backend changes (planned)
+
+- **Public API `/api/public/*`** (no sign-in; rate limited hard per IP; Cloudflare Turnstile captcha on join): `GET /vendors/{slug}` (venue page data: logo, name, colours, menu link, rule summary, rewards), `POST /vendors/{slug}/join {name, email, phone?, heardFrom?, ageConfirmed, branchId?, source: nfc|qr|link}` → creates or reuses the customer and the **card for that merchant** (balance 0) and returns `{cardId, shortCode, googleSaveUrl, appleUrl}`, `POST /cards/recover {email, vendorSlug}` (emails the card link; never says whether the email exists), `GET /cards/{publicId}` (the enrolled page, by an unguessable id).
+- **Google Wallet** (Wallet API, free issuer account in the Google Pay & Wallet Console, service-account key in `.env`): one **LoyaltyClass per merchant** (logo, colours, name) and one **LoyaltyObject per card** (points, cardholder, barcode). "Add to Google Wallet" = a signed JWT save link. After a balance change: `PATCH` the object (updates within seconds).
+- **Apple Wallet** (PassKit): a signed `.pkpass` per card (`storeCard` style), signed with a **Pass Type ID certificate** from the **paid Apple Developer account** (same blocker as Apple sign-in). Updates use Apple's **PassKit web service** that the API must expose: `POST|DELETE /v1/devices/{deviceLibraryId}/registrations/{passTypeId}/{serial}`, `GET /v1/devices/{deviceLibraryId}/registrations/{passTypeId}?passesUpdatedSince`, `GET /v1/passes/{passTypeId}/{serial}` (latest pass), `POST /v1/log`; after a balance change the API sends an **APNs push** to the registered devices, which then download the new pass.
+- **New `wallet` module** (`src/wallet/`): builds Google objects and Apple passes from the card + vendor branding, keeps them in sync. It replaces the customer-app live `cards` notice as the "balance changed" hook: collect, redeem, admin adjust/undo all call `wallet.cardChanged(cardId)` (after commit, never inside the transaction; failures retried, never undo points).
+- **Scans accept the wallet card QR**: new code format `dvote:c1:<card token>` (128-bit, only its SHA-256 stored, like QR codes). `POST /scans/preview` tells apart a one-time app QR (`dvote:q1:`) and a card QR; for a card it returns the customer's first name, balance and affordable rewards. Collect: same checks and one transaction as today. Redeem: `POST /scans/redeem {code, rewardId, branchId?, idempotencyKey}` (staff choose the reward).
+- **Security trade-off:** a wallet QR is **static** (it can't change every 5 minutes like the app QR), so a screenshot can be reused. Mitigations: staff see the cardholder's name on every scan; idempotency + duplicate-receipt checks stay; fraud flags (too many collects) stay; the card token can be **rotated** from the dashboard/admin (old pass stops working, the wallet gets the new one); Google Wallet's rotating-barcode option can be added later (Apple has no equivalent).
+- **Business rules that change:** rule 5 ("cards are created on the first purchase") becomes **"a card is created when the customer joins a merchant (balance 0)"**; rule 8 (one-time QR) stays for the app, and card QRs follow the rules above. Everything else (points per merchant, server decides, ledger, rounding, tenant scoping) is unchanged.
+
+### Database changes — **applied 2026-10-17** (migrations `16_wallet_join` + `17_vendor_slug_default`, local test DB and cloud; lockdown re-run; `schema.prisma` refreshed; mirrored in `database/dvote_schema.sql` section 9)
+
+What was built (it replaces the plan bullets below where they differ):
+- `vendors.slug` (NOT NULL, unique, `^[a-z0-9]+(-[a-z0-9]+)*$`, 2-50 chars, not a reserved word such as `api`, `admin`, `c`, `join`, `www`): **filled by the trigger `vendors_fill_slug`** from the name when a merchant is created without one (DB default `''`, so code may leave it out): "Joy Corner" → `joy-corner`, then `joy-corner-2`…; names without Latin letters → `shop`, `shop-2`. Slug picking takes an advisory lock (no duplicates under concurrency). Existing merchants were given slugs oldest first (cloud: joy-corner, ecuador-coffee, costa-coffe, starbucks, marrouf-coffee).
+- `users`: `email_verified_at`, `age_confirmed_at`; **unique `lower(email)`** (one customer per email). App sign-in (`UsersService.findOrCreateFromAuth`) now **links** a Supabase login to an existing customer with the same email that has no login yet (a web join), so the app shows the same cards; an email owned by another login is not copied. `PATCH /app/users/me` with another customer's email → 409 `email_taken`.
+- `cards`: `public_id` (32 hex, unique, default random: card page link + Apple serial), `token_hash` (SHA-256 of the pass QR secret, unique, NULL until a pass is issued), `short_code` (`ABC-DEF`, unique per merchant), `joined_via` (nfc/qr/link/app), `joined_branch_id` (composite FK with vendor), `heard_from`, `google_object_id`, `apple_auth_token`, `pass_updated_at`.
+- ~~`join_requests`~~: created by 16 for our own email codes, **dropped by `18_drop_join_requests`** (never held data) once verification moved to Supabase Auth (option A).
+- **`wallet_registrations`** (new): Apple devices holding a card's pass (`device_library_id`, `push_token`, card; unique device+card).
+- `point_events.scan_source` (`app_qr` / `wallet_card`, NULL on old rows = app QR); the rules CHECK now accepts earn/redeem with a QR **or** `scan_source = 'wallet_card'`. Ledger stays append-only.
+
+The original plan:
+
+- `vendors`: `slug` (unique, for the join URL), optional wallet look overrides (otherwise logo, banner and card design are reused), optional venue links (menu link, Google review URL, Wi-Fi name/password).
+- `users`: customers can exist **without** a Supabase account (`auth_user_id` is already nullable); add `email_verified_at` (if we verify), `heard_from`, `age_confirmed_at`, `marketing_consent`; one customer per email (unique, lower-case) so one person joining several merchants is one user with several cards.
+- `cards`: `public_id` (unguessable id for the card page and the Apple serial), `token_hash` (the card QR secret, SHA-256), `short_code` (e.g. `CZW-QNM`, unique per merchant), `joined_via` (nfc/qr/link), `joined_branch_id`, `google_object_id`, `apple_auth_token` (PassKit web-service token), `pass_updated_at`.
+- **New `wallet_registrations`**: Apple devices registered for a card (`device_library_id`, `push_token`, card), for the PassKit web service.
+- `point_events`: the CHECKs require `qr_code_id` for earn/redeem; card scans have no `qr_codes` row, so add `card_scan` (or a `source` column: `app_qr` / `wallet_card`) and relax the CHECK to "a QR **or** a card scan". The one-event-per-QR index stays for app QRs.
+- `qr_codes`: unchanged (still used by the paused app).
+- Re-run `database/supabase_lockdown.sql` after the migration (new table).
+
+### Built — public join API (2026-10-17, `src/public-join/`, `/api/public`)
+
+- `GET /public/vendors/{slug}` (no sign-in; slug case-insensitive): venue page data: `slug, name, logoUrl, bannerUrl, category, cardDesign, currency, rule {spendAmount, pointsPerSpend} | null, rewards [{name, nameAr, pointsCost, imageUrl}], branches [{id, name}]` (open branches only). Unknown or suspended → 404 `vendor_not_found`.
+- `POST /public/vendors/{slug}/join` (**no sign-in**; rate limited `LIMITS.join` = 30/min **per IP**): body `{email, phone, name?, ageConfirmed?, heardFrom?: friend|social_media|walking_by|google_maps|other, branchId?, source: nfc|qr|link}` → `{created, card}`. The customer is found by email (case-insensitive); a known email needs the **same mobile** (else 409 `details_mismatch`), a blocked one → 403 `user_blocked`; a new email creates the customer (name and `ageConfirmed: true` required: 400 `name_required` / `age_required`). The phone is stored as `+201XXXXXXXXX` (`egyptianMobile()`: 010/011/012/015 in any common format; else 400 `invalid_phone`), then the card is created (balance 0, `short_code` like `CZW-QNM` from letters/digits that can't be confused, `joined_via`, `joined_branch_id`, `heard_from`). **Joining again (same email + mobile) returns the same card (`created: false`): that is "Already have a card? Get it back".** Other errors: `invalid_branch` (not an open branch of this merchant), validation 400 (bad email, unknown source). A customer later signing into the (paused) app with the same email is linked to this row.
+- `GET /public/cards/{publicId}` (no sign-in; the 32-hex id is the secret): the card page `{publicId, shortCode, cardholder, balance, vendor {slug, name, logoUrl, bannerUrl, cardDesign, currency}, createdAt}`; 404 `card_not_found` (also when the merchant is suspended). App-made cards get a short code the first time they are shown.
+- Tests: `test/public-join.e2e-spec.ts` (venue page, Google join, rejoin = same card, second merchant = same customer, email-code sign-in without a name, the rules, web customer later linked to an app login by email), `src/public-join/egyptian-phone.spec.ts`.
+- **Not built yet:** the web site itself (`apps/web`), the wallet passes (Google + Apple) and their links in the join result, staff scanning of the card QR (`token_hash` stays NULL until a pass is issued), Cloudflare Turnstile on join, the dashboard join link / QR poster. The web origin must be added to `CORS_ORIGINS` and Supabase Redirect URLs (`https://dvote.co/**`, local dev URL).
+
+### Built — public site `apps/web` (2026-10-17, dvote.co)
+
+React 19 + Vite + Tailwind v4 (no shadcn; own small components in `src/components/ui.tsx`), React Router 7, supabase-js, port **5174**; mobile first; **English + Arabic** (`src/i18n`, same model as the dashboard: `en.ts` source, `ar.ts` typed; first visit follows the phone's language, footer switch saved in localStorage `dvote-web-language`; RTL set before first paint in `index.html`). Pages: `/<slug>` venue page (logo, Loyalty card, rule, rewards, "get it back"), `/<slug>/join` (**final: one form, no code** — name, email, mobile, how did you hear, 14+ → `join` → the card page; `?back=1` asks only email + mobile. The text below describes the removed email-code version. New customer: one form — name, email, Egyptian mobile, how did you hear, 14+ — then Supabase's 6-digit email code (`signInWithOtp` / `verifyOtp`; the typed details wait in `sessionStorage` `dvote-join:<slug>`, so the email's link also works), then `join`. Get it back (`?back=1`): email → code → `join` with no details; if the API answers `phone_required` / `age_required` / `name_required` it is a new customer and the form is shown with the email already confirmed), `/c/<publicId>` card page (card preview in the merchant's design, wallet button by device: iOS → Apple, Android → Google, computer → both + QR of the page; **disabled until the passes exist**), `/privacy`. `?s=nfc|qr` and `?b=<branch>` are kept through the flow. After the card is made the page signs out of Supabase (the card is the identity). `src/lib/cardDesigns.ts` = the dashboard's list (keep identical). README: `apps/web/README.md`. The site no longer uses Supabase (only `VITE_API_URL`). Root scripts `web:install`, `web:dev`; preview config entries `web` and `api` in `.claude/launch.json`. API `CORS_ORIGINS` includes `http://localhost:5174`. The join API also changed: `phone` and `ageConfirmed` are optional when the customer already gave them (400 `phone_required` / `age_required` otherwise); public responses include the merchant `id` (automatic card colours).
+
+### Built — Google Wallet button (2026-10-17, `src/wallet/`)
+
+**Staff-selected Wallet redemption (2026-10-17):** dashboard Till's Redeem reward action recognizes
+`dvote:c1:`. Preview `{code,intent:'redeem',previewBranchId?}` returns `wallet` with customer name,
+balance and merchant-only active rewards, each with usable/reason and current price (insufficient
+or sold out disabled). No earning rule is required to redeem. Selection opens the existing reward
+confirmation, with an option to reload the reward list. Redeem accepts `rewardId` for a Wallet
+card and `expectedPointsCost` to reject a changed price. It reuses the atomic balance decrement,
+ledger and redemption snapshot, records scan_source=wallet_card and triggers post-commit Google
+sync. Replay is scoped to wallet card, reward and staff. App QR redemption remains supported.
+Tests cover concurrent/duplicate redemption, ledger equality, merchant isolation, sold-out branch,
+price mismatch, insufficient points, no earning rule and the Wallet sync hook. No migration.
+Customer web always shows both Wallet badges (device-preferred first), disables Google when
+`hasUsers=true` on the Google object, and retains the saved notice. Apple is still unavailable.
+
+**Broadcasts (2026-10-17):** `src/broadcasts/broadcasts.ts`, migration `24_wallet_broadcasts`
+(local + cloud; lockdown re-run; schema mirrored and Prisma refreshed). `/api/vendor/broadcasts`
+(merchant admin only): POST `preview` accepts customer segment/customSegment/branchId/search;
+POST root adds title/body/idempotencyKey and snapshots the matching linked cards into recipient
+rows; GET root shows 30 recent campaigns and per-status counts. Reuses Customers' exact segment
+classification, including manual custom membership, while excluding blocked customers. Worker
+claims pending recipients with SKIP LOCKED, rechecks customer/vendor/card eligibility, caps sends
+at 3 per card per rolling 24h, and calls Google per-object `addMessage` with `TEXT_AND_NOTIFY`.
+Google GET checks saved/hasUsers and duplicate message IDs first; removes only our own oldest
+broadcast when the ten-message limit is reached. A provider/network error is marked uncertain,
+never blindly resent; interrupted claims become uncertain after 2 minutes. Google acceptance is
+not delivery confirmation. POST retries use the same campaign idempotency key. No emails/SMS.
+Dashboard `MyMessages` is fully EN/AR: audience preview, composition, explicit send confirmation,
+result history, Google availability and Apple-pending explanation. Branch filter means historical
+branch activity, not current location. Only vendor_admin gets sending/settings APIs.
+
+GET/PATCH `/broadcasts/nearby` reads/sets `vendors.wallet_nearby_enabled` (default false).
+Google class save/sync includes `merchantLocations` for up to 10 active branches with map pins,
+ordered by branch UUID; disabling clears the array. Google controls nearby notification wording,
+radius/dwell/timing; customer must enable Wallet notifications and precise always-on location.
+No customer location data is returned to the merchant. Apple issuing/APNs/PassKit remain pending.
+
+**Automatic Wallet logos (2026-10-17):** `storage/wallet-logo.ts` produces a 720×720 opaque WebP,
+preserving the logo aspect ratio and using the quantized dominant visible edge colour for padding
+(white if all edges are transparent). `WalletLogoService.ensure` creates/reuses the immutable
+`-wallet-v1.webp` sibling of an uploaded `logo_path`. Admin and merchant uploads generate both
+files before committing the logo row; replace/remove/PATCH external URL clean up both. Google
+save/sync payloads use the derivative; original logo URLs for other clients are unchanged. Older
+uploads are generated lazily from our own Storage, never fetched from arbitrary external URLs.
+API startup reconciles all linked passes so existing cards receive the fix without re-uploading.
+Tests cover portrait/landscape padding pixels, transparency, upload/delete lifecycle and sync.
+
+**Google Wallet synchronization (2026-10-17):** `GoogleWalletService` handles post-commit change
+notices from `LiveService.cardsChanged` (collect/redeem/admin adjust/undo) and `vendorChanged`
+(dashboard branding writes). A serialized background worker PATCHes the existing loyalty object
+with the latest balance/name/state and its class with colour/logo/banner/name. No alert notification
+is requested. Failed or unsaved (404) objects remain pending. Startup and 60-second reconciliation
+page through linked cards whose `pass_updated_at` is missing/older than card or merchant updates.
+The checkpoint is conditional on the observed balance and merchant version, so concurrent changes
+are retried; Google failures never fail the points transaction. No migration needed. Google uses
+its native layout: selected card colour, logo and banner are supported; web gradients/patterns are
+not reproduced. Configure `WALLET_DEFAULT_LOGO_URL` to replace a removed merchant logo (Google
+requires a program logo; absent a fallback, the previous logo is retained). Apple issuing/updating
+and lock-screen notifications remain pending. Tests mock all Google requests with throwaway keys.
+
+Google class PATCHes must include `reviewStatus: UNDER_REVIEW` even for approved classes; omitting
+it caused live `400 invalidResource`. The shared branding payload includes it for save and sync,
+and the mock Google endpoint rejects PATCHes missing it.
+
+**Wallet collect scanning (2026-10-17):** the staff scanner accepts `dvote:c1:`. ScansService validates
+the hashed card token, enforces the scanning merchant, and supports preview + collect with the existing
+amount, branch, blocked-user and receipt checks. Each visit uses a fresh idempotency key; retries
+return the same event (scoped to card and staff). Wallet codes remain reusable, and ledger rows use
+`scan_source=wallet_card` with no one-time QR row. Wallet reward selection/redeem, Google broadcasts
+and Google pass synchronization are built above. Apple pass support remains pending.
+
+- `GET /api/public/cards/{publicId}/google-wallet` → `{saveUrl}` (`https://pay.google.com/gp/v/save/<jwt>`), JWT signed RS256 with the service-account key (`jose`). It carries a **LoyaltyClass per merchant** (`<issuer>.vendor-<vendorId>`: name, logo or `WALLET_DEFAULT_LOGO_URL`, first colour of the card design) and a **LoyaltyObject per card** (`<issuer>.card-<publicId>`: points, cardholder, short code, QR). Google creates them when the customer saves. Errors: 404 `card_not_found`, 503 `wallet_not_configured`.
+- **Card QR** `dvote:c1:<secret>`: secret = 128 bits of HMAC-SHA256(`WALLET_TOKEN_SECRET`, card id) (`wallet/card-token.ts`), so it can be rebuilt; `cards.token_hash` = its SHA-256 and `google_object_id` are saved when the link is made. **Never change `WALLET_TOKEN_SECRET` once passes exist.**
+- Env (optional; unset = 503): `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_KEY_FILE` (service-account JSON in git-ignored `apps/api/.secrets/`), `WALLET_TOKEN_SECRET` (≥ 32 chars), `WALLET_DEFAULT_LOGO_URL`.
+- Web: the card page button fetches the link and opens it; Apple button stays off ("coming soon"). Test: `test/google-wallet.e2e-spec.ts` (throwaway RSA key, `test/helpers/google-wallet-env.ts`).
+- **Built:** wallet collect scanning and automatic Google pass balance/branding updates (see above).
+- **Not yet:** Apple passes and Apple notification messages.
+
+### Customer app while paused (`apps/mobile`)
+
+- **Archived:** the folder was removed on 2026-10-17 and saved at git tag **`customer-app-v1`** (commit `d2deec3`, the whole app incl. widgets). Restore: `git checkout customer-app-v1 -- apps/mobile`, then `npm install` in `apps/mobile` (and `npx expo run:android` for a dev build). The tag must be pushed to GitHub (`git push origin customer-app-v1`) so the team has it.
+- **The API side stays:** `/api/app/*` endpoints, live `cards` notices and their tests remain in `apps/api` and keep passing.
+- **Make it compatible later:** when it ships, a customer signs in with the same email and the app shows the **same cards** (cards belong to the user, not to the app). The app keeps its one-time QR (more secure); staff scanning stays one scanner for both. Add "Add to Wallet" inside the app then.
+- **Don't spend time on:** app-only features (widgets polish, push to the app). Live `cards` notices stay in the API for the app, next to the wallet updates.
+
+### Accounts and costs needed before launch
+
+- **Google Pay & Wallet Console** issuer account (free) + Google Cloud service account; test passes work at once, **publishing needs Google's approval** of the pass design.
+- **Apple Developer Program** ($99/yr): Pass Type ID certificate + APNs key. Without it there is **no Apple Wallet**, so iPhone users would get only the web card page until then.
+- A public domain + HTTPS for the web site and the API (Apple requires HTTPS for the PassKit web service); Cloudflare in front (see the deploy reminder).
+
+### Decided 2026-10-17
+
+0. **Public address:** the domain is **`dvote.co`** and each merchant's page is **`dvote.co/<merchant-slug>`** (e.g. `dvote.co/joy-corner`); this is what the NFC tag and the printed QR at the till open (a branch can add `?b=<branch>`). The other pages hang under it (e.g. `dvote.co/joy-corner/join`, `dvote.co/c/<card-id>`). Reference product: tappi (`thetappi.com`), same logic.
+
+1. **Name + mobile only (final, 2026-10-17, replaces the email version below):** the join form asks only **name + Egyptian mobile** (no email, no "how did you hear", no 14+ tick, no separate "get it back" page). The **mobile is the customer key**: a known mobile returns the same customer regardless of the entered name (the saved name is preserved); it opens the existing card for this merchant or creates one if needed. A new mobile creates the customer and card. No email/OTP for now (explicit user decision). The API still accepts optional `email`, `heardFrom`, `ageConfirmed`. The card page asks `GET /api/public/cards/{publicId}/wallet-status` → `{google, apple}` (Google: the pass object exists at Google = the customer saved it; Apple: a `wallet_registrations` row) and hides the add buttons once the card is in a wallet; otherwise one button by device (iPhone → Apple, Android → Google). No unique index on `users.phone` yet (app users may share old numbers): the oldest row with that phone wins.
+1. **No email verification (final, 2026-10-17):** the customer types name, email, mobile and ticks 14+; the card is made at once — no code, no sign-in, no Supabase on the public site (an email code and "Continue with Google" were built and removed the same day at the user's request). **Email + mobile identify the customer:** a known email must come with the same mobile number (else 409 `details_mismatch`, revealing nothing), and then joining again returns the same card ("get it back" = email + mobile). Consequence: emails may be mistyped or fake; `users.email_verified_at` stays NULL for web customers. Add Cloudflare Turnstile on the join form before launch (anyone can post it).
+2. **Phone number is required** (for SMS / WhatsApp messages later); **Egyptian mobile numbers only** for now (`01` + 9 digits, stored as `+201…`).
+3. **Merchants may see their customers' email and phone** (dashboard Customers page). This replaces the earlier "contact details stay private" rule for merchant views; the join form says so ("How your data is used").
+
+### Still open
+
+- **Wallet notifications** (lock-screen messages from the pass, e.g. "You can now redeem a free coffee"): **later**, not in the first version (decided 2026-10-17: small steps first). The pass still updates its points after every scan.
 
 ---
 
 ## Tech stack (decided)
 
-- **Backend:** NestJS (TypeScript), Prisma ORM, PostgreSQL 18
-- **Web dashboards:** React + TypeScript (Vite), Ant Design, TanStack Query, Recharts. One app, role-based routes for vendor and admin.
-- **Mobile:** Flutter (Dart), `nfc_manager` for NFC
-- **API contract:** OpenAPI generated from NestJS → typed Dart client (Flutter) and TypeScript client (React)
-- **Customer auth:** Google, Facebook, Apple sign-in (NO phone/OTP). Backend verifies the provider ID token and issues its own JWT access + refresh tokens.
-- **Staff / admin auth:** email + password (bcrypt/argon2), JWT. Platform admins also have 2FA (TOTP).
-- **NFC tags:** NTAG 424 DNA with SUN from day one (signed, counter-based taps). Tag secret keys live in a secrets manager/KMS; DB stores only `key_ref`.
-- **Hosting v1:** one backend container + one managed PostgreSQL. No microservices, queues or Redis.
+- **Backend:** NestJS (TypeScript), Prisma ORM, PostgreSQL (Supabase Postgres 17 in the cloud; local PostgreSQL 18 for tests)
+- **Web dashboards:** React + TypeScript (Vite), Tailwind CSS v4 + shadcn/ui (switched from Ant Design 2026-10-09), TanStack Query, Recharts. One app, role-based routes for vendor and admin.
+- **Mobile:** two React Native + Expo (TypeScript) apps — customer app (shows QR codes) and a separate staff app (camera QR scanner). `@supabase/supabase-js` for sign-in. No NFC.
+- **API contract:** OpenAPI generated from NestJS → one typed TypeScript client (`packages/api-client`) shared by the dashboard and both apps.
+- **Auth: Supabase Auth.** (The database is Supabase Postgres too, since 2026-10-08, but the apps never talk to it: only NestJS does, via Prisma. See Database.) Supabase issues and refreshes all tokens; NestJS only verifies them locally against the project's JWKS (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, via `jose`) and maps the token's `sub` to our own rows. NestJS never issues JWTs.
+- **Customer auth:** Google, Facebook, or **email + password** (decided 2026-10-03) through Supabase. Email sign-ups must confirm their email before Supabase issues a token — keep Supabase "Confirm email" ON. NO phone/SMS (costs money; later), no anonymous — the guard (`CUSTOMER_PROVIDERS`) rejects other providers with `provider_not_allowed`. The sign-up name is passed as `full_name` user metadata. Supabase links providers with the same verified email into one auth user. `users.auth_user_id` = Supabase user id; the row is created on the customer's first API call.
+  - **Apple is postponed** (needs the paid Apple Developer Program, $99/yr). To add it: enable it in Supabase and add `'apple'` to `CUSTOMER_PROVIDERS` in `auth/customer-auth.guard.ts`. An iOS App Store release that offers Google/Facebook login will likely need Sign in with Apple too (App Store guideline 4.8).
+- **Staff auth (built):** Supabase email + password (Google also works if the email matches). Invite-only: `POST /api/vendor/staff` calls Supabase `inviteUserByEmail` with the server-only `SUPABASE_SECRET_KEY` and stores `staff_users.auth_user_id`; if the email already has a Supabase account (e.g. a customer), it is linked without an email. `StaffAuthGuard` requires an active staff row in an active vendor (and active branch for branch roles) and builds the `StaffContext` used for tenant scoping. `password_hash` is legacy/nullable. Onboarding is API-only: a platform admin creates the vendor (`POST /api/admin/vendors`) and its vendor admin (`POST /api/admin/vendors/{id}/admins`, invite email); that vendor admin adds managers and staff with `POST /api/vendor/staff`. Staff never self-sign-up. (No script for vendor admins — removed on purpose.)
+- **Platform admin auth (built):** Supabase email + password + MFA (TOTP). `PlatformAdminGuard` requires an active `platform_admins` row (`auth_user_id`) and an `aal2` token, unless `ADMIN_MFA_REQUIRED=false` (local dev only; default true). Platform admins are created only by `npm run admin:create -- --name … --email … --password …` (from `apps/api`) — the one bootstrap script; no API. Use an email without an existing Google-only Supabase account (e.g. a `+admin` Gmail alias), or password sign-in fails. Error codes: `not_admin`, `admin_disabled`, `mfa_required` (403).
+- **Hosting v1:** one backend container + one managed PostgreSQL (Supabase). No microservices, queues or Redis.
+- **Rate limiting (built 2026-10-11, `src/rate-limit/rate-limit.ts`, `@nestjs/throttler`, in memory):** a global guard on every route, two per-minute limits: per IP (`RATE_LIMIT_IP_PER_MIN`, default 600: many phones share a mobile-network IP) and per signed-in user (`RATE_LIMIT_USER_PER_MIN`, default 120; keyed by the token `sub`, read unverified only for counting). Stricter per user via `@UserLimit(LIMITS.x)`: QR create 20, staff scans 60, image uploads 10 (inside `@ApiImageUpload()`, checked before the file is read). Over the limit → 429 `rate_limited` + `Retry-After`. `RATE_LIMIT_ENABLED=false` in e2e tests (`test/setup-env.ts`) except `test/rate-limit.e2e-spec.ts`. Behind Cloudflare / a load balancer set `TRUST_PROXY` (hop count) so `req.ip` is the real client; Cloudflare in front (proxied DNS, WAF + its own rate-limit rule) stops big floods before they reach the API. Several API containers would need a shared store (Redis).
 
-## Suggested repo layout
+## Repo layout (monorepo)
+
+`apps/api` is self-contained (own `package.json`, lockfile, `node_modules`, `.env`); run Nest/Prisma commands from `apps/api` (Prisma config: `prisma7.config.ts`). `apps/staff` is the **built** staff app (Expo SDK 57 + Expo Router, web + iOS/Android from one codebase; own `package.json`/`.env`; see its README and `AGENTS.md`: always check versioned Expo docs, add packages with `npx expo install`). `apps/mobile` (customer app) is **archived 2026-10-17**: removed from the working tree, saved at git tag `customer-app-v1` (restore with `git checkout customer-app-v1 -- apps/mobile`, then `npm install` in it). Sections below that mention `apps/mobile` describe that archived app. It was the customer app (Expo SDK 57 + Expo Router, **iOS/Android product**, scheme `dvote`; same conventions as `apps/staff`; `npm run web` on 8082 is a dev-only preview for the browser pane, not a shipped target). **Languages: English (default) + Arabic** — see "Customer app localization" below. `apps/dashboard` is the **admin dashboard** (React 19 + Vite + Tailwind v4 + shadcn/ui (Radix, Solar icons (`@solar-icons/react`: Linear by default, matching Bold Duotone for active navigation; attribution bundled in `/icon-credits.txt`), Sonner toasts) + TanStack Query + Recharts + React Router 7, port 5173; light + dark theme via the `dark` class (`src/lib/theme.tsx`, tokens in `src/styles.css`); add components with `npx shadcn@latest add <name>` into `src/components/ui`; own `package.json`/`.env` with `VITE_*` public values; the API needs `http://localhost:5173` in `CORS_ORIGINS`). It is also the **vendor dashboard** (built 2026-10-09; **users see vendors as "merchants"** since 2026-10-10: UI text and the admin route `/merchants` only, code/API/DB keep `vendor`): one sign-in screen; a platform admin gets the admin pages, a `vendor_admin`/`branch_manager` (from `GET /api/vendor/staff/me`) gets only their own vendor; plain `staff` get only the **Scan** page (`/scan`, `pages/my/MyTill.tsx`: camera via jsQR or a typed / hand-scanner code → the same `/scans/preview|collect|redeem` calls as the staff app). The vendor/branch/rule/reward/image/staff screens are shared via a `VendorScope` (`src/lib/scope.ts`): `adminScope(id)` calls `/api/admin/vendors/{id}/…`, `myVendorScope(me)` calls `/api/vendor/…` with no vendor id (the API takes it from the token). Branch locations are picked on a map (`components/LocationPicker.tsx`: Leaflet + OpenStreetMap tiles, place search via OSM Nominatim, paste a Google Maps link, use my location, drag the pin), never typed. Branch photos live on the Branches page (Photos button per branch); the Menu tab has menu pages only. Rewards have a photo column. Unknown URLs redirect to `/`. The profile menu's **Storefront preview** opens the shop's public page on the customer website, `${VITE_WEB_URL}/<slug>` in a new tab (`VITE_WEB_URL` in `apps/dashboard/.env`, default `http://localhost:5174`, production `https://dvote.co`; the vendor's `slug` is in `GET /api/vendor/profile`; hidden while the slug is empty). Bottom of the merchant sidebar: "Get help" (`components/ContactDvote.tsx`, a normal nav item) opens a dialog with WhatsApp (+20 120 711 8966) and email (getdvote@gmail.com), each with a ready message carrying the person's name and shop, in the dashboard language. **Branding** (`components/BrandingPanel.tsx`; admin: vendor's Branding tab, vendor admin: Storefront page `/storefront`, in the Hub section: the page is the storefront builder (see "Storefront builder" below); the shop profile is edited in **Settings → Branding** (`ProfileEditor` in `pages/my/MyProfile.tsx`, merchant admins only: banner as cover, logo over it, one autosaving form for name, category, contact email and Egyptian mobile phone; old `/storefront?tab=branding` links redirect there, and the go-live / attention logo step points there. The banner / cover is no longer used anywhere (2026-10-17: removed from Branding, the admin branding panel, the go-live checklist and the attention list; the columns stay), without the card design: that and the points rule are on the **Card** page `/card` (Loyalty; old `/rule` redirects); Settings `/settings` is an empty placeholder for now): category, banner upload, and the loyalty-card design picker (10 designs in `lib/cardDesigns.ts` = `CARD_DESIGNS` in `apps/mobile/src/lib/theme.ts`: gradient + ink + pattern petals/circles/stripes/dots; keep both lists identical). `api-client` is still a placeholder. Root `package.json` has convenience scripts `api:*`, `admin:create`, `staff:*`, (the `mobile:*` scripts were removed with the archive; no npm workspaces yet; add them when the other packages get a `package.json`).
 
 ```
 dvote/
 ├── CLAUDE.md
-├── docs/                      # PDF spec, ERD
+├── docs/                      # spec PDF + its HTML source (docs/src)
 ├── database/
-│   ├── dvote_schema.sql       # schema source of truth (13 tables)
-│   └── dvote_seed_joy_corner.sql
+│   ├── dvote_schema.sql       # schema source of truth (15 tables, v2.0)
+│   └── dvote_seed_joy_corner.sql   # dev seed: Joy Corner, 10 EGP = 1 pt, 3 rewards
 ├── apps/
 │   ├── api/                   # NestJS + Prisma
 │   ├── dashboard/             # React (vendor + admin)
-│   └── mobile/                # Flutter
+│   ├── mobile/                # ARCHIVED (git tag customer-app-v1): React Native customer app
+│   ├── web/                   # public site dvote.co: venue page, join, card page (React + Vite)
+│   └── staff/                 # React Native (Expo) staff scanner app — web + native (built)
 └── packages/
     └── api-client/            # generated TS client from OpenAPI
 ```
@@ -47,173 +228,287 @@ dvote/
 
 ## Database
 
-Local DB: `postgresql://postgres:<password>@localhost:5432/dvote` (put it in `apps/api/.env` as `DATABASE_URL`, never commit it).
+**App DB: Supabase Postgres 17** (project `cfknsqlixyeihhkleock`, region eu-west-1, Free plan: pauses after 1 week idle, no backups — Pro before real customers). `apps/api/.env` `DATABASE_URL` = the **Transaction pooler** URL (`aws-1-eu-west-1.pooler.supabase.com:6543`, user `postgres.<ref>`; since 2026-10-09: the session pooler on 5432 allows only 15 clients on the Free plan and ran out when two developers' APIs shared the project → every query 500 `EMAXCONNSESSION`. The API pool is capped at 5 (`PrismaService`). `prisma7.config.ts` swaps to 5432 for the Prisma CLI, which needs a session for migrations; the direct `db.<ref>.supabase.co` host is IPv6-only and unreachable here; password letters+digits only). Never commit it. **Supabase Data API is locked:** `database/supabase_lockdown.sql` (RLS on every table, no policies, no grants for `anon`/`authenticated`; NestJS connects as the owner, unaffected) — re-run it after any migration that adds a table. Migrations on the cloud: `npx prisma migrate deploy` (DATABASE_URL already points there).
+**Local DB** `postgresql://postgres:<password>@localhost:5432/dvote` = `TEST_DATABASE_URL`, used **only by e2e tests** (`test/setup-env.ts` swaps it in and refuses any non-local host: the cleanup needs superuser, and tests must never touch cloud data). Keep local schema in step with the cloud (apply each migration to both). Prisma lives in `apps/api/prisma/`; migrations `0_init`, `1_users_auth_user_id`, `2_staff_users_auth_user_id`, `3_points_rewards_qr`, `4_platform_admins_auth_user_id`, `5_users_gender_birth_date`, `6_storage_images`, `7_rewards_arabic`, `8_reward_images`, `9_vendor_branding`, `10_branch_hours`, `11_branch_city`, `12_users_location`, `13_fraud_flags_key`, `13_reward_sold_out`, `14_branch_weekly_hours_pause`, `15_reward_retail_value`, `16_wallet_join`, `17_vendor_slug_default`, `18_drop_join_requests` are applied (local and cloud, as of 2026-10-17; older notes below about "cloud only" are out of date); `10_branch_hours` is applied on the cloud (2026-10-09), not yet on the local test DB; `11_branch_city` likewise (cloud only). `13_reward_sold_out` is applied on the cloud (2026-10-10, lockdown re-run), not yet on the local test DB. `14_branch_weekly_hours_pause` is applied on the cloud (2026-10-10), not yet on the local test DB. `database/dvote_schema.sql` is the full current schema (a DB built from it matches all migrations: mark them applied with `npx prisma migrate resolve --applied <name>`). The Prisma client is generated into `apps/api/src/generated/prisma` (git-ignored; import from `generated/prisma/client.js`).
 
-The schema was created with raw SQL (`database/dvote_schema.sql`) and is already applied to the local `dvote` database. **Prisma must adopt it, not recreate it:**
+**Schema changes:** hand-write `prisma/migrations/<n>_<name>/migration.sql`, apply with `npx prisma migrate deploy`, refresh `schema.prisma` with **`npm run db:pull`** (= `prisma db pull` + `prisma/fix-introspection.cjs` + `prisma generate`; never plain `db pull`: the fix-up stops Prisma reading the partial "one active rule per vendor" index as a one-to-one relation), and mirror the change in `database/dvote_schema.sql`. Avoid `migrate dev` on the local DB: drift from objects Prisma can't model can make it offer a reset, which wipes the seed data. Prisma cannot express the partial unique indexes, CHECK constraints, composite FKs-with-intent or triggers below, so **never let a Prisma migration drop them**.
 
-1. `npx prisma db pull` → generates `schema.prisma` from the live DB.
-2. Baseline: copy `dvote_schema.sql` to `prisma/migrations/0_init/migration.sql`, then `npx prisma migrate resolve --applied 0_init`.
-3. Future changes: `npx prisma migrate dev --create-only`, then hand-edit the SQL when needed. Prisma cannot express the partial unique indexes, CHECK constraints or triggers below, so **never let a Prisma migration drop them**.
-
-### Tables (13)
+### Tables (16: the 15 below + `wallet_registrations`, see "Direction change")
 
 | Table | Side | Purpose |
 |---|---|---|
-| `vendors` | vendor | Brand (tenant root). status: active/suspended |
-| `branches` | vendor | Physical shop. FK vendor |
-| `staff_users` | vendor | role: vendor_admin (branch_id NULL) / branch_manager / staff (branch_id required) |
-| `nfc_tags` | vendor | NTAG 424 card per branch. `tag_uid` unique, `key_ref`, `last_counter` |
-| `programs` | vendor | Reward rules ("settings"): `points_required`, `reward_description`, `cooldown_minutes`, `version`, `is_active` |
-| `users` | customer | Customers. email nullable (Apple can hide it), phone optional |
-| `user_identities` | customer | (provider, provider_user_id) unique → user. One user can link Google + Apple + Facebook |
-| `wallets` | customer | One per (user, vendor). `balance` (cached), `lifetime_points`, `program_id` |
-| `scan_sessions` | activity | One per button press. mode earn/redeem, status open/consumed/expired/rejected, expires in 90 s |
-| `point_events` | activity | **Ledger, append-only.** type earn(+1)/redeem(−N)/adjust(±, admin + reason) |
-| `redemptions` | activity | One per free coffee, 1-to-1 with its redeem ledger row |
-| `platform_admins` | platform | Internal team. 2FA via `totp_secret_ref` |
-| `fraud_flags` | platform | Suspicious activity for review. status open/dismissed/confirmed |
+| `vendors` | vendor | Brand (tenant root). `currency` (default EGP). status active/suspended. `logo_url` (public link) + `logo_path` (set when the logo was uploaded to Storage); `banner_url` + `banner_path` (shop-page banner); `category` (cafe / cafe_restaurant / restaurant / bakery / desserts / juice_bar, CHECK; NULL = not set); `card_design` (1-10, CHECK; NULL = automatic from the id); `contact_phone` (optional + and 6-15 digits, CHECK; migration 19) |
+| `branches` | vendor | Physical shop. FK vendor. `weekly_hours` jsonb (migration 14): `[{day 0-6 (0 = Sunday), opensAt, closesAt}]`, several per day = split shifts (≤ 3), no entry = closed that day, NULL = not set; `opens_at`/`closes_at` are legacy, kept equal to the hours only when every day has the same single slot. `paused_until`: temporarily closed until then |
+| `staff_users` | vendor | role: vendor_admin ("Super admin" in the dashboard) or viewer ("Viewer only", read-only, migration 21), both branch_id NULL / branch_manager / staff (branch_id required); `auth_user_id` |
+| `point_rules` | vendor | Earning rule, versioned: `spend_amount`, `points_per_spend`, `min_purchase`, `max_points_per_purchase`, `is_active` |
+| `rewards` | vendor | Reward catalogue: `name`, `description`, `name_ar`/`description_ar` (Arabic, optional), `points_cost`, `status` active/archived, `sort_order` |
+| `users` | customer | Customers. email nullable, phone optional, `gender` (male/female, NULL = not given), `birth_date` (plain `date`), `avatar_url` (sign-in provider photo), `avatar_path` (uploaded photo in Storage), `auth_user_id` |
+| `user_identities` | customer | **Unused** (Supabase handles provider identities and linking) |
+| `cards` | customer | One per (user, vendor), created on first purchase. `balance` (cached), `lifetime_points` |
+| `qr_codes` | activity | One per QR shown. purpose collect/redeem, `vendor_id` (NULL = master collect QR; the shop for a shop collect QR; the reward's vendor for redeem), `reward_id` (redeem), `token_hash`, status active/used/expired/cancelled, `expires_at` (5 min) |
+| `point_events` | activity | **Ledger, append-only.** earn (+points, `purchase_amount`, `rule_id`) / redeem (−cost, `reward_id`) / adjust (admin + reason). `qr_code_id`, `staff_id`, `branch_id`, `receipt_ref` |
+| `redemptions` | activity | One per reward given, 1-to-1 with its redeem ledger row; snapshots `reward_name`, `points_cost` |
+| `platform_admins` | platform | Internal team. `auth_user_id`; 2FA via Supabase MFA (`password_hash`, `totp_secret_ref` legacy) |
+| `fraud_flags` | platform | too_many_collects / large_purchase / branch_spike / staff_spike; targets vendor/branch/user/staff |
+| `reward_sold_outs` | vendor | A reward sold out at one branch (migration 13): `sold_out_until` (NULL = until turned back on), `set_by_staff_id`; UNIQUE (reward, branch), composite FKs to rewards/branches with vendor. Counts while `sold_out_until IS NULL OR > now()`; "back on sale" sets it to now(), rows are never deleted |
+| `vendor_images` | vendor | Menu pages (`kind` menu, no branch) and branch photos (`branch_photo`, composite FK branch+vendor). `storage_path`, `sort_order`. **Hard-deleted together with its file** (media, not business history) |
 
-All tables: `id uuid` (gen_random_uuid), `created_at`, `updated_at` (trigger-maintained, timestamptz UTC). Soft delete via `status`; never hard-delete business rows.
+All tables: `id uuid` (gen_random_uuid), `created_at`, `updated_at` (trigger-maintained, timestamptz UTC). Soft delete via `status`; never hard-delete business rows (exception: `vendor_images`, deleted with their file).
+
+### Image storage (Supabase Storage, built 2026-10-08)
+
+Buckets (created/updated by `npm run storage:setup`, idempotent; WebP only, at most 2 MB per file):
+- **`vendors` (public):** `<vendorId>/logo/<uuid>.webp`, `<vendorId>/menu/<uuid>.webp`, `<vendorId>/branches/<branchId>/<uuid>.webp`, `<vendorId>/rewards/<uuid>.webp` (one photo per reward: `rewards.image_url` + `image_path`), `<vendorId>/banner/<uuid>.webp` (one shop-page banner, preset `banner` = 1600x800 crop). Permanent links (`/storage/v1/object/public/...`).
+- **`avatars` (private):** `<userId>/<uuid>.webp`. Only shown to the owner, as a **signed link valid about 1 hour** (`avatarUrl` in `/users/me`).
+
+Rules: **apps never upload to Storage directly.** They send `multipart/form-data` (field `file`, at most 10 MB, JPG/PNG/WebP/HEIC) to the API, which re-encodes it with `sharp` (avatar 512x512 crop, logo fits 512, menu page 1600, branch photo 1280; metadata stripped) and uploads with the secret key. Code: `src/storage/` (`StorageService`, `images.ts`, `ImageUploadInterceptor`, `@ApiImageUpload()`) and `src/vendor-images/`. File names are random and never reused, so links can be cached forever. Replace = upload new file, update the row, then delete the old file; delete = delete the file, then update/delete the row. Setting `logoUrl` by PATCH (or null) deletes an uploaded logo file. e2e tests replace `StorageService` with `test/helpers/fake-storage.ts` (`test/images.e2e-spec.ts`). Limits: 20 menu pages per vendor, 3 photos per branch, 1 photo per reward (replace = new file, old deleted). Reward photos: `PUT|DELETE /api/vendor/rewards/{id}/image` (vendor_admin) and `PUT|DELETE /api/admin/rewards/{id}/image`, preset `reward` (fits 1000). Error codes: `file_required`, `invalid_upload` (400), `file_too_large` (413), `unsupported_image` (415), `too_many_images` (409), `image_not_found` (404), `storage_not_configured`, `storage_error` (503).
 
 ### Constraints enforced by the DB (keep them; handle their errors in the API)
 
-- One active program per vendor (partial unique index); `UNIQUE (vendor_id, version)`.
-- `wallets`: `UNIQUE (user_id, vendor_id)`, `balance >= 0`; wallet's program must belong to wallet's vendor (composite FK).
-- `staff_users`: branch must belong to the same vendor (composite FK); role/branch rule (CHECK).
-- `point_events`: earn ⇒ delta = 1 and session_id set; redeem ⇒ delta < 0 and session_id set; adjust ⇒ created_by + reason set. `idempotency_key` UNIQUE. At most one event per session.
+- One active point rule per vendor (partial unique index); `UNIQUE (vendor_id, version)`.
+- `cards`: `UNIQUE (user_id, vendor_id)`, `balance >= 0`.
+- **Points never cross vendors:** `point_events` and `redemptions` carry `vendor_id` and composite FKs `(card_id|branch_id|rule_id|reward_id, vendor_id)`; `qr_codes (reward_id, vendor_id)` likewise.
+- `point_events`: earn ⇒ delta > 0, purchase_amount > 0, rule, QR, staff, branch set; redeem ⇒ delta < 0, reward, QR, staff, branch set; adjust ⇒ created_by + reason. `idempotency_key` UNIQUE. At most one event per QR (partial unique). `receipt_ref` unique per branch for earns.
 - `point_events` UPDATE/DELETE raise an exception (trigger). Corrections = new `adjust` row.
-- `scan_sessions`: redeem ⇒ vendor_id required; rejected ⇒ reject_reason required.
-- `fraud_flags`: at least one target (vendor/branch/user/tag); non-open ⇒ reviewed_by set.
+- `qr_codes`: redeem ⇒ vendor + reward set; collect ⇒ no reward; used ⇒ used_at, used_by_staff_id, used_branch_id set.
+- `staff_users`: branch must belong to the same vendor (composite FK); role/branch rule (CHECK).
+- `fraud_flags`: at least one target; non-open ⇒ reviewed_by set.
 
 ---
 
 ## Core business rules (invariants)
 
-1. **Points live at vendor level.** Earned at a branch, stored in the user's wallet for that vendor. Never move between vendors.
-2. **The server decides points, never the app.** The app only forwards the NFC payload.
-3. **1 tap = 1 point.** Cooldown: max 1 earn per wallet per branch per `cooldown_minutes` (default 10).
-4. **Ledger is the source of truth.** `wallets.balance` must always equal `SUM(point_events.delta)` for that wallet. Every balance change happens in the same DB transaction as its ledger insert.
-5. **Customer claims the reward** with a "Claim free coffee" button (not automatic). Extra points carry over (11 − 10 = 1).
-6. **Program versioning.** When a vendor changes rules, insert a new `programs` row (version + 1) and make it active. Existing wallets keep their old program until they redeem; the redeem transaction moves the wallet to the active program.
-7. **Tenant scoping.** Every vendor-dashboard query filters by the staff token's `vendor_id` (and `branch_id` for branch roles). Enforce once, in a NestJS guard/interceptor — never per endpoint by memory.
+1. **Points live at vendor level** on the customer's card for that vendor. Earned at any branch of the vendor; never move between vendors.
+2. **The server decides points, never the apps.** The customer app only shows a code; the staff app only sends the code and the receipt total.
+3. **Points formula:** `floor(amount / spend_amount) * points_per_spend`, capped at `max_points_per_purchase`; 0 if `amount < min_purchase`. Round **down**. Money is `numeric(12,2)` in the DB and integer minor units (piastres) in code — never floats. 0 points ⇒ reject `no_points_earned`, write nothing.
+4. **Ledger is the source of truth.** `cards.balance` must always equal `SUM(point_events.delta)` for that card. Every balance change happens in the same DB transaction as its ledger insert.
+5. **Cards are created on the first purchase** at a vendor (no points ⇒ no card).
+6. **Customer chooses when to redeem.** Leftover points stay (1000 − 300 = 700).
+7. **Rule / reward versioning.** A new rule = new `point_rules` row (version + 1, active); applies from then on, past earns keep `rule_id`. Reward edits apply to future redemptions; `redemptions` snapshots name + cost. Archived rewards can't be redeemed.
+8. **QR codes are one-time server-issued secrets**: 128-bit random code in the QR (`dvote:q1:<code>`), only its SHA-256 stored, valid 5 min, single use; issuing a new QR of the same purpose cancels the customer's previous active one. Never put the user id in a QR.
+9. **Vendor and branch come from the scanning staff member**, never from the customer's phone. Vendor admins (no branch) must send `branchId`.
+10. **Tenant scoping.** Every vendor-side query filters by the `StaffContext` (vendor, and branch for branch roles), built once in `StaffAuthGuard` — never per endpoint by memory. Other vendors' rows → 404.
 
 ---
 
-## Earn flow (`mode=earn`)
+## Collect flow (earn points)
 
-1. App: `POST /api/app/scan-sessions {mode:"earn"}` → server inserts open session (expires_at = now + 90 s), returns `session_id`.
-2. App enters NFC reader mode; barista taps card; app reads SUN payload (UID, counter, CMAC).
-3. App: `POST /api/app/scan-sessions/{id}/complete {payload, idempotencyKey}`.
-4. Server checks **in order** (any failure → session `rejected` + `reject_reason`, clear error to app):
-   1. Session exists, belongs to this user, status open, not expired.
-   2. `idempotencyKey` already used → return the original result, award nothing.
-   3. Tag exists by UID and is `active`; resolve branch → vendor.
-   4. CMAC valid and counter > `nfc_tags.last_counter` (`bad_signature`, `replayed_counter`).
-   5. User not blocked; vendor and branch active.
-   6. Cooldown: no earn for this wallet at this branch within `cooldown_minutes` (`cooldown`).
-5. **One transaction** (`prisma.$transaction`):
-   - Upsert wallet (on first visit, `program_id` = vendor's active program).
-   - Insert `point_events` (type earn, delta +1, branch, session, tag, idempotency_key).
-   - `UPDATE wallets SET balance = balance + 1, lifetime_points = lifetime_points + 1`.
-   - `UPDATE nfc_tags SET last_counter = <counter>`.
-   - Session → `consumed`, set `tag_id`.
-6. Respond: new balance, points_required, remaining.
+1. Customer app: `POST /api/app/qr-codes {purpose:"collect", vendorId?}` → `{id, code, vendorId, expiresAt}`. Two kinds (decided 2026-10-09, replaces the 2026-10-08 "no vendor QRs" rule): the **master QR** (tab bar, no `vendorId`) works at any shop, the scanning staff's vendor gets the points; the **shop QR** (Collect on a shop page, `vendorId` = that shop; unknown/suspended → 404 `vendor_not_found`) works only at that vendor: another vendor's staff get **403 `vendor_mismatch`** (preview: `usable:false, reason:"vendor_mismatch"`), nothing is written and the QR stays usable. The branch always comes from the scanning staff member. App shows QR and polls `GET /api/app/qr-codes/{id}` every 2 s.
+2. Staff app scans → `POST /api/vendor/scans/preview {code}` → what it is (no customer personal data).
+3. Staff enter the total → `POST /api/vendor/scans/collect {code, amount, receiptRef?, branchId?, idempotencyKey}`.
+4. Checks **in order**: code exists, `active`, not expired (`qr_invalid`, `qr_used`, `qr_cancelled`, `qr_expired`) → idempotency key used ⇒ return original result → purpose collect (`wrong_qr_type`) → branch known/active, vendor active (`branch_required`) → customer not blocked (`user_blocked`) → active rule (`no_active_rule`), amount valid (`invalid_amount`), points > 0 (`no_points_earned`), receipt not reused (`duplicate_receipt`). A failed check changes nothing; the QR stays usable.
+5. **One transaction:** upsert card → insert `point_events` (earn, +points, amount, rule, branch, staff, qr, idempotency_key) → `balance += p, lifetime_points += p, last_activity_at = now()` → `UPDATE qr_codes SET status='used', … WHERE id=$1 AND status='active' AND expires_at > now()` (0 rows ⇒ abort `qr_used`).
+6. Staff app gets `{pointsAdded, …}`; customer app's poll sees `used` + result.
 
-## Redeem flow (`mode=redeem`)
+## Redeem flow
 
-1. App shows **Claim free coffee** when `balance >= points_required` (of the wallet's program).
-2. `POST /scan-sessions {mode:"redeem", vendorId}` → session with `vendor_id`.
-3. Barista taps; app calls `/complete` as above.
-4. Same checks except cooldown, plus: tag's vendor == session's vendor; balance still sufficient.
-5. **One transaction:**
+1. Customer picks a reward → `POST /api/app/qr-codes {purpose:"redeem", rewardId}` (server pre-checks reward active + balance, ties QR to vendor + reward).
+2. Staff scan → preview shows "Redeem: <reward> · <cost> pts" → `POST /api/vendor/scans/redeem {code, branchId?, idempotencyKey}`.
+3. Checks: code valid (as above), purpose redeem, QR vendor == staff vendor (`vendor_mismatch`), reward active (`reward_unavailable`), customer not blocked, balance (`insufficient_points`).
+4. **One transaction:**
    ```sql
-   UPDATE wallets SET balance = balance - $n
-   WHERE id = $wallet AND balance >= $n
-   RETURNING balance;           -- no row ⇒ not enough points ⇒ abort
+   UPDATE cards SET balance = balance - $cost
+   WHERE id = $card AND balance >= $cost
+   RETURNING balance;           -- no row ⇒ insufficient_points ⇒ abort
    ```
-   - Insert `point_events` (type redeem, delta = −n).
-   - Insert `redemptions` (wallet, program, branch, point_event_id).
-   - If the vendor has a newer active program, set `wallets.program_id` to it.
-   - Session → `consumed`.
-6. Respond with a confirmation screen ("Free coffee approved", branch, time) for staff to see.
+   + insert `point_events` (redeem, −cost) + insert `redemptions` (snapshot name/cost) + mark QR used (conditional, as above).
+5. Both apps show "Reward approved: <reward>", branch, time.
 
-## Fraud flags (write rows to `fraud_flags`; never block a tap by themselves)
+## Fraud flags (write rows to `fraud_flags`; never block anything by themselves)
 
-- `too_many_earns`: > 3 earns for one user in a day across one vendor's branches.
+- `too_many_collects`: > 3 collects for one customer in a day at one vendor.
+- `large_purchase`: receipt ≫ branch's usual size (e.g. > 5× 30-day average).
 - `branch_spike`: branch daily points > 3× its 30-day average.
-- `tag_counter_anomaly`: counter goes backwards or skips a large range.
-- `far_location`: tap location far from the tag's branch (if location is sent).
+- `staff_spike`: one staff member's daily points > 3× their own average.
 
-Run the batch rules as a scheduled job; the counter anomaly can be flagged inline in the scan flow.
+**Built 2026-10-11** (`src/fraud-flags/`): `FraudCheckService` runs every 15 min inside the API (not in tests/scripts; first run 30 s after start) over today + yesterday (Cairo days), thresholds in `FRAUD_RULES` (large purchase also needs ≥ 10 bills in the branch's 30 days; spikes need ≥ 100 points that day and a non-zero 30-day history). One flag per finding via `fraud_flags.key` + `ON CONFLICT DO NOTHING` (migration `13_fraud_flags_key`). Admin API `/api/admin/fraud`: `GET summary` (open per type, last check, rules) · `GET flags?status&type&vendorId&page` · `PATCH flags/{id} {status, note?}` (confirm / dismiss / reopen; note + time in `details.review`, `reviewed_by` = the admin) · `POST check` (run now). Dashboard: System → **Fraud & risk** tab (`pages/system/FraudTab.tsx`), with "Block customer" (existing `PATCH /admin/users/{id}`). Test: `test/fraud.e2e-spec.ts`. Vendor read-only view not built yet.
 
 ---
 
 ## API endpoints
 
-### Mobile — `/api/app` (customer JWT)
+### Customer app — `/api/app` (Supabase access token, `CustomerAuthGuard`)
 | Method | Path | Purpose |
 |---|---|---|
-| POST | /auth/social | `{provider, idToken}` → verify with Google/Facebook/Apple, find/create user via `user_identities`, return tokens |
-| POST | /auth/refresh | Refresh token → new access token |
-| GET / PATCH | /me | Profile / update name, email, phone |
-| GET | /wallets | All wallets: vendor, balance, points_required, remaining |
-| GET | /wallets/{id}/events | History for one vendor |
-| GET | /vendors | Vendors + branches (discovery, map) |
-| POST | /scan-sessions | Open session `{mode, vendorId?}` |
-| POST | /scan-sessions/{id}/complete | `{payload, idempotencyKey}` → result + new balance |
+| GET / PATCH | /users/me | Own profile / update name, email, phone, `gender` (`male`/`female`), `birthDate` (`YYYY-MM-DD`, not future; `null` clears either) — **built** |
+| PUT / DELETE | /users/me/avatar | Upload or replace my photo (private bucket; old file deleted) / remove it (file deleted, provider photo cleared too) — **built** |
+| GET | /cards | My cards: vendor, balance, lifetime, affordableRewards, nextReward, createdAt (= first purchase there) — **built** |
+| GET | /cards/{id}/events | History for one card (`?limit`) — **built** |
+| GET | /vendors | Explore: active vendors A–Z with rule summary, active reward and open branch counts, first branch address, my balance; `?search` matches name, category (EN/AR words, ≥ 3 letters), open branch name/city/address, active reward name (EN/AR) — **built** |
+| GET | /vendors/nearby | `?lat&lng` (both, or neither = my saved location) `&limit≤30`: `{located, items[…list item, distanceKm, nearestBranch]}` nearest first, distance to each shop's closest open branch with a map location (haversine in SQL) — **built** (My cards → "Near you", `components/NearYou.tsx`) |
+| PUT | /users/me/location | `{lat, lng}` → 204: saves `users.last_lat/last_lng/last_location_at` (latest only, no history). The app sends it when a session opens and on resume (≤ every 10 min), foreground permission only (`lib/location.ts`, expo-location) — **built** |
+| GET | /vendors/{id} | Shop page: active rule, active rewards (shop order), menu pages, open branches (address, lat/lng, photos), my card; suspended/unknown → 404 `vendor_not_found` — **built** (`vendors/app-vendors.controller.ts`, `vendor-page.service.ts`) |
+| POST | /qr-codes | `{purpose:"collect", vendorId?}` (master or shop QR) or `{purpose:"redeem", rewardId}` → `{id, code, vendorId, expiresAt, reward}` — **built** (redeem: 404 `reward_not_found`, 409 `reward_unavailable` / `insufficient_points`; vendorId with redeem or rewardId with collect → 400) |
+| GET | /qr-codes/{id} | Status + result once used (polled) — **built** |
+| GET | /rewards/{id}/history | My own redemptions of one reward: `{count, pointsSpent, items[{at, branchName, pointsCost, rewardName}]}` newest first (≤ 50); unknown reward = empty — **built** (`rewards/app-rewards.controller.ts`; shown as "Your history" on the reward sheet, 3 latest + "…and N earlier") |
+| POST | /qr-codes/{id}/cancel | Customer closed the QR — **built** |
 
-Account linking: if a verified provider email matches an existing user, attach a new `user_identities` row to that user instead of creating a duplicate.
+Dev test pages (not in production): `/dev/login.html` (customers), `/dev/staff.html` (staff sign-in, invite/reset landing page, staff CRUD), served from `apps/api/dev-public`. Don't add new dev pages unless asked.
 
-### Vendor — `/api/vendor` (staff JWT, always scoped to staff's vendor)
-`GET /summary?from&to` · `GET|POST|PATCH /branches` · `GET /events?branch_id&from&to` · `GET /redemptions` · `GET|POST|PATCH /staff` · `GET|POST /programs` (POST publishes a new version) · `POST /tags/{id}/report-lost` · `GET /fraud/flags` (own branches, read-only). Vendors never see customer names/emails, only counts.
+**`me` convention:** a signed-in user's own record is always `<resource>/me` (`/api/app/users/me`, `/api/vendor/staff/me`): no id in the URL, so nobody can ask for someone else's. Never expose a customer list on `/api/app`.
 
-### Admin — `/api/admin` (platform admin JWT + 2FA)
-`GET|POST|PATCH /vendors` · `GET /vendors/{id}/summary` · `POST /tags` · `PATCH /tags/{id}` (revoke/reassign) · `GET /users/{id}` · `POST /wallets/{id}/adjust` (writes an `adjust` ledger row with reason, updates balance in same tx) · `GET /fraud/flags` · `PATCH /fraud/flags/{id}` (dismiss/confirm, sets reviewed_by).
+Sign-in, refresh and account linking happen in the apps through the Supabase SDK — there are no `/auth/*` endpoints. Auth errors use stable codes: `missing_token`, `invalid_token`, `token_expired` (401); `provider_not_allowed`, `user_blocked` (403).
+
+### Staff app + vendor dashboard — `/api/vendor` (Supabase access token, `StaffAuthGuard`, scoped to the staff's vendor)
+
+`GET /staff/me` returns the staff row **plus** `vendor` {name, logoUrl, currency}, `branch`, `branches` (scannable: own branch, or all active for vendor_admin) and `activeRule` — everything the staff app needs after sign-in.
+
+**Built:** `GET /profile` (any role: own vendor) · `PATCH /profile` (vendor_admin: name, logoUrl, contactEmail, contactPhone (migration `19_vendor_contact_phone`: an Egyptian mobile typed the local way, e.g. `010 0123 4567`, stored as `+201XXXXXXXXX`; `egyptianMobile()` in `update-vendor.dto.ts`, `lib/phone.ts` in the dashboard; null clears) — never status/currency) · `PUT|DELETE /profile/logo` and `PUT|DELETE /profile/banner` (vendor_admin; file deleted on replace/remove); PATCH also takes `category` and `cardDesign` (1-10, null = automatic) · `GET /images?kind&branchId` (any role) · `POST /images` (multipart `file` + `kind` menu|branch_photo + `branchId?`; vendor_admin: menu + any branch; branch_manager: own branch photos only) · `DELETE /images/{id}` (204; file deleted) · `GET /staff/me` (any role) · `GET|POST /staff`, `GET|PATCH /staff/{id}` (vendor_admin + branch_manager). Rules: vendor_admin manages everyone in the vendor but not their own role/branch/status; branch_manager manages only `staff` in their own branch and can't change role/branch; `staff` role has no access to `/staff`. Other vendors' / branches' rows return 404. Disable = `PATCH {status:"disabled"}` (soft delete). Email can't change. Error codes: `not_staff`, `staff_disabled`, `vendor_suspended`, `branch_closed`, `forbidden_role`, `forbidden_branch`, `forbidden_role_change`, `cannot_modify_self` (403); `staff_not_found` (404); `branch_required`, `branch_not_allowed`, `invalid_branch` (400); `email_taken`, `account_already_staff` (409); `email_rate_limited` (429, Supabase's built-in sender allows only a few emails/hour); `auth_admin_not_configured`, `auth_provider_error` (503, with Supabase's message).
+
+**Built — staff app (all staff roles):** `POST /scans/preview` (200, `{purpose, usable, reason, expiresAt}`, changes nothing) · `POST /scans/collect` (200; errors: `qr_invalid` 404, `qr_used`/`qr_expired`/`qr_cancelled`/`no_active_rule`/`duplicate_receipt`/`idempotency_key_reused` 409, `wrong_qr_type`/`branch_required`/`invalid_branch` 400, `forbidden_branch`/`user_blocked` 403, `no_points_earned` 422). Money math in `src/points/points.ts` (minor units), QR tokens in `src/qr-codes/qr-code.token.ts`.
+**Built — redeem (2026-10-10):** `POST /scans/preview` on a redeem QR also returns `redeem` {reward name/nameAr/description/imageUrl, pointsCost, **customerName**, balance, balanceAfter} (decided 2026-10-10: staff see who is redeeming, to hand the reward to the right person; collect previews still show no customer data), reasons `reward_unavailable` / `insufficient_points` · `POST /scans/redeem {code, branchId?, idempotencyKey}` (200 `{redemptionId, rewardName, pointsRedeemed, cardBalance, branchName, at}`; one transaction: QR used + conditional `balance >= cost` decrement + ledger `redeem` row + `redemptions` snapshot; then a live `cards` notice to the customer). Customer app: Redeem on the reward sheet (enabled with enough points) → `/qr?purpose=redeem&rewardId…` → "Reward redeemed" + points used + new balance (`redeemResult` in `GET /qr-codes/{id}`). Staff app: scan → `app/redeem.tsx` (Confirm reward: reward + customer, Give reward) → done. Tests: `test/redeem.e2e-spec.ts`.
+**Built — till tally (2026-10-17):** `GET /scans/today` (any staff role) → `{collects, redemptions}` by the signed-in staff member today (Cairo day); shown on the dashboard Scan page.
+**Built — dashboard (2026-10-09, `@VendorApi()`, reading: vendor_admin + branch_manager, changing: vendor_admin):** `GET|POST /branches`, `PATCH /branches/{id}` · `GET|POST /point-rules` (POST = new version, recorded with the staff id), `DELETE /point-rules/active` · `GET|POST /rewards`, `PATCH /rewards/{id}`, `PUT|DELETE /rewards/{id}/image` · `GET /summary` (counts only, Cairo days; branch manager = own branch activity). Other vendors' rows → 404. Branch location: lat and lng both or neither (400 `location_incomplete`, admin too). Branch opening hours (optional, migration `10_branch_hours`): `opensAt`/`closesAt` "HH:MM" 24-hour, the same every day in the branch's timezone, both or neither (400 `hours_incomplete`), not equal (400 `hours_invalid`); closing earlier than opening = open past midnight. The customer shop page returns them per branch. Branch address = street line + `city` (migration `11_branch_city`): a key from a fixed list of ~50 Egyptian cities (`src/branches/cities.ts`, 400 on unknown keys, null = not set); names (English + Arabic) live in `apps/dashboard/src/lib/cities.ts` (+ OSM spellings for filling the city from a map pin) and `apps/mobile/src/lib/cities.ts`: keep the three lists identical. Tests: `test/vendor-dashboard.e2e-spec.ts`.
+**Built — activity log (2026-10-10, `src/reports/vendor-activity.ts`):** `GET /events?type&branchId&staffId&from&to&receipt&page&pageSize` (vendor_admin + branch_manager; a branch manager always gets their own branch, whatever `branchId` says): the ledger newest first (`from`/`to` are Cairo days, inclusive) with branch, staff, reward snapshot name, bill, receipt, and `customerRef` (first 6 characters of the card id: tells repeat visits apart, never who the customer is), plus `totals` over every matching row (collects, redemptions, points, sales). Dashboard page **Activity** (`/activity`, `pages/my/MyActivity.tsx`). Tests: `test/vendor-events.e2e-spec.ts`.
+**Built — redemptions (2026-10-10, `src/reports/vendor-redemptions.ts`):** `GET /redemptions?rewardId&branchId&staffId&from&to&page&pageSize` (same roles and branch rule as `/events`): rewards given, newest first (snapshot name + cost, the reward's current photo, branch, who gave it, `customerRef`), `totals` (redemptions, points, distinct customer cards) and `byReward` (current name, status, count, points; ignores `rewardId` so the dashboard can pick from it). Cairo-day ranges for both endpoints: `src/reports/cairo-days.ts`. Dashboard: **Redemptions** tab of the Rewards page (`/rewards?tab=redemptions`, `pages/my/MyRedemptions.tsx`; old `/redemptions` redirects); period picker + KPI strip shared in `components/PeriodFilter.tsx`. Tests: `test/vendor-events.e2e-spec.ts`.
+**Hidden since 2026-10-17:** opening hours and temporarily closed are switched off (API env `OPENING_HOURS_ENABLED`, default off, on in e2e tests; dashboard `OPENING_HOURS` in `lib/hours.ts`): no hours editor / open-now pill / status, the customer shop page gets no hours or pause, the go-live `branch_hours` step needs only an open branch, and the paused / no-hours attention items are skipped. Data and branch endpoints are unchanged.
+**Built — branch hours + temporarily closed (2026-10-10, `src/branches/hours.ts`):** branch POST/PATCH (vendor and admin) take `hours: [{day, opensAt, closesAt}] | null` (wins over `opensAt`/`closesAt`; old clients' single pair becomes every day); errors `hours_invalid`, `hours_overlap` (only a day's last slot may run past midnight), `too_many_slots`. `PUT /branches/{id}/pause {until}` (≤ 14 days; `until_in_past` / `until_too_far`) and `DELETE /branches/{id}/pause` (vendor_admin: any branch; branch_manager: own, else 403 `forbidden_branch`). Pausing does **not** block scans (if staff scan, the branch is open). Branch responses and the customer shop page return `hours` and `pausedUntil` (only while ahead). Dashboard: weekly editor (`components/WeeklyHoursEditor.tsx`, Saturday first), "Now" pill with the pause menu (`pages/vendor/BranchNow.tsx`), status dot under the shop name (`VendorLayout`, `lib/hours.ts` = open-now in browser time). Customer app shop page: "Temporarily closed · back at …", today's hours (split shifts) or "Closed today". Tests: `test/branch-hours.e2e-spec.ts`.
+**Built — sold out per branch (2026-10-10, `src/rewards/reward-sold-outs.service.ts`):** `GET /rewards/sold-out` (vendor_admin + branch_manager: every open branch's current sold-outs) · `PUT /rewards/{id}/sold-out {branchId?, until: ISO|null}` (branch manager: own branch only, else 403 `forbidden_branch`; vendor admin: one branch, or every open branch without `branchId`; `until` future and ≤ 31 days, else 400 `until_in_past` / `until_too_far`; null = until turned back on) · `DELETE /rewards/{id}/sold-out?branchId` (back on sale; admin without branchId = everywhere). Effects: redeem scans at that branch → 409 `reward_sold_out` (preview reason too, for branch staff; a vendor admin's preview can't know the branch yet), the customer shop page returns `soldOutAt` per reward and `soldOutEverywhere` (reward cards show a "Sold out at …" / "Sold out" badge on the photo; the sheet lists the branches with their back-at time; Redeem stays on while another branch has it, and is off when sold out everywhere, where `POST /app/qr-codes` also refuses with 409 `reward_sold_out`). Dashboard: Availability pill on the Rewards page (`pages/vendor/RewardAvailability.tsx`, merchant accounts only via `scope.soldOut`). Tests: `test/reward-sold-out.e2e-spec.ts`.
+**Built — needs your attention (2026-10-10, `src/reports/vendor-attention.ts`):** `GET /attention` (vendor_admin + branch_manager) → `{items: [{key, group: now|setup, tone: critical|warning|info, title, detail, action: {label, to}}]}`, most urgent first. Now: no active rule, no active rewards, branch temporarily closed, rewards sold out (per branch), and unusual activity checked live from the ledger (the fraud-flag rules, no job yet): a card with > 3 collects today, a staff member with ≥ 10 collects today and > 3× their usual day (only once they have ≥ 10 in the last 30 days), a bill > 5× the branch's 30-day average (once it has ≥ 20 bills). Setup (vendor admin only): rewards without photo / Arabic name, branches without hours / map pin, no logo or banner, no staff. A branch manager gets their branch's items only. Dashboard: top of Overview (`pages/my/NeedsAttention.tsx`, chips All / Today / Setup). Tests: `test/vendor-attention.e2e-spec.ts`.
+**Built — insights (2026-10-10, `src/reports/vendor-insights.ts`):** `GET /insights?from&to&compare=previous|none&branchId` (vendor_admin + branch_manager; from/to required Cairo days, ≤ 366, else 400 `range_invalid` / `range_too_long`): `current` and `previous` KPIs (previous = the same number of days just before): sales (sum of bills on collects), visits (collects), avgBill, customers (distinct cards that collected), newCustomers (first ever collect here in the period; per branch for a manager), returningCustomers (2+ visits), repeatRate, visitsPerCustomer, redeemingCustomers, rewardsRedeemed, points given/redeemed; `days` (each day with the same position in the previous period) and `branches` (admin, all branches). Counts only. Dashboard page **Insights** (`/insights`, `pages/my/MyInsights.tsx`): period + "compared with" + branch, KPI cards with definitions on hover and change vs previous, daily chart (previous dashed), by-branch table. All report date params use `@IsDay()` (`cairo-days.ts`: real calendar days; 2026-02-31 → 400, not a DB error). Tests: `test/vendor-insights.e2e-spec.ts`.
+**Built — reward performance (2026-10-14, `src/reports/vendor-reward-performance.ts`):** `GET /reward-performance?from&to&branchId` (vendor_admin + branch_manager; from/to required Cairo days): `rewards` (active ones, plus archived ones given in the period, most given first: redemptions, points, distinct customers in the period; `canAfford` = balances covering it now, `close` = balances at 80-99% of its cost now, `CLOSE_SHARE`) and `held` (points on unblocked customers' cards, holders, `worth` = points × active rule rate (spend-equivalent, not cash; NULL without a rule), `readyToRedeem`, `closeToReward`). The branch filter applies to redemptions only; balances are merchant-wide, so a branch manager gets `held: null` and null `canAfford`/`close`. Counts only. Dashboard: **Reward performance** section on Insights (`pages/my/RewardPerformance.tsx`). Tests: `test/vendor-reward-performance.e2e-spec.ts`.
+**Built — go-live checklist (2026-10-14, `src/reports/vendor-go-live.ts`):** `GET /go-live` (vendor_admin only) → `steps` in order (`logo`, `banner`, `rule`, `reward` = an active reward with a photo and an Arabic name, `branch_hours` = an open branch with weekly hours, `staff` = an active non-admin staff member, `test_scan` = any ledger row with a QR, i.e. a real collect/redeem scan) each with `done` and the dashboard path `to`, plus `done`/`total`/`live`, `rewards` {active, withPhoto, withArabic} and `firstScanAt`. No new data: everything is read from existing rows. Dashboard: card at the top of Home (`pages/my/GoLiveChecklist.tsx`, merchant admin only, hidden once live). Tests: `test/vendor-go-live.e2e-spec.ts`.
+**Planned — dashboard:** `GET /fraud/flags` (read-only). Customers exposes names and scoped loyalty activity to merchant admins and branch managers; email, phone and other private profile fields are never returned. Summary and Insights remain aggregate reports.
+
+### Admin — `/api/admin` (Supabase access token with aal2, `PlatformAdminGuard`)
+
+**Built:** `GET|POST /vendors`, `GET|PATCH /vendors/{id}` (filters `status`, `search`; PATCH `status:"suspended"` = soft delete; `logoUrl`/`contactEmail` accept null to clear; `currency` locked once the vendor has a point rule → 409 `currency_locked`; `vendor_not_found` 404) · `POST /vendors/{id}/admins` (invite a vendor_admin by email; same rules/errors as staff invites) · `PUT|DELETE /vendors/{id}/logo` and `/vendors/{id}/banner` (upload/replace/remove); POST/PATCH also take `category` and `cardDesign`. The customer app gets `bannerUrl`, `category`, `cardDesign` in `/app/vendors` (list + page) and `cardDesign` in each card's vendor.
+
+**Built (2026-10-09, all with `@AdminApi()`):** `GET /me` · `GET /overview` (totals, 14 days in Cairo time, top vendors 30 days) · `GET|POST /vendors/{id}/branches`, `PATCH /branches/{id}` (close = status) · `GET|POST /vendors/{id}/point-rules` (POST = new active version, previous retired in one tx), `DELETE /vendors/{id}/point-rules/active` (stop earning) · `GET|POST /vendors/{id}/rewards`, `PATCH /rewards/{id}` (incl. `nameAr`/`descriptionAr`, archive = status) · `GET /vendors/{id}/staff`, `PATCH /staff/{id}` (name, status only) · `GET|POST /vendors/{id}/images`, `DELETE /vendors/{id}/images/{imageId}` · `GET /users?search&status&page&pageSize`, `GET /users/{id}` (cards + 30 latest events), `PATCH /users/{id}` (block/unblock) · `GET /stats/qr-sources?days=1-365` (default 30: collects + points split by **master QR vs shop QR**, per day and per shop; no extra column: `point_events.qr_code_id → qr_codes.vendor_id`, NULL = master QR, so past collects are covered; `admin/qr-stats.ts`, dashboard page **Statistics** `/statistics`, test in `collect.e2e-spec.ts`) · `GET /system/database` (DB size, version, connections / max, cache-hit %, sign-in accounts, per-table rows + size, storage buckets; DB server RAM / data disk / load / CPUs from Supabase's metrics endpoint `/customer/v1/privileged/metrics` with the secret key, cached 30 s, `server: null` elsewhere) · `GET /system/status` (up/down + latency: the API itself (uptime, RAM, live apps), DB `SELECT 1`, Supabase Auth `/auth/v1/health`, Storage, and the websites in env `STATUS_TARGETS` = "Name=url,…"; 5 s per check). Dashboard page **System** `/system` (Status + Database tabs, Refresh button only, no auto-refresh). Code `src/system/`. Services (`BranchesService`, `PointRulesService`, `RewardsService`) are reusable by the vendor dashboard. Tests: `test/admin-dashboard.e2e-spec.ts`. Error codes: `branch_not_found`, `reward_not_found`, `user_not_found`.
+
+**Built — point corrections (2026-10-11, `admin/point-adjust.ts`):** `POST /cards/{id}/adjust {delta ≠ 0, reason 3-500, idempotencyKey?}` (add or take points) and `POST /point-events/{id}/reverse {reason}` (undo a mistyped collect: takes back exactly its points; earn rows only, once each via idempotency key `reverse:<eventId>`). One transaction: conditional `balance + delta >= 0` (else 409 `insufficient_points`, e.g. the points were already spent), `lifetime_points` moves too (never below 0), new `adjust` ledger row (`created_by` = admin, `reason`, `branch_id` NULL), then a live `cards` notice to the customer. Errors: `card_not_found`, `point_event_not_found` (404), `not_reversible`, `already_reversed`, `idempotency_key_reused` (409). `GET /users/{id}` returns the 10 latest events; the full history is paged with `GET /users/{id}/events?page&pageSize≤50` (newest first; each event carries `cardId`, `reversed`, `adminName`). The customer sheet pages it 10 at a time. Dashboard: customer sheet → Adjust per card, undo icon per collect (`components/PointsCorrection.tsx`). Tests: `test/point-adjust.e2e-spec.ts`.
+
+**Planned:** `GET /vendors/{id}/summary`. Fraud flags: built (see "Fraud flags").
 
 ---
 
 ## NestJS modules
 
-`auth`, `users`, `vendors`, `branches`, `staff`, `nfc-tags`, `programs`, `wallets`, `scan-sessions`, `redemptions`, `fraud-flags`, `admin`, `reports`.
-`scan-sessions` is the core: build it first, with tests.
-
-## NTAG 424 DNA verification
-
-Node `crypto` has AES but no CMAC. Use a well-tested CMAC package or implement RFC 4493 on AES-CBC. Test against the sample vectors in NXP application note **AN12196** before trusting it. Keys are fetched from the secrets store via `key_ref`; never log or persist raw keys.
+`auth`, `users`, `storage` (built: Supabase Storage + image processing), `vendor-images` (built), `vendors` (built: admin CRUD + logo), `branches`, `staff`, `point-rules`, `rewards`, `cards`, `qr-codes`, `scans` (collect + redeem), `redemptions`, `fraud-flags`, `admin`, `reports`.
+`qr-codes` + `scans` are the core: build them with integration tests.
 
 ---
 
 ## Build order
 
-1. `apps/api`: NestJS scaffold, Prisma `db pull` + baseline, seed (Joy Corner), health check.
-2. Customer auth (Google, Facebook, Apple) + JWT.
-3. Scan sessions + earn flow + wallets, with integration tests against a real Postgres.
-4. Redemption flow.
-5. Vendor and admin APIs, fraud-flag job, then the React dashboards.
-6. Flutter app (generated Dart client).
+1. `apps/api`: NestJS scaffold, Prisma baseline, health check. ✅
+2. Customer auth (Google, Facebook; Apple postponed) + `GET|PATCH /api/app/users/me`. ✅
+3. Staff auth + staff CRUD (`/api/vendor/staff`, `/staff/me`). ✅
+   - Platform admin auth (aal2) + vendors CRUD (`/api/admin/vendors`). ✅
+4. Vendor setup APIs: branches, point rules, rewards.
+5. QR codes + collect flow + cards, with integration tests against a real Postgres. ✅ (`test/collect.e2e-spec.ts`)
+6. Redeem flow. ✅ (`test/redeem.e2e-spec.ts`)
+7. Reports, admin APIs, fraud-flag job, then the React dashboard.
+8. React Native customer app + staff app, using the shared `packages/api-client`.
+   - Customer app: welcome (Google/Facebook/email sign-up + login, reset password), cards + history, You hub, profile details (photo via expo-image-picker → `PUT|DELETE /users/me/avatar`, name, phone, gender, birthday calendar), shop page `/shop/[id]` (rule, rewards with "pts to go", menu pages, branches with directions and photos), settings, about, collect QR screen (`/qr`: polls status every 2 s → "+N points" + balance; no push yet) ✅ (`apps/mobile`). Explore tab (all shops, search, opens the shop page). Live data (2026-10-10): the app keeps a **WebSocket to `/api/app/live`** while signed in (`startLive` in `src/lib/live.ts`, started by `SessionProvider`; token sent as the first message `{type:"auth",token}`, never in the URL; reconnects with backoff and on app resume). The API (`src/live/`: `LiveService` + global `LiveInterceptor`) pushes `{type:"vendor",vendorId}` after every successful dashboard write on `/api/admin|vendor` (not staff/users/scans) and `{type:"cards"}` to one customer after a collect. Notices carry no data; `useLiveRefresh(load, {vendorId?})` re-reads at once (shop screens ignore other shops), plus a 60 s backup refresh and on resume. In-memory (one API container); several containers would need a shared channel (e.g. Postgres LISTEN/NOTIFY). Tests: `test/live.e2e-spec.ts`. A shop without a points rule: Collect is disabled on its page and `POST /qr-codes {vendorId}` → 409 `no_active_rule`; staff preview reports `no_active_rule` before the bill is typed (staff-app message in Arabic). Earlier screens: the You tab refreshes the profile the same way (the signed avatar link is kept while it is the same file). Shop page Collect opens a shop QR (`/qr?vendorId=…`). Placeholders: help/join. Terms and conditions (`app/terms.tsx`) is a WebView of `{API}/legal/terms.html` (`terms-ar.html` in Arabic), static files in `apps/api/public/legal/` served in every environment: edit and redeploy the API to change them, no app release (draft text for now). Supabase Redirect URLs must allow `exp://**` and `dvote://**`.
+   - Staff app (login → home → scan → bill amount → done) ✅ (`apps/staff`; types hand-written until api-client exists). The API needs `CORS_ORIGINS` for its web origin (`http://localhost:8081`).
 
 ## Must-have tests
 
-- Earn happy path; balance == ledger sum after every operation.
-- Same idempotency key twice → one point, same response.
-- Cooldown rejects the second tap within the window.
-- Replayed/old NFC counter and bad CMAC are rejected.
-- Two concurrent redeems on a wallet with exactly N points → exactly one succeeds.
-- Redeem at 11/10 leaves balance 1; wallet moves to newer program version after redeem.
-- Revoked/lost tag rejected; blocked user rejected.
-- Vendor A's staff can never read vendor B's data.
+- Collect happy path; points = floor(amount / spend) × per_spend (95 EGP @ 10 → 9); card created on first purchase; balance == ledger sum after every operation.
+- Same idempotency key twice → points once, same response.
+- QR single use: second scan → `qr_used`; expired → `qr_expired`; two concurrent scans of one QR → exactly one succeeds.
+- A master collect QR works at any vendor; points go to the scanning staff's vendor + branch. A shop collect QR (`vendorId`) at another vendor → 403 `vendor_mismatch`, nothing written; unknown vendor on create → 404. Redeem QR at another vendor → `vendor_mismatch`.
+- Below one point / below min purchase → `no_points_earned`, nothing written; duplicate receipt → `duplicate_receipt`.
+- Redeem: 1000 − 300 = 700; insufficient balance rejected; two concurrent redeems on exactly-enough balance → exactly one succeeds; archived reward → `reward_unavailable`.
+- New rule version applies only to later purchases; reward price change doesn't alter past redemptions.
+- Blocked customer rejected; disabled staff rejected.
+- Vendor A's staff can never read or act on vendor B's data.
 
 ## Conventions
 
+- **Folder structure: by feature** (`src/<feature>/` with module, controller(s), service, `dto/`), not by layer. Logic lives in services; controllers stay thin.
+- **DTO naming:** requests by action — `Create<X>Dto`, `Update<X>Dto`, `List<X>QueryDto` (files `create-x.dto.ts`, …); responses `<X>ResponseDto` (`x-response.dto.ts`) with a static `from(row)` mapper. API JSON is camelCase; DB columns stay snake_case.
+- **UUIDs:** validate with `@IsUuid()` / `ParseUuidPipe` from `src/common/uuid.ts` (any 8-4-4-4-12 hex, like PostgreSQL), never class-validator `@IsUUID()` or Nest `ParseUUIDPipe`: those reject the hand-written seed ids (`11111111-0000-…`).
 - TypeScript strict mode. DTOs validated with `class-validator`. All times stored UTC (`timestamptz`); convert with `branches.timezone` for display.
-- Money-like operations only inside `prisma.$transaction`, using conditional `UPDATE ... WHERE balance >= n` (or `SELECT ... FOR UPDATE`), never read-modify-write in JS.
-- Errors returned to the app use stable codes matching `reject_reason` (`cooldown`, `tag_revoked`, `bad_signature`, `replayed_counter`, `session_expired`, `insufficient_points`, `vendor_mismatch`, `user_blocked`).
-- Never commit `.env`, secrets or tag keys.
+- **DB sessions are forced to UTC** (`PrismaService`: `options: '-c TimeZone=UTC'`). The pg adapter sends/reads timestamps without an offset; without this, Prisma-written times are shifted by the server's timezone (Africa/Cairo = 3 h) while DB `now()` defaults are not — e.g. a 5-minute QR would live 3 h. A collect e2e test guards it. Rows written before this fix (dev data) may have created_at 3 h early.
+- Tests that must delete `point_events` (append-only) do it inside a transaction with `SET LOCAL session_replication_role = replica` — test cleanup only, never in app code.
+- Balance-changing operations only inside `prisma.$transaction`, using conditional `UPDATE ... WHERE balance >= n` / `WHERE status = 'active'`, never read-modify-write in JS.
+- Errors use stable `code`s: scans — `qr_invalid`, `qr_used`, `qr_expired`, `qr_cancelled`, `wrong_qr_type`, `vendor_mismatch`, `branch_required`, `no_active_rule`, `invalid_amount`, `no_points_earned`, `duplicate_receipt`, `reward_unavailable`, `reward_sold_out`, `insufficient_points`, `user_blocked`.
+- Never commit `.env`, secrets or keys.
 
-## Open decision
+## Merchant dashboard localization (apps/dashboard, built 2026-10-11)
 
-Cooldown scope: 10 minutes **per branch** (current default) or **per vendor**? Ask before changing.
+- Same model as the customer app: **English default + Arabic**, switch in the merchant top bar and on the sign-in page (`components/LanguageToggle.tsx`), saved in the browser (localStorage `dvote-dashboard-language`; `index.html` applies `dir="rtl"` before the first paint).
+- `src/i18n/`: `en.ts` is the source of every key, `ar.ts` is typed `Dictionary` (a missing Arabic text fails the typecheck). Use the plain `t('ns.key', params)` from `src/i18n` (also outside components: toasts, `lib/hours.ts`); `useI18n()` for `language`/`setLanguage`. Switching language remounts the app (queries stay cached), so module-level text must be a function, never a constant. Plurals `{one, other}` (+ Arabic zero/two/few/many) by `count`. Western digits; dayjs uses Arabic month names with Latin digits (`ar-latn`).
+- **Never hard-code user-facing text** in merchant pages or shared tabs; use logical classes (`ps/pe/ms/me/start/end/text-start/text-end`), mirror directional icons with `rtl:rotate-180`, wrap LTR runs (coordinates, times) with `dir="ltr"` or Unicode isolates.
+- API error codes → `errors.<code>` (`lib/api.ts` `call()`), else the server message. "Needs your attention" items: the API sends `params` (names, counts, times) with each item and the dashboard words known kinds from `attention.kinds.*` (English falls back to the API text).
+- **Admin pages stay English** (`useEnglishOnly()` in `AdminLayout` shows them LTR without changing the saved choice); the shared vendor tabs follow the language.
+
+## Customer app home-screen widgets (apps/mobile, built 2026-10-11)
+
+- **My points** (`DvotePoints`: top 3 shops by balance, card colours, tap → `dvote://cards`) and **Collect points** (`DvoteQr`: tap → `dvote://qr`, which makes a fresh master collect QR at once; signed out → welcome; closing goes back, or to My cards when opened from the widget).
+- iOS: `expo-widgets` (WidgetKit, `src/widgets/ios-widgets.tsx`, `@expo/ui/swift-ui`, `'widget'` functions get everything through props). Android: `react-native-android-widget` (`android-widgets.tsx`, background task `android-task.tsx` registered in the custom entry `index.ts`, so `package.json` `main` is `index.ts`). Both configured in `app.json` plugins (names must match).
+- Widgets never call the API (no session there): the app saves a snapshot (`src/widgets/data.ts`, AsyncStorage `dvote.widget.points` / `dvote.widget.qr`, texts already in the app language) and pushes it with `refreshWidgets(cards | null)` (`src/widgets/index{,.ios,.android}.ts`; keep the platform files `.ts`, not `.tsx`: Metro tries every platform variant of `.ts` before any `.tsx`, so an `index.android.tsx` loses to the web no-op `index.ts` — that bug kept the points widget on "sign in"): on session open, app resume, every cards-tab load (live `cards` notices included) and sign-out (null = "sign in").
+- Needs a development build (not Expo Go). iOS widgets need an App Group (`group.com.dvote.co`), so the paid Apple Developer account; Android works now.
+
+## Customer app localization (apps/mobile, built 2026-10-08)
+
+- **English is the default; Arabic is the other language.** Chosen in Settings → Language, saved on the device (AsyncStorage `dvote.language`); not stored on the server yet.
+- `src/i18n/`: `en.ts` is the source of every key; `ar.ts` is typed as the same `Dictionary`, so a missing Arabic text fails the typecheck. In components: `const { t } = useI18n(); t('cards.title')`; outside components (API errors, dialogs, dates) use the plain `t` export. Placeholders: `t('qr.expiresIn', { time })`. **Plurals**: objects `{ one, other }` (Arabic also `zero, two, few, many`) chosen by `count`. Lists (month/weekday names): `calendarNames()`. API error codes → `errors.<code>` (`friendlyMessage` in `lib/api.ts`).
+- **Never hard-code user-facing text** in screens: add the key to `en.ts` and `ar.ts`.
+- **Arabic = right-to-left without a restart:** `Screen`, the tab bar and the sheets set `direction: 'rtl'`; use `marginStart/End` (not Left/Right) for side spacing; directional icons use `<Icon … mirror />`; `TextInput` aligns to the reading side. Numbers stay in Western digits (0-9).
+- **Fonts:** Inter for English, IBM Plex Sans Arabic for Arabic (`components/Text` picks by language; both loaded in `app/_layout`).
+- **Shop data in Arabic:** rewards have optional `name_ar`/`description_ar`; the API returns both (`nameAr`, `descriptionAr`, `rewardNameAr`) and the app picks with `localized(en, ar)` (falls back to English). Not translated yet: vendor and branch names/addresses, Supabase emails, the staff app.
 
 ## Later (not v1)
 
-Push notifications (FCM), point expiry, staff confirmation app / quantity, QR fallback for phones without NFC, vendor promotions, vendor billing.
+Push notifications (FCM), point expiry, vendor-side void of a mistyped collect (admins can undo one now), vendor promotions (double points), offline QR, POS integration, Apple sign-in, vendor billing.
+
+
+**Built — merchant Customers (2026-10-10, Tier 2 item 2):** `GET /api/vendor/customers` and `GET /api/vendor/customers/:id` (`src/merchant-customers`, vendor_admin + branch_manager). Dashboard Customers tab keeps shadcn; searchable/paginated directory, sort, segment counts and profile sheet with spend, visits, redemptions and paginated loyalty history. IDs are merchant card IDs, not global user IDs. Responses explicitly allowlist fields; no email, phone, auth IDs, demographics, avatar, receipts or adjustment notes (email and phone only in the admin-only export). Managers are forced to their branch regardless of query parameters; branch profiles omit merchant-wide points balances and other-branch activity.
+
+Built-in segments (since 2026-10-17, `src/merchant-customers/segments.ts`) are mutually exclusive, computed, never stored, in Cairo days, checked in order: joined (earlier of card creation and first visit) in the last 30 days → New; no visit → Never visited; a visit in the last 30 days and 2+ visits in them → Champions; a visit in the last 30 days → Regulars; no visit for over 120 days → Lost; quiet 30-120 days after 3+ visits → At risk; otherwise → Slipping.
+
+**Custom segments (2026-10-17, migration `20_customer_segments`: tables `customer_segments` + `customer_segment_members`):** a merchant admin creates segments with a name, description and rules (`{field, op, value}`, all/any; fields visits, visits_30d, spend, days_since_visit, days_since_joined, points, rewards_redeemed, built-in segment; ≤ 10 rules; none = by hand only) and can add/remove customers by hand. Each customer has one built-in segment and **at most one custom segment**: a hand-added segment wins (adding one drops the customer's other hand-made additions), then the first segment in list order whose rules match and that they weren't removed from by hand (`included = false` beats the rules). Rules use the same scoped numbers as the page (branch scope for managers). API `/api/vendor/customer-segments`: `POST preview` (count only, managers too), `POST`, `PATCH /{id}`, `DELETE /{id}` (archive), `PUT|DELETE /{id}/members/{cardId}` (vendor_admin; 409 `segment_name_taken`, 404 `segment_not_found` / `customer_not_found`, 400 `invalid_rules`). `GET /customers` takes `customSegment` and returns `customSegments` (with counts) and each customer's `customSegment {id, name, manual}`. **Export:** `GET /customers/export` (vendor_admin only; same filters, no paging, ≤ 20,000 rows, `truncated`) returns the list fields **plus email, phone and joinedAt** (decided 2026-10-17: merchants may have their customers' contact details); the dashboard writes the CSV (UTF-8 BOM, headers in the dashboard language). Dashboard: Customers → Segmentation tab = cards (count, share, meaning, See them, Send a message → `/broadcast` (placeholder), Export) for the built-in and the merchant's segments, with the segment builder dialog (`pages/my/customer-segments.tsx`); the list filter has both kinds; the profile sheet shows and changes the custom segment. Counts cover the selected merchant/branch independently of search and segment filters. Search accepts names (including Arabic) or card references, never contact details. A visit means one recorded earn event; spend/visits are lifetime within the selected scope. No migration required. Six integration tests in `test/merchant-customers.e2e-spec.ts` passed against isolated local PostgreSQL, covering boundaries, privacy, search, pagination, tenant isolation and role/branch restrictions.
+
+**Team roles + Settings (2026-10-17):** roles are fixed permission bundles, no per-person ticks (`apps/dashboard/src/lib/permissions.ts`, shown in the invite dialog grouped Till / Rewards / Customers / Programs & content / Insight / Operations): Super admin (`vendor_admin`) everything; Branch manager their branch's till, sold-out, customers, analytics and cashiers; Staff the till only; **Viewer only** (`viewer`, migration `21_staff_viewer_role`, merchant-wide, no branch) reads Home, reports, customers (with phone), branches, rewards and the card, and changes nothing. API: viewers are added to the reading endpoints' `@StaffRoles` (reports, customers, branches/rewards/point-rules GET, `staff/me`), never to scans (`ScansController` is `vendor_admin`/`branch_manager`/`staff`), staff management or any change; read scoping uses `ctx.branchId ?? requested` (no branch = merchant-wide), not the role. A merchant admin can invite all four roles. Settings (`/settings?tab=`) has tabs General, Team, Branding, Billing: General (`pages/my/general-settings.tsx`) = dashboard language (this browser), time zone (Cairo) and currency read-only, email notifications listed as Soon (no emails are sent yet), and for merchant admins Close your account (a mailto to dvote); Team = staff list + invite drawer + the team sign-in link (the dashboard address, with Copy; `/staff` redirects there; viewers don't get it); Branding = the shop profile + page style, brand colours and font (merchant admins only); Billing is empty for now. **Customer phone:** the customer profile (`GET /customers/:id`) returns and shows `phone` to everyone with Customers access; email stays in the database but is not shown (decided 2026-10-17: phone is the contact from now on).
+
+**Storefront builder (2026-10-17, migration `22_storefront`):** the merchant's public page (`apps/web`, `dvote.co/<slug>`) is built from **sections** in order: `loyalty` (button wording: loyalty_card / join_club / collect_points; opens join → card page with the wallet buttons), `rewards`, `menu` (always titled "Menu"; the menu pages), `branches` (address + Google Maps directions), `wifi` (ssid, security wpa/wep/none, password shown to customers). A section not in the list isn't shown; `loyalty` is the core section and can't be removed (the API puts it back first). `vendors.storefront` jsonb = the shop's list (NULL = default: loyalty, rewards, menu, branches); `branches.storefront` = a branch's own copy (NULL = the shop's), used when the page is opened with `?b=<branch>`. Checked in `apps/api/src/storefront/storefront.ts` (400 `invalid_storefront`; unreadable stored values fall back to the default). API: `GET /api/vendor/storefront` (admin, manager, viewer) → `{shop, branches[{id,name,storefront|null}]}`, `PUT /api/vendor/storefront {branchId?, storefront|null}` (vendor_admin). **Look** (Settings → Branding, `pages/my/brand-style.tsx`, PATCH `/vendor/profile`): `page_style` spotlight (default) / compact / branded, `brand_primary` / `brand_secondary` (#rrggbb, NULL = the card design colours), `brand_font` (key of `BRAND_FONTS`, curated Google Fonts incl. Arabic ones; no font upload). `GET /api/public/vendors/:slug?b=` returns `style`, `sections`, `menu` (image links) and branches with `address` + `mapsUrl`. Dashboard Storefront page (`pages/my/storefront-editor.tsx`), themed with the shop's brand colour and font: logo + page address, the real page in an iPhone mockup (`components/IPhoneMockup.tsx`: the page renders at 393 × 852 and is scaled down; reloads after each save) with Preview | Change style under it, "Storefront for" All locations / a branch (Customize for this branch / Use the shop's storefront), section cards with up / down / remove, Add section, autosave. An **eye button** at the end of the Storefront row in the sidebar (merchant admins; `NavItem.action` in `AdminLayout`) opens the same live page in a phone overlay (`StorefrontPreviewDialog`). `apps/web` venue page (`pages/VenuePage.tsx`, `lib/brand.ts`) is a short **hub**: one row per section in the chosen order and style, colours and font; each row opens its own page (`/<slug>/join` for the loyalty card, `/<slug>/rewards`, `/<slug>/menu`, `/<slug>/branches`, with a way back), and WiFi shows the network + password + Copy right on the hub. Rows with nothing to show (no rewards, no menu pages) are left out. Icons and coloured text use `accent` (the brand colour, or dark ink when it's too light to read). Keep the section types, labels and fonts identical in the API, `apps/dashboard/src/lib/storefront.ts` and `apps/web/src/lib/api.ts`.
+
+Dashboard icons: use `@solar-icons/react/linear` everywhere and the identical named export from `@solar-icons/react/bold-duotone` for active navigation. Never substitute a different symbol for active state. The shadcn CLI config uses its supported Tabler generator; convert any newly generated icon imports to Solar before finishing a component install. Keep Solar attribution in `public/icon-credits.txt`; the profile menu has no icon credit line.
+
+Home branch filter: merchant admins default to all branches and can select one via `GET /api/vendor/summary?branchId=...`. Managers always remain scoped to their assigned branch. Branch customers are cards with an earn there; new branch customers are first earns there in the last seven days. Points held remain merchant-wide (shared balances), as do setup/attention notices; the UI labels these explicitly.
+
+### Storefront customer feedback (2026-10-17)
+
+The optional `feedback` storefront section opens `/:slug/feedback` (preserves branch tags). `POST /api/public/vendors/:slug/feedback` accepts name, comment and optional Egyptian mobile, requires an active merchant/branch and an enabled section, and is limited to 5 submissions/minute. It never creates or updates customers/cards; a normalized phone match links only an existing card belonging to that merchant, without exposing the match in the public response. `GET /api/vendor/customer-feedback?page=1` powers the Feedback sidebar page (20 per page, newest first), scoped to the signed-in merchant and to the assigned branch for branch managers. Cardholder labels explicitly indicate an unverified phone match. Migration 24 adds `vendor_feedback` with composite tenant FKs, RLS, and no anon/authenticated table access. Cloud migration applied; local test migration remains unavailable.
+
+Storefront follow-up: Feedback sections may define `placeholder: {en, ar}` (both required, max 300 each); omission uses localized defaults. Branding supports checking and saving a unique username through `GET|PUT /api/vendor/profile/username`; the database unique index handles races and reserved routes cannot be claimed. Migration 25 changes new name collisions to random five-digit suffixes without changing existing addresses. Scan's daily summary links to Activity with `period=today&staff=<staff-id>`. Customer history fetches the full ledger item by `eventId` through the tenant-scoped Activity API and reuses its drawer.
+
+### Merchant quick feedback → admin Feedback page (2026-10-17)
+
+`POST /api/vendor/feedback` (Get help dialog: mood love/okay/unhappy + message) now **saves** a `merchant_feedback` row (migration `26_merchant_feedback`: vendor, staff, mood, message; RLS on, no anon/authenticated access; applied on the cloud) and then copies it to the feedback Google Sheet when `FEEDBACK_SHEET_URL`/`SECRET` are set (a sheet failure is logged, never returned). Admins read it with `GET /api/admin/merchant-feedback?mood&vendorId&page&pageSize` (newest first, shop + team member name/email/role, `moods` counts per mood ignoring the mood filter) on the admin dashboard **Feedback** page (`/feedback`, `pages/Feedback.tsx`). Customer-app feedback (`/api/app/feedback`) still goes only to the sheet.
+
+### Responsive UI tests (2026-10-17, `apps/ui-tests`)
+
+Playwright checks every dashboard page (all roles + platform admin), the customer website and the main dialogs at 9 viewports (320 → 2560 px wide, plus a short 1280 × 640) and Arabic RTL at 4, for sideways overflow, content off screen, overlapping controls, tap targets under 24 px on phones, clipped button text and dialogs that don't fit. Both apps run on their own Vite servers (5199 / 5198) against a mocked API (`lib/fixtures.ts`, typed with the apps' API types; fake Supabase session), so no accounts or cloud data. Run `npm run ui:test` (root) or `npm test` + `npm run summary` in `apps/ui-tests`; 452 checks passing as of 2026-10-17. Add new pages to the specs and new endpoints to `lib/mock-api.ts`. Layout rules learned from it: lists on the website use `grid grid-cols-1` (a plain `grid` lets one-line `truncate` text widen every row), inline-flex links with truncated text need `max-w-full`, and popovers taller than a phone use `max-h-(--radix-popover-content-available-height)` + `overflow-y-auto`.
+
+### Wallet redemption confirmations (2026-10-17)
+Successful redemptions enqueue a transactional Google Wallet confirmation in the existing wallet_broadcasts/recipients outbox, tagged audience.type=redemption and keyed redemption:<id>. Queued atomically with the ledger, delivered after commit by BroadcastsService, excluded from campaign history, and subject to the shared per-card rolling-day quota. Provider errors never undo redemption. Both customer Wallet buttons remain visible; saved wallet alone is disabled; Apple button explains pending Apple setup until issuance exists.
+
+Wallet notification delivery: Broadcast worker logs controlled WalletRequestError diagnostics. Definite HTTP 4xx rejections are failed/provider_http_<status> and do not reserve local notification quota; ambiguous delivery remains unknown. Real redemption message retry verified on Google and customer confirmed notification arrival (2026-10-17).
+
+Staff home UI (2026-10-17): optional Screen.backgroundLogoUrl renders a noninteractive decorative vendor watermark; VendorHeader.prominent enlarges the home greeting only. Home uses a ScrollView and scan action panel; existing branch selection and scan eligibility are preserved. Staff lint and typecheck pass.
+
+Staff dashboard styling (2026-10-17): apps/staff/src/lib/theme.ts mirrors dashboard light stone colors/radii. Shared Text maps weights to bundled Inter faces; RootLayout loads four faces with expo-font. Screen provides the dark dvote/Staff bar and white page on stone canvas. Shared buttons, fields and reward cards use matching bordered 12px/16px surfaces; mobile primary controls remain 52px high. This replaces the old grey/pill staff style across all routes while retaining the home watermark.
+
+Platform staff onboarding update (2026-10-17): POST /api/admin/vendors/{id}/staff (PlatformAdminGuard) accepts CreateStaffDto. StaffService.createForVendor forces the first staff member to vendor_admin/no branch; subsequent invitations honor vendor_admin/branch_manager/staff/viewer with existing role/branch validation and invite/link behavior. AdminScope now uses this endpoint and exposes all role choices after the first-member admin dialog. Existing /admins remains admin-only for compatibility. Vendor-side role limits are unchanged. Tested with 61 admin-vendors/staff e2e cases.
+
+One vendor admin (2026-10-17): migration 27_one_vendor_admin enforces UNIQUE staff_users(vendor_id) WHERE role='vendor_admin' across all statuses, cloud/local applied. StaffService prechecks invites and uses vendor-row-locked transactions for admin creation/promotion; duplicates return vendor_admin_exists (409). Admin role is hidden from invite choices if already occupied. Disabled admin must be re-enabled; creating another is refused. prisma/fix-introspection.cjs strips the partial unique from the client model and restores both vendors.staff_users[] and branches.staff_users[]. Staff home now uses circular logos, subtle circular watermark, a visible dvote brand header and stacked branch choices with constrained widths.
+
+Staff Collect/Redeem tabs (2026-10-17): Home mode query controls the two tabs. Scan passes intent and previewBranchId. Wallet redemption routes through /rewards (customer balance + affordable/available reward choices), then /redeem?rewardId=... which rechecks the preview. One-time app reward QRs confirm directly. Redeem sends rewardId/expectedPointsCost with the existing idempotency key; Wallet sync and confirmation notification are handled by the existing API transaction/outbox. Secrets remain in SessionProvider memory. vendor_admin display name is Merchant admin (مسؤول المتجر), including admin Feedback; platform administration is separate.
+
+Staff app entry policy (2026-10-17): canUseStaffApp allows vendor_admin/branch_manager/staff only. SessionProvider checks actual /staff/me role on sign-in and restore; viewer/unknown roles never become the staff app's active profile. Viewers get staff_app_not_allowed and are signed out with scope=local; forbidden_role during scanning also removes app access. The dashboard's shared /staff/me remains viewer-accessible, while ScansController enforces its existing three-role allowlist. Role tests exercise successful collect/redeem for all permitted roles and forbidden_role for viewers on preview/collect/redeem.
+
+Branch map UI (2026-10-17): LocationPicker's map styling is scoped under .branch-location-map. Plain Leaflet attribution prefix replaces its default flag; OSM credit is retained. Taller panel, softer tiles, themed controls, dark pin, collapsible link input, selected-location guidance and ResizeObserver sizing work in the shared branch forms.
+
+Branch map themes (2026-10-17): LocationPicker lazy-loads BranchMap.tsx (MapLibre GL + explicit Vite worker). OpenFreeMap style URLs /styles/positron and /styles/dark provide the requested OpenMapTiles-derived light/dark looks with no key. Uses useTheme.resolvedTheme; setStyle does not recreate the map, so zoom/pin persist. All existing embedded maps are covered by this shared picker; outbound Google directions links remain external. Credits are supplied by the vector TileJSON. Old Leaflet map rendering/filter CSS was replaced with scoped MapLibre control/pin styles.
+
+### Platform-admin merchant workspace (2026-10-18)
+
+See DVOTE_BRIEF.md, “Platform-wide merchant operations”. Admin pages now use /api/admin/workspace/:section for all-merchant listings and /api/admin/vendors/:workspaceVendorId/workspace/... for merchant tools. Preserve PlatformAdminGuard/MFA and the explicit admin actor; never substitute a merchant staff id. Migration 28_admin_workspace adds admin actor columns/checks and admin_actions audit records. Shared dashboard merchant components must use useVendorApi()/useMe()/useMyScope(), and WorkspaceLink for merchant navigation, so vendor accounts stay scoped to /api/vendor and platform workspaces use their protected admin prefix. Keep each selected merchant’s query cache isolated. Store kits and billing remain their existing placeholders.
+
+### Loyalty Cards area (2026-10-19, migration `29_loyalty_cards`, applied on the cloud)
+
+Design: `docs/superpowers/specs/2026-10-19-loyalty-cards-design.md` (tappi-style, reference screenshots were tappi's UI). **One card per merchant**: `loyalty_cards` (vendor unique, `name`, `status` active / paused / cancelled + `cancelled_at`, `live_version_id`) and append-only `loyalty_card_versions` (`number` 1..n, `design` jsonb, staff or admin author). The migration gave every existing merchant a card + V1 in the colour its pass already had. The design document (colours, background `solid|gradient|mesh|waves|dots` or uploaded image, front title + points label EN/AR, button 1 = storefront label EN/AR, button 2 none/directions(branch)/call(phone), back: about, hours, ≤ 5 links, terms) is checked by `src/loyalty-cards/card-design.ts` (`checkDesign`, 400 `invalid_design`); keep `apps/dashboard/src/lib/card-look.ts` and `apps/web/src/lib/card-look.ts` in step. API `/api/vendor/loyalty-card` (`src/loyalty-cards/loyalty-cards.module.ts`, also in the admin workspace): GET (admin/manager/viewer), POST create (409 `card_exists` while a card exists or is restorable), PATCH `/settings` (name + money for 1 point → new rule version, `points_per_spend` 1), POST `/pause` `/resume` (pause = no new sign-ups only: join 409 `card_paused` for new customers, members keep earning), POST `/cancel` `/restore` (cancel: join 409 / wallet scans 403 `card_cancelled`, Google objects INACTIVE; restore within 30 days, else 409 `restore_expired`; after 30 days a new card may be created and reuses the members' cards), POST `/versions` (save = new live version), POST `/versions/:id/live` (move the live pointer, no new version), PUT `/background` (WebP 1200×760 at `<vendorId>/card/<uuid>.webp`), GET `/members`. Every write bumps `vendors.updated_at` so the Google pass re-syncs (`wallet/card-pass.ts`: localized title + points label, hero image, text modules, links module with the storefront first; env `PUBLIC_WEB_URL`, default https://dvote.co). Public `/api/public/vendors/:slug` and `/cards/:id` return `card` (the live look) for the web card. Dashboard: `pages/my/cards/` (`/card` page + funnel + menu dialogs + members, `/card/design` editor with iPhone/Android × EN/AR × front/back preview, points input, history; preview behind a floating button below 1024 px). Tests: `test/loyalty-cards.e2e-spec.ts`, `src/loyalty-cards/card-design.spec.ts`, ui-tests `cards.spec.ts` + card pages/dialogs. Apple passes are still not generated (iPhone preview is a mock-up).

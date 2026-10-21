@@ -1,0 +1,140 @@
+import { useMutation } from '@tanstack/react-query';
+import { CheckIcon as Check, LoaderIcon as Loader2 } from '@solar-icons/react/linear';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { errorMessage, type Vendor, type VendorBranding, type VendorCategory } from '../lib/api';
+import { CARD_DESIGNS, cardDesign, categoryLabel, designName, VENDOR_CATEGORIES } from '../lib/cardDesigns';
+import { t } from '../i18n';
+import { CardPreview } from './CardPreview';
+
+const NONE = 'none';
+
+/**
+ * How a vendor looks to customers: its category and the design of
+ * its loyalty cards (one of 10). The same panel serves a platform admin (any vendor) and a
+ * vendor admin (their own vendor): only the save / upload calls differ.
+ */
+export function BrandingPanel({
+  vendor,
+  canEdit,
+  save,
+  onSaved,
+  showDesign = true,
+}: {
+  vendor: Vendor;
+  canEdit: boolean;
+  save: (body: Partial<VendorBranding>) => Promise<Vendor>;
+  onSaved: (v: Vendor) => void;
+  /** The card design picker (merchants have it on the Card page instead). */
+  showDesign?: boolean;
+}) {
+  const done = (text: string) => (v: Vendor) => {
+    onSaved(v);
+    toast.success(text);
+  };
+  const fail = (e: unknown) => void toast.error(errorMessage(e));
+
+  const update = useMutation({ mutationFn: save, onError: fail });
+
+  return (
+    <div className="grid gap-8">
+      {/* Category */}
+      <section className="grid gap-2">
+        <h3 className="font-semibold">{t('branding.category')}</h3>
+        <p className="text-sm text-muted-foreground">{t('branding.categoryHint')}</p>
+        <Select
+          value={vendor.category ?? NONE}
+          disabled={!canEdit || update.isPending}
+          onValueChange={(v) =>
+            update.mutate({ category: v === NONE ? null : (v as VendorCategory) }, { onSuccess: done(t('branding.categorySaved')) })
+          }
+        >
+          <SelectTrigger className="w-full max-w-xs" aria-label={t('branding.category')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>{t('branches.notSet')}</SelectItem>
+            {VENDOR_CATEGORIES.map((c) => (
+              <SelectItem key={c.value} value={c.value}>
+                {categoryLabel(c.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </section>
+
+      {showDesign ? <CardDesignPicker vendor={vendor} canEdit={canEdit} save={save} onSaved={onSaved} /> : null}
+    </div>
+  );
+}
+
+/** The design of the vendor's loyalty cards in the customer app: one of 10, or automatic. */
+export function CardDesignPicker({
+  vendor,
+  canEdit,
+  save,
+  onSaved,
+}: {
+  vendor: Vendor;
+  canEdit: boolean;
+  save: (body: Partial<VendorBranding>) => Promise<Vendor>;
+  onSaved: (v: Vendor) => void;
+}) {
+  const done = (text: string) => (v: Vendor) => {
+    onSaved(v);
+    toast.success(text);
+  };
+  const update = useMutation({ mutationFn: save, onError: (e: unknown) => void toast.error(errorMessage(e)) });
+  const shown = cardDesign(vendor.id, vendor.cardDesign);
+
+  return (
+    <section className="grid gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">{t('branding.design')}</h3>
+        {canEdit && vendor.cardDesign ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={update.isPending}
+            onClick={() => update.mutate({ cardDesign: null }, { onSuccess: done(t('branding.automaticToast')) })}
+          >
+            {t('branding.automatic')}
+          </Button>
+        ) : null}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {t('branding.designHint', { shop: vendor.name })}{' '}
+        {vendor.cardDesign ? t('branding.now', { design: designName(shown) }) : t('branding.noneChosen', { design: designName(shown) })}
+      </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {CARD_DESIGNS.map((d) => {
+          const selected = vendor.cardDesign === d.id;
+          const pending = update.isPending && update.variables?.cardDesign === d.id;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              disabled={!canEdit || update.isPending}
+              onClick={() => update.mutate({ cardDesign: d.id }, { onSuccess: done(t('branding.designToast', { design: designName(d) })) })}
+              className={cn(
+                'group grid gap-1.5 rounded-2xl p-1.5 text-start outline-none transition focus-visible:ring-3 focus-visible:ring-ring/50',
+                selected ? 'bg-brand-soft ring-2 ring-primary' : 'enabled:hover:bg-muted',
+                !canEdit && 'cursor-default',
+              )}
+              aria-pressed={selected}
+              aria-label={t('branding.designLabel', { n: d.id, design: designName(d) })}
+            >
+              <CardPreview design={d} name={vendor.name} logoUrl={vendor.logoUrl} />
+              <span className="flex items-center gap-1.5 px-1 text-sm font-medium">
+                {pending ? <Loader2 className="size-3.5 animate-spin" /> : selected ? <Check className="size-3.5 text-primary" /> : null}
+                {d.id}. {designName(d)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

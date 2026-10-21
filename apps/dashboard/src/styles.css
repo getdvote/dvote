@@ -1,0 +1,519 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Shared branch maps follow the dashboard theme without filtering map artwork. */
+.branch-location-map .maplibregl-map { background: var(--muted); font-family: var(--font-sans); }
+.branch-location-map .maplibregl-ctrl-group {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    box-shadow: 0 2px 10px #00000012;
+}
+.branch-location-map .maplibregl-ctrl-group button { width: 34px; height: 34px; }
+.branch-location-map .maplibregl-ctrl-group button + button { border-color: var(--border); }
+.branch-location-map .maplibregl-ctrl-group button:hover { background: var(--muted); }
+.dark .branch-location-map .maplibregl-ctrl-icon { filter: invert(1); }
+.branch-location-map .maplibregl-ctrl-attrib {
+    padding: 3px 8px;
+    border-start-start-radius: 8px;
+    background: var(--card);
+    color: var(--muted-foreground);
+    font-size: 10px;
+}
+.branch-location-map .maplibregl-ctrl-attrib a { color: inherit; text-decoration: underline; }
+.branch-map-marker { width: 34px; height: 34px; cursor: grab; }
+.branch-map-marker:active { cursor: grabbing; }
+.branch-map-pin {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--card);
+    border-radius: 50% 50% 50% 0;
+    background: var(--primary);
+    transform: rotate(-45deg);
+    box-shadow: 0 3px 12px #00000040;
+}
+.branch-map-pin span { width: 9px; height: 9px; border-radius: 50%; background: var(--primary-foreground); }
+
+/*
+ * dvote design: warm stone neutrals with near-black as the one accent (white in dark mode),
+ * Inter, a stone canvas with the page on a white panel and white rounded cards. Light is the default; .dark on <html> switches every token.
+ */
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: "Inter", "IBM Plex Sans Arabic", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    /* dvote extras: tinted brand surface + status colours */
+    --color-brand-soft: var(--brand-soft);
+    --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-destructive-soft: var(--destructive-soft);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    /* warm stone neutrals; the one accent is near-black */
+    --background: oklch(0.952 0.005 80);
+    --foreground: oklch(0.216 0.006 56);
+    --card: oklch(0.995 0.002 85);
+    --card-foreground: oklch(0.216 0.006 56);
+    --popover: oklch(0.995 0.002 85);
+    --popover-foreground: oklch(0.216 0.006 56);
+    --primary: oklch(0.216 0.006 56);
+    --primary-foreground: oklch(0.985 0.001 106);
+    --secondary: oklch(0.945 0.005 80);
+    --secondary-foreground: oklch(0.216 0.006 56);
+    --muted: oklch(0.948 0.005 80);
+    --muted-foreground: oklch(0.54 0.013 58);
+    --accent: oklch(0.935 0.006 78);
+    --accent-foreground: oklch(0.216 0.006 56);
+    --destructive: oklch(0.6 0.19 25);
+    --border: oklch(0.905 0.006 75);
+    --input: oklch(0.875 0.007 70);
+    --ring: oklch(0.709 0.01 56);
+    --brand-soft: oklch(0.928 0.007 78);
+    --success: oklch(0.56 0.12 150);
+    --success-soft: oklch(0.955 0.025 150);
+    --warning: oklch(0.6 0.12 70);
+    --warning-soft: oklch(0.96 0.04 85);
+    --destructive-soft: oklch(0.96 0.025 25);
+    --chart-1: oklch(0.32 0.01 60);
+    --chart-2: oklch(0.6 0.1 150);
+    --chart-3: oklch(0.72 0.12 70);
+    --chart-4: oklch(0.6 0.06 230);
+    --chart-5: oklch(0.62 0.13 35);
+    --radius: 0.75rem;
+    /* the sidebar is dark in both themes (same values as .dark): it is also the canvas around the page */
+    --sidebar: oklch(0.165 0.004 60); /* = background */
+    --sidebar-foreground: oklch(0.97 0.002 80);
+    --sidebar-primary: oklch(0.96 0.003 80);
+    --sidebar-primary-foreground: oklch(0.216 0.006 56);
+    --sidebar-accent: oklch(0.27 0.006 60);
+    --sidebar-accent-foreground: oklch(0.97 0.002 80);
+    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-ring: oklch(0.553 0.013 58);
+}
+
+.dark {
+    --background: oklch(0.165 0.004 60);
+    --foreground: oklch(0.97 0.002 80);
+    --card: oklch(0.21 0.005 60);
+    --card-foreground: oklch(0.97 0.002 80);
+    --popover: oklch(0.235 0.005 60);
+    --popover-foreground: oklch(0.97 0.002 80);
+    --primary: oklch(0.96 0.003 80);
+    --primary-foreground: oklch(0.216 0.006 56);
+    --secondary: oklch(0.27 0.006 60);
+    --secondary-foreground: oklch(0.97 0.002 80);
+    --muted: oklch(0.26 0.006 60);
+    --muted-foreground: oklch(0.71 0.01 60);
+    --accent: oklch(0.29 0.007 60);
+    --accent-foreground: oklch(0.97 0.002 80);
+    --destructive: oklch(0.7 0.17 25);
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 14%);
+    --ring: oklch(0.553 0.013 58);
+    --brand-soft: oklch(0.29 0.007 60);
+    --success: oklch(0.74 0.13 150);
+    --success-soft: oklch(0.3 0.05 150);
+    --warning: oklch(0.8 0.12 80);
+    --warning-soft: oklch(0.32 0.05 75);
+    --destructive-soft: oklch(0.3 0.07 25);
+    --chart-1: oklch(0.85 0.01 70);
+    --chart-2: oklch(0.7 0.12 150);
+    --chart-3: oklch(0.78 0.12 70);
+    --chart-4: oklch(0.7 0.08 230);
+    --chart-5: oklch(0.7 0.14 35);
+    --sidebar: oklch(0.165 0.004 60); /* = background */
+    --sidebar-foreground: oklch(0.97 0.002 80);
+    --sidebar-primary: oklch(0.96 0.003 80);
+    --sidebar-primary-foreground: oklch(0.216 0.006 56);
+    --sidebar-accent: oklch(0.27 0.006 60);
+    --sidebar-accent-foreground: oklch(0.97 0.002 80);
+    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-ring: oklch(0.553 0.013 58);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  html {
+    @apply font-sans;
+    /* no rubber-band past the top/bottom: it showed the light page colour above the dark canvas */
+    overscroll-behavior-y: none;
+    background-color: var(--sidebar);
+  }
+}
+
+/* "Reduce motion" on the computer: keep changes instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Sidebar logo: a single star spin with a gentle lift of the wordmark. */
+@keyframes dvote-logo-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  [data-spin-on-hover] [data-logo-mark] {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  [data-spin-on-hover]:hover [data-logo-mark] {
+    animation: dvote-logo-spin 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes dvote-wordmark-lift {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-12px); }
+}
+@keyframes dvote-nav-icon-lift {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  40% { transform: translateY(-2px) rotate(-8deg); }
+  70% { transform: translateY(-1px) rotate(3deg); }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  [data-spin-on-hover]:hover [data-logo-wordmark] {
+    animation: dvote-wordmark-lift 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover > svg {
+    animation: dvote-nav-icon-lift 450ms ease-out;
+  }
+}
+
+/* Keep labels mounted so they fade rather than disappearing during the width change. */
+@media (min-width: 768px) {
+  [data-slot="sidebar"] [data-nav-label] {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 220ms ease-out 200ms, transform 350ms ease-out 120ms;
+  }
+  [data-slot="sidebar"][data-collapsible="icon"] [data-nav-label] {
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity 160ms ease-out, transform 250ms ease-out;
+  }
+  [data-slot="sidebar"][data-side="right"][data-collapsible="icon"] [data-nav-label] {
+    transform: translateX(6px);
+  }
+  [data-slot="sidebar-menu-button"] {
+    transition-duration: 500ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar-collapse-toggle > svg {
+    transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar-collapse-toggle[data-expanded="false"] > svg {
+    transform: rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sidebar"] *,
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"] {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* On phones and small tablets, dialogs become bottom sheets. The dialog itself
+   scrolls, while its action footer remains pinned inside the same focus trap. */
+@keyframes dvote-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes dvote-sheet-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@media (max-width: 767px) {
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"] {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 4rem);
+    translate: none;
+    transform: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    background-color: var(--popover);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    scroll-padding-block: 3rem 8rem;
+    animation-duration: 250ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-slot="dialog-content"][data-state="open"],
+  [data-slot="alert-dialog-content"][data-state="open"] {
+    animation-name: dvote-sheet-in;
+  }
+  [data-slot="dialog-content"][data-state="closed"],
+  [data-slot="alert-dialog-content"][data-state="closed"] {
+    animation-name: dvote-sheet-out;
+  }
+  [data-slot="dialog-content"] [data-slot="dialog-footer"],
+  [data-slot="alert-dialog-content"] [data-slot="alert-dialog-footer"],
+  [data-slot="dialog-content"] [data-mobile-dialog-actions] {
+    position: sticky;
+    bottom: calc(-1rem - env(safe-area-inset-bottom));
+    z-index: 10;
+    flex-shrink: 0;
+    margin-inline: -1rem;
+    margin-bottom: calc(-1rem - env(safe-area-inset-bottom));
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--popover);
+  }
+  [data-mobile-dialog-actions] {
+    display: grid;
+    gap: 0.5rem;
+    width: auto;
+    justify-self: stretch;
+  }
+  [data-slot="dialog-footer"] > [data-slot="button"],
+  [data-slot="alert-dialog-footer"] > [data-slot="button"],
+  [data-mobile-dialog-actions] > [data-slot="button"] {
+    min-height: 2.75rem;
+    width: 100%;
+  }
+}
+
+/* Continuous-corner approximation: CSS superellipse curvature is not Figma's
+   percentage-based smoothing. Radius tokens and per-corner radii stay unchanged. */
+@supports (corner-shape: superellipse(1.15)) {
+  @layer base {
+    *,
+    ::before,
+    ::after {
+      corner-shape: superellipse(1.15);
+    }
+
+    /* Circular avatars, status dots, pills and round controls remain circular. */
+    [class~="rounded-full"],
+    [class~="rounded-full"]::before,
+    [class~="rounded-full"]::after,
+    input[type="radio"],
+    [data-slot="slider-thumb"],
+    [data-slot="switch-thumb"] {
+      corner-shape: round;
+    }
+  }
+}
+
+/* Height changes stay in normal document flow, moving surrounding content smoothly. */
+.checklist-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 220ms ease;
+}
+.checklist-reveal[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="tabs-content"][data-state="active"] {
+    animation: dvote-content-reveal 220ms ease-out;
+  }
+}
+@keyframes dvote-content-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Inset drawers feel like a floating panel inside the dashboard canvas. */
+@media (min-width: 768px) {
+  [data-slot="sheet-content"][data-side="left"],
+  [data-slot="sheet-content"][data-side="right"] {
+    top: 1rem;
+    bottom: 1rem;
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+    width: calc(100% - 2rem);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  [data-slot="sheet-content"][data-side="right"] { right: 1rem; }
+  [data-slot="sheet-content"][data-side="left"] { left: 1rem; }
+}
+/* Detail drawers share the mobile bottom-sheet behavior; navigation is separate. */
+@media (max-width: 767px) {
+  [data-slot="sheet-content"][data-side] {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 4rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 0;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation-duration: 250ms;
+  }
+  [data-slot="sheet-content"][data-side][data-state="open"] { animation-name: dvote-sheet-in; }
+  [data-slot="sheet-content"][data-side][data-state="closed"] { animation-name: dvote-sheet-out; }
+  [data-slot="sheet-content"] [data-slot="sheet-footer"] {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--popover);
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* On phones and small tablets, each table row becomes a card: the heading cell
+   on top, every other column as a label/value line, row actions at the bottom.
+   Labels come from the column headers (see useStackedRows in ui/table.tsx). */
+@media (max-width: 767px) {
+  [data-slot="table-container"]:has(> table[data-slot="table"]) { overflow-x: visible; }
+  table[data-slot="table"],
+  table[data-slot="table"] > tbody { display: block; width: 100%; }
+  table[data-slot="table"] > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  table[data-slot="table"] > tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  table[data-slot="table"] > tbody > tr {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+  }
+  table[data-slot="table"] > tbody > tr:last-child { border-width: 1px; }
+  table[data-slot="table"] > tbody > tr > td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
+    padding: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: end;
+  }
+  table[data-slot="table"] > tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 50%;
+    margin-inline-end: auto;
+    padding-inline-end: 0.5rem;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: start;
+  }
+  table[data-slot="table"] > tbody > tr > td > * { min-width: 0; max-width: 100%; }
+  /* data-card="fill" on a cell: its value (a bar, a chart) takes the free width. */
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="fill"] > * { flex: 1 1 8rem; }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="primary"] {
+    display: block;
+    order: -1;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9375rem;
+    text-align: start;
+  }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="primary"]::before,
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="actions"]::before { content: none; }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="actions"] {
+    order: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  /* An actions cell with nothing visible in it (no permission) adds no divider. */
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="actions"]:not(:has(:is(button, a, input):not(.hidden, .hidden *))) {
+    display: none;
+  }
+  /* Loading and empty rows span every column; they stay plain, not cards. */
+  table[data-slot="table"] > tbody > tr:has(> td[data-cell-role="full"]) {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  table[data-slot="table"] > tbody > tr > td[data-cell-role="full"] {
+    display: block;
+    text-align: center;
+  }
+}

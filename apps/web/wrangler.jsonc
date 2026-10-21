@@ -1,0 +1,11 @@
+// Cloudflare (Workers static assets) settings for the customer website dvote.co.
+// Build: `npm run build` (Vite → dist/). Every unknown path (/joy-corner, /joy-corner/join, /c/<id>)
+// returns index.html so the React router opens the right page.
+{
+  "name": "dvote-web",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,93 @@
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+  ApiUnprocessableEntityResponse,
+} from '@nestjs/swagger';
+import { CurrentStaff } from '../auth/current-staff.decorator';
+import { StaffAuthGuard, StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
+import { CollectScanDto, PreviewScanDto, RedeemScanDto } from './dto/scan.dto';
+import {
+  CollectResponseDto,
+  RedeemResponseDto,
+  PreviewScanResponseDto,
+  ScansTodayResponseDto,
+} from './dto/scan-response.dto';
+import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
+import { ScansService } from './scans.service';
+
+/** Used by the staff app after scanning a customer's QR. All staff roles. */
+@ApiTags('vendor: scans')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({
+  description: 'missing_token | invalid_token | token_expired',
+})
+@UseGuards(StaffAuthGuard)
+@UserLimit(LIMITS.scans)
+@StaffRoles('vendor_admin', 'branch_manager', 'staff') // not viewers: read-only
+@Controller('vendor/scans')
+export class ScansController {
+  constructor(private readonly scans: ScansService) {}
+
+  /** My collects and rewards given today (Cairo time), for the dashboard till. */
+  @Get('today')
+  @ApiOkResponse({ type: ScansTodayResponseDto })
+  today(@CurrentStaff() ctx: StaffContext): Promise<ScansTodayResponseDto> {
+    return this.scans.today(ctx);
+  }
+
+  /** What the QR is and whether it can be used here. Changes nothing. */
+  @Post('preview')
+  @HttpCode(200)
+  @ApiOkResponse({ type: PreviewScanResponseDto })
+  @ApiNotFoundResponse({ description: 'qr_invalid' })
+  preview(
+    @CurrentStaff() ctx: StaffContext,
+    @Body() dto: PreviewScanDto,
+  ): Promise<PreviewScanResponseDto> {
+    return this.scans.preview(ctx, dto.code, dto.intent, dto.previewBranchId);
+  }
+
+  /** Enter the receipt total: the server computes and adds the points. */
+  @Post('collect')
+  @HttpCode(200)
+  @ApiOkResponse({ type: CollectResponseDto })
+  @ApiNotFoundResponse({ description: 'qr_invalid' })
+  @ApiBadRequestResponse({
+    description:
+      'wrong_qr_type | branch_required | invalid_branch | validation errors',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'forbidden_branch | user_blocked | not_staff | staff_disabled | vendor_suspended | branch_closed',
+  })
+  @ApiConflictResponse({
+    description:
+      'qr_used | qr_expired | qr_cancelled | no_active_rule | duplicate_receipt | idempotency_key_reused',
+  })
+  @ApiUnprocessableEntityResponse({ description: 'no_points_earned' })
+  collect(
+    @CurrentStaff() ctx: StaffContext,
+    @Body() dto: CollectScanDto,
+  ): Promise<CollectResponseDto> {
+    return this.scans.collect(ctx, dto);
+  }
+
+  /** Confirm a redeem QR: give the reward and take its points from the customer's card. */
+  @Post('redeem')
+  @HttpCode(200)
+  @ApiOkResponse({ type: RedeemResponseDto })
+  @ApiNotFoundResponse({ description: 'qr_invalid' })
+  @ApiBadRequestResponse({ description: 'wrong_qr_type | branch_required | invalid_branch | validation errors' })
+  @ApiForbiddenResponse({ description: 'vendor_mismatch | forbidden_branch | user_blocked | not_staff | staff_disabled | vendor_suspended | branch_closed' })
+  @ApiConflictResponse({ description: 'qr_used | qr_expired | qr_cancelled | reward_unavailable | reward_sold_out | insufficient_points | idempotency_key_reused' })
+  redeem(@CurrentStaff() ctx: StaffContext, @Body() dto: RedeemScanDto): Promise<RedeemResponseDto> {
+    return this.scans.redeem(ctx, dto);
+  }
+}

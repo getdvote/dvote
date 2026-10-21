@@ -1,0 +1,21 @@
+/** Native equivalents of the dashboard's light stone palette and Inter typography. */
+export const theme = {
+  background: '#F0EFEC',
+  surface: '#FEFDFC',
+  text: '#1D1B19',
+  muted: '#736D67',
+  placeholder: '#99918A',
+  primary: '#1D1B19',
+  onPrimary: '#FAFAF9',
+  border: '#E1DFDB',
+  subtle: '#ECEAE6',
+  sidebar: '#100F0E',
+  danger: '#C5443D',
+  dangerSoft: '#FCEEEB',
+  font: { regular: 'Inter_400Regular', medium: 'Inter_500Medium', semibold: 'Inter_600SemiBold', bold: 'Inter_700Bold' },
+  radius: 12,
+  controlHeight: 52,
+  buttonHeight: 52,
+  gutter: 20,
+  maxWidth: 560,
+} as const;

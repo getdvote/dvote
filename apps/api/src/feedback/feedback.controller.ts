@@ -1,0 +1,83 @@
+import { Body, Controller, Get, HttpCode, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import type { users } from '../generated/prisma/client.js';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { CustomerAuthGuard } from '../auth/customer-auth.guard';
+import { AdminApi } from '../auth/admin-api.decorator';
+import { CurrentStaff } from '../auth/current-staff.decorator';
+import { StaffAuthGuard, type StaffContext } from '../auth/staff-auth.guard';
+import { CreateFeedbackDto, MerchantFeedbackDto } from './dto/create-feedback.dto';
+import { ListMerchantFeedbackQueryDto, MerchantFeedbackListDto } from './dto/merchant-feedback-list.dto';
+import { FeedbackService } from './feedback.service';
+
+@ApiTags('app: feedback')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({
+  description: 'missing_token | invalid_token | token_expired',
+})
+@ApiForbiddenResponse({ description: 'provider_not_allowed | user_blocked' })
+@UseGuards(CustomerAuthGuard)
+@Controller('app/feedback')
+export class FeedbackController {
+  constructor(private readonly feedback: FeedbackService) {}
+
+  /** Adds a row to the feedback Google Sheet: time, user id, category, message. */
+  @Post()
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: 'Feedback received' })
+  @ApiServiceUnavailableResponse({
+    description: 'feedback_not_configured | feedback_unavailable',
+  })
+  async create(
+    @CurrentUser() user: users,
+    @Body() dto: CreateFeedbackDto,
+  ): Promise<void> {
+    await this.feedback.send(user.id, dto);
+  }
+}
+
+/** Quick feedback from the merchant dashboard (Get help dialog): any signed-in team member. */
+@ApiTags('vendor: feedback')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({
+  description: 'missing_token | invalid_token | token_expired',
+})
+@UseGuards(StaffAuthGuard)
+@Controller('vendor/feedback')
+export class VendorFeedbackController {
+  constructor(private readonly feedback: FeedbackService) {}
+
+  @Post()
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: 'Feedback received' })
+  @ApiServiceUnavailableResponse({
+    description: 'feedback_not_configured | feedback_unavailable',
+  })
+  async create(
+    @CurrentStaff() ctx: StaffContext,
+    @Body() dto: MerchantFeedbackDto,
+  ): Promise<void> {
+    await this.feedback.sendMerchant(ctx, dto);
+  }
+}
+
+/** Merchant quick feedback for platform admins (dashboard: Feedback page). */
+@AdminApi('admin: feedback')
+@Controller('admin/merchant-feedback')
+export class AdminFeedbackController {
+  constructor(private readonly feedback: FeedbackService) {}
+
+  @Get()
+  @ApiOkResponse({ type: MerchantFeedbackListDto })
+  list(@Query() query: ListMerchantFeedbackQueryDto): Promise<MerchantFeedbackListDto> {
+    return this.feedback.listMerchant(query);
+  }
+}

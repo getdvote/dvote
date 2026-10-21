@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>dvote Loyalty Platform — Project Documentation v2.0</title>
+<!--
+  Source of docs/Coffee_Loyalty_Platform_Documentation.pdf.
+  Edit this file, then rebuild the PDF:  node docs/src/build-pdf.mjs
+-->
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  @page wide { size: A4 landscape; margin: 12mm 12mm; }
+  :root {
+    --ink: #1f1d1a; --muted: #6b665f; --line: #e3ded6; --soft: #f6f3ef;
+    --brown: #6f4e37; --brown-soft: #f3ebe4; --blue: #2f5d8a; --blue-soft: #e8f0f8;
+    --grey: #5f6368; --grey-soft: #eeeeee; --new: #1f7a4d; --new-soft: #e3f3ea;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; color: var(--ink); font: 10pt/1.5 "Segoe UI", system-ui, sans-serif; }
+  h1, h2, h3 { line-height: 1.25; margin: 0; }
+  h2 { font-size: 15pt; margin: 18pt 0 6pt; color: var(--brown); break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+  li { margin-bottom: 2pt; }
+  code { font: 8.8pt Consolas, "Cascadia Mono", monospace; background: var(--soft); padding: 0 3px; border-radius: 3px; }
+  pre { font: 8.6pt/1.45 Consolas, monospace; background: var(--soft); padding: 8pt 10pt; border-radius: 6px; margin: 0 0 8pt; white-space: pre-wrap; break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 9pt; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  th { text-align: left; background: var(--brown-soft); color: var(--brown); font-weight: 600; }
+  th, td { padding: 4pt 6pt; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td code { white-space: nowrap; }
+  .new { display: inline-block; font-size: 7pt; font-weight: 700; letter-spacing: .04em; color: var(--new); background: var(--new-soft); border-radius: 3px; padding: 0 4px; vertical-align: 1px; }
+  .built { display: inline-block; font-size: 7pt; font-weight: 700; color: var(--blue); background: var(--blue-soft); border-radius: 3px; padding: 0 4px; vertical-align: 1px; }
+  .note { background: var(--soft); border-left: 3px solid var(--brown); padding: 6pt 9pt; margin: 6pt 0 10pt; border-radius: 0 6px 6px 0; break-inside: avoid; }
+  .tbl-title { font-weight: 700; margin: 10pt 0 2pt; break-after: avoid; }
+  .tbl-title code { font-size: 9.5pt; background: none; padding: 0; }
+  .muted { color: var(--muted); }
+
+  /* cover */
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; break-after: page; }
+  .cover .kicker { letter-spacing: .3em; font-size: 9pt; color: var(--muted); }
+  .cover h1 { font-size: 30pt; margin: 8pt 0 10pt; color: var(--brown); }
+  .cover .lead { font-size: 13pt; max-width: 130mm; color: var(--ink); }
+  .cover .ver { margin-top: 18pt; color: var(--muted); }
+  /* contents */
+  .toc { break-after: page; }
+  .toc ol { list-style: none; padding: 0; }
+  .toc > ol > li { margin: 6pt 0; font-weight: 600; }
+  .toc ol ol { font-weight: 400; color: var(--muted); padding-left: 14pt; }
+  /* section openers */
+  .section { break-before: page; }
+  .section .eyebrow { letter-spacing: .3em; font-size: 8.5pt; color: var(--muted); margin-top: 0; }
+  .section h1 { font-size: 22pt; color: var(--brown); margin: 2pt 0 2pt; }
+  .section .intro { color: var(--muted); margin-bottom: 8pt; }
+  /* diagrams */
+  figure { margin: 6pt 0 12pt; break-inside: avoid; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
+  .wide-page { page: wide; break-before: page; }
+  svg text { font-family: "Segoe UI", system-ui, sans-serif; }
+  #erd svg { display: block; width: auto; max-width: 100%; height: 148mm; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<div class="cover">
+  <div class="kicker">PROJECT DOCUMENTATION</div>
+  <h1>dvote Loyalty Platform</h1>
+  <div class="lead">Spend-based loyalty points and vendor rewards for coffee shops, collected and redeemed with one-time QR codes. Customer app, staff app, vendor dashboard and admin dashboard.</div>
+  <div class="ver">Version 2.0 · 3 October 2026 · replaces v1.2 (NFC, "buy N get 1 free")</div>
+</div>
+
+<!-- ============================== CONTENTS ============================== -->
+<div class="toc">
+  <h2 style="margin-top:0">Contents</h2>
+  <ol>
+    <li>1. Introduction<ol><li>1.1 Overview · 1.2 Actors and roles · 1.3 Core concepts and business rules</li></ol></li>
+    <li>2. Diagrams<ol><li>2.1 Collecting points · 2.2 Redeeming a reward · 2.3 Entity relationship diagram</li></ol></li>
+    <li>3. Flows and Example<ol><li>3.1 Collect flow · 3.2 Redeem flow · 3.3 What the customer sees · 3.4 Worked example: Joy Corner</li></ol></li>
+    <li>4. Database<ol><li>4.1 Table overview · 4.2 Table definitions · 4.3 Constraints and indexes</li></ol></li>
+    <li>5. Technical Architecture<ol><li>5.1 Tech stack · 5.2 Supporting services · 5.3 Backend decisions · 5.4 QR code security · 5.5 Build order</li></ol></li>
+    <li>6. API Endpoints<ol><li>6.1 Customer app · 6.2 Staff app · 6.3 Vendor dashboard · 6.4 Admin dashboard · 6.5 Error codes</li></ol></li>
+    <li>7. Apps and Dashboards<ol><li>7.1 Staff app · 7.2 Vendor vs admin dashboard</li></ol></li>
+    <li>8. Edge Cases and Fraud<ol><li>8.1 Edge cases · 8.2 Automatic fraud flags</li></ol></li>
+    <li>9. Decisions and Roadmap<ol><li>9.1 Decisions · 9.2 Later versions</li></ol></li>
+  </ol>
+  <div class="note" style="margin-top:16pt">
+    <b>What changed in v2.0.</b> The business moved from "buy N coffees, get 1 free" with NFC cards to <b>spend-based points</b>: each vendor sets how much money earns a point (e.g. 10 EGP = 1 point) and publishes a <b>catalogue of rewards</b> priced in points (e.g. free coffee 300 pts). Points are collected and redeemed with <b>one-time QR codes</b> shown in the customer app and scanned by vendor staff in a new <b>staff app</b>. Removed: <code>nfc_tags</code>, NTAG 424 security, the 10-minute cooldown, <code>programs</code>, <code>wallets</code>, <code>scan_sessions</code>. New: <code>point_rules</code>, <code>rewards</code>, <code>cards</code>, <code>qr_codes</code>. Login moved to Supabase Auth (built in v1.2 work). Items new in this version are marked <span class="new">NEW</span>; endpoints already implemented are marked <span class="built">BUILT</span>.
+  </div>
+</div>
+
+<!-- ============================== 1. INTRODUCTION ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 1</p>
+  <h1>Introduction</h1>
+  <p class="intro">What the platform is, who uses it and the rules it follows.</p>
+
+  <h2>1.1 Overview</h2>
+  <p>A multi-vendor loyalty platform for coffee shops. Customers earn <b>points</b> on every purchase, in proportion to what they spend, and spend those points on <b>rewards</b> that each vendor defines. Points belong to one vendor: points earned at Ecuador can only be spent at Ecuador.</p>
+  <table>
+    <thead><tr><th>Part</th><th>Users</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Customer app (iOS + Android)</td><td>Customers</td><td>Sign in, see their cards (points per vendor), browse vendors and rewards, show a QR to collect points or redeem a reward</td></tr>
+      <tr><td>Staff app (iOS + Android) <span class="new">NEW</span></td><td>Vendor staff, branch managers, vendor admins</td><td>Scan the customer's QR, enter the receipt total to award points, confirm reward redemptions</td></tr>
+      <tr><td>Vendor dashboard (web)</td><td>Vendor admins, branch managers</td><td>Branches, staff, point rule, reward catalogue, reports</td></tr>
+      <tr><td>Admin dashboard (web)</td><td>Platform team</td><td>All vendors, onboarding, customer support, point corrections, fraud review</td></tr>
+    </tbody>
+  </table>
+  <p>Rewards are paid for by the vendor. For the vendor, the platform is a customer-retention and advertising channel.</p>
+  <p><b>v1 scope:</b> collect points by QR, redeem rewards by QR, per-vendor cards, the staff app and both dashboards. Point expiry and push notifications are deferred (see Roadmap).</p>
+
+  <h2>1.2 Actors and roles</h2>
+  <table>
+    <thead><tr><th>Role</th><th>Scope</th><th>Can do</th></tr></thead>
+    <tbody>
+      <tr><td>Customer</td><td>Own account</td><td>Sign in with Google or Facebook, see cards and history, show collect / redeem QR codes</td></tr>
+      <tr><td>Staff</td><td>One branch</td><td>In the staff app: scan QR codes, enter receipt totals, confirm redemptions, see their own activity today</td></tr>
+      <tr><td>Branch manager</td><td>One branch</td><td>Everything staff can do, plus manage the staff of their branch and see branch reports</td></tr>
+      <tr><td>Vendor admin</td><td>One vendor (all branches)</td><td>Manage branches, staff, the point rule and the reward catalogue; reports for their vendor; can also scan (choosing the branch)</td></tr>
+      <tr><td>Platform admin</td><td>Everything</td><td>Onboard vendors, view all vendors, support customers, correct points, review fraud</td></tr>
+    </tbody>
+  </table>
+  <p>Customers use the customer app. Staff, branch managers and vendor admins use the staff app to scan and the vendor dashboard to manage. Platform admins use the admin dashboard.</p>
+
+  <h2>1.3 Core concepts and business rules</h2>
+  <p><b>Vendor vs branch.</b> A vendor is the brand (e.g. Ecuador, Joy Corner); a branch is one physical shop. A chain with 6 shops = 1 vendor, 6 branches.</p>
+  <p><b>Card.</b> One card per customer per vendor: the customer's points at that vendor. A card is created automatically on the customer's <b>first purchase</b> at that vendor; a customer with no points at a vendor has no card for it. Points from any branch of the same vendor add to the same card and never move between vendors.</p>
+  <p><b>Point rule</b> <span class="new">NEW</span>. Each vendor has one active rule (its "settings"): <i>every <code>spend_amount</code> spent earns <code>points_per_spend</code> points</i>, e.g. every 10 EGP = 1 point. Optional: a minimum purchase and a maximum number of points per receipt. Points are always rounded <b>down</b>: 95 EGP at 10 EGP/point = 9 points. Rules are versioned: a new rule applies to purchases from then on; past points never change.</p>
+  <p><b>Rewards</b> <span class="new">NEW</span>. Each vendor publishes a catalogue of rewards priced in points, e.g. free coffee 300 · free cheesecake 500 · coffee + cheesecake 750. Rewards can be edited or archived, never deleted; a redemption keeps a copy of the reward's name and price at that moment.</p>
+  <p><b>Collecting.</b> The customer shows a QR; staff scan it and enter the receipt total; <b>the server</b> applies the vendor's rule and adds the points. The app never decides points.</p>
+  <p><b>Redeeming.</b> The customer picks a reward they can afford and shows a redeem QR; staff scan it; the server checks the balance, deducts the reward's points and records the redemption. The customer chooses when to redeem; nothing is automatic. Leftover points stay on the card (1000 − 300 = 700).</p>
+  <p><b>One-time QR codes</b> <span class="new">NEW</span>. Every QR holds a random single-use code issued by the server, valid for 5 minutes. A screenshot or photo of an old QR is useless.</p>
+  <p><b>Ledger is the source of truth.</b> A card's balance is a cached total and must always equal the sum of that card's point events (earns positive, redemptions negative, admin adjustments either). Every balance change is written in the same database transaction as its ledger row.</p>
+  <p><b>Tenant scoping.</b> Staff only ever see and act on their own vendor (and their own branch, for branch roles).</p>
+</div>
+
+<!-- ============================== 2. DIAGRAMS ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 2</p>
+  <h1>Diagrams</h1>
+  <p class="intro">The two main sequence diagrams and the entity relationship diagram. Section 3 explains each flow step by step.</p>
+
+  <h2>2.1 Sequence diagram: collecting points</h2>
+  <figure><div id="seq-collect"></div><figcaption>Master QR shown (vendor unknown until a staff member scans it). With a vendor QR the only difference is that the QR is tied to one vendor and other vendors' staff are refused.</figcaption></figure>
+
+  <h2>2.2 Sequence diagram: redeeming a reward</h2>
+  <figure><div id="seq-redeem"></div><figcaption>Points are deducted only when staff confirm, with a conditional update, so two scans of the same QR or two simultaneous redemptions cannot both succeed.</figcaption></figure>
+</div>
+
+<div class="wide-page">
+  <h2 style="margin-top:0">2.3 Entity relationship diagram</h2>
+  <p class="muted" style="margin-bottom:4pt">Thirteen tables; <code>vendors</code> is the tenant root. Brown = vendor side, blue = customer and activity, grey = platform. Lines point from a foreign key to the table it references; every activity row also carries <code>vendor_id</code>, and composite foreign keys guarantee its card, branch, rule and reward all belong to that vendor. Dashed = kept but currently unused.</p>
+  <figure style="margin:0"><div id="erd"></div></figure>
+</div>
+
+<!-- ============================== 3. FLOWS ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 3</p>
+  <h1>Flows and Example</h1>
+  <p class="intro">How collecting and redeeming work, then a walk-through with a real vendor.</p>
+
+  <h2>3.1 Collect flow (earning points)</h2>
+  <p>There are two ways to show a collect QR; the server handles both the same way.</p>
+  <table>
+    <thead><tr><th>QR</th><th>Where in the app</th><th>Contains</th><th>Vendor comes from</th></tr></thead>
+    <tbody>
+      <tr><td><b>Master QR</b></td><td>Vendors list page</td><td>One-time code → customer</td><td>The staff member who scans it</td></tr>
+      <tr><td><b>Vendor QR</b></td><td>A vendor's page</td><td>One-time code → customer + that vendor</td><td>The QR; other vendors' staff are refused (<code>vendor_mismatch</code>)</td></tr>
+    </tbody>
+  </table>
+  <p>In both cases the <b>branch comes from the scanning staff member</b>, never from the customer's phone. A vendor admin (who has no branch) picks the branch in the staff app.</p>
+  <ol>
+    <li>Customer taps <b>Collect points</b> (master or vendor QR). The app calls <code>POST /api/app/qr-codes {purpose:"collect", vendorId?}</code>; the server stores a <code>qr_codes</code> row (status active, expires in 5 min, only the code's hash is stored) and returns the code. Any older active collect QR of that customer is cancelled.</li>
+    <li>The app shows the QR and waits, checking the QR's status every 2 seconds.</li>
+    <li>Staff scan it in the staff app. The app calls <code>POST /api/vendor/scans/preview</code> to show what the QR is (collect; vendor allowed).</li>
+    <li>Staff type the receipt total (and optionally the receipt number) and submit <code>POST /api/vendor/scans/collect {code, amount, receiptRef?, branchId?, idempotencyKey}</code>.</li>
+    <li>The server runs the checks below, computes the points with the vendor's active rule and, in <b>one transaction</b>: creates the card if this is the customer's first purchase at this vendor, inserts a <code>point_events</code> row (earn, +points, amount, rule version, branch, staff), adds the points to <code>cards.balance</code> and <code>lifetime_points</code>, and marks the QR used.</li>
+    <li>The staff app shows "<b>+9 points added</b>"; the customer app sees the QR is used and shows "+9 points at Joy Corner · balance 129".</li>
+  </ol>
+  <p class="tbl-title">Server checks for collect, in order</p>
+  <ol>
+    <li>Code exists and is <code>active</code> and not expired (<code>qr_invalid</code>, <code>qr_used</code>, <code>qr_expired</code>).</li>
+    <li>Idempotency key already used → return the original result, add nothing.</li>
+    <li>QR is a collect QR (<code>wrong_qr_type</code>).</li>
+    <li>Staff active; branch known (<code>branch_required</code> for vendor admins); vendor and branch active.</li>
+    <li>Vendor QR: its vendor = the staff member's vendor (<code>vendor_mismatch</code>).</li>
+    <li>Customer not blocked (<code>user_blocked</code>).</li>
+    <li>Vendor has an active rule (<code>no_active_rule</code>); amount valid (<code>invalid_amount</code>); points &gt; 0 (<code>no_points_earned</code>, e.g. 8 EGP at 10 EGP/point or below the minimum purchase); receipt number not already used at this branch (<code>duplicate_receipt</code>).</li>
+  </ol>
+  <p>A failed check returns a clear error to the staff app and changes nothing; the QR stays usable so staff can correct a typo.</p>
+
+  <h2>3.2 Redeem flow</h2>
+  <ol>
+    <li>On a vendor's page, the app lists the rewards with their prices and marks the ones the card can afford.</li>
+    <li>Customer taps a reward → <code>POST /api/app/qr-codes {purpose:"redeem", rewardId}</code>. The server checks the reward is active and the balance is enough (so the customer gets an early "not enough points"), then issues a redeem QR tied to that vendor and reward.</li>
+    <li>Staff scan it → preview shows "<b>Redeem: Free coffee · 300 pts</b>" so staff know what to serve.</li>
+    <li>Staff confirm → <code>POST /api/vendor/scans/redeem {code, branchId?, idempotencyKey}</code>.</li>
+    <li>Checks: code valid (as above); it is a redeem QR; its vendor = the staff member's vendor (<code>vendor_mismatch</code>); reward still active (<code>reward_unavailable</code>); customer not blocked; balance still enough (<code>insufficient_points</code>).</li>
+    <li>One transaction:
+<pre>UPDATE cards SET balance = balance - $cost
+WHERE id = $card AND balance >= $cost
+RETURNING balance;            -- no row ⇒ not enough points ⇒ abort</pre>
+      then insert <code>point_events</code> (redeem, −cost, reward, branch, staff), insert <code>redemptions</code> (with the reward's name and cost copied), mark the QR used.</li>
+    <li>Both apps show "<b>Reward approved: Free coffee</b>", branch and time; staff serve the reward.</li>
+  </ol>
+
+  <h2>3.3 What the customer sees</h2>
+  <ul>
+    <li><b>My cards</b>: one card per vendor where the customer has points (none at first). Each card shows the vendor, balance, and progress to the next reward ("120 / 300 to Free coffee").</li>
+    <li><b>Vendors</b>: all active vendors with their rule ("10 EGP = 1 point") and the master <b>Collect points</b> QR button.</li>
+    <li><b>Vendor page</b>: branches, rule, rewards (affordable ones highlighted), the vendor <b>Collect points</b> QR and a <b>Redeem</b> button per reward.</li>
+    <li><b>History</b>: every earn, redemption and correction on a card, with date, branch and amount.</li>
+  </ul>
+
+  <h2>3.4 Worked example: Joy Corner</h2>
+  <p>Joy Corner has a Smouha branch. Its rule: every 10 EGP = 1 point. Rewards: Free coffee 300 · Free cheesecake 500 · Free coffee + cheesecake 750.</p>
+  <p class="tbl-title">Setup (done once)</p>
+  <table>
+    <thead><tr><th>Table</th><th>Row written</th></tr></thead>
+    <tbody>
+      <tr><td><code>vendors</code></td><td>Joy Corner, currency EGP, active</td></tr>
+      <tr><td><code>branches</code></td><td>Joy Corner Smouha → Joy Corner</td></tr>
+      <tr><td><code>point_rules</code></td><td>version 1, spend_amount 10.00, points_per_spend 1, active</td></tr>
+      <tr><td><code>rewards</code></td><td>3 rows: Free coffee 300, Free cheesecake 500, Free coffee + cheesecake 750</td></tr>
+      <tr><td><code>staff_users</code></td><td>Sara, role staff, branch Smouha (signs in to the staff app)</td></tr>
+      <tr><td><code>users</code></td><td>Karim signs in with Google: one user row (linked to his Supabase account)</td></tr>
+    </tbody>
+  </table>
+  <p class="tbl-title">Karim's Joy Corner card over time</p>
+  <table>
+    <thead><tr><th>Visit</th><th>What happens</th><th>Rows written</th><th>Balance</th><th>App shows</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Shows master QR; Sara scans, enters 95 EGP</td><td>card created; point_events +9 (rule v1)</td><td>9</td><td>New card · 9 / 300 to Free coffee</td></tr>
+      <tr><td>2–20</td><td>Buys regularly, total 2,400 EGP</td><td>point_events +240 in total</td><td>249</td><td>249 / 300</td></tr>
+      <tr><td>21</td><td>Spends 8 EGP</td><td>nothing (<code>no_points_earned</code>)</td><td>249</td><td>Sara sees "0 points: below 10 EGP"</td></tr>
+      <tr><td>22</td><td>Vendor QR, spends 520 EGP</td><td>point_events +52</td><td>301</td><td>Free coffee available</td></tr>
+      <tr><td>22</td><td>Redeems Free coffee; Sara scans and confirms</td><td>point_events −300; redemptions row</td><td>1</td><td>"Reward approved: Free coffee"</td></tr>
+      <tr><td>23</td><td>Shows an old screenshot of a QR</td><td>nothing (<code>qr_used</code>)</td><td>1</td><td>Sara sees "This QR was already used"</td></tr>
+    </tbody>
+  </table>
+  <p>At any time <code>cards.balance</code> equals the sum of Karim's <code>point_events.delta</code> for Joy Corner; <code>lifetime_points</code> keeps counting up (301) and never decreases.</p>
+  <p><b>If Joy Corner changes the rule.</b> Publishing "every 10 EGP = 2 points" adds <code>point_rules</code> version 2 and makes it the active one. Purchases from then on earn double; Karim's earlier points stay as they were, and each earn row records which version it used. <b>If Joy Corner changes a reward</b> (coffee now 350 points), new redemptions use 350; past redemptions keep the 300 they were made at.</p>
+</div>
+
+<!-- ============================== 4. DATABASE ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 4</p>
+  <h1>Database</h1>
+  <p class="intro">All thirteen tables, their columns, constraints and indexes. Source of truth: <code>database/dvote_schema.sql</code>.</p>
+
+  <h2>4.1 Table overview</h2>
+  <table>
+    <thead><tr><th>#</th><th>Table</th><th>Side</th><th>Holds</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>vendors</code></td><td>Vendor</td><td>Brands, e.g. Joy Corner; now with a currency</td></tr>
+      <tr><td>2</td><td><code>branches</code></td><td>Vendor</td><td>Physical shops of a vendor</td></tr>
+      <tr><td>3</td><td><code>staff_users</code></td><td>Vendor</td><td>Vendor admins, branch managers, staff (linked to Supabase Auth)</td></tr>
+      <tr><td>4</td><td><code>point_rules</code> <span class="new">NEW</span></td><td>Vendor</td><td>How spending turns into points, versioned (replaces <code>programs</code>)</td></tr>
+      <tr><td>5</td><td><code>rewards</code> <span class="new">NEW</span></td><td>Vendor</td><td>Each vendor's reward catalogue, priced in points</td></tr>
+      <tr><td>6</td><td><code>users</code></td><td>Customer</td><td>Customers of the app (linked to Supabase Auth)</td></tr>
+      <tr><td>7</td><td><code>user_identities</code></td><td>Customer</td><td>Kept but unused: Supabase Auth tracks Google / Facebook identities</td></tr>
+      <tr><td>8</td><td><code>cards</code> <span class="new">NEW</span></td><td>Customer</td><td>One points balance per customer per vendor (replaces <code>wallets</code>)</td></tr>
+      <tr><td>9</td><td><code>qr_codes</code> <span class="new">NEW</span></td><td>Activity</td><td>Every QR the app shows: one-time, 5 minutes (replaces <code>scan_sessions</code>)</td></tr>
+      <tr><td>10</td><td><code>point_events</code></td><td>Activity</td><td>The ledger: every earn, redemption and correction; append-only</td></tr>
+      <tr><td>11</td><td><code>redemptions</code></td><td>Activity</td><td>Every reward given, with the reward's name and price at that time</td></tr>
+      <tr><td>12</td><td><code>platform_admins</code></td><td>Platform</td><td>Your team (admin dashboard)</td></tr>
+      <tr><td>13</td><td><code>fraud_flags</code></td><td>Platform</td><td>Suspicious activity for admins to review</td></tr>
+    </tbody>
+  </table>
+  <p>Removed in v2.0: <code>nfc_tags</code>, <code>programs</code>, <code>wallets</code>, <code>scan_sessions</code>. Every table has <code>id uuid</code>, <code>created_at</code> and <code>updated_at</code> (UTC, <code>updated_at</code> kept current by a trigger). Business rows are never deleted; they change <code>status</code>.</p>
+
+  <h2>4.2 Table definitions</h2>
+
+  <p class="tbl-title"><code>vendors</code></p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>name</td><td>varchar(120)</td><td>Brand name shown in the app</td></tr>
+    <tr><td>logo_url, contact_email</td><td>varchar, nullable</td><td></td></tr>
+    <tr><td>currency <span class="new">NEW</span></td><td>char(3), default EGP</td><td>Currency of receipt totals and rules</td></tr>
+    <tr><td>status</td><td>enum</td><td>active, suspended</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>branches</code></p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>vendor_id</td><td>uuid FK → vendors</td><td>UNIQUE (id, vendor_id) lets other tables prove a branch belongs to a vendor</td></tr>
+    <tr><td>name, address</td><td>varchar</td><td>e.g. "Smouha"</td></tr>
+    <tr><td>lat, lng</td><td>decimal(9,6), nullable</td><td>For the map</td></tr>
+    <tr><td>timezone</td><td>varchar, default Africa/Cairo</td><td>For displaying times</td></tr>
+    <tr><td>status</td><td>enum</td><td>active, closed</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>staff_users</code></p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>vendor_id</td><td>uuid FK → vendors</td><td>Always set</td></tr>
+    <tr><td>branch_id</td><td>uuid, nullable</td><td>NULL for vendor admins, required for the other roles; must be a branch of the same vendor</td></tr>
+    <tr><td>name, email</td><td>varchar</td><td>email unique (case-insensitive)</td></tr>
+    <tr><td>auth_user_id</td><td>uuid, UNIQUE</td><td>The Supabase Auth account; passwords live in Supabase</td></tr>
+    <tr><td>password_hash</td><td>varchar, nullable</td><td>Legacy, unused</td></tr>
+    <tr><td>role</td><td>enum</td><td>vendor_admin, branch_manager, staff</td></tr>
+    <tr><td>status</td><td>enum</td><td>active, disabled (disabled = blocked immediately)</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>point_rules</code> <span class="new">NEW</span></p>
+  <p class="muted">Points for a purchase = <code>floor(amount ÷ spend_amount) × points_per_spend</code>, capped at <code>max_points_per_purchase</code>; 0 if <code>amount &lt; min_purchase</code>.</p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>vendor_id</td><td>uuid FK → vendors</td><td></td></tr>
+    <tr><td>version</td><td>int ≥ 1</td><td>+1 each time the vendor changes its rule</td></tr>
+    <tr><td>spend_amount</td><td>numeric(12,2) &gt; 0</td><td>e.g. 10.00 (EGP)</td></tr>
+    <tr><td>points_per_spend</td><td>int &gt; 0, default 1</td><td>Points for each spend_amount</td></tr>
+    <tr><td>min_purchase</td><td>numeric(12,2) ≥ 0, default 0</td><td>Smaller receipts earn nothing</td></tr>
+    <tr><td>max_points_per_purchase</td><td>int, nullable</td><td>Optional cap per receipt</td></tr>
+    <tr><td>is_active</td><td>bool</td><td>Only one active rule per vendor</td></tr>
+    <tr><td>created_by_staff_id</td><td>uuid FK → staff_users, nullable</td><td>Who published it</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>rewards</code> <span class="new">NEW</span></p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>vendor_id</td><td>uuid FK → vendors</td><td></td></tr>
+    <tr><td>name</td><td>varchar(120)</td><td>e.g. "Free cheesecake"</td></tr>
+    <tr><td>description, image_url</td><td>varchar, nullable</td><td>Shown in the app</td></tr>
+    <tr><td>points_cost</td><td>int &gt; 0</td><td>e.g. 500</td></tr>
+    <tr><td>status</td><td>enum</td><td>active, archived (archived rewards disappear from the app)</td></tr>
+    <tr><td>sort_order</td><td>int</td><td>Display order</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>users</code> (customers)</p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>auth_user_id</td><td>uuid, UNIQUE</td><td>The Supabase Auth account; the row is created on the first API call</td></tr>
+    <tr><td>name, email, avatar_url</td><td>varchar, nullable</td><td>From Google / Facebook; editable</td></tr>
+    <tr><td>phone</td><td>varchar, nullable</td><td>Optional, not used for login</td></tr>
+    <tr><td>status</td><td>enum</td><td>active, blocked</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>cards</code> <span class="new">NEW</span> (replaces wallets)</p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>user_id, vendor_id</td><td>uuid FKs</td><td>UNIQUE (user_id, vendor_id): one card per customer per vendor</td></tr>
+    <tr><td>balance</td><td>int ≥ 0</td><td>Cached sum of the card's point_events.delta</td></tr>
+    <tr><td>lifetime_points</td><td>int ≥ 0</td><td>Total ever earned; never decreases</td></tr>
+    <tr><td>last_activity_at</td><td>timestamptz</td><td>For sorting cards and reports</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>qr_codes</code> <span class="new">NEW</span> (replaces scan_sessions)</p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>user_id</td><td>uuid FK → users</td><td>Whose QR it is</td></tr>
+    <tr><td>purpose</td><td>enum</td><td>collect, redeem</td></tr>
+    <tr><td>vendor_id</td><td>uuid FK, nullable</td><td>NULL = master QR; set for vendor QRs and always for redeem</td></tr>
+    <tr><td>reward_id</td><td>uuid, nullable</td><td>Redeem only; must be a reward of that vendor</td></tr>
+    <tr><td>token_hash</td><td>char(64), UNIQUE</td><td>SHA-256 of the code in the QR; the code itself is never stored</td></tr>
+    <tr><td>status</td><td>enum</td><td>active, used, expired, cancelled</td></tr>
+    <tr><td>expires_at</td><td>timestamptz</td><td>Default created_at + 5 minutes</td></tr>
+    <tr><td>used_at, used_by_staff_id, used_branch_id</td><td>nullable</td><td>Required once used: who scanned it, where</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>point_events</code> (ledger, append-only)</p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>card_id, vendor_id</td><td>uuid FKs</td><td>The card must belong to that vendor</td></tr>
+    <tr><td>branch_id</td><td>uuid, nullable</td><td>Where it happened (NULL only for admin corrections)</td></tr>
+    <tr><td>type</td><td>enum</td><td>earn, redeem, adjust</td></tr>
+    <tr><td>delta</td><td>int</td><td>+points (earn), −points_cost (redeem), ± (adjust)</td></tr>
+    <tr><td>purchase_amount <span class="new">NEW</span></td><td>numeric(12,2)</td><td>Earn: receipt total</td></tr>
+    <tr><td>receipt_ref <span class="new">NEW</span></td><td>varchar(64), nullable</td><td>Earn: optional receipt number; unique per branch</td></tr>
+    <tr><td>rule_id <span class="new">NEW</span></td><td>uuid, nullable</td><td>Earn: rule version used</td></tr>
+    <tr><td>reward_id <span class="new">NEW</span></td><td>uuid, nullable</td><td>Redeem: reward given</td></tr>
+    <tr><td>qr_code_id <span class="new">NEW</span></td><td>uuid FK, nullable</td><td>The QR scanned; at most one event per QR</td></tr>
+    <tr><td>staff_id <span class="new">NEW</span></td><td>uuid FK, nullable</td><td>Who scanned (earn and redeem)</td></tr>
+    <tr><td>created_by, reason</td><td>nullable</td><td>Adjust: platform admin and reason (required)</td></tr>
+    <tr><td>idempotency_key</td><td>varchar, UNIQUE</td><td>Sent by the staff app per submit; a retry returns the first result</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>redemptions</code></p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>card_id, vendor_id, reward_id, branch_id</td><td>uuid FKs</td><td>All must belong to the same vendor</td></tr>
+    <tr><td>staff_id</td><td>uuid FK → staff_users</td><td>Who confirmed it</td></tr>
+    <tr><td>point_event_id</td><td>uuid FK, UNIQUE</td><td>The matching negative ledger row</td></tr>
+    <tr><td>reward_name, points_cost</td><td>snapshot</td><td>Copied from the reward at redemption time</td></tr>
+  </tbody></table>
+
+  <p class="tbl-title"><code>platform_admins</code>, <code>user_identities</code></p>
+  <p>Unchanged from v1.2. Platform admins will move to Supabase Auth with two-factor login (adds <code>auth_user_id</code>). <code>user_identities</code> is kept but not used.</p>
+
+  <p class="tbl-title"><code>fraud_flags</code></p>
+  <table><thead><tr><th style="width:24%">Column</th><th style="width:28%">Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>type</td><td>enum</td><td>too_many_collects, large_purchase, branch_spike, staff_spike <span class="new">NEW</span></td></tr>
+    <tr><td>vendor_id, branch_id, user_id, staff_id</td><td>uuid FKs, nullable</td><td>Who it is about (at least one); <code>staff_id</code> replaces <code>tag_id</code></td></tr>
+    <tr><td>details</td><td>jsonb</td><td>The numbers behind the flag</td></tr>
+    <tr><td>status, reviewed_by</td><td>enum, FK</td><td>open, dismissed, confirmed; reviewer required once closed</td></tr>
+  </tbody></table>
+
+  <h2>4.3 Constraints and indexes</h2>
+  <ul>
+    <li>One active rule per vendor (partial unique index); <code>UNIQUE (vendor_id, version)</code>.</li>
+    <li><code>cards</code>: one per (user, vendor); <code>balance ≥ 0</code>.</li>
+    <li><code>point_events</code>: earn ⇒ delta &gt; 0 with amount, rule, QR, staff, branch; redeem ⇒ delta &lt; 0 with reward, QR, staff, branch; adjust ⇒ admin and reason. UPDATE and DELETE are blocked by a trigger: corrections are new adjust rows.</li>
+    <li>Composite foreign keys on <code>(…, vendor_id)</code>: a ledger row's card, branch, rule and reward must all belong to its vendor, so points can never cross vendors even by a bug.</li>
+    <li>At most one ledger row per QR code; a receipt number earns once per branch.</li>
+    <li><code>qr_codes</code>: redeem ⇒ vendor and reward set; collect ⇒ no reward; used ⇒ used_at, staff and branch set.</li>
+    <li>Indexes: point_events by (card, time), (branch, time), (vendor, time), (staff, time); rewards by (vendor, status, order); qr_codes by (user, time); fraud_flags by (status, time).</li>
+  </ul>
+</div>
+
+<!-- ============================== 5. ARCHITECTURE ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 5</p>
+  <h1>Technical Architecture</h1>
+  <p class="intro">Stack, services, implementation decisions and QR security.</p>
+
+  <h2>5.1 Tech stack</h2>
+  <table>
+    <thead><tr><th>Layer</th><th>Choice</th><th>Why for this project</th></tr></thead>
+    <tbody>
+      <tr><td>Database</td><td>PostgreSQL 18</td><td>A money-like ledger needs ACID transactions; partial unique indexes, CHECK constraints, composite keys and triggers enforce the rules in the database itself</td></tr>
+      <tr><td>ORM</td><td>Prisma 7</td><td>Generated TypeScript types; hand-written SQL migrations keep the constraints Prisma can't express</td></tr>
+      <tr><td>Backend</td><td>NestJS (TypeScript)</td><td>One module per feature, guards for role and tenant scoping</td></tr>
+      <tr><td>Web dashboard</td><td>React + TypeScript (Vite), Ant Design, TanStack Query, Recharts</td><td>One app with role-based routes for vendors and platform admins</td></tr>
+      <tr><td>Customer app <span class="new">NEW</span></td><td>React Native + Expo</td><td>Same language as the backend and dashboard; shows QR codes (no NFC needed any more)</td></tr>
+      <tr><td>Staff app <span class="new">NEW</span></td><td>React Native + Expo (separate app)</td><td>Camera QR scanner, receipt-total entry, redemption confirmation</td></tr>
+      <tr><td>Auth</td><td>Supabase Auth</td><td>Google / Facebook for customers, email + password for staff; the backend only verifies tokens</td></tr>
+      <tr><td>API contract</td><td>OpenAPI from NestJS</td><td>One generated TypeScript client shared by the dashboard and both apps</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.2 Supporting services</h2>
+  <ul>
+    <li><b>Supabase Auth</b>: customers sign in with Google or Facebook; staff are invited by email and set a password. Supabase issues and refreshes tokens; the backend checks them locally with the project's public keys and maps each one to its own <code>users</code> or <code>staff_users</code> row. Apple sign-in is postponed (paid developer account); an iOS release offering Google/Facebook will likely need it.</li>
+    <li><b>Email</b>: Supabase sends staff invites and password resets; production needs its own SMTP provider (the built-in sender is rate-limited).</li>
+    <li><b>Push notifications</b> (later): Firebase Cloud Messaging, to confirm points when the app is closed.</li>
+    <li><b>Hosting</b>: one backend container plus one managed PostgreSQL. No microservices, queues or Redis in v1.</li>
+  </ul>
+
+  <h2>5.3 Backend decisions</h2>
+  <ul>
+    <li><b>Balance changes are atomic.</b> Earn and redeem run inside <code>prisma.$transaction</code> with the ledger insert. Redemption uses a conditional <code>UPDATE … WHERE balance &gt;= cost</code>; marking the QR used is also conditional (<code>WHERE status = 'active'</code>), so the same QR can never be processed twice, even by two staff phones at once.</li>
+    <li><b>Money is exact.</b> Amounts are <code>numeric(12,2)</code> in the database and integer minor units (piastres) in code, never floating point. Points round down.</li>
+    <li><b>Tenant scoping in one place.</b> A guard builds the staff member's context (vendor, branch, role) once per request; every vendor-side query filters by it.</li>
+    <li><b>Idempotency.</b> The staff app sends a fresh key with each submit; a retry after a lost response returns the original result.</li>
+    <li><b>Customer confirmation.</b> While a QR is on screen the customer app checks its status every 2 seconds and shows the result as soon as it is used.</li>
+    <li><b>Fraud checks</b>: a scheduled job writes <code>fraud_flags</code>; flags never block a purchase by themselves.</li>
+    <li><b>Modules</b>: auth, users, vendors, branches, staff, point-rules, rewards, cards, qr-codes, scans (collect + redeem), redemptions, fraud-flags, admin, reports.</li>
+  </ul>
+
+  <h2>5.4 QR code security <span class="new">NEW</span></h2>
+  <p>The QR never contains the customer's id or anything personal: it holds a random one-time code (128 bits) issued by the server, e.g. <code>dvote:q1:Zx3…</code>.</p>
+  <table>
+    <thead><tr><th>Threat</th><th>Protection</th></tr></thead>
+    <tbody>
+      <tr><td>Screenshot or photo of a QR reused later</td><td>Single use; expires after 5 minutes; a new QR cancels the previous one</td></tr>
+      <tr><td>Someone guesses another customer's QR</td><td>128-bit random code; nothing to guess from a user id</td></tr>
+      <tr><td>Database leak exposes live QR codes</td><td>Only the SHA-256 hash is stored</td></tr>
+      <tr><td>Staff of another vendor redeem a reward</td><td>Redeem QRs are tied to one vendor and reward (<code>vendor_mismatch</code>)</td></tr>
+      <tr><td>Same QR scanned on two staff phones at once</td><td>Conditional update: only the first succeeds</td></tr>
+      <tr><td>Points awarded twice for one receipt</td><td>One ledger row per QR; optional receipt number unique per branch</td></tr>
+    </tbody>
+  </table>
+  <p>The app never decides points: it only shows the code. All API calls require a signed-in token over HTTPS.</p>
+
+  <h2>5.5 Build order</h2>
+  <ol>
+    <li>Backend scaffold, Prisma, health check. <span class="built">DONE</span></li>
+    <li>Customer sign-in (Google, Facebook) and <code>/api/app/me</code>. <span class="built">DONE</span></li>
+    <li>Staff sign-in, invites and staff management. <span class="built">DONE</span></li>
+    <li>Vendor setup APIs: branches, point rule, rewards.</li>
+    <li>QR codes, collect flow and cards, with integration tests on a real PostgreSQL.</li>
+    <li>Redeem flow.</li>
+    <li>Reports, admin APIs, fraud-flag job, then the React dashboard.</li>
+    <li>React Native customer app and staff app (shared generated API client).</li>
+  </ol>
+</div>
+
+<!-- ============================== 6. API ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 6</p>
+  <h1>API Endpoints</h1>
+  <p class="intro">Every call sends a Supabase access token. JSON is camelCase; errors carry a stable <code>code</code>.</p>
+
+  <h2>6.1 Customer app (<code>/api/app</code>) — customer token</h2>
+  <table>
+    <thead><tr><th style="width:12%">Method</th><th style="width:30%">Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>GET / PATCH</td><td>/me <span class="built">BUILT</span></td><td>Profile; update name, email, phone (the profile is created on the first call)</td></tr>
+      <tr><td>GET</td><td>/cards</td><td>My cards: vendor, balance, lifetime points, next reward progress</td></tr>
+      <tr><td>GET</td><td>/cards/{id}/events</td><td>History of one card</td></tr>
+      <tr><td>GET</td><td>/vendors</td><td>Active vendors with branches and rule summary</td></tr>
+      <tr><td>GET</td><td>/vendors/{id}</td><td>Vendor page: branches, rule, rewards, my card (if any)</td></tr>
+      <tr><td>POST</td><td>/qr-codes</td><td><code>{purpose:"collect", vendorId?}</code> or <code>{purpose:"redeem", rewardId}</code> → <code>{id, code, expiresAt}</code></td></tr>
+      <tr><td>GET</td><td>/qr-codes/{id}</td><td>Status (active, used, expired, cancelled) and, once used, the result (+points or reward)</td></tr>
+      <tr><td>POST</td><td>/qr-codes/{id}/cancel</td><td>Customer closes the QR screen</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.2 Staff app (<code>/api/vendor</code>) — staff token <span class="new">NEW</span></h2>
+  <table>
+    <thead><tr><th style="width:12%">Method</th><th style="width:30%">Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/me <span class="built">BUILT</span></td><td>Signed-in staff member: role, vendor, branch</td></tr>
+      <tr><td>POST</td><td>/scans/preview</td><td><code>{code}</code> → collect or redeem, the reward to serve, whether it can be used here. No customer personal data</td></tr>
+      <tr><td>POST</td><td>/scans/collect</td><td><code>{code, amount, receiptRef?, branchId?, idempotencyKey}</code> → points added</td></tr>
+      <tr><td>POST</td><td>/scans/redeem</td><td><code>{code, branchId?, idempotencyKey}</code> → reward approved</td></tr>
+      <tr><td>GET</td><td>/scans/today</td><td>The staff member's own collects and redemptions today</td></tr>
+    </tbody>
+  </table>
+  <p><code>branchId</code> is only sent by vendor admins (who have no branch); for everyone else the branch is their own.</p>
+
+  <h2>6.3 Vendor dashboard (<code>/api/vendor</code>) — staff token, scoped to the staff member's vendor</h2>
+  <table>
+    <thead><tr><th style="width:12%">Method</th><th style="width:30%">Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>GET / POST</td><td>/staff <span class="built">BUILT</span></td><td>List staff; invite a new staff member by email</td></tr>
+      <tr><td>GET / PATCH</td><td>/staff/{id} <span class="built">BUILT</span></td><td>View; edit name, role, branch; disable</td></tr>
+      <tr><td>GET / POST / PATCH</td><td>/branches</td><td>Own branches</td></tr>
+      <tr><td>GET / POST</td><td>/point-rules</td><td>Current rule and history; publish a new version (vendor admin)</td></tr>
+      <tr><td>GET / POST / PATCH</td><td>/rewards</td><td>Reward catalogue; archive instead of delete (vendor admin)</td></tr>
+      <tr><td>GET</td><td>/summary?from&amp;to</td><td>Points issued, sales recorded, redemptions, unique and returning customers</td></tr>
+      <tr><td>GET</td><td>/events?branchId&amp;from&amp;to</td><td>Ledger rows for own branches</td></tr>
+      <tr><td>GET</td><td>/redemptions</td><td>Rewards given at own branches</td></tr>
+      <tr><td>GET</td><td>/fraud/flags</td><td>Flags for own vendor (read-only)</td></tr>
+    </tbody>
+  </table>
+  <p>Vendors never see customer names or emails, only counts.</p>
+
+  <h2>6.4 Admin dashboard (<code>/api/admin</code>) — platform admin token + 2FA</h2>
+  <table>
+    <thead><tr><th style="width:12%">Method</th><th style="width:30%">Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>GET / POST / PATCH</td><td>/vendors</td><td>Onboard and manage vendors, including their first vendor admin</td></tr>
+      <tr><td>GET</td><td>/vendors/{id}/summary</td><td>Any vendor's stats</td></tr>
+      <tr><td>GET / PATCH</td><td>/users/{id}</td><td>Customer lookup for support; block / unblock</td></tr>
+      <tr><td>POST</td><td>/cards/{id}/adjust</td><td>Manual point correction (adjust ledger row with reason)</td></tr>
+      <tr><td>GET / PATCH</td><td>/fraud/flags</td><td>Suspicious activity list; dismiss or confirm</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.5 Error codes for scans</h2>
+  <table>
+    <thead><tr><th style="width:30%">Code</th><th>Meaning (shown to staff)</th></tr></thead>
+    <tbody>
+      <tr><td><code>qr_invalid</code></td><td>Not a dvote QR, or unknown code</td></tr>
+      <tr><td><code>qr_used</code> / <code>qr_expired</code> / <code>qr_cancelled</code></td><td>Ask the customer to show a new QR</td></tr>
+      <tr><td><code>wrong_qr_type</code></td><td>A redeem QR was submitted as collect or the reverse</td></tr>
+      <tr><td><code>vendor_mismatch</code></td><td>The QR belongs to another vendor</td></tr>
+      <tr><td><code>branch_required</code></td><td>Vendor admin must choose a branch</td></tr>
+      <tr><td><code>no_active_rule</code></td><td>The vendor has not set a point rule yet</td></tr>
+      <tr><td><code>invalid_amount</code> / <code>no_points_earned</code></td><td>Amount not valid, or too small to earn a point</td></tr>
+      <tr><td><code>duplicate_receipt</code></td><td>This receipt number already earned points here</td></tr>
+      <tr><td><code>reward_unavailable</code> / <code>insufficient_points</code></td><td>Reward archived, or the card no longer has enough points</td></tr>
+      <tr><td><code>user_blocked</code></td><td>Customer account blocked by the platform</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================== 7. APPS & DASHBOARDS ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 7</p>
+  <h1>Apps and Dashboards</h1>
+  <p class="intro">What staff, vendors and platform admins can see and do.</p>
+
+  <h2>7.1 Staff app <span class="new">NEW</span></h2>
+  <ul>
+    <li><b>Sign in</b> with the email and password from the invite. Vendor admins choose the branch they are working at.</li>
+    <li><b>Scan</b>: camera opens; scanning a customer's QR shows either the <b>Enter receipt total</b> form (collect) or <b>Redeem: Free coffee · 300 pts · Confirm</b> (redeem).</li>
+    <li><b>Result</b>: "+9 points added" or "Reward approved", or a clear error (Section 6.5).</li>
+    <li><b>Today</b>: the staff member's own collects and redemptions for the day.</li>
+  </ul>
+
+  <h2>7.2 Vendor vs admin dashboard</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>Vendor dashboard</th><th>Admin dashboard</th></tr></thead>
+    <tbody>
+      <tr><td>Scope</td><td>One vendor and its branches</td><td>All vendors</td></tr>
+      <tr><td>Points issued, sales recorded per day / branch</td><td>Own only</td><td>All, comparable</td></tr>
+      <tr><td>Redemptions</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Unique and returning customers</td><td>Counts only</td><td>Yes</td></tr>
+      <tr><td>Customer personal details</td><td>No</td><td>Yes, for support</td></tr>
+      <tr><td>Branches, staff</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Point rule (e.g. 10 EGP = 1 pt)</td><td>Publish a new version</td><td>View, override</td></tr>
+      <tr><td>Reward catalogue</td><td>Add, edit, archive</td><td>View</td></tr>
+      <tr><td>Manual point correction</td><td>No</td><td>Yes, with reason</td></tr>
+      <tr><td>Fraud flags</td><td>Own, view only</td><td>All; dismiss or confirm</td></tr>
+      <tr><td>Vendor onboarding, billing</td><td>No</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>Tenant scoping.</b> Every vendor-side query filters by the signed-in staff member's vendor (and branch for branch roles), enforced once in a guard. Rows of other vendors or branches are reported as not found.</div>
+</div>
+
+<!-- ============================== 8. EDGE CASES ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 8</p>
+  <h1>Edge Cases and Fraud</h1>
+  <p class="intro">What goes wrong in real cafés and how the system handles it.</p>
+
+  <h2>8.1 Edge cases and failures</h2>
+  <table>
+    <thead><tr><th style="width:28%">Situation</th><th style="width:26%">What happens</th><th>Handling</th></tr></thead>
+    <tbody>
+      <tr><td>Points added, response lost on bad café wifi</td><td>Staff app retries</td><td>Same idempotency key → same result, no double points</td></tr>
+      <tr><td>QR expires while the customer waits in line</td><td>5 minutes pass</td><td>App shows a fresh QR automatically</td></tr>
+      <tr><td>Staff type a wrong total (e.g. 950 instead of 95)</td><td>Points already added</td><td>Platform admin corrects with an adjust row; <code>large_purchase</code> flag helps spot it. Later: vendor-side void within a few minutes</td></tr>
+      <tr><td>Receipt below one point (8 EGP)</td><td>0 points</td><td><code>no_points_earned</code>; nothing written; QR still usable</td></tr>
+      <tr><td>Customer shows an old screenshot</td><td>QR already used or expired</td><td>Rejected; customer opens a new QR</td></tr>
+      <tr><td>Vendor QR of Joy Corner scanned at Ecuador</td><td>Wrong vendor</td><td><code>vendor_mismatch</code>; the master QR works at any vendor</td></tr>
+      <tr><td>Two staff scan the same QR at once</td><td>Race</td><td>Conditional updates: exactly one succeeds</td></tr>
+      <tr><td>Customer redeems from two phones at once</td><td>Race on the balance</td><td>Conditional <code>UPDATE … WHERE balance &gt;= cost</code>: only one succeeds</td></tr>
+      <tr><td>Vendor changes its rule or a reward's price</td><td>Old points / redemptions</td><td>New rule applies from now on; past rows keep their rule version and reward snapshot</td></tr>
+      <tr><td>Reward archived while a redeem QR is open</td><td>Reward gone</td><td><code>reward_unavailable</code>; no points deducted</td></tr>
+      <tr><td>Staff member leaves</td><td>Account disabled</td><td>Blocked on the next request; past activity kept</td></tr>
+      <tr><td>Staff give points without a sale</td><td>Insider abuse</td><td><code>staff_spike</code>, <code>too_many_collects</code> and <code>large_purchase</code> flags; vendor sees per-staff numbers</td></tr>
+      <tr><td>Customer has no internet at the counter</td><td>App cannot fetch a QR</td><td>v1: not supported (a QR needs the server). Later: pre-fetched codes</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.2 Automatic fraud flags</h2>
+  <p>A scheduled job writes one <code>fraud_flags</code> row per finding, with the numbers in <code>details</code>. Flags never block anything on their own; a platform admin reviews them.</p>
+  <ul>
+    <li><code>too_many_collects</code>: more than 3 collects for one customer in a day at one vendor.</li>
+    <li><code>large_purchase</code>: a receipt far above the branch's usual size (e.g. 5× its 30-day average).</li>
+    <li><code>branch_spike</code>: a branch's daily points above 3× its 30-day average.</li>
+    <li><code>staff_spike</code>: one staff member's daily points above 3× their own average.</li>
+  </ul>
+</div>
+
+<!-- ============================== 9. DECISIONS ============================== -->
+<div class="section">
+  <p class="eyebrow">SECTION 9</p>
+  <h1>Decisions and Roadmap</h1>
+  <p class="intro">What is decided, and what comes later.</p>
+
+  <h2>9.1 Decisions</h2>
+  <ul>
+    <li><b>Decided</b> <span class="new">NEW</span>: spend-based points with a versioned rule per vendor; points round down.</li>
+    <li><b>Decided</b> <span class="new">NEW</span>: each vendor defines a reward catalogue priced in points; the customer chooses when to redeem.</li>
+    <li><b>Decided</b> <span class="new">NEW</span>: QR codes replace NFC. QRs hold a one-time server-issued code (5 minutes, single use), never the user id.</li>
+    <li><b>Decided</b> <span class="new">NEW</span>: master QR (any vendor) and vendor QR (one vendor); the branch always comes from the scanning staff member.</li>
+    <li><b>Decided</b> <span class="new">NEW</span>: a separate staff app (React Native) for scanning.</li>
+    <li><b>Decided</b>: Supabase Auth: Google and Facebook for customers, invited email + password for staff; Apple postponed.</li>
+    <li><b>Decided</b>: React Native + Expo for the mobile apps (replaces Flutter).</li>
+    <li><b>Removed</b>: NFC cards, NTAG 424 DNA, the 10-minute cooldown (one-time QRs and fraud flags replace it).</li>
+  </ul>
+
+  <h2>9.2 Later versions</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>Why</th><th>Needs</th></tr></thead>
+    <tbody>
+      <tr><td>Push notifications</td><td>Confirm points even when the app is closed</td><td>FCM / APNs, device tokens table</td></tr>
+      <tr><td>Point expiry</td><td>Limits vendor liability for old points</td><td>Expiry rule on point_rules; ledger already has dates</td></tr>
+      <tr><td>Void a collect</td><td>Fix a mistyped total without the platform team</td><td>Vendor-side reversal within N minutes (adjust row)</td></tr>
+      <tr><td>Vendor promotions</td><td>Double points days, new-customer bonus</td><td>Promotion rules on top of point_rules</td></tr>
+      <tr><td>Offline QR</td><td>Customers without internet at the counter</td><td>Pre-fetched signed codes</td></tr>
+      <tr><td>POS integration</td><td>Receipt total sent automatically, no typing</td><td>Per-POS connectors</td></tr>
+      <tr><td>Apple sign-in</td><td>Required for an iOS release with social login</td><td>Apple Developer Program</td></tr>
+      <tr><td>Vendor billing</td><td>Monetise the platform</td><td>Plans table, invoices</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+/* ---------- diagrams (drawn at load; Edge prints after scripts run) ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function svgRoot(w, h) {
+  const s = el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%' });
+  const defs = el('defs');
+  for (const [id, color] of [['arr', '#1f1d1a'], ['arrg', '#8a847c']]) {
+    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
+    m.append(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: color }));
+    defs.append(m);
+  }
+  s.append(defs);
+  return s;
+}
+
+/* Sequence diagram: actors + steps [from, to, label, dashed?] or ['note', actorIdx, text] */
+function sequence(id, actors, steps) {
+  const W = 700, top = 44, gap = 34;
+  const H = top + steps.length * gap + 30;
+  const s = svgRoot(W, H);
+  const xs = actors.map((_, i) => 90 + i * ((W - 180) / (actors.length - 1)));
+  actors.forEach((a, i) => {
+    s.append(el('rect', { x: xs[i] - 66, y: 4, width: 132, height: 28, rx: 6, fill: a.fill, stroke: a.stroke }));
+    s.append(el('text', { x: xs[i], y: 22, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: a.stroke }, a.name));
+    s.append(el('line', { x1: xs[i], y1: 32, x2: xs[i], y2: H - 6, stroke: '#cfc8be', 'stroke-dasharray': '4 4' }));
+  });
+  steps.forEach((st, k) => {
+    const y = top + k * gap + 12;
+    if (st[0] === 'note') {
+      const w = Math.max(150, st[2].length * 5.6);
+      const x = Math.min(W - 4 - w / 2, Math.max(4 + w / 2, xs[st[1]])); // keep inside the drawing
+      s.append(el('rect', { x: x - w / 2, y: y - 13, width: w, height: 22, rx: 4, fill: '#fff8e6', stroke: '#e6cf98' }));
+      s.append(el('text', { x, y: y + 2, 'text-anchor': 'middle', 'font-size': 9.5, fill: '#6b5b2e' }, st[2]));
+      return;
+    }
+    const [from, to, label, dashed] = st;
+    if (from === to) {
+      const x = xs[from];
+      s.append(el('path', { d: `M${x},${y - 4} h36 v14 h-34`, fill: 'none', stroke: '#1f1d1a', 'marker-end': 'url(#arr)' }));
+      s.append(el('text', { x: x + 42, y: y + 6, 'font-size': 9.5, fill: '#1f1d1a' }, label));
+      return;
+    }
+    const x1 = xs[from], x2 = xs[to];
+    s.append(el('line', { x1, y1: y + 4, x2: x2 + (x2 > x1 ? -2 : 2), y2: y + 4, stroke: dashed ? '#8a847c' : '#1f1d1a', 'stroke-dasharray': dashed ? '5 4' : '', 'marker-end': dashed ? 'url(#arrg)' : 'url(#arr)' }));
+    s.append(el('text', { x: (x1 + x2) / 2, y: y - 1, 'text-anchor': 'middle', 'font-size': 9.5, fill: dashed ? '#6b665f' : '#1f1d1a' }, label));
+  });
+  document.getElementById(id).append(s);
+}
+
+const actors = [
+  { name: 'Customer app', fill: '#e8f0f8', stroke: '#2f5d8a' },
+  { name: 'Staff app', fill: '#f3ebe4', stroke: '#6f4e37' },
+  { name: 'Backend', fill: '#eeeeee', stroke: '#3c4043' },
+  { name: 'Database', fill: '#eeeeee', stroke: '#3c4043' },
+];
+sequence('seq-collect', actors, [
+  [0, 2, 'POST /qr-codes {purpose: collect}'],
+  [2, 3, 'insert qr_codes (hash, active, 5 min)'],
+  [2, 0, '{id, code, expiresAt}', true],
+  ['note', 0, 'shows QR, checks status every 2 s'],
+  [1, 0, 'staff scan the QR', true],
+  [1, 2, 'POST /scans/preview {code}'],
+  [2, 1, 'collect · vendor OK', true],
+  ['note', 1, 'staff enter receipt total 95 EGP'],
+  [1, 2, 'POST /scans/collect {code, amount, key}'],
+  [2, 2, 'checks + rule: floor(95/10)×1 = 9'],
+  [2, 3, 'BEGIN: card (create if first), event +9,'],
+  [2, 3, 'balance + 9, QR used · COMMIT'],
+  [2, 1, '"+9 points added"', true],
+  [0, 2, 'GET /qr-codes/{id}'],
+  [2, 0, 'used · +9 · balance 129', true],
+]);
+sequence('seq-redeem', actors, [
+  ['note', 0, 'card 1000 pts · taps "Free coffee (300)"'],
+  [0, 2, 'POST /qr-codes {purpose: redeem, rewardId}'],
+  [2, 3, 'check reward + balance; insert qr_codes'],
+  [2, 0, '{id, code, expiresAt}', true],
+  [1, 0, 'staff scan the QR', true],
+  [1, 2, 'POST /scans/preview {code}'],
+  [2, 1, 'Redeem: Free coffee · 300 pts', true],
+  [1, 2, 'POST /scans/redeem {code, key}'],
+  [2, 2, 'checks: vendor, reward active'],
+  [2, 3, 'BEGIN: UPDATE cards … WHERE balance >= 300'],
+  [2, 3, 'event −300, redemptions row, QR used · COMMIT'],
+  [2, 1, '"Reward approved: Free coffee"', true],
+  [0, 2, 'GET /qr-codes/{id}'],
+  [2, 0, 'used · reward approved · balance 700', true],
+]);
+
+/* ---------- ERD ---------- */
+(function erd() {
+  const W = 1030, H = 640;
+  const s = svgRoot(W, H);
+  const C = {
+    v: { fill: '#f3ebe4', stroke: '#6f4e37' },
+    c: { fill: '#e8f0f8', stroke: '#2f5d8a' },
+    p: { fill: '#eeeeee', stroke: '#5f6368' },
+  };
+  const boxes = {
+    vendors:        { x: 20,  y: 20,  side: 'v', cols: ['uuid id PK', 'varchar name', 'char currency', 'enum status'] },
+    branches:       { x: 225, y: 20,  side: 'v', cols: ['uuid id PK', 'uuid vendor_id FK', 'varchar name', 'varchar timezone', 'enum status'] },
+    staff_users:    { x: 430, y: 20,  side: 'v', cols: ['uuid id PK', 'uuid vendor_id FK', 'uuid branch_id FK', 'uuid auth_user_id UK', 'enum role', 'enum status'] },
+    point_rules:    { x: 635, y: 20,  side: 'v', isNew: true, cols: ['uuid id PK', 'uuid vendor_id FK', 'int version', 'numeric spend_amount', 'int points_per_spend', 'numeric min_purchase', 'int max_points', 'bool is_active'] },
+    rewards:        { x: 840, y: 20,  side: 'v', isNew: true, cols: ['uuid id PK', 'uuid vendor_id FK', 'varchar name', 'int points_cost', 'enum status', 'int sort_order'] },
+    users:          { x: 20,  y: 250, side: 'c', cols: ['uuid id PK', 'uuid auth_user_id UK', 'varchar name', 'varchar email', 'varchar phone', 'enum status'] },
+    cards:          { x: 225, y: 250, side: 'c', isNew: true, cols: ['uuid id PK', 'uuid user_id FK', 'uuid vendor_id FK', 'int balance', 'int lifetime_points'] },
+    qr_codes:       { x: 430, y: 250, side: 'c', isNew: true, cols: ['uuid id PK', 'uuid user_id FK', 'enum purpose', 'uuid vendor_id FK', 'uuid reward_id FK', 'char token_hash UK', 'enum status', 'timestamptz expires_at', 'uuid used_by_staff_id FK', 'uuid used_branch_id FK'] },
+    point_events:   { x: 635, y: 250, side: 'c', cols: ['uuid id PK', 'uuid card_id FK', 'uuid vendor_id FK', 'uuid branch_id FK', 'enum type', 'int delta', 'numeric purchase_amount', 'uuid rule_id FK', 'uuid reward_id FK', 'uuid qr_code_id FK', 'uuid staff_id FK', 'varchar idempotency_key UK'] },
+    redemptions:    { x: 840, y: 250, side: 'c', cols: ['uuid id PK', 'uuid card_id FK', 'uuid reward_id FK', 'uuid branch_id FK', 'uuid staff_id FK', 'uuid point_event_id FK UK', 'varchar reward_name', 'int points_cost'] },
+    user_identities:{ x: 20,  y: 500, side: 'c', unused: true, cols: ['uuid id PK', 'uuid user_id FK', 'enum provider', 'varchar provider_user_id'] },
+    platform_admins:{ x: 635, y: 500, side: 'p', cols: ['uuid id PK', 'varchar email UK', 'varchar totp_secret_ref', 'enum status'] },
+    fraud_flags:    { x: 840, y: 500, side: 'p', cols: ['uuid id PK', 'enum type', 'uuid vendor/branch/user/staff FK', 'jsonb details', 'enum status', 'uuid reviewed_by FK'] },
+  };
+  const BW = 175, HEAD = 22, ROW = 13.5;
+  for (const b of Object.values(boxes)) { b.w = BW; b.h = HEAD + b.cols.length * ROW + 6; }
+  const mid = (b, side) => side === 'top' ? [b.x + b.w / 2, b.y] : side === 'bottom' ? [b.x + b.w / 2, b.y + b.h] : side === 'left' ? [b.x, b.y + b.h / 2] : [b.x + b.w, b.y + b.h / 2];
+  // [from table, from side, to table, to side, dx offset]
+  const links = [
+    ['branches', 'left', 'vendors', 'right'],
+    ['staff_users', 'left', 'branches', 'right'],
+    ['point_rules', 'top', 'vendors', 'top', -40],
+    ['rewards', 'top', 'vendors', 'top', -20],
+    ['cards', 'left', 'users', 'right'],
+    ['cards', 'top', 'vendors', 'bottom'],
+    ['qr_codes', 'top', 'staff_users', 'bottom'],
+    ['qr_codes', 'top', 'rewards', 'bottom', 60],
+    ['point_events', 'left', 'qr_codes', 'right'],
+    ['point_events', 'top', 'point_rules', 'bottom'],
+    ['point_events', 'bottom', 'cards', 'bottom', 0],
+    ['redemptions', 'left', 'point_events', 'right'],
+    ['redemptions', 'top', 'rewards', 'bottom'],
+    ['user_identities', 'top', 'users', 'bottom'],
+    ['fraud_flags', 'left', 'platform_admins', 'right'],
+    ['point_events', 'bottom', 'platform_admins', 'top'],
+  ];
+  const lines = el('g', { fill: 'none', stroke: '#8a847c', 'stroke-width': 1.1 });
+  for (const [a, sa, b, sb, off] of links) {
+    let [x1, y1] = mid(boxes[a], sa), [x2, y2] = mid(boxes[b], sb);
+    let d;
+    if (sa === 'top' && sb === 'top') {           // arc over the top row
+      const yTop = 10 + (off ? off / 20 : 0);
+      d = `M${x1},${y1} V${8 - (off || 0) / 10} H${x2} V${y2}`;
+    } else if (sa === 'bottom' && sb === 'bottom') { // under the middle row
+      d = `M${x1},${y1} V${y1 + 14} H${x2} V${y2}`;
+    } else if ((sa === 'left' && sb === 'right') || (sa === 'right' && sb === 'left')) {
+      const mx = (x1 + x2) / 2; d = `M${x1},${y1} H${mx} V${y2} H${x2}`;
+    } else {
+      if (off) x1 += off;
+      const my = (y1 + y2) / 2; d = `M${x1},${y1} V${my} H${x2} V${y2}`;
+    }
+    lines.append(el('path', { d, 'marker-end': 'url(#arrg)' }));
+  }
+  s.append(lines);
+  for (const [name, b] of Object.entries(boxes)) {
+    const c = C[b.side];
+    const g = el('g');
+    g.append(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 6, fill: '#ffffff', stroke: c.stroke, 'stroke-dasharray': b.unused ? '4 3' : '' }));
+    g.append(el('path', { d: `M${b.x},${b.y + 6} a6,6 0 0 1 6,-6 h${b.w - 12} a6,6 0 0 1 6,6 v${HEAD - 6} h${-b.w} z`, fill: c.fill, stroke: c.stroke }));
+    g.append(el('text', { x: b.x + 8, y: b.y + 15, 'font-size': 10.5, 'font-weight': 700, fill: c.stroke }, name + (b.isNew ? '  · NEW' : '') + (b.unused ? '  · unused' : '')));
+    b.cols.forEach((col, i) => {
+      const key = /\b(PK|FK|UK)\b/.test(col);
+      g.append(el('text', { x: b.x + 8, y: b.y + HEAD + 11 + i * ROW, 'font-size': 9, fill: key ? '#1f1d1a' : '#5f5a54', 'font-weight': / PK/.test(col) ? 700 : 400 }, col));
+    });
+    s.append(g);
+  }
+  document.getElementById('erd').append(s);
+})();
+</script>
+</body>
+</html>

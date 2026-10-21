@@ -1,0 +1,680 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model branches {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id        String             @db.Uuid
+  name             String             @db.VarChar(120)
+  address          String?            @db.VarChar(500)
+  lat              Decimal?           @db.Decimal(9, 6)
+  lng              Decimal?           @db.Decimal(9, 6)
+  timezone         String             @default("Africa/Cairo") @db.VarChar(64)
+  status           branch_status      @default(active)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  opens_at         String?            @db.VarChar(5)
+  closes_at        String?            @db.VarChar(5)
+  city             String?            @db.VarChar(40)
+  weekly_hours     Json?
+  paused_until     DateTime?          @db.Timestamptz(6)
+  storefront       Json?
+  vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cards            cards[]
+  fraud_flags      fraud_flags[]
+  point_events     point_events[]
+  qr_codes         qr_codes[]
+  redemptions      redemptions[]
+  reward_sold_outs reward_sold_outs[]
+  staff_users      staff_users[]
+  vendor_feedback  vendor_feedback[]
+  vendor_images    vendor_images[]
+
+  @@unique([id, vendor_id])
+  @@index([vendor_id], map: "branches_vendor_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fraud_flags {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            fraud_flag_type
+  vendor_id       String?           @db.Uuid
+  branch_id       String?           @db.Uuid
+  user_id         String?           @db.Uuid
+  staff_id        String?           @db.Uuid
+  details         Json              @default("{}")
+  status          fraud_flag_status @default(open)
+  reviewed_by     String?           @db.Uuid
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  key             String?           @unique(map: "fraud_flags_key_uq") @db.VarChar(200)
+  branches        branches?         @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platform_admins platform_admins?  @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users     staff_users?      @relation(fields: [staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users           users?            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors         vendors?          @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status, created_at], map: "fraud_flags_status_time_idx")
+  @@index([vendor_id], map: "fraud_flags_vendor_idx")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model platform_admins {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String                  @db.VarChar(120)
+  email                 String                  @db.VarChar(255)
+  password_hash         String?                 @db.VarChar(255)
+  totp_secret_ref       String?                 @db.VarChar(255)
+  auth_user_id          String?                 @unique @db.Uuid
+  status                account_status          @default(active)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  admin_actions         admin_actions[]
+  fraud_flags           fraud_flags[]
+  point_events          point_events[]
+  qr_codes              qr_codes[]
+  redemptions           redemptions[]
+  wallet_broadcasts     wallet_broadcasts[]
+  loyalty_card_versions loyalty_card_versions[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model point_events {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  card_id         String           @db.Uuid
+  vendor_id       String           @db.Uuid
+  branch_id       String?          @db.Uuid
+  type            point_event_type
+  delta           Int
+  purchase_amount Decimal?         @db.Decimal(12, 2)
+  receipt_ref     String?          @db.VarChar(64)
+  rule_id         String?          @db.Uuid
+  reward_id       String?          @db.Uuid
+  qr_code_id      String?          @unique(map: "point_events_qr_uq", where: raw("(qr_code_id IS NOT NULL)")) @db.Uuid
+  staff_id        String?          @db.Uuid
+  created_by      String?          @db.Uuid
+  reason          String?          @db.VarChar(500)
+  idempotency_key String           @unique @db.VarChar(100)
+  created_at      DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime         @default(now()) @db.Timestamptz(6)
+  scan_source     String?          @db.VarChar(12)
+  branches        branches?        @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  cards           cards            @relation(fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  platform_admins platform_admins? @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qr_codes        qr_codes?        @relation(fields: [qr_code_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rewards         rewards?         @relation(fields: [reward_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  point_rules     point_rules?     @relation(fields: [rule_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users     staff_users?     @relation(fields: [staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors         vendors          @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  redemptions     redemptions?
+
+  @@unique([branch_id, receipt_ref], map: "point_events_receipt_uq", where: raw("((type = 'earn'::point_event_type) AND (receipt_ref IS NOT NULL))"))
+  @@index([branch_id, created_at], map: "point_events_branch_time_idx")
+  @@index([card_id, created_at], map: "point_events_card_time_idx")
+  @@index([staff_id, created_at], map: "point_events_staff_time_idx")
+  @@index([vendor_id, created_at], map: "point_events_vendor_time_idx")
+}
+
+model redemptions {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  card_id             String           @db.Uuid
+  vendor_id           String           @db.Uuid
+  reward_id           String           @db.Uuid
+  branch_id           String           @db.Uuid
+  staff_id            String?          @db.Uuid
+  point_event_id      String           @unique @db.Uuid
+  reward_name         String           @db.VarChar(120)
+  points_cost         Int
+  created_at          DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime         @default(now()) @db.Timestamptz(6)
+  created_by_admin_id String?          @db.Uuid
+  branches            branches         @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  cards               cards            @relation(fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  platform_admins     platform_admins? @relation(fields: [created_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  point_events        point_events     @relation(fields: [point_event_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rewards             rewards          @relation(fields: [reward_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users         staff_users?     @relation(fields: [staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors             vendors          @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([branch_id, created_at], map: "redemptions_branch_time_idx")
+  @@index([card_id], map: "redemptions_card_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model staff_users {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id                String                     @db.Uuid
+  branch_id                String?                    @db.Uuid
+  name                     String                     @db.VarChar(120)
+  email                    String                     @db.VarChar(255)
+  password_hash            String?                    @db.VarChar(255)
+  auth_user_id             String?                    @unique @db.Uuid
+  role                     staff_role
+  status                   account_status             @default(active)
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  customer_segment_members customer_segment_members[]
+  customer_segments        customer_segments[]
+  fraud_flags              fraud_flags[]
+  merchant_feedback        merchant_feedback[]
+  point_events             point_events[]
+  point_rules              point_rules[]
+  qr_codes                 qr_codes[]
+  redemptions              redemptions[]
+  reward_sold_outs         reward_sold_outs[]
+  branches                 branches?                  @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  vendors                  vendors                    @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wallet_broadcasts        wallet_broadcasts[]
+
+  loyalty_card_versions loyalty_card_versions[]
+
+  @@index([vendor_id], map: "staff_users_vendor_idx")
+}
+
+model user_identities {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String        @db.Uuid
+  provider         auth_provider
+  provider_user_id String        @db.VarChar(255)
+  email            String?       @db.VarChar(255)
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime      @default(now()) @db.Timestamptz(6)
+  users            users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([provider, provider_user_id])
+  @@index([user_id], map: "user_identities_user_idx")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model users {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String?           @db.VarChar(120)
+  email             String?           @db.VarChar(255)
+  avatar_url        String?           @db.VarChar(500)
+  phone             String?           @db.VarChar(20)
+  auth_user_id      String?           @unique @db.Uuid
+  status            user_status       @default(active)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  gender            user_gender?
+  birth_date        DateTime?         @db.Date
+  avatar_path       String?           @db.VarChar(300)
+  last_lat          Decimal?          @db.Decimal(9, 6)
+  last_lng          Decimal?          @db.Decimal(9, 6)
+  last_location_at  DateTime?         @db.Timestamptz(6)
+  email_verified_at DateTime?         @db.Timestamptz(6)
+  age_confirmed_at  DateTime?         @db.Timestamptz(6)
+  cards             cards[]
+  fraud_flags       fraud_flags[]
+  qr_codes          qr_codes[]
+  user_identities   user_identities[]
+}
+
+model vendors {
+  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String              @db.VarChar(120)
+  logo_url              String?             @db.VarChar(500)
+  contact_email         String?             @db.VarChar(255)
+  currency              String              @default("EGP") @db.Char(3)
+  status                vendor_status       @default(active)
+  created_at            DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime            @default(now()) @db.Timestamptz(6)
+  logo_path             String?             @db.VarChar(300)
+  category              String?             @db.VarChar(40)
+  card_design           Int?                @db.SmallInt
+  banner_url            String?             @db.VarChar(500)
+  banner_path           String?             @db.VarChar(300)
+  slug                  String              @unique(map: "vendors_slug_uq") @default("") @db.VarChar(50)
+  contact_phone         String?             @db.VarChar(20)
+  storefront            Json?
+  page_style            String?             @db.VarChar(20)
+  brand_primary         String?             @db.VarChar(7)
+  brand_secondary       String?             @db.VarChar(7)
+  brand_font            String?             @db.VarChar(40)
+  wallet_nearby_branch_ids String[] @db.Uuid
+  wallet_nearby_enabled Boolean             @default(false)
+  admin_actions         admin_actions[]
+  branches              branches[]
+  cards                 cards[]
+  customer_segments     customer_segments[]
+  fraud_flags           fraud_flags[]
+  merchant_feedback     merchant_feedback[]
+  point_events          point_events[]
+  point_rules           point_rules[]
+  qr_codes              qr_codes[]
+  redemptions           redemptions[]
+  reward_sold_outs      reward_sold_outs[]
+  rewards               rewards[]
+  staff_users           staff_users[]
+  vendor_feedback       vendor_feedback[]
+  vendor_images         vendor_images[]
+  wallet_broadcasts     wallet_broadcasts[]
+  loyalty_cards         loyalty_cards?
+  wallet_campaigns wallet_campaigns[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cards {
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                     String                        @db.Uuid
+  vendor_id                   String                        @db.Uuid
+  balance                     Int                           @default(0)
+  lifetime_points             Int                           @default(0)
+  last_activity_at            DateTime                      @default(now()) @db.Timestamptz(6)
+  created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  public_id                   String                        @unique(map: "cards_public_id_uq") @default(dbgenerated("replace((gen_random_uuid())::text, '-'::text, ''::text)")) @db.VarChar(32)
+  token_hash                  String?                       @unique(map: "cards_token_hash_uq", where: raw("(token_hash IS NOT NULL)")) @db.Char(64)
+  short_code                  String?                       @db.VarChar(8)
+  joined_via                  String?                       @db.VarChar(10)
+  joined_branch_id            String?                       @db.Uuid
+  heard_from                  String?                       @db.VarChar(40)
+  google_object_id            String?                       @db.VarChar(200)
+  apple_auth_token            String?                       @db.VarChar(64)
+  pass_updated_at             DateTime?                     @db.Timestamptz(6)
+  branches                    branches?                     @relation(fields: [joined_branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction, map: "cards_joined_branch_fk")
+  users                       users                         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors                     vendors                       @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer_segment_members    customer_segment_members[]
+  point_events                point_events[]
+  redemptions                 redemptions[]
+  vendor_feedback             vendor_feedback[]
+  wallet_broadcast_recipients wallet_broadcast_recipients[]
+  wallet_registrations        wallet_registrations[]
+
+  @@unique([id, vendor_id])
+  @@unique([user_id, vendor_id])
+  @@unique([vendor_id, short_code], map: "cards_short_code_uq", where: raw("(short_code IS NOT NULL)"))
+  @@index([vendor_id], map: "cards_vendor_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model point_rules {
+  id                      String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id               String         @db.Uuid
+  version                 Int
+  spend_amount            Decimal        @db.Decimal(12, 2)
+  points_per_spend        Int            @default(1)
+  min_purchase            Decimal        @default(0) @db.Decimal(12, 2)
+  max_points_per_purchase Int?
+  is_active               Boolean        @default(true)
+  created_by_staff_id     String?        @db.Uuid
+  created_at              DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime       @default(now()) @db.Timestamptz(6)
+  point_events            point_events[]
+  staff_users             staff_users?   @relation(fields: [created_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors                 vendors        @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, vendor_id])
+  @@unique([vendor_id, version])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model qr_codes {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String           @db.Uuid
+  purpose          qr_purpose
+  vendor_id        String?          @db.Uuid
+  reward_id        String?          @db.Uuid
+  token_hash       String           @unique @db.Char(64)
+  status           qr_status        @default(active)
+  expires_at       DateTime         @default(dbgenerated("(now() + '00:05:00'::interval)")) @db.Timestamptz(6)
+  used_at          DateTime?        @db.Timestamptz(6)
+  used_by_staff_id String?          @db.Uuid
+  used_branch_id   String?          @db.Uuid
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime         @default(now()) @db.Timestamptz(6)
+  used_by_admin_id String?          @db.Uuid
+  point_events     point_events?
+  rewards          rewards?         @relation(fields: [reward_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  branches         branches?        @relation(fields: [used_branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platform_admins  platform_admins? @relation(fields: [used_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users      staff_users?     @relation(fields: [used_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users            users            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors          vendors?         @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, created_at(sort: Desc)], map: "qr_codes_user_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reward_sold_outs {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id       String       @db.Uuid
+  reward_id       String       @db.Uuid
+  branch_id       String       @db.Uuid
+  sold_out_until  DateTime?    @db.Timestamptz(6)
+  set_by_staff_id String?      @db.Uuid
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime     @default(now()) @db.Timestamptz(6)
+  branches        branches     @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction, map: "reward_sold_outs_branch_fk")
+  rewards         rewards      @relation(fields: [reward_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction, map: "reward_sold_outs_reward_fk")
+  staff_users     staff_users? @relation(fields: [set_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors         vendors      @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([reward_id, branch_id], map: "reward_sold_outs_uq")
+  @@index([vendor_id, branch_id], map: "reward_sold_outs_vendor_idx")
+}
+
+model rewards {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id        String             @db.Uuid
+  name             String             @db.VarChar(120)
+  description      String?            @db.VarChar(500)
+  image_url        String?            @db.VarChar(500)
+  points_cost      Int
+  status           reward_status      @default(active)
+  sort_order       Int                @default(0)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  name_ar          String?            @db.VarChar(120)
+  description_ar   String?            @db.VarChar(500)
+  image_path       String?            @db.VarChar(300)
+  retail_value     Decimal?           @db.Decimal(12, 2)
+  point_events     point_events[]
+  qr_codes         qr_codes[]
+  redemptions      redemptions[]
+  reward_sold_outs reward_sold_outs[]
+  vendors          vendors            @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, vendor_id])
+  @@index([vendor_id, status, sort_order], map: "rewards_vendor_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model vendor_images {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id    String            @db.Uuid
+  branch_id    String?           @db.Uuid
+  kind         vendor_image_kind
+  storage_path String            @unique @db.VarChar(300)
+  sort_order   Int               @default(0)
+  created_at   DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime          @default(now()) @db.Timestamptz(6)
+  branches     branches?         @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction, map: "vendor_images_branch_fk")
+  vendors      vendors           @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([vendor_id, kind, branch_id, sort_order], map: "vendor_images_vendor_idx")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model wallet_registrations {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  card_id           String   @db.Uuid
+  device_library_id String   @db.VarChar(128)
+  push_token        String   @db.VarChar(256)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+  cards             cards    @relation(fields: [card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([device_library_id, card_id])
+  @@index([card_id], map: "wallet_registrations_card_idx")
+}
+
+/// Custom customer segments (migration 20). Queried with raw SQL in src/merchant-customers.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model customer_segments {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id                String                     @db.Uuid
+  name                     String                     @db.VarChar(60)
+  description              String?                    @db.VarChar(300)
+  match                    String                     @default("all") @db.VarChar(3)
+  rules                    Json                       @default("[]")
+  sort_order               Int                        @default(0)
+  status                   String                     @default("active") @db.VarChar(10)
+  created_by_staff_id      String?                    @db.Uuid
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  customer_segment_members customer_segment_members[]
+  staff_users              staff_users?               @relation(fields: [created_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors                  vendors                    @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, vendor_id])
+}
+
+/// Customers added to (included) or removed from (not included) a custom segment by hand.
+model customer_segment_members {
+  segment_id        String            @db.Uuid
+  card_id           String            @db.Uuid
+  vendor_id         String            @db.Uuid
+  included          Boolean
+  set_by_staff_id   String?           @db.Uuid
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  cards             cards             @relation(fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  customer_segments customer_segments @relation(fields: [segment_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users       staff_users?      @relation(fields: [set_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([segment_id, card_id])
+  @@index([vendor_id, card_id], map: "customer_segment_members_card_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model wallet_broadcast_recipients {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  broadcast_id      String            @db.Uuid
+  vendor_id         String            @db.Uuid
+  card_id           String            @db.Uuid
+  google_object_id  String
+  status            String            @default("pending") @db.VarChar(16)
+  reason            String?           @db.VarChar(60)
+  attempted_at      DateTime?         @db.Timestamptz(6)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  wallet_broadcasts wallet_broadcasts @relation(fields: [broadcast_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  cards             cards             @relation(fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([broadcast_id, card_id])
+  @@index([created_at], map: "wallet_broadcast_pending", where: raw("((status)::text = 'pending'::text)"))
+  @@index([card_id, attempted_at], map: "wallet_broadcast_quota", where: raw("((status)::text = ANY ((ARRAY['processing'::character varying, 'accepted'::character varying, 'unknown'::character varying])::text[]))"))
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model wallet_broadcasts {
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id                   String                        @db.Uuid
+  created_by                  String?                       @db.Uuid
+  title                       String                        @db.VarChar(80)
+  body                        String                        @db.VarChar(2000)
+  audience                    Json
+  idempotency_key             String                        @db.VarChar(100)
+  created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  created_by_admin_id         String?                       @db.Uuid
+  wallet_broadcast_recipients wallet_broadcast_recipients[]
+  platform_admins             platform_admins?              @relation(fields: [created_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users                 staff_users?                  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors                     vendors                       @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, vendor_id])
+  @@unique([vendor_id, idempotency_key])
+  @@index([vendor_id, created_at(sort: Desc)], map: "wallet_broadcasts_vendor_time")
+}
+
+model merchant_feedback {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id   String      @db.Uuid
+  staff_id    String      @db.Uuid
+  mood        String?     @db.VarChar(10)
+  message     String      @db.VarChar(2000)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  staff_users staff_users @relation(fields: [staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors     vendors     @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc), id(sort: Desc)], map: "merchant_feedback_created_idx")
+  @@index([vendor_id, created_at(sort: Desc)], map: "merchant_feedback_vendor_idx")
+}
+
+model vendor_feedback {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id  String    @db.Uuid
+  branch_id  String?   @db.Uuid
+  card_id    String?   @db.Uuid
+  name       String    @db.VarChar(120)
+  phone      String?   @db.VarChar(20)
+  message    String    @db.VarChar(2000)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  branches   branches? @relation(fields: [branch_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  cards      cards?    @relation(fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  vendors    vendors   @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([vendor_id, created_at(sort: Desc), id(sort: Desc)], map: "vendor_feedback_vendor_created_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model admin_actions {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id        String          @db.Uuid
+  vendor_id       String          @db.Uuid
+  method          String          @db.VarChar(8)
+  path            String          @db.VarChar(300)
+  status          String          @default("pending") @db.VarChar(12)
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  platform_admins platform_admins @relation(fields: [admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendors         vendors         @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([vendor_id, created_at(sort: Desc)], map: "admin_actions_vendor_time_idx")
+}
+
+enum account_status {
+  active
+  disabled
+}
+
+enum auth_provider {
+  google
+  facebook
+  apple
+}
+
+enum branch_status {
+  active
+  closed
+}
+
+enum fraud_flag_status {
+  open
+  dismissed
+  confirmed
+}
+
+enum fraud_flag_type {
+  too_many_collects
+  large_purchase
+  branch_spike
+  staff_spike
+}
+
+enum point_event_type {
+  earn
+  redeem
+  adjust
+}
+
+enum staff_role {
+  vendor_admin
+  branch_manager
+  staff
+  viewer
+}
+
+enum user_status {
+  active
+  blocked
+}
+
+enum vendor_status {
+  active
+  suspended
+}
+
+enum qr_purpose {
+  collect
+  redeem
+}
+
+enum qr_status {
+  active
+  used
+  expired
+  cancelled
+}
+
+enum reward_status {
+  active
+  archived
+}
+
+enum user_gender {
+  male
+  female
+}
+
+enum vendor_image_kind {
+  menu
+  branch_photo
+}
+
+/// The merchant's loyalty card (one per merchant, migration 29). This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model loyalty_cards {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id       String                  @unique(map: "loyalty_cards_vendor_uq") @db.Uuid
+  name            String                  @db.VarChar(60)
+  status          String                  @default("active") @db.VarChar(10)
+  cancelled_at    DateTime?               @db.Timestamptz(6)
+  live_version_id String?                 @db.Uuid
+  created_at      DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime                @default(now()) @db.Timestamptz(6)
+  versions        loyalty_card_versions[] @relation("loyalty_card_versions_card")
+  live_version    loyalty_card_versions?  @relation("loyalty_cards_live_version", fields: [live_version_id, id], references: [id, card_id], onDelete: NoAction, onUpdate: NoAction, map: "loyalty_cards_live_version_fk")
+  vendors         vendors                 @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, vendor_id], map: "loyalty_cards_id_vendor_uq")
+}
+
+/// Immutable versions of a loyalty card's look (V1, V2, ...). This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model loyalty_card_versions {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  card_id             String           @db.Uuid
+  vendor_id           String           @db.Uuid
+  number              Int
+  design              Json
+  created_by_staff_id String?          @db.Uuid
+  created_by_admin_id String?          @db.Uuid
+  created_at          DateTime         @default(now()) @db.Timestamptz(6)
+  card                loyalty_cards    @relation("loyalty_card_versions_card", fields: [card_id, vendor_id], references: [id, vendor_id], onDelete: NoAction, onUpdate: NoAction)
+  live_of             loyalty_cards[]  @relation("loyalty_cards_live_version")
+  platform_admins     platform_admins? @relation(fields: [created_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  staff_users         staff_users?     @relation(fields: [created_by_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, card_id], map: "loyalty_card_versions_id_card_uq")
+  @@unique([card_id, number], map: "loyalty_card_versions_number_uq")
+}
+
+// Check constraints and due-work index are maintained by migration 30.
+model wallet_campaigns {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id   String    @db.Uuid
+  actor       Json
+  name        String    @db.VarChar(80)
+  body        String    @db.VarChar(2000)
+  audience    Json      @default("{}")
+  status      String
+  next_at     DateTime? @db.Timestamptz(6)
+  repeat_days Int?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  vendors     vendors   @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([next_at], map: "wallet_campaigns_due", where: raw("(status = ANY (ARRAY['scheduled'::text, 'repeating'::text, 'processing'::text]))"))
+}

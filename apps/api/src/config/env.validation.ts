@@ -1,0 +1,189 @@
+import { plainToInstance, Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  Min,
+  MinLength,
+  validateSync,
+} from 'class-validator';
+
+export class Env {
+  @IsIn(['development', 'test', 'production'])
+  NODE_ENV: 'development' | 'test' | 'production' = 'development';
+
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  @Type(() => Number)
+  PORT: number = 3000;
+
+  @IsString()
+  @IsNotEmpty()
+  DATABASE_URL: string;
+
+  /**
+   * Supabase project URL, e.g. https://abcd1234.supabase.co (or http://127.0.0.1:54321 locally).
+   * Only the public URL: tokens are checked against the project's public signing keys (JWKS).
+   */
+  @IsUrl({ require_tld: false, require_protocol: true })
+  SUPABASE_URL: string;
+
+  /**
+   * Supabase SECRET key (sb_secret_... or legacy service_role). Server-only: used to
+   * invite staff. Optional (empty = unset) so the API boots without it; staff invites
+   * return 503 until set.
+   */
+  @IsOptional()
+  @IsString()
+  SUPABASE_SECRET_KEY?: string;
+
+  /**
+   * Where the staff invite email link lands (the dashboard's set-password page).
+   * Must be listed in Supabase → Authentication → URL Configuration → Redirect URLs.
+   * Defaults to the dev test page outside production.
+   */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  STAFF_INVITE_REDIRECT_URL?: string;
+
+  /**
+   * The public customer site (storefronts at <url>/<slug>): the first button on the wallet
+   * pass opens the merchant's storefront there. Default https://dvote.app.
+   */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  PUBLIC_WEB_URL?: string;
+
+  /**
+   * Websites the admin "System status" page checks, as "Name=https://url" pairs separated
+   * by commas, e.g. "Dashboard=https://admin.dvote.app,Staff web app=https://staff.dvote.app".
+   * The API itself, the database and Supabase Auth / Storage are always checked.
+   */
+  @IsOptional()
+  @IsString()
+  STATUS_TARGETS?: string;
+
+  /**
+   * Platform admins must have completed two-factor (authenticator app) login, i.e. a
+   * token with aal2. Keep true everywhere real; set false only for local development.
+   */
+  @IsBoolean()
+  // Read the raw env string: implicit conversion would turn "false" into true.
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.ADMIN_MFA_REQUIRED;
+    return typeof raw === 'string'
+      ? raw.trim().toLowerCase() !== 'false'
+      : true;
+  })
+  ADMIN_MFA_REQUIRED: boolean = true;
+
+  /**
+   * Google Apps Script web app that appends customer feedback to the feedback Google Sheet
+   * (script: google-apps-script/feedback.gs). Optional: unset = POST /api/app/feedback
+   * returns 503 feedback_not_configured.
+   */
+  @IsOptional()
+  // An empty FEEDBACK_SHEET_URL= line (as in .env.example) means unset.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  )
+  @IsUrl({ require_tld: false, require_protocol: true })
+  FEEDBACK_SHEET_URL?: string;
+
+  /** Shared secret the script checks, so only this API can write to the sheet. */
+  @IsOptional()
+  @IsString()
+  FEEDBACK_SHEET_SECRET?: string;
+
+  /**
+   * Google Wallet (loyalty passes): the Issuer ID from the Google Pay & Wallet Console and the
+   * path to the Google Cloud service-account key (JSON) that signs "Add to Google Wallet" links.
+   * Both unset = the button answers 503 wallet_not_configured.
+   */
+  @IsOptional()
+  @IsString()
+  GOOGLE_WALLET_ISSUER_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_WALLET_KEY_FILE?: string;
+
+  /** The same key pasted as one line of JSON (for hosts without files, e.g. Railway). Wins over the file. */
+  @IsOptional()
+  @IsString()
+  GOOGLE_WALLET_KEY_JSON?: string;
+
+  /**
+   * Secret for the card QR on the wallet passes: each card's code is derived from it, so the
+   * same code can be put on the pass again later. At least 32 characters; never change it once
+   * passes are issued (every printed QR would stop working).
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  WALLET_TOKEN_SECRET?: string;
+
+  /** Logo on the Google pass for a merchant without its own logo (public https image). */
+  @IsOptional()
+  @IsString()
+  WALLET_DEFAULT_LOGO_URL?: string;
+
+  /** Flood protection (429 rate_limited). Default on; e2e tests turn it off except their own test. */
+  @IsBoolean()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.RATE_LIMIT_ENABLED;
+    return typeof raw === 'string' ? raw.trim().toLowerCase() !== 'false' : true;
+  })
+  RATE_LIMIT_ENABLED: boolean = true;
+
+  /** Requests per minute from one IP address (many phones can share one mobile-network IP). */
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  RATE_LIMIT_IP_PER_MIN: number = 600;
+
+  /** Requests per minute from one signed-in user (some endpoints are stricter). */
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  RATE_LIMIT_USER_PER_MIN: number = 120;
+
+  /**
+   * Behind Cloudflare / a load balancer: how many proxies to trust for the client IP
+   * (Express "trust proxy", e.g. 1 or 2). Unset = connect directly, use the socket address.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  TRUST_PROXY?: number;
+
+  /** Comma-separated list of allowed origins; unset = CORS disabled. */
+  @IsOptional()
+  @IsString()
+  CORS_ORIGINS?: string;
+}
+
+/** Fails fast at boot if the environment is missing or malformed. */
+export function validateEnv(config: Record<string, unknown>): Env {
+  const env = plainToInstance(Env, config, {
+    enableImplicitConversion: true,
+  });
+  const errors = validateSync(env, { skipMissingProperties: false });
+  if (errors.length > 0) {
+    const details = errors
+      .map(
+        (e) =>
+          `${e.property}: ${Object.values(e.constraints ?? {}).join(', ')}`,
+      )
+      .join('; ');
+    throw new Error(`Invalid environment: ${details}`);
+  }
+  return env;
+}

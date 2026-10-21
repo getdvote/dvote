@@ -1,0 +1,103 @@
+import { AltArrowLeftIcon as ChevronLeft, AltArrowRightIcon as ChevronRight, MagnifierIcon as Search, CloseIcon as X } from '@solar-icons/react/linear';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { ReactNode } from 'react';
+import { t } from '../i18n';
+
+/** Search box with a magnifier and a clear button. */
+export function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="relative w-full max-w-xs">
+      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-9 ps-9 pe-8" aria-label={placeholder} />
+      {value ? (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="absolute end-1.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          aria-label={t('common.clearSearch')}
+          onClick={() => onChange('')}
+        >
+          <X />
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** "All / Active / Suspended"-style filter. */
+export function StatusFilter<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: ReactNode }[];
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      value={value}
+      onValueChange={(v) => v && onChange(v as T)}
+      aria-label={t('common.filterByStatus')}
+    >
+      {options.map((o) => (
+        <ToggleGroupItem key={o.value} value={o.value} className="h-9 px-3 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
+          {o.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+/** Previous / next with "Page 2 of 5". Hidden when everything fits on one page. */
+export function Pager({ page, pageSize, total, onChange }: { page: number; pageSize: number; total: number; onChange: (p: number) => void }) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-end gap-2 border-t px-4 py-3 text-sm text-muted-foreground">
+      <span className="me-2">{t('common.pageOf', { page, pages })}</span>
+      <Button variant="outline" size="icon-sm" aria-label={t('common.previousPage')} disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        <ChevronLeft className="rtl:rotate-180" />
+      </Button>
+      <Button variant="outline" size="icon-sm" aria-label={t('common.nextPage')} disabled={page >= pages} onClick={() => onChange(page + 1)}>
+        <ChevronRight className="rtl:rotate-180" />
+      </Button>
+    </div>
+  );
+}
+
+/** A dropdown filter whose first option means "no filter" (value `all`). */
+export function SelectFilter({
+  value,
+  onChange,
+  label,
+  allLabel,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+  allLabel: string;
+  options: { value: string; label: string }[] | undefined;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-9 w-44" aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{allLabel}</SelectItem>
+        {options?.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}

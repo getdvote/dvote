@@ -27,7 +27,7 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 
-/generated/prisma
+apps/api/src/generated/
 
 # AI tool folders (only .claude is used)
 .agents/
@@ -38,3 +38,26 @@ Thumbs.db
 # Prisma AI skills (not used)
 .claude/skills/
 skills-lock.json
+# React Native / Expo (apps/mobile)
+.expo/
+web-build/
+apps/mobile/android/
+apps/mobile/ios/
+*.jks
+*.keystore
+*.mobileprovision
+*.p12
+*.iml
+
+# Vite (apps/dashboard)
+apps/dashboard/.vite/
+
+# Apple / signing keys (never commit)
+*.p8
+
+# API secret files (Google Wallet service-account key, ...)
+apps/api/.secrets/
+
+# database backups (npm run db:backup)
+apps/api/backups/
+*.dump

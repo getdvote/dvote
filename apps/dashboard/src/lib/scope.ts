@@ -1,0 +1,154 @@
+import {
+  api,
+  vendorApi,
+  type AccountStatus,
+  type Branch,
+  type PointRule,
+  type Reward,
+  type RewardBody,
+  type SoldOut,
+  type Staff,
+  type StaffMe,
+  type StaffRole,
+  type VendorImage,
+} from './api';
+
+type RuleBody = {
+  spendAmount: number;
+  pointsPerSpend: number;
+  minPurchase?: number;
+  maxPointsPerPurchase?: number | null;
+};
+
+/**
+ * One vendor's data, as the shared tabs (branches, rule, rewards, images, staff) see it.
+ * A platform admin gets `adminScope(id)` (any vendor); a vendor account gets `myVendorScope(me)`,
+ * which only calls /api/vendor — the vendor comes from the token, never from the page.
+ */
+export interface VendorScope {
+  /** Query-key part: the vendor id, or 'me'. */
+  key: string;
+  currency: string;
+  can: {
+    editVendor: boolean; // branches, rule, rewards, menu
+    branchPhotos: (branchId: string) => boolean;
+    manageStaff: boolean;
+    /** Roles this account may invite (empty = no invite button). */
+    inviteRoles: StaffRole[];
+    /** Branch new branch-level staff go to when the account can't choose (branch managers). */
+    fixedBranchId: string | null;
+  };
+  branches: () => Promise<Branch[]>;
+  createBranch: (body: Partial<Branch>) => Promise<Branch>;
+  updateBranch: (id: string, body: Partial<Branch>) => Promise<Branch>;
+  pointRules: () => Promise<PointRule[]>;
+  publishRule: (body: RuleBody) => Promise<PointRule>;
+  deactivateRule: () => Promise<void>;
+  rewards: () => Promise<Reward[]>;
+  createReward: (body: RewardBody) => Promise<Reward>;
+  updateReward: (id: string, body: RewardBody) => Promise<Reward>;
+  uploadRewardImage: (id: string, f: File) => Promise<Reward>;
+  removeRewardImage: (id: string) => Promise<Reward>;
+  images: () => Promise<VendorImage[]>;
+  uploadImage: (f: File, kind: VendorImage['kind'], branchId?: string) => Promise<VendorImage>;
+  deleteImage: (id: string) => Promise<void>;
+  staff: () => Promise<Staff[]>;
+  updateStaff: (id: string, body: { name?: string; status?: AccountStatus }) => Promise<Staff>;
+  inviteStaff: (body: { name: string; email: string; role: StaffRole; branchId?: string }) => Promise<Staff & { invited: boolean }>;
+  /** "Temporarily closed until" (merchant accounts only). */
+  branchPause?: {
+    /** The only branch this account can pause (branch managers); null = any. */
+    fixedBranchId: string | null;
+    pause: (branchId: string, until: string) => Promise<Branch>;
+    resume: (branchId: string) => Promise<Branch>;
+  };
+  /** Per-branch "sold out" for rewards (merchant accounts only; the admin pages don't show it). */
+  soldOut?: {
+    /** The only branch this account can mark (branch managers); null = any branch or all. */
+    fixedBranchId: string | null;
+    list: () => Promise<SoldOut[]>;
+    set: (rewardId: string, body: { branchId?: string; until: string | null }) => Promise<SoldOut[]>;
+    clear: (rewardId: string, branchId?: string) => Promise<SoldOut[]>;
+  };
+}
+
+export function adminScope(vendorId: string, currency: string): VendorScope {
+  return {
+    key: vendorId,
+    currency,
+    can: {
+      editVendor: true,
+      branchPhotos: () => true,
+      manageStaff: true,
+      inviteRoles: ['vendor_admin', 'branch_manager', 'staff', 'viewer'],
+      fixedBranchId: null,
+    },
+    branches: () => api.branches(vendorId),
+    createBranch: (b) => api.createBranch(vendorId, b),
+    updateBranch: api.updateBranch,
+    pointRules: () => api.pointRules(vendorId),
+    publishRule: (b) => api.publishRule(vendorId, b),
+    deactivateRule: () => api.deactivateRule(vendorId),
+    rewards: () => api.rewards(vendorId),
+    createReward: (b) => api.createReward(vendorId, b),
+    updateReward: api.updateReward,
+    uploadRewardImage: api.uploadRewardImage,
+    removeRewardImage: api.removeRewardImage,
+    images: () => api.images(vendorId),
+    uploadImage: (f, kind, branchId) => api.uploadImage(vendorId, f, kind, branchId),
+    deleteImage: (id) => api.deleteImage(vendorId, id),
+    staff: () => api.staff(vendorId),
+    updateStaff: api.updateStaff,
+    inviteStaff: (b) => api.inviteVendorStaff(vendorId, b),
+  };
+}
+
+/** What the signed-in vendor account may do; the API enforces the same rules. */
+export function myVendorScope(me: StaffMe, client: typeof vendorApi = vendorApi): VendorScope {
+  const isAdmin = me.role === 'vendor_admin';
+  const viewer = me.role === 'viewer'; // read-only, every branch
+  return {
+    key: 'me',
+    currency: me.vendor.currency,
+    can: {
+      editVendor: isAdmin,
+      branchPhotos: (branchId) => isAdmin || (!viewer && branchId === me.branchId),
+      manageStaff: !viewer,
+      inviteRoles: isAdmin ? ['vendor_admin', 'branch_manager', 'staff', 'viewer'] : viewer ? [] : ['staff'],
+      fixedBranchId: isAdmin || viewer ? null : me.branchId,
+    },
+    branches: client.branches,
+    createBranch: client.createBranch,
+    updateBranch: client.updateBranch,
+    pointRules: client.pointRules,
+    publishRule: client.publishRule,
+    deactivateRule: client.deactivateRule,
+    rewards: client.rewards,
+    createReward: client.createReward,
+    updateReward: client.updateReward,
+    uploadRewardImage: client.uploadRewardImage,
+    removeRewardImage: client.removeRewardImage,
+    images: client.images,
+    uploadImage: client.uploadImage,
+    deleteImage: client.deleteImage,
+    staff: client.staff,
+    updateStaff: client.updateStaff,
+    inviteStaff: client.inviteStaff,
+    // viewers change nothing: no pause / sold-out controls
+    branchPause: viewer
+      ? undefined
+      : {
+          fixedBranchId: isAdmin ? null : me.branchId,
+          pause: client.pauseBranch,
+          resume: client.resumeBranch,
+        },
+    soldOut: viewer
+      ? undefined
+      : {
+          fixedBranchId: isAdmin ? null : me.branchId,
+          list: client.soldOuts,
+          set: client.setSoldOut,
+          clear: client.clearSoldOut,
+        },
+  };
+}
