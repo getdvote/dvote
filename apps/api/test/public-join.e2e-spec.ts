@@ -13,7 +13,7 @@ import { createTestSigner, type TestSigner } from './helpers/test-auth';
 const run = randomUUID().slice(0, 8);
 const ids = { vendorA: randomUUID(), vendorB: randomUUID(), suspended: randomUUID(), branchA: randomUUID(), branchB: randomUUID() };
 
-describe('Public join (dvote.app/<slug>): venue page, join with the form, card page (e2e)', () => {
+describe('Public join (m.dvote.co/<slug>): venue page, join with the form, card page (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
   let signer: TestSigner;

@@ -137,6 +137,15 @@ export interface QrSources {
   }[];
 }
 
+export type PlanName = 'starter' | 'growth' | 'chain';
+export interface VendorPlan {
+  status: 'trial' | 'active';
+  plan: PlanName | null;
+  trialEndsAt: string | null;
+  /** An unpaid trial shop is deleted for good then. */
+  deleteAt: string | null;
+}
+
 export interface Vendor {
   id: string;
   name: string;
@@ -158,6 +167,11 @@ export interface Vendor {
   brandFont: BrandFont | null;
   currency: string;
   status: VendorStatus;
+  planStatus?: 'trial' | 'active';
+  plan?: PlanName | null;
+  trialEndsAt?: string | null;
+  deleteAt?: string | null;
+  selfSignup?: boolean;
   branchCount: number;
   staffCount: number;
   createdAt: string;
@@ -320,6 +334,8 @@ export interface StaffMe extends Staff {
     name: string;
     logoUrl: string | null;
     currency: string;
+    /** Self sign-ups are on a free trial until an admin activates a plan. */
+    plan?: VendorPlan;
   };
   branch: { id: string; name: string } | null;
   /** Active branches this account can work at (all of them for a merchant admin). */
@@ -717,6 +733,8 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    /** The whole error body (e.g. trial_ended carries trialEndedAt and deleteAt). */
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -749,7 +767,7 @@ async function call<T>(method: Method, path: string, body?: unknown): Promise<T>
   if (!res.ok) {
     const code = json.code ?? `http_${res.status}`;
     const server = Array.isArray(json.message) ? json.message.join(', ') : json.message;
-    throw new ApiError(res.status, code, errorText(code) ?? server ?? t('common.somethingWrong'));
+    throw new ApiError(res.status, code, errorText(code) ?? server ?? t('common.somethingWrong'), json as Record<string, unknown>);
   }
   return json as T;
 }
@@ -784,6 +802,15 @@ export const api = {
       total: number;
     }>('GET', `/api/admin/workspace/${section}${qs(q)}`),
   me: () => call<AdminMe>('GET', '/api/admin/me'),
+  /** Merchant sign-up, step 1 (no sign-in, captcha): the account + confirmation email. */
+  merchantSignup: (body: { ownerName: string; shopName: string; email: string; password: string; phone: string; captchaToken?: string; redirectTo: string }) =>
+    call<{ sent: true }>('POST', '/api/public/merchant-signup', body),
+  /** A confirmed new account opens its shop (free trial). */
+  signup: (body: { shopName: string; ownerName: string; phone: string }) =>
+    call<{ vendorId: string; trialEndsAt: string; deleteAt: string }>('POST', '/api/vendor/signup', body),
+  /** Admin: activate a paid plan or extend a free trial. */
+  vendorPlan: (vendorId: string, body: { action: 'activate'; plan: PlanName } | { action: 'extend'; days: number }) =>
+    call<{ planStatus: 'trial' | 'active'; plan: PlanName | null; trialEndsAt: string | null; deleteAt: string | null }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
   overview: () => call<Overview>('GET', '/api/admin/overview'),
   qrSources: (days: number) => call<QrSources>('GET', `/api/admin/stats/qr-sources?days=${days}`),
   systemDatabase: () => call<SystemDatabase>('GET', '/api/admin/system/database'),

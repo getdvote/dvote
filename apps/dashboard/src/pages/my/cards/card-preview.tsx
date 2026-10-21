@@ -240,7 +240,7 @@ function IPhoneBack(p: Rendered) {
         ))}
         {d.back.terms ? <Row title={w.terms}>{d.back.terms}</Row> : null}
         <LinkRow title={w.cardCode} value="K7M-4QX" />
-        <LinkRow title={`${w.poweredBy} dvote`} value="dvote.app" />
+        <LinkRow title={`${w.poweredBy} dvote`} value="dvote.co" />
       </div>
     </div>
   );

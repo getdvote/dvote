@@ -865,3 +865,19 @@ DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN REVOKE ALL ON wallet_campaigns FROM anon; END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN REVOKE ALL ON wallet_campaigns FROM authenticated; END IF;
 END $$;
+
+-- =====================================================================
+-- 10. SELF SIGN-UP + FREE TRIAL (migration 31_vendor_trial, 2026-10-21)
+-- =====================================================================
+ALTER TABLE vendors
+  ADD COLUMN plan_status   varchar(10) NOT NULL DEFAULT 'active',
+  ADD COLUMN plan          varchar(10),
+  ADD COLUMN trial_ends_at timestamptz,
+  ADD COLUMN delete_at     timestamptz,
+  ADD COLUMN self_signup   boolean NOT NULL DEFAULT false,
+  ADD CONSTRAINT vendors_plan_status_ck CHECK (plan_status IN ('trial', 'active')),
+  ADD CONSTRAINT vendors_plan_ck CHECK (plan IS NULL OR plan IN ('starter', 'growth', 'chain')),
+  ADD CONSTRAINT vendors_trial_dates_ck CHECK (
+    plan_status <> 'trial' OR (trial_ends_at IS NOT NULL AND delete_at IS NOT NULL AND delete_at >= trial_ends_at)
+  );
+CREATE INDEX vendors_trial_idx ON vendors (trial_ends_at, delete_at) WHERE plan_status = 'trial';

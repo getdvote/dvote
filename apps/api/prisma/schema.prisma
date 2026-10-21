@@ -240,6 +240,11 @@ model vendors {
   brand_secondary       String?             @db.VarChar(7)
   brand_font            String?             @db.VarChar(40)
   wallet_nearby_branch_ids String[] @db.Uuid
+  plan_status              String              @default("active") @db.VarChar(10)
+  plan                     String?             @db.VarChar(10)
+  trial_ends_at            DateTime?           @db.Timestamptz(6)
+  delete_at                DateTime?           @db.Timestamptz(6)
+  self_signup              Boolean             @default(false)
   wallet_nearby_enabled Boolean             @default(false)
   admin_actions         admin_actions[]
   branches              branches[]
@@ -259,6 +264,8 @@ model vendors {
   wallet_broadcasts     wallet_broadcasts[]
   loyalty_cards         loyalty_cards?
   wallet_campaigns wallet_campaigns[]
+
+  @@index([trial_ends_at, delete_at], map: "vendors_trial_idx", where: raw("((plan_status)::text = 'trial'::text)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

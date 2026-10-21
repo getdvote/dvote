@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode }
 import { api, ApiError, errorMessage, vendorApi, type AdminMe, type StaffMe } from './api';
 import { supabase } from './supabase';
 import { AuthContext, type AuthState, type AuthStatus, type Enrollment } from './auth-context';
+import { toEgyptianMobile } from './phone';
 
 /**
  * Platform-admin sign-in: email + password, then a 6-digit code from an authenticator app
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminMe | null>(null);
   const [staff, setStaff] = useState<StaffMe | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [trial, setTrial] = useState<AuthState['trial']>(null);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut().catch(() => undefined);
@@ -30,18 +32,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('signedOut');
   }, []);
 
+  /**
+   * A new account from the sign-up page (merchant.dvote.co/signup) has no shop yet: after the
+   * email is confirmed, open it from the details saved at sign-up (Supabase user metadata).
+   * false = not a sign-up account.
+   */
+  const openSignupShop = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    const meta = (data.user?.user_metadata ?? {}) as { shop_name?: string; full_name?: string; phone?: string };
+    if (!meta.shop_name || !meta.full_name || !meta.phone) return false;
+    await api.signup({ shopName: meta.shop_name, ownerName: meta.full_name, phone: toEgyptianMobile(meta.phone) ?? meta.phone });
+    return true;
+  }, []);
+
   /** Not a platform admin: maybe a vendor account. */
   const resolveVendor = useCallback(async () => {
     try {
-      const me = await vendorApi.me();
+      let me;
+      try {
+        me = await vendorApi.me();
+      } catch (err) {
+        if (!(err instanceof ApiError && err.code === 'not_staff') || !(await openSignupShop())) throw err;
+        me = await vendorApi.me();
+      }
       setStaff(me);
+      setTrial(null);
       setNotice(null);
       setStatus('ready');
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'trial_ended') {
+        setTrial({
+          trialEndedAt: typeof err.details.trialEndedAt === 'string' ? err.details.trialEndedAt : null,
+          deleteAt: typeof err.details.deleteAt === 'string' ? err.details.deleteAt : null,
+        });
+        setStatus('trialEnded');
+        return;
+      }
       setNotice(err instanceof ApiError && err.code === 'not_staff' ? 'This account has no access to the dvote dashboard.' : errorMessage(err));
       await signOut();
     }
-  }, [signOut]);
+  }, [signOut, openSignupShop]);
 
   /** After a password (or a stored session): decide what's still needed. */
   const resolve = useCallback(async () => {
@@ -118,8 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ status, admin, staff, notice, signIn, verifyCode, startEnroll, confirmEnroll, signOut }),
-    [status, admin, staff, notice, signIn, verifyCode, startEnroll, confirmEnroll, signOut],
+    () => ({ status, admin, staff, notice, trial, signIn, verifyCode, startEnroll, confirmEnroll, signOut }),
+    [status, admin, staff, notice, trial, signIn, verifyCode, startEnroll, confirmEnroll, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

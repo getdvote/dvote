@@ -76,7 +76,7 @@ function useBrandedVendor(): { brand: Brand | null; fallback: ReactNode } {
 }
 
 /**
- * dvote.app/<slug>: what the NFC tag / QR at the till opens. A short hub: one row per section the
+ * m.dvote.co/<slug>: what the NFC tag / QR at the till opens. A short hub: one row per section the
  * merchant chose (dashboard → Storefront), in their order; each row opens its own page (the
  * loyalty card opens joining), WiFi shows its password right here. The look (page style,
  * colours, font) comes from Settings → Branding.
@@ -272,7 +272,7 @@ function WifiCard({ ssid, password, brand }: { ssid: string; password: string; b
 }
 
 /**
- * dvote.app/<slug>/rewards | /menu | /branches: one section on its own page, with the way back
+ * m.dvote.co/<slug>/rewards | /menu | /branches: one section on its own page, with the way back
  * to the merchant's hub.
  */
 export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branches' }) {

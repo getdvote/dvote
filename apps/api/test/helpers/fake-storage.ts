@@ -19,6 +19,11 @@ export class FakeStorage {
       .map((k) => k.slice(bucket.length + 1));
   }
 
+  /** Every file under a folder (StorageService.listFolder). */
+  listFolder(bucket: Bucket, prefix: string) {
+    return Promise.resolve(this.list(bucket, `${prefix}/`));
+  }
+
   ensureBuckets() {
     return Promise.resolve([]);
   }

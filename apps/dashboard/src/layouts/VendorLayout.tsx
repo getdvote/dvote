@@ -78,6 +78,8 @@ export function useMyVendor(): Vendor {
   return (
     data ?? {
       ...me.vendor,
+      // sign-in returns the plan as an object; the profile's `plan` is just its name
+      plan: me.vendor.plan?.plan ?? null,
       bannerUrl: null,
       category: null,
       cardDesign: null,
@@ -241,8 +243,27 @@ export function VendorLayout({ children }: { children: ReactNode }) {
         extra: cashier || !OPENING_HOURS ? null : <BranchesNow />,
       }}
     >
+      <TrialBanner />
       {children}
     </SideLayout>
+  );
+}
+
+/** A self sign-up shop on its free trial: days left and the way to the plans (dvote.co/pricing). */
+function TrialBanner() {
+  const plan = useMe().vendor.plan;
+  if (plan?.status !== 'trial' || !plan.trialEndsAt) return null;
+  const days = Math.max(0, Math.ceil((Date.parse(plan.trialEndsAt) - Date.now()) / 86_400_000));
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-pressed/40 bg-brand-soft px-4 py-3 text-sm text-foreground">
+      <p>
+        <span className="font-semibold">{days === 0 ? t('trial.lastDay') : t('trial.daysLeft', { count: days })}</span>
+        <span className="text-muted-foreground"> · {t('trial.banner')}</span>
+      </p>
+      <a href={`${config.landingUrl}/pricing`} className="inline-flex min-h-8 items-center font-semibold text-brand-text underline-offset-4 hover:underline">
+        {t('trial.seePlans')}
+      </a>
+    </div>
   );
 }
 

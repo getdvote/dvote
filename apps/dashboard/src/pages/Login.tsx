@@ -1,5 +1,5 @@
 import { CheckIcon as Check, CopyIcon as Copy, EyeIcon as Eye, EyeClosedIcon as EyeOff, LoaderIcon as Loader2, LockIcon as Lock, LetterIcon as Mail, ShieldCheckIcon as ShieldCheck } from '@solar-icons/react/linear';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Field } from '../components/Field';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { t } from '../i18n';
+import { site } from '../lib/config';
 import { errorMessage } from '../lib/api';
 import { useAuth, type Enrollment } from '../lib/auth';
 
@@ -21,6 +22,16 @@ import { useAuth, type Enrollment } from '../lib/auth';
  */
 export function Login() {
   const { status, notice } = useAuth();
+  return (
+    <AuthShell>
+      {notice ? <ErrorAlert error={notice} /> : null}
+      {status === 'mfaVerify' ? <CodeStep /> : status === 'mfaEnroll' ? <EnrollStep /> : <PasswordStep />}
+    </AuthShell>
+  );
+}
+
+/** The sign-in / sign-up frame: logo and switches, the form in the middle, the dashboard picture. */
+export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen bg-card p-3 lg:grid-cols-2">
       <div className="relative flex flex-col px-4 py-5 sm:px-8">
@@ -34,8 +45,7 @@ export function Login() {
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 py-10">
           {/* small screens have no brand panel: the welcome scene stands in */}
           <BrandIllustration name="welcome" size="sm" className="mx-auto lg:hidden" />
-          {notice ? <ErrorAlert error={notice} /> : null}
-          {status === 'mfaVerify' ? <CodeStep /> : status === 'mfaEnroll' ? <EnrollStep /> : <PasswordStep />}
+          {children}
         </div>
         <p className="text-center text-xs text-muted-foreground">{t('login.footer')}</p>
       </div>
@@ -62,7 +72,7 @@ function Showcase() {
             <span className="size-2.5 rounded-full bg-foreground/15" />
             <span className="size-2.5 rounded-full bg-foreground/15" />
             <span className="size-2.5 rounded-full bg-foreground/15" />
-            <span className="ms-4 rounded-md bg-muted px-3 py-0.5 text-[10px] text-muted-foreground">dashboard.dvote.app</span>
+            <span className="ms-4 rounded-md bg-muted px-3 py-0.5 text-[10px] text-muted-foreground">merchant.dvote.co</span>
           </div>
           <div className="grid grid-cols-[150px_1fr]">
             <div className="grid content-start gap-1 border-e bg-muted/50 p-3 text-xs">
@@ -108,7 +118,7 @@ function Showcase() {
   );
 }
 
-function StepHeader({ title, description }: { title: string; description: string }) {
+export function StepHeader({ title, description }: { title: string; description: string }) {
   return (
     <div className="grid gap-1">
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
@@ -139,7 +149,7 @@ function PasswordStep() {
 
   return (
     <>
-      <StepHeader title={t('login.title')} description={t('login.description')} />
+      <StepHeader title={t('login.title')} description={site === 'admin' ? t('login.adminDescription') : t('login.description')} />
       <div>
         <form onSubmit={submit} className="grid gap-5">
           <Field label={t('staff.email')} htmlFor="email">
@@ -180,6 +190,14 @@ function PasswordStep() {
             {t('login.continue')}
           </Button>
         </form>
+        {site !== 'admin' ? (
+          <p className="mt-5 text-center text-sm text-muted-foreground">
+            {t('login.newHere')}{' '}
+            <Link to="/signup" className="font-medium text-foreground underline underline-offset-4">
+              {t('login.startTrial')}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </>
   );

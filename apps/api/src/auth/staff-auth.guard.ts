@@ -63,13 +63,23 @@ export class StaffAuthGuard implements CanActivate {
     const staff = await this.prisma.staff_users.findUnique({
       where: { auth_user_id: claims.sub },
       include: {
-        vendors: { select: { status: true } },
+        vendors: { select: { status: true, plan_status: true, trial_ends_at: true, delete_at: true } },
         branches: { select: { status: true } },
       },
     });
     if (!staff) throw new ForbiddenException({ code: 'not_staff' });
     if (staff.status !== 'active') {
       throw new ForbiddenException({ code: 'staff_disabled' });
+    }
+    // a free trial that has run out locks the whole shop (dashboard, scans) until a plan is active
+    const v = staff.vendors;
+    if (v.plan_status === 'trial' && v.trial_ends_at && v.trial_ends_at <= new Date()) {
+      throw new ForbiddenException({
+        code: 'trial_ended',
+        message: 'The free trial has ended. Subscribe to a plan to continue.',
+        trialEndedAt: v.trial_ends_at.toISOString(),
+        deleteAt: v.delete_at?.toISOString() ?? null,
+      });
     }
     if (staff.vendors.status !== 'active') {
       throw new ForbiddenException({ code: 'vendor_suspended' });

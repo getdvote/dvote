@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 
 /**
- * The storefront: the sections of a merchant's public page (dvote.app/<slug>), in order. A
+ * The storefront: the sections of a merchant's public page (m.dvote.co/<slug>), in order. A
  * section not in the list is not shown. Stored as jsonb on vendors (the shop) and branches (a
  * branch's own copy); checked here, never trusted from the client.
  */

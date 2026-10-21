@@ -105,7 +105,7 @@ export class PublicVendorDto {
 
 /** One customer's loyalty card at one merchant, as the card page and the wallet pass show it. */
 export class PublicCardDto {
-  @ApiProperty({ description: 'Unguessable id: the card page is dvote.app/c/<publicId>' }) publicId: string;
+  @ApiProperty({ description: 'Unguessable id: the card page is m.dvote.co/c/<publicId>' }) publicId: string;
   @ApiProperty({ example: 'CZW-QNM' }) shortCode: string;
   @ApiProperty({ example: 'Mona Ali' }) cardholder: string;
   @ApiProperty() balance: number;

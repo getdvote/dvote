@@ -86,7 +86,7 @@ export function PermissionDemo({ location = false }: { location?: boolean }) {
               <SiteIcon />
             </span>
           </span>
-          dvote.co
+          m.dvote.co
         </div>
       </div>
 

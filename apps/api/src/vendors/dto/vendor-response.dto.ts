@@ -13,7 +13,7 @@ export class VendorResponseDto {
   @ApiProperty({ type: String, nullable: true })
   logoUrl: string | null;
 
-  @ApiProperty({ example: 'joy-corner', description: 'Public page address: dvote.app/<slug> (empty = none yet)' })
+  @ApiProperty({ example: 'joy-corner', description: 'Public page address: m.dvote.co/<slug> (empty = none yet)' })
   slug: string;
 
   @ApiProperty({ type: String, nullable: true, description: 'Shop-page banner' })
@@ -43,6 +43,16 @@ export class VendorResponseDto {
 
   @ApiProperty({ enum: vendor_status, enumName: 'VendorStatus' })
   status: vendor_status;
+
+  @ApiProperty({ enum: ['trial', 'active'], description: 'trial = self sign-up not paid yet (migration 31)' })
+  planStatus: 'trial' | 'active';
+
+  @ApiProperty({ type: String, nullable: true, enum: ['starter', 'growth', 'chain'] })
+  plan: string | null;
+
+  @ApiProperty({ type: String, nullable: true }) trialEndsAt: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Unpaid trial shops are deleted for good then' }) deleteAt: string | null;
+  @ApiProperty({ description: 'Signed up by itself (merchant.dvote.co/signup)' }) selfSignup: boolean;
 
   @ApiProperty({ description: 'Branches (any status)' })
   branchCount: number;
@@ -75,6 +85,11 @@ export class VendorResponseDto {
       contactPhone: v.contact_phone,
       currency: v.currency,
       status: v.status,
+      planStatus: v.plan_status === 'trial' ? 'trial' : 'active',
+      plan: v.plan,
+      trialEndsAt: v.trial_ends_at?.toISOString() ?? null,
+      deleteAt: v.delete_at?.toISOString() ?? null,
+      selfSignup: v.self_signup,
       branchCount: v._count.branches,
       staffCount: v._count.staff_users,
       createdAt: v.created_at.toISOString(),

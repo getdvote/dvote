@@ -33,6 +33,17 @@
         "start:dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "apps/landing",
+        "run",
+        "dev"
+      ],
+      "port": 5175
     }
   ]
 }
