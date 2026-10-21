@@ -71,8 +71,10 @@ export class SupabaseAdminService {
    * Merchant self sign-up (after the captcha): an UNCONFIRMED email + password account, marked
    * app_metadata.dvote_signup (only the server can set app_metadata, so accounts made by calling
    * Supabase directly can't open a trial shop), then Supabase's "Confirm signup" email.
-   * An unconfirmed earlier sign-up with the same email gets the new details and a fresh email;
-   * any other existing account → 'taken'.
+   * An unconfirmed earlier sign-up with the same email only gets the confirmation email again
+   * ('resent'): its password and details are never changed from this public, unauthenticated
+   * path, or anyone could set the password of an account its owner is about to confirm.
+   * Any other existing account → 'taken'.
    */
   async createSignupAccount(
     email: string,
@@ -95,8 +97,6 @@ export class SupabaseAdminService {
       const { data: found, error: getError } = await admin.getUserById(authUserId);
       if (getError || !found.user) throw this.failed('look up user', getError);
       if (found.user.email_confirmed_at || found.user.app_metadata?.dvote_signup !== true) return 'taken';
-      const { error: updateError } = await admin.updateUserById(authUserId, { password, user_metadata: details });
-      if (updateError) throw this.failed('update sign-up account', updateError);
       outcome = 'resent';
     }
     const { error: mailError } = await this.client!.auth.resend({
