@@ -71,7 +71,9 @@ export function CardFace({ width = BASE_W, ...props }: FaceProps) {
   const h = H[props.device];
   return (
     <div className={cn('relative shrink-0 overflow-hidden', props.className)} style={{ width, height: h * scale }}>
-      <div className="absolute top-0 origin-top-left start-0 rtl:origin-top-right" style={{ width: BASE_W, height: h, transform: `scale(${scale})` }}>
+      {/* exactly BASE_W wide, so pinning it top-left fills the box in either direction;
+          `rtl:` would also fire inside an LTR phone on an Arabic page and push it sideways */}
+      <div className="absolute top-0 left-0 origin-top-left" style={{ width: BASE_W, height: h, transform: `scale(${scale})` }}>
         {props.device === 'iphone' ? <IPhoneFront {...props} /> : <AndroidFront {...props} />}
       </div>
     </div>

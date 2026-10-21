@@ -162,10 +162,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                 asChild
                 isActive={isActive(n.to)}
                 tooltip={n.label}
-                className={cn(
-                  'relative h-9 gap-3 px-3 font-medium data-active:bg-transparent [&_svg]:size-[18px] [&>*:not([data-pill])]:relative',
-                  n.action && 'pe-10',
-                )}
+                className="relative h-9 gap-3 px-3 font-medium data-active:bg-transparent [&_svg]:size-[18px] [&>*:not([data-pill])]:relative"
               >
                 <NavLink to={n.to}>
                   {/* the highlight glides from the old page to the new one */}
@@ -190,7 +187,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                   title={n.action.label}
                   aria-label={n.action.label}
                   onClick={n.action.onClick}
-                  className="top-1.5 right-1.5 size-6 w-6 text-muted-foreground hover:text-foreground rtl:right-auto rtl:left-1.5"
+                  className="top-1.5 end-1.5 size-6 w-6 text-muted-foreground hover:text-foreground"
                 >
                   <n.action.icon />
                 </SidebarMenuAction>
