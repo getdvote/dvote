@@ -1333,6 +1333,7 @@ export const en = {
     checkTitle: "Check your email",
     checkText: "We sent a confirmation link to {email}. Open it on this device to finish: your shop opens with a 7-day free trial.",
     checkSpam: "No email after a few minutes? Check your spam folder.",
+    checkAgain: "Signed up with this email before? We sent that link again: your first details and password stay the same.",
   },
   trial: {
     daysLeft: { one: "Free trial: 1 day left", other: "Free trial: {count} days left" },

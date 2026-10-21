@@ -273,3 +273,44 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
     await expect(trial.purge(adminMade.id)).rejects.toThrow('not an overdue');
   });
 });
+
+describe('Sign-up account creation never changes an existing account from the public path', () => {
+  const existingId = randomUUID();
+  /** A fake Supabase client: createUser says the email exists; the stored account is unconfirmed or confirmed. */
+  function service(user: { email_confirmed_at: string | null; app_metadata: Record<string, unknown> }) {
+    const admin = {
+      createUser: jest.fn(() => Promise.resolve({ data: { user: null }, error: { code: 'email_exists', message: 'already registered' } })),
+      generateLink: jest.fn(() => Promise.resolve({ data: { user: { id: existingId } }, error: null })),
+      getUserById: jest.fn(() => Promise.resolve({ data: { user: { id: existingId, ...user } }, error: null })),
+      updateUserById: jest.fn(() => Promise.resolve({ data: { user: null }, error: null })),
+      deleteUser: jest.fn(() => Promise.resolve({ data: null, error: null })),
+    };
+    const resend = jest.fn(() => Promise.resolve({ data: {}, error: null }));
+    const config = { get: (key: string) => ({ SUPABASE_URL: 'http://supabase.test', NODE_ENV: 'test', PORT: 3000 })[key] };
+    const svc = new SupabaseAdminService(config as never);
+    (svc as unknown as { client: unknown }).client = { auth: { admin, resend } };
+    return { svc, admin, resend };
+  }
+  const details = { full_name: 'Attacker', shop_name: 'Attacker Shop', phone: '+201000000000' };
+
+  it('an unconfirmed dvote sign-up only gets the confirmation email again: password and details untouched', async () => {
+    const { svc, admin, resend } = service({ email_confirmed_at: null, app_metadata: { dvote_signup: true } });
+    await expect(svc.createSignupAccount('victim@test.dvote', 'attacker-pass', details, 'http://localhost:5173/')).resolves.toBe('resent');
+    expect(admin.updateUserById).not.toHaveBeenCalled();
+    expect(admin.deleteUser).not.toHaveBeenCalled();
+    expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'victim@test.dvote', options: { emailRedirectTo: 'http://localhost:5173/' } });
+  });
+
+  it('a confirmed or non-sign-up account is taken: nothing changed, no email', async () => {
+    for (const user of [
+      { email_confirmed_at: new Date().toISOString(), app_metadata: { dvote_signup: true } },
+      { email_confirmed_at: null, app_metadata: {} },
+    ]) {
+      const { svc, admin, resend } = service(user);
+      await expect(svc.createSignupAccount('someone@test.dvote', 'attacker-pass', details)).resolves.toBe('taken');
+      expect(admin.updateUserById).not.toHaveBeenCalled();
+      expect(admin.deleteUser).not.toHaveBeenCalled();
+      expect(resend).not.toHaveBeenCalled();
+    }
+  });
+});

@@ -67,6 +67,7 @@ export function Signup() {
         </span>
         <StepHeader title={t('signup.checkTitle')} description={t('signup.checkText', { email: sentTo })} />
         <p className="text-sm text-muted-foreground">{t('signup.checkSpam')}</p>
+        <p className="text-sm text-muted-foreground">{t('signup.checkAgain')}</p>
         <Link to="/" className="inline-flex min-h-8 items-center text-sm text-muted-foreground underline underline-offset-4">
           {t('signup.haveAccount')}
         </Link>
