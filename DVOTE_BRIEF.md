@@ -390,3 +390,10 @@ New campaigns and existing drafts save automatically after a short typing pause,
 - Purchased domain: **dvote.co**, registered with **Namecheap**. This replaces the previously planned dvote.app address.
 - A standalone branded **Coming soon** page is prepared in apps/coming-soon (index.html + logo.svg); no build, API or secrets required. Deploy only this folder for the temporary holding page.
 - Publication is pending access to the domain/hosting account; the www record currently points to Namecheap parking. Do not describe the page as live until verified at the domain.
+
+
+### Addresses and dashboards split (2026-10-21)
+- `dvote.co` = landing page (to build; "Log in" → `merchant.dvote.co`). `merchant.dvote.co` = merchant dashboard, `admin.dvote.co` = admin dashboard (one `apps/dashboard` build; each address admits only its own accounts and points others to the right one). `m.dvote.co/<shop>` = customer storefront printed on QR posters / NFC tags; `dvote.co/m/<shop>` will forward there. `api.dvote.co` = API (Railway or Hetzner, undecided).
+- Customer storefront is built and deployed on Cloudflare (Worker `dvote-web`, from `main`); today it is attached to `dvote.co` temporarily. Moving it to `m.dvote.co`, creating the dashboard Worker `dvote-dashboard` and the redirect rules wait until the landing page is built (DEPLOY.md steps 2-4).
+- Git: `develop` = integration, `main` = live; `main` is protected and was brought up to date (PR #57).
+- Backups: `npm run db:backup` writes the database dump and new Storage images to Google Drive (`BACKUP_DIR=G:/My Drive/dvote`).

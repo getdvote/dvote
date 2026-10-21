@@ -1,0 +1,29 @@
+<!-- Supabase → Authentication → Emails → Templates → "Confirm signup". Subject: see README.md -->
+<!-- The Data fields come from the dashboard sign-up page (Signup.tsx): full_name, shop_name -->
+<div style="background:#f4f4f5;padding:24px 12px;font-family:Inter,Segoe UI,Arial,sans-serif;color:#1c1c1e">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px">
+    <tr><td style="padding:28px 28px 8px"><div style="font-size:22px;font-weight:700;letter-spacing:-0.3px">dvote</div></td></tr>
+    <tr>
+      <td dir="ltr" style="padding:8px 28px 20px;text-align:left;font-size:15px;line-height:1.6">
+        <p style="margin:0 0 12px;font-size:18px;font-weight:600">{{ if .Data.full_name }}Hi {{ .Data.full_name }},{{ else }}Hi,{{ end }}</p>
+        <p style="margin:0 0 12px">Welcome to dvote! Confirm your email to open {{ if .Data.shop_name }}<strong>{{ .Data.shop_name }}</strong>{{ else }}your shop{{ end }} and start your <strong>7-day free trial</strong> with every feature.</p>
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#6155f5;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:12px">Confirm my email</a>
+      </td>
+    </tr>
+    <tr><td style="padding:0 28px"><div style="border-top:1px solid #e4e4e7"></div></td></tr>
+    <tr>
+      <td dir="rtl" style="padding:20px 28px;text-align:right;font-size:15px;line-height:1.8;font-family:Tahoma,Segoe UI,Arial,sans-serif">
+        <p style="margin:0 0 12px;font-size:18px;font-weight:600">{{ if .Data.full_name }}أهلًا {{ .Data.full_name }}،{{ else }}أهلًا،{{ end }}</p>
+        <p style="margin:0 0 12px">مرحبًا بك في dvote! أكّد بريدك لفتح {{ if .Data.shop_name }}<strong>{{ .Data.shop_name }}</strong>{{ else }}محلك{{ end }} وبدء <strong>تجربتك المجانية لمدة 7 أيام</strong> بكل المميزات.</p>
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#6155f5;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:12px">أكّد بريدي</a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 28px 26px;font-size:12px;line-height:1.6;color:#71717a;text-align:center">
+        You received this because {{ .Email }} was used to sign up on dvote. If it wasn't you, ignore this email.<br>
+        <span dir="rtl">وصلتك هذه الرسالة لأن {{ .Email }} استُخدم للتسجيل في dvote. إذا لم تكن أنت، تجاهلها.</span><br>
+        dvote · getdvote@gmail.com
+      </td>
+    </tr>
+  </table>
+</div>

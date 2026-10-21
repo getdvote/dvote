@@ -18,6 +18,8 @@ export interface SupabaseClaims {
   app_metadata?: {
     provider?: string;
     providers?: string[];
+    /** Set by the API's merchant sign-up (server only): may open a trial shop. */
+    dvote_signup?: boolean;
   };
   user_metadata?: {
     full_name?: string;

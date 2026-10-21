@@ -244,7 +244,7 @@ export class GoogleWalletService implements OnApplicationBootstrap, OnModuleDest
     const branch = second.type === 'directions'
       ? await this.prisma.branches.findFirst({ where: { id: second.branchId, vendor_id: v.id, status: 'active' }, select: { lat: true, lng: true } })
       : null;
-    const web = (this.config.get('PUBLIC_WEB_URL', { infer: true }) ?? 'https://dvote.app').replace(/\/$/, '');
+    const web = (this.config.get('PUBLIC_WEB_URL', { infer: true }) ?? 'https://m.dvote.co').replace(/\/$/, '');
     return {
       design,
       cancelled: card?.status === 'cancelled',

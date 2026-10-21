@@ -6,6 +6,7 @@ Paste them in **Supabase → Authentication → Emails → Templates**. Keep `{{
 | Template in Supabase | Subject (paste in "Subject heading") | Body (paste the whole file in "Message body") |
 |---|---|---|
 | **Invite user** | `You're invited to {{ if .Data.shop_name }}{{ .Data.shop_name }} on {{ end }}dvote · دعوة للانضمام إلى dvote` | [invite.html](invite.html) |
+| **Confirm signup** (merchant self sign-up) | `Confirm your email to start your dvote free trial · أكّد بريدك لبدء تجربتك المجانية` | [confirm-signup.html](confirm-signup.html) |
 | **Reset password** | `Reset your dvote password · إعادة تعيين كلمة المرور` | [reset-password.html](reset-password.html) |
 
 - The invite uses details the API sends with each staff invite (`apps/api/src/staff/staff.service.ts` → `inviteUser`): `full_name`, `shop_name`, `role_en`, `role_ar`. Invites without them (e.g. `npm run admin:create` without a password) fall back to a general text.

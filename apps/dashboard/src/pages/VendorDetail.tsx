@@ -23,6 +23,7 @@ import { RewardsTab } from './vendor/RewardsTab';
 import { RulesTab } from './vendor/RulesTab';
 import { StaffTab } from './vendor/StaffTab';
 import { BrandingPanel } from '../components/BrandingPanel';
+import { PlanCard } from '../components/PlanCard';
 import { categoryLabel } from '../lib/cardDesigns';
 import { CurrencySelect } from './Vendors';
 
@@ -51,6 +52,7 @@ export function VendorDetail() {
       ) : (
         <div className="grid gap-5">
           <VendorHeader vendor={vendor} />
+          <PlanCard vendor={vendor} />
           <Card>
             <CardContent>
               <Tabs defaultValue="branches">

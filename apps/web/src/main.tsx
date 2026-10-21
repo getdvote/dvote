@@ -12,8 +12,8 @@ import { VenuePage, VenueSectionPage } from './pages/VenuePage';
 import './styles.css';
 
 /**
- * dvote.app routes. Fixed words come first (they are reserved merchant slugs in the database:
- * see vendor_slug_reserved in migration 16), then dvote.app/<merchant-slug>.
+ * m.dvote.co routes. Fixed words come first (they are reserved merchant slugs in the database:
+ * see vendor_slug_reserved in migration 16), then m.dvote.co/<merchant-slug>.
  */
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },

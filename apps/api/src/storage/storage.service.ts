@@ -101,6 +101,21 @@ export class StorageService {
     return data.signedUrl;
   }
 
+  /** Every file path under a folder (Storage lists one level at a time). */
+  async listFolder(bucket: Bucket, prefix: string): Promise<string[]> {
+    const files: string[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await this.storage().from(bucket).list(prefix, { limit: 1000, offset });
+      if (error) throw this.failed(`list ${bucket}/${prefix}`, error);
+      for (const item of data) {
+        const path = `${prefix}/${item.name}`;
+        if (item.id === null) files.push(...(await this.listFolder(bucket, path)));
+        else files.push(path);
+      }
+      if (data.length < 1000) return files;
+    }
+  }
+
   /** Deletes without failing the request: for clean-up after the main change already succeeded. */
   async removeQuietly(bucket: Bucket, paths: string[]): Promise<void> {
     try {
