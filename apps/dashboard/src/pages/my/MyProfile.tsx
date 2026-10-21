@@ -77,7 +77,7 @@ export function ProfileEditor() {
           >
             <Avatar className="size-20 border bg-card shadow-sm">
               {vendor.logoUrl ? <AvatarImage src={vendor.logoUrl} alt="" /> : null}
-              <AvatarFallback className="bg-brand-soft text-3xl font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
+              <AvatarFallback className="bg-secondary text-3xl font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
             </Avatar>
             <span className="absolute end-0 bottom-0 flex size-8 items-center justify-center rounded-full border-2 border-card bg-card shadow-xs">
               {logo.isPending ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}

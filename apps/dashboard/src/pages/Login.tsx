@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { BrandIllustration, BrandPattern } from '../components/BrandArt';
 import { DvoteLogo } from '../components/DvoteLogo';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { Field } from '../components/Field';
@@ -31,6 +32,8 @@ export function Login() {
           </div>
         </div>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 py-10">
+          {/* small screens have no brand panel: the welcome scene stands in */}
+          <BrandIllustration name="welcome" size="sm" className="mx-auto lg:hidden" />
           {notice ? <ErrorAlert error={notice} /> : null}
           {status === 'mfaVerify' ? <CodeStep /> : status === 'mfaEnroll' ? <EnrollStep /> : <PasswordStep />}
         </div>
@@ -41,22 +44,20 @@ export function Login() {
   );
 }
 
-/** The right half: a hatched panel with a line about dvote and a tilted look at the dashboard. */
+/** The right half: an ink brand panel with a line about dvote and a tilted look at the dashboard. */
 function Showcase() {
   const bars = [30, 44, 38, 52, 47, 60, 55, 70, 64, 78, 72, 90, 84, 96];
   return (
-    <div
-      className="relative hidden overflow-hidden rounded-3xl border bg-muted lg:block"
-      style={{ backgroundImage: 'repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in oklch, var(--foreground) 4%, transparent) 7px 8px)' }}
-      aria-hidden
-    >
+    <div className="relative isolate hidden overflow-hidden rounded-3xl bg-ink text-paper lg:block" aria-hidden>
+      {/* brand moment: the kit's orbit pattern, faded out under the heading so the text stays crisp */}
+      <BrandPattern name="orbit-ink" fade="top" className="-z-10 bg-[position:70%_75%] opacity-70" />
       <div className="max-w-md px-12 pt-14">
         <h2 className="text-2xl font-semibold tracking-tight">{t('login.showcaseTitle')}</h2>
-        <p className="mt-2 text-muted-foreground">{t('login.showcaseText')}</p>
+        <p className="mt-2 text-paper/75">{t('login.showcaseText')}</p>
       </div>
       {/* a small, still picture of the merchant dashboard */}
       <div className="absolute start-14 top-60 w-[760px] origin-top-left [transform:perspective(1800px)_rotateY(-12deg)_rotateX(5deg)_rotateZ(-2deg)] rtl:origin-top-right rtl:[transform:perspective(1800px)_rotateY(12deg)_rotateX(5deg)_rotateZ(2deg)]">
-        <div className="overflow-hidden rounded-2xl border bg-card shadow-2xl" dir="ltr">
+        <div className="overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-2xl" dir="ltr">
           <div className="flex items-center gap-1.5 border-b px-4 py-2.5">
             <span className="size-2.5 rounded-full bg-foreground/15" />
             <span className="size-2.5 rounded-full bg-foreground/15" />
@@ -174,7 +175,7 @@ function PasswordStep() {
             {t('login.forgot')}
           </Link>
           <ErrorAlert error={error} />
-          <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
+          <Button type="submit" variant="brand" size="lg" className="h-11 w-full" disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : null}
             {t('login.continue')}
           </Button>
@@ -203,7 +204,7 @@ function CodeInput({ onSubmit, busy }: { onSubmit: (code: string) => void; busy:
           </InputOTPGroup>
         </InputOTP>
       </div>
-      <Button type="submit" size="lg" className="h-10 w-full" disabled={busy || code.length !== 6}>
+      <Button type="submit" variant="brand" size="lg" className="h-10 w-full" disabled={busy || code.length !== 6}>
         {busy ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
         Verify
       </Button>

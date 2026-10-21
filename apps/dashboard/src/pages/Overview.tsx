@@ -100,7 +100,7 @@ export function Overview() {
                         >
                           <Avatar className="size-10">
                             <AvatarImage src={v.logoUrl ?? undefined} alt="" />
-                            <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{i + 1}</AvatarFallback>
+                            <AvatarFallback className="bg-secondary font-semibold text-accent-foreground">{i + 1}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <div className="truncate font-medium">{v.name}</div>
@@ -151,7 +151,7 @@ export function Stat({ icon: Icon, title, value, note }: { icon: SolarIcon; titl
   return (
     <Card>
       <CardContent className="flex items-start gap-3.5">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-accent-foreground">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-accent-foreground">
           <Icon className="size-5" />
         </div>
         <div className="min-w-0">

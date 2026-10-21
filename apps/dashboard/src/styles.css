@@ -92,6 +92,9 @@
     --color-warning: var(--warning);
     --color-warning-soft: var(--warning-soft);
     --color-destructive-soft: var(--destructive-soft);
+    /* fixed brand paper + ink (same in both themes): illustration panels and brand-moment surfaces */
+    --color-paper: #F3F1EE;
+    --color-ink: #11190C;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);

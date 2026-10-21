@@ -145,7 +145,7 @@ function VendorHeader({ vendor }: { vendor: Vendor }) {
           >
             <Avatar className="size-22">
               <AvatarImage src={vendor.logoUrl ?? undefined} alt="" />
-              <AvatarFallback className="bg-brand-soft text-3xl font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
+              <AvatarFallback className="bg-secondary text-3xl font-semibold text-accent-foreground">{initial(vendor.name)}</AvatarFallback>
             </Avatar>
             <span className="absolute -right-0.5 -bottom-0.5 flex size-8 items-center justify-center rounded-full border-2 border-background bg-card text-foreground shadow-sm">
               {logo.isPending ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}

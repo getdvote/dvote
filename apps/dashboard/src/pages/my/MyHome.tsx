@@ -154,7 +154,7 @@ export function MyHome() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableState loading={false} empty={!data.branches.length} colSpan={3} emptyTitle={t('home.noBranches')}
+                    <TableState loading={false} empty={!data.branches.length} colSpan={3} illustration="nearby" emptyTitle={t('home.noBranches')}
                       emptyText={t('emptyStates.homeBranchesText')}
                       action={
                         isAdmin ? (
