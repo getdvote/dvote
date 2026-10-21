@@ -150,6 +150,7 @@ export function MyRedemptions({ embedded }: { embedded?: boolean } = {}) {
                   loading={isLoading}
                   empty={!data?.items.length}
                   colSpan={branchOnly ? 5 : 6}
+                  illustration={filtered ? undefined : 'reward-unlocked'}
                   emptyTitle={filtered ? t('emptyStates.noMatchTitle') : t('emptyStates.redemptionsTitle')}
                   emptyText={filtered ? t('activity.noMatch') : t('emptyStates.redemptionsText')}
                   action={

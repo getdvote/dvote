@@ -280,7 +280,7 @@ export function Statistics() {
                                 src={v.logoUrl ?? undefined}
                                 alt=""
                               />
-                              <AvatarFallback className="bg-brand-soft text-xs font-semibold text-accent-foreground">
+                              <AvatarFallback className="bg-secondary text-xs font-semibold text-accent-foreground">
                                 {initial(v.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -338,7 +338,7 @@ function SourceTile({
   return (
     <Card>
       <CardContent className="flex items-start gap-3.5">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-accent-foreground">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-accent-foreground">
           {icon}
         </div>
         <div className="min-w-0 flex-1">

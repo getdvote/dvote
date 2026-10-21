@@ -89,7 +89,7 @@ export function FraudTab() {
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
         <Card className={s && s.open > 0 ? 'bg-warning/10' : undefined}>
           <CardContent className="flex items-start gap-3">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-accent-foreground">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-accent-foreground">
               <ShieldAlert className="size-5" />
             </div>
             <div>

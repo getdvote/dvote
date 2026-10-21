@@ -44,6 +44,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { PageHeader } from "../../components/PageHeader";
+import { BrandPattern } from "../../components/BrandArt";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { Field } from "../../components/Field";
 import { DatePicker, TimePicker } from "../../components/PeriodFilter";
@@ -537,6 +538,7 @@ export function MyMessages() {
                   loading={campaigns.isLoading || history.isLoading}
                   empty={!items.filter((c) => matches(c, filter)).length}
                   colSpan={6}
+                  illustration={filter === "all" ? "send-campaign" : undefined}
                   emptyTitle={t("emptyStates.broadcastTitle")}
                   emptyText={t("broadcast.empty")}
                   action={
@@ -784,7 +786,8 @@ export function MyMessages() {
         }}
       >
         <DialogContent className="flex max-h-[94dvh] flex-col overflow-hidden p-0 sm:max-w-5xl">
-          <DialogHeader className="border-b p-5 pe-12">
+          <DialogHeader className="relative isolate overflow-hidden border-b p-5 pe-12">
+            <BrandPattern name="paper-grid" fade="start" className="-z-10" />
             <DialogTitle>{t("broadcast.new")}</DialogTitle>
             <DialogDescription>{t("broadcast.subtitle")}</DialogDescription>
             {autoEligible && (name.trim() || body.trim()) && (
@@ -1191,7 +1194,7 @@ export function MyMessages() {
                     </div>
                   }
                   actionLabel={action}
-                  trigger={<Button disabled={!canSend}>{action}</Button>}
+                  trigger={<Button variant="brand" disabled={!canSend}>{action}</Button>}
                   onConfirm={async () => {
                     await save.mutateAsync(mode);
                   }}

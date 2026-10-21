@@ -68,7 +68,7 @@ export function BranchesTab({ scope }: { scope: VendorScope }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={OPENING_HOURS ? 7 : 6} emptyTitle={t('emptyStates.branchesTitle')}
+            <TableState loading={isLoading} empty={!data?.length} colSpan={OPENING_HOURS ? 7 : 6} illustration="nearby" emptyTitle={t('emptyStates.branchesTitle')}
               emptyText={t('emptyStates.branchesText')}
               action={
                 scope.can.editVendor ? (

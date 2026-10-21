@@ -162,7 +162,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                 asChild
                 isActive={isActive(n.to)}
                 tooltip={n.label}
-                className="relative h-9 gap-3 px-3 font-medium data-active:bg-transparent [&_svg]:size-[18px] [&>*:not([data-pill])]:relative"
+                className="relative h-9 gap-3 px-3 font-medium data-active:bg-transparent data-[active=true]:text-sidebar-primary-foreground data-[active=true]:hover:text-sidebar-primary-foreground [&_svg]:size-[18px] [&>*:not([data-pill])]:relative"
               >
                 <NavLink to={n.to}>
                   {/* the highlight glides from the old page to the new one */}
@@ -175,7 +175,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                         bounce: 0.15,
                         duration: 0.35,
                       }}
-                      className="absolute inset-0 rounded-md bg-sidebar-accent"
+                      className="absolute inset-0 rounded-md bg-sidebar-primary"
                     />
                   ) : null}
                   <NavIcon item={n} active={isActive(n.to)} />
@@ -187,7 +187,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                   title={n.action.label}
                   aria-label={n.action.label}
                   onClick={n.action.onClick}
-                  className="top-1.5 end-1.5 size-6 w-6 text-muted-foreground hover:text-foreground"
+                  className="top-1.5 end-1.5 size-6 w-6 text-muted-foreground hover:text-foreground peer-data-[active=true]/menu-button:text-sidebar-primary-foreground"
                 >
                   <n.action.icon />
                 </SidebarMenuAction>
@@ -350,7 +350,7 @@ function IdentityRow({
     <>
       <Avatar className="size-10 rounded-lg after:rounded-lg">
         {identity.imageUrl ? <AvatarImage src={identity.imageUrl} alt="" className="rounded-lg" /> : null}
-        <AvatarFallback className="rounded-lg bg-brand-soft font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
+        <AvatarFallback className="rounded-lg bg-secondary font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 text-start group-data-[collapsible=icon]:hidden">
         <div className="truncate text-sm font-semibold">{identity.name}</div>
@@ -538,7 +538,7 @@ function MobileHeader({
         >
           <Avatar className="size-8 rounded-full after:rounded-full">
             {identity.imageUrl ? <AvatarImage src={identity.imageUrl} alt="" className="rounded-full" /> : null}
-            <AvatarFallback className="rounded-full bg-brand-soft text-sm font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
+            <AvatarFallback className="rounded-full bg-secondary text-sm font-semibold text-accent-foreground">{initial(identity.name)}</AvatarFallback>
           </Avatar>
           <span className="max-w-32 truncate text-sm font-semibold">{identity.name}</span>
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />

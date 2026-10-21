@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BrandIllustration } from '../../components/BrandArt';
 import { type AttentionItem } from '../../lib/api';
 import { cn } from '@/lib/utils';
 import { getLanguage, t, type TKey } from '../../i18n';
@@ -73,10 +74,8 @@ export function NeedsAttention({ hideSetup = false }: { hideSetup?: boolean }) {
             <Skeleton className="h-14 w-full" />
           </div>
         ) : !now.length && !setup.length ? (
-          <div className="flex items-center gap-3 px-6 py-5 text-sm">
-            <span className="flex size-9 items-center justify-center rounded-full bg-success/10">
-              <CircleCheck className="size-5 text-success" />
-            </span>
+          <div className="flex flex-col items-center gap-3 px-6 py-5 text-center text-sm sm:flex-row sm:gap-5 sm:text-start">
+            <BrandIllustration name="all-done" className="w-28 sm:w-32" />
             <span>
               <span className="font-medium">{t('attention.allGood')}</span>{' '}
               <span className="text-muted-foreground">{hideSetup ? t('attention.setupInChecklist') : t('attention.nothingNow')}</span>

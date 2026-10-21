@@ -91,7 +91,7 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
             </TableRow>
           </TableHeader>
           <Reorder.Group as="tbody" axis="y" values={rows} onReorder={setRows} data-slot="table-body" className="[&_tr:last-child]:border-0">
-            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} emptyTitle={t('emptyStates.rewardsTitle')}
+            <TableState loading={isLoading} empty={!data?.length} colSpan={cols} illustration="empty-rewards" emptyTitle={t('emptyStates.rewardsTitle')}
               emptyText={t('emptyStates.rewardsText')}
               action={
                 scope.can.editVendor ? (

@@ -85,7 +85,7 @@ export function Customers() {
                   <div className="flex items-center gap-3">
                     <Avatar className="size-9">
                       <AvatarImage src={u.avatarUrl ?? undefined} alt="" />
-                      <AvatarFallback className="bg-brand-soft font-semibold text-accent-foreground">{initial(u.name ?? u.email)}</AvatarFallback>
+                      <AvatarFallback className="bg-secondary font-semibold text-accent-foreground">{initial(u.name ?? u.email)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-semibold">{u.name ?? 'No name'}</div>
@@ -165,7 +165,7 @@ function CustomerSheet({ id, onClose }: { id: string | null; onClose: () => void
               <div className="flex items-center gap-4">
                 <Avatar className="size-16">
                   <AvatarImage src={u.avatarUrl ?? undefined} alt="" />
-                  <AvatarFallback className="bg-brand-soft text-2xl font-semibold text-accent-foreground">{initial(u.name ?? u.email)}</AvatarFallback>
+                  <AvatarFallback className="bg-secondary text-2xl font-semibold text-accent-foreground">{initial(u.name ?? u.email)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

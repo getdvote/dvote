@@ -79,7 +79,7 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableState loading={isLoading} empty={!data?.length} colSpan={6} emptyTitle={t('emptyStates.staffTitle')}
+            <TableState loading={isLoading} empty={!data?.length} colSpan={6} illustration="welcome" emptyTitle={t('emptyStates.staffTitle')}
               emptyText={t('emptyStates.staffText')}
               action={
                 scope.can.inviteRoles.length ? (

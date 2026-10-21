@@ -105,7 +105,7 @@ export function Feedback() {
                 <article key={f.id} className="flex gap-3 p-4">
                   <Avatar className="size-9 rounded-lg">
                     <AvatarImage src={f.vendor.logoUrl ?? undefined} alt="" />
-                    <AvatarFallback className="rounded-lg bg-brand-soft font-semibold text-accent-foreground">{initial(f.vendor.name)}</AvatarFallback>
+                    <AvatarFallback className="rounded-lg bg-secondary font-semibold text-accent-foreground">{initial(f.vendor.name)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
