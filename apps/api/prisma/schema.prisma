@@ -83,6 +83,7 @@ model platform_admins {
   redemptions           redemptions[]
   wallet_broadcasts     wallet_broadcasts[]
   loyalty_card_versions loyalty_card_versions[]
+  platform_settings     platform_settings[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -246,6 +247,8 @@ model vendors {
   delete_at                DateTime?           @db.Timestamptz(6)
   self_signup              Boolean             @default(false)
   wallet_nearby_enabled Boolean             @default(false)
+  billing_cycle         String?             @db.VarChar(7)
+  founding              Boolean             @default(false)
   admin_actions         admin_actions[]
   branches              branches[]
   cards                 cards[]
@@ -684,4 +687,13 @@ model wallet_campaigns {
   vendors     vendors   @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([next_at], map: "wallet_campaigns_due", where: raw("(status = ANY (ARRAY['scheduled'::text, 'repeating'::text, 'processing'::text]))"))
+}
+
+/// Platform-wide settings set by the dvote team (migration 32). This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model platform_settings {
+  key             String           @id @db.VarChar(40)
+  value           Json
+  updated_by      String?          @db.Uuid
+  updated_at      DateTime         @default(now()) @db.Timestamptz(6)
+  platform_admins platform_admins? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

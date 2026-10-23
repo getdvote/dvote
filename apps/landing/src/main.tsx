@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router';
-import { Layout } from './components/site';
+import { Layout } from './components/layout';
 import { I18nProvider } from './i18n';
-import { ContactPage, FeaturesPage, HomePage, PricingPage } from './pages/pages';
+import { HomePage } from './pages/home';
 import './styles.css';
 
 /** dvote.co: the landing page. "Log in" goes to the merchant dashboard (merchant.dvote.co). */
@@ -16,9 +16,10 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/', element: <HomePage /> },
-      { path: '/features', element: <FeaturesPage /> },
-      { path: '/pricing', element: <PricingPage /> },
-      { path: '/contact', element: <ContactPage /> },
+      // one page: old addresses (e.g. the dashboard's "See plans" → /pricing) jump to the section
+      { path: '/features', element: <Navigate to="/#features" replace /> },
+      { path: '/pricing', element: <Navigate to="/#pricing" replace /> },
+      { path: '/contact', element: <Navigate to="/#contact" replace /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

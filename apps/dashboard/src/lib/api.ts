@@ -137,13 +137,22 @@ export interface QrSources {
   }[];
 }
 
-export type PlanName = 'starter' | 'growth' | 'chain';
+export type PlanName = 'regular' | 'loyal' | 'chain';
+export type BillingCycle = 'monthly' | 'annual';
 export interface VendorPlan {
   status: 'trial' | 'active';
   plan: PlanName | null;
+  billingCycle?: BillingCycle | null;
   trialEndsAt: string | null;
   /** An unpaid trial shop is deleted for good then. */
   deleteAt: string | null;
+}
+
+export interface FoundingStatus {
+  total: number;
+  open: boolean;
+  taken: number;
+  left: number;
 }
 
 export interface Vendor {
@@ -169,6 +178,9 @@ export interface Vendor {
   status: VendorStatus;
   planStatus?: 'trial' | 'active';
   plan?: PlanName | null;
+  billingCycle?: BillingCycle | null;
+  /** Holds a Founding Merchant spot. */
+  founding?: boolean;
   trialEndsAt?: string | null;
   deleteAt?: string | null;
   selfSignup?: boolean;
@@ -803,14 +815,27 @@ export const api = {
     }>('GET', `/api/admin/workspace/${section}${qs(q)}`),
   me: () => call<AdminMe>('GET', '/api/admin/me'),
   /** Merchant sign-up, step 1 (no sign-in, captcha): the account + confirmation email. */
-  merchantSignup: (body: { ownerName: string; shopName: string; email: string; password: string; phone: string; captchaToken?: string; redirectTo: string }) =>
+  merchantSignup: (body: { ownerName: string; shopName: string; email: string; password: string; phone: string; captchaToken?: string; redirectTo: string; plan?: PlanName; billingCycle?: BillingCycle }) =>
     call<{ sent: true }>('POST', '/api/public/merchant-signup', body),
   /** A confirmed new account opens its shop (free trial). */
   signup: (body: { shopName: string; ownerName: string; phone: string }) =>
     call<{ vendorId: string; trialEndsAt: string; deleteAt: string }>('POST', '/api/vendor/signup', body),
   /** Admin: activate a paid plan or extend a free trial. */
-  vendorPlan: (vendorId: string, body: { action: 'activate'; plan: PlanName } | { action: 'extend'; days: number }) =>
-    call<{ planStatus: 'trial' | 'active'; plan: PlanName | null; trialEndsAt: string | null; deleteAt: string | null }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
+  vendorPlan: (
+    vendorId: string,
+    body: { action: 'activate'; plan: PlanName; billingCycle: BillingCycle; founding?: boolean } | { action: 'extend'; days: number },
+  ) =>
+    call<{
+      planStatus: 'trial' | 'active';
+      plan: PlanName | null;
+      billingCycle: BillingCycle | null;
+      founding: boolean;
+      trialEndsAt: string | null;
+      deleteAt: string | null;
+    }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
+  /** Admin: the Founding Merchants offer (spots and whether it is open). */
+  founding: () => call<FoundingStatus>('GET', '/api/admin/settings/founding'),
+  setFounding: (body: { total: number; open: boolean }) => call<FoundingStatus>('PUT', '/api/admin/settings/founding', body),
   overview: () => call<Overview>('GET', '/api/admin/overview'),
   qrSources: (days: number) => call<QrSources>('GET', `/api/admin/stats/qr-sources?days=${days}`),
   systemDatabase: () => call<SystemDatabase>('GET', '/api/admin/system/database'),

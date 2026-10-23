@@ -25,6 +25,7 @@ import { FraudFlagsModule } from './fraud-flags/fraud-flags';
 import { RateLimitModule } from './rate-limit/rate-limit';
 import { PublicJoinModule } from './public-join/public-join.module';
 import { TrialModule } from './trial/trial.module';
+import { PlansModule } from './plans/plans.module';
 import { BroadcastsModule } from './broadcasts/broadcasts';
 import { AdminWorkspaceModule } from './admin/workspace.module';
 import { LoyaltyCardsModule } from './loyalty-cards/loyalty-cards.module';
@@ -61,6 +62,7 @@ import { LoyaltyCardsModule } from './loyalty-cards/loyalty-cards.module';
     LoyaltyCardsModule,
     PublicJoinModule,
     TrialModule,
+    PlansModule,
     BroadcastsModule,
     AdminWorkspaceModule,
   ],

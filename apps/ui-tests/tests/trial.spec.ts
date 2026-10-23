@@ -5,7 +5,7 @@ import { staffMe } from '../lib/fixtures';
 import { mockApi, setLanguage, signIn } from '../lib/mock-api';
 import { KEY_VIEWPORTS } from '../lib/viewports';
 
-/** Self sign-up and the 7-day free trial: sign-up page, trial banner, "trial ended" screen. */
+/** Self sign-up and the 14-day free trial: sign-up page, trial banner, "trial ended" screen. */
 const DAY = 86_400_000;
 
 async function trialMe(page: Page, daysLeft: number) {
@@ -85,7 +85,7 @@ test('sign-in page links to the free trial (merchant), and the sign-up page has 
   await setLanguage(page, 'en');
   await mockApi(page, 'vendor_admin');
   await page.goto(DASHBOARD + '/');
-  await page.getByRole('link', { name: 'Start a 7-day free trial' }).click();
+  await page.getByRole('link', { name: 'Start a 14-day free trial' }).click();
   await expect(page).toHaveURL(/\/signup$/);
   for (const id of ['ownerName', 'shopName', 'email', 'phone', 'password']) await expect(page.locator(`#${id}`)).toBeVisible();
 });

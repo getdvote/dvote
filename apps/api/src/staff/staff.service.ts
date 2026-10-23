@@ -100,6 +100,7 @@ export class StaffService {
         plan: {
           status: vendor.plan_status === 'trial' ? 'trial' : 'active',
           plan: vendor.plan,
+          billingCycle: vendor.billing_cycle,
           trialEndsAt: vendor.trial_ends_at?.toISOString() ?? null,
           deleteAt: vendor.delete_at?.toISOString() ?? null,
         },

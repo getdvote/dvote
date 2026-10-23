@@ -881,3 +881,29 @@ ALTER TABLE vendors
     plan_status <> 'trial' OR (trial_ends_at IS NOT NULL AND delete_at IS NOT NULL AND delete_at >= trial_ends_at)
   );
 CREATE INDEX vendors_trial_idx ON vendors (trial_ends_at, delete_at) WHERE plan_status = 'trial';
+
+-- =====================================================================
+-- 11. PLANS v2: REGULAR / LOYAL / CHAIN + FOUNDING (migration 32_plans_v2, 2026-10-23)
+-- =====================================================================
+ALTER TABLE vendors DROP CONSTRAINT vendors_plan_ck;
+ALTER TABLE vendors
+  ADD CONSTRAINT vendors_plan_ck CHECK (plan IS NULL OR plan IN ('regular', 'loyal', 'chain')),
+  ADD COLUMN billing_cycle varchar(7),
+  ADD COLUMN founding      boolean NOT NULL DEFAULT false,
+  ADD CONSTRAINT vendors_billing_cycle_ck CHECK (billing_cycle IS NULL OR billing_cycle IN ('monthly', 'annual'));
+
+-- Platform-wide settings set by the dvote team. 'founding' = {total, open}.
+CREATE TABLE platform_settings (
+  key        varchar(40) PRIMARY KEY,
+  value      jsonb NOT NULL,
+  updated_by uuid REFERENCES platform_admins(id),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO platform_settings (key, value) VALUES ('founding', '{"total": 10, "open": true}');
+CREATE TRIGGER platform_settings_set_updated_at BEFORE UPDATE ON platform_settings
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ON platform_settings FROM anon; END IF;
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN REVOKE ALL ON platform_settings FROM authenticated; END IF;
+END $$;

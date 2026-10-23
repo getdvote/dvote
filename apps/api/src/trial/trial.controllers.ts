@@ -1,14 +1,15 @@
 import { Body, Controller, HttpCode, Param, Post, Req, UnauthorizedException, UseGuards, ForbiddenException, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConflictResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
 import type { Request } from 'express';
 import { AdminApi } from '../auth/admin-api.decorator';
 import { bearerToken } from '../auth/bearer-token';
 import { SupabaseJwtVerifier, type SupabaseClaims } from '../auth/supabase-jwt.verifier';
 import { ParseUuidPipe } from '../common/uuid';
 import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
-import { PLANS, TrialService, type Plan } from './trial.service';
+import { BILLING_CYCLES, PLANS, type BillingCycle, type Plan } from '../plans/plans';
+import { TrialService } from './trial.service';
 
 export class SignupDto {
   @IsString() @MinLength(2) @MaxLength(120) shopName: string;
@@ -26,11 +27,18 @@ export class StartSignupDto {
   @IsOptional() @IsString() @MaxLength(4096) captchaToken?: string;
   /** Where the confirmation link lands (must be allowed in Supabase's Redirect URLs). */
   @IsOptional() @IsUrl({ require_tld: false, protocols: ['http', 'https'] }) redirectTo?: string;
+  /** The plan picked on dvote.co/pricing (kept on the trial shop; nothing is charged). */
+  @IsOptional() @IsIn(PLANS) plan?: Plan;
+  @IsOptional() @IsIn(BILLING_CYCLES) billingCycle?: BillingCycle;
 }
 
 export class PlanActionDto {
   @IsIn(['activate', 'extend']) action: 'activate' | 'extend';
   @ValidateIf((o: PlanActionDto) => o.action === 'activate') @IsIn(PLANS) plan?: Plan;
+  /** Activate only; default monthly. */
+  @IsOptional() @IsIn(BILLING_CYCLES) billingCycle?: BillingCycle;
+  /** Activate only: take (true) or give back (false) a Founding Merchant spot; left out = unchanged. */
+  @IsOptional() @IsBoolean() founding?: boolean;
   @ValidateIf((o: PlanActionDto) => o.action === 'extend') @Type(() => Number) @IsInt() @Min(1) @Max(60) days?: number;
 }
 
@@ -55,7 +63,7 @@ class SignupAuthGuard implements CanActivate {
 
 /**
  * POST /api/vendor/signup: the merchant dashboard's sign-up (merchant.dvote.co/signup) after the
- * email is confirmed. Creates the shop on a 7-day free trial; the account becomes its merchant admin.
+ * email is confirmed. Creates the shop on a 14-day free trial; the account becomes its merchant admin.
  */
 @ApiTags('vendor: sign-up')
 @ApiBearerAuth()
@@ -102,11 +110,17 @@ export class AdminPlanController {
   @Post(':id/plan')
   @HttpCode(200)
   @ApiBody({ type: PlanActionDto })
+  @ApiConflictResponse({ description: 'not_on_trial | founding_full' })
   async plan(@Param('id', ParseUuidPipe) id: string, @Body() dto: PlanActionDto) {
-    const v = dto.action === 'activate' ? await this.trial.activate(id, dto.plan as Plan) : await this.trial.extend(id, dto.days as number);
+    const v =
+      dto.action === 'activate'
+        ? await this.trial.activate(id, dto.plan as Plan, dto.billingCycle, dto.founding)
+        : await this.trial.extend(id, dto.days as number);
     return {
       planStatus: v.plan_status,
       plan: v.plan,
+      billingCycle: v.billing_cycle,
+      founding: v.founding,
       trialEndsAt: v.trial_ends_at?.toISOString() ?? null,
       deleteAt: v.delete_at?.toISOString() ?? null,
       status: v.status,
