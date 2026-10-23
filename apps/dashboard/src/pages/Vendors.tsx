@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { Field } from '../components/Field';
+import { FoundingSettings } from '../components/FoundingSettings';
 import { Pager, SearchInput, StatusFilter } from '../components/ListControls';
 import { initial, PageHeader } from '../components/PageHeader';
 import { StatusTag } from '../components/StatusTag';
@@ -42,9 +43,12 @@ export function Vendors() {
         title="Merchants"
         subtitle="Coffee shop brands on dvote"
         extra={
-          <Button size="lg" onClick={() => setCreating(true)}>
-            <Plus /> New merchant
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <FoundingSettings />
+            <Button size="lg" onClick={() => setCreating(true)}>
+              <Plus /> New merchant
+            </Button>
+          </div>
         }
       />
       <Card className="gap-0 py-0">

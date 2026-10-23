@@ -12,6 +12,7 @@ type Handler = (url: URL, method: string) => unknown;
 const routes: [string, RegExp, Handler][] = [
   // vendor (merchant) API
   ['GET', /^\/api\/vendor\/staff\/me$/, () => null], // filled per role below
+  ['GET', /^\/api\/admin\/settings\/founding$/, () => ({ total: 10, open: true, taken: 3, left: 7 })],
   ['GET', /^\/api\/vendor\/profile$/, () => f.vendor],
   ['GET', /^\/api\/vendor\/profile\/username$/, () => ({ available: true })],
   ['GET', /^\/api\/vendor\/summary$/, () => f.summary],

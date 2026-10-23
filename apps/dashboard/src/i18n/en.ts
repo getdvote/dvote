@@ -1315,7 +1315,7 @@ export const en = {
   },
   signup: {
     title: "Start your free trial",
-    description: "7 days, every feature, no card needed. We'll email you a link to confirm your address.",
+    description: "14 days, every feature, no card needed. We'll email you a link to confirm your address.",
     ownerName: "Your name",
     shopName: "Shop name",
     email: "Email",
@@ -1331,7 +1331,7 @@ export const en = {
     privacy: "Privacy policy",
     haveAccount: "Already have an account? Sign in",
     checkTitle: "Check your email",
-    checkText: "We sent a confirmation link to {email}. Open it on this device to finish: your shop opens with a 7-day free trial.",
+    checkText: "We sent a confirmation link to {email}. Open it on this device to finish: your shop opens with a 14-day free trial.",
     checkSpam: "No email after a few minutes? Check your spam folder.",
     checkAgain: "Signed up with this email before? We sent that link again: your first details and password stay the same.",
   },
@@ -1347,7 +1347,7 @@ export const en = {
   },
   login: {
     newHere: "New to dvote?",
-    startTrial: "Start a 7-day free trial",
+    startTrial: "Start a 14-day free trial",
     adminDescription: "dvote team sign-in. Shop owners and managers sign in at merchant.dvote.co.",
     forgot: "Forgot password?",
     showcaseTitle: "Your loyalty program in one place",
