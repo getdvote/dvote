@@ -90,7 +90,7 @@ export function WrongSitePage({ belongsTo, href }: { belongsTo: 'admin' | 'merch
 }
 
 /**
- * A self sign-up shop whose 7-day free trial is over (API trial_ended): nothing else is
+ * A self sign-up shop whose 14-day free trial is over (API trial_ended): nothing else is
  * reachable. Points to the plans on dvote.co/pricing and says when the shop will be deleted.
  */
 export function TrialEndedPage() {

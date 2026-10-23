@@ -6,8 +6,11 @@ export class StaffMePlanDto {
   @ApiProperty({ enum: ['trial', 'active'] })
   status: 'trial' | 'active';
 
-  @ApiProperty({ type: String, nullable: true, enum: ['starter', 'growth', 'chain'] })
+  @ApiProperty({ type: String, nullable: true, enum: ['regular', 'loyal', 'chain'] })
   plan: string | null;
+
+  @ApiProperty({ type: String, nullable: true, enum: ['monthly', 'annual'] })
+  billingCycle: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'When the free trial ends (trial only)' })
   trialEndsAt: string | null;

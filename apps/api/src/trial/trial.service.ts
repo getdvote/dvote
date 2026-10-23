@@ -16,20 +16,24 @@ import { StorageService } from '../storage/storage.service';
 import { SupabaseAdminService } from '../supabase/supabase-admin.service';
 import type { SupabaseClaims } from '../auth/supabase-jwt.verifier';
 import { TurnstileService } from './turnstile.service';
+import { TRIAL } from './trial-rules';
+import { BILLING_CYCLES, PLANS, type BillingCycle, type Plan } from '../plans/plans';
+import { PlansService } from '../plans/plans.service';
 
-/** Self sign-up rules (decided 2026-10-21). */
-export const TRIAL = {
-  /** Every merchant-admin feature, free, for this long after sign-up. */
-  trialDays: 7,
-  /** An unpaid trial shop is deleted for good this long after sign-up. */
-  deleteAfterDays: 30,
-  /** How often the API locks ended trials and deletes overdue ones. */
-  checkEveryMs: 15 * 60 * 1000,
-};
-export const PLANS = ['starter', 'growth', 'chain'] as const;
-export type Plan = (typeof PLANS)[number];
+export { TRIAL } from './trial-rules';
+export { PLANS, type Plan };
 
 const DAY = 24 * 60 * 60 * 1000;
+const PLAN_SELECT = {
+  id: true,
+  plan_status: true,
+  plan: true,
+  billing_cycle: true,
+  founding: true,
+  trial_ends_at: true,
+  delete_at: true,
+  status: true,
+} as const;
 
 export interface StartSignupInput {
   ownerName: string;
@@ -38,6 +42,9 @@ export interface StartSignupInput {
   password: string;
   phone: string;
   captchaToken?: string;
+  /** The plan picked on dvote.co/pricing (a hint for the dvote team; nothing is charged). */
+  plan?: Plan;
+  billingCycle?: BillingCycle;
   redirectTo?: string;
 }
 
@@ -64,6 +71,7 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly authAdmin: SupabaseAdminService,
     private readonly http: HttpAdapterHost,
     private readonly turnstile: TurnstileService,
+    private readonly plans: PlansService,
   ) {}
 
   onApplicationBootstrap() {
@@ -92,7 +100,13 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     const outcome = await this.authAdmin.createSignupAccount(
       email,
       input.password,
-      { full_name: input.ownerName.trim().replace(/\s+/g, ' '), shop_name: input.shopName.trim().replace(/\s+/g, ' '), phone },
+      {
+        full_name: input.ownerName.trim().replace(/\s+/g, ' '),
+        shop_name: input.shopName.trim().replace(/\s+/g, ' '),
+        phone,
+        ...(input.plan ? { plan: input.plan } : {}),
+        ...(input.billingCycle ? { billing_cycle: input.billingCycle } : {}),
+      },
       input.redirectTo,
     );
     if (outcome === 'taken') throw new ConflictException({ code: 'email_taken', message: 'This email already has a dvote account. Sign in instead.' });
@@ -131,6 +145,11 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
       throw new ConflictException({ code: 'email_taken', message: 'This email is already used by a shop team member.' });
     }
 
+    // the plan picked on dvote.co/pricing, kept on the trial shop for the dvote team
+    const meta = claims.user_metadata as Record<string, unknown> | undefined;
+    const picked = PLANS.find((p) => p === meta?.plan) ?? null;
+    const cycle = BILLING_CYCLES.find((c) => c === meta?.billing_cycle) ?? null;
+
     const now = Date.now();
     const trialEndsAt = new Date(now + TRIAL.trialDays * DAY);
     const deleteAt = new Date(now + TRIAL.deleteAfterDays * DAY);
@@ -142,6 +161,8 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
             contact_email: email,
             contact_phone: phone,
             plan_status: 'trial',
+            plan: picked,
+            billing_cycle: picked ? (cycle ?? 'monthly') : null,
             trial_ends_at: trialEndsAt,
             delete_at: deleteAt,
             self_signup: true,
@@ -172,14 +193,29 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     return { vendorId, trialEndsAt: trialEndsAt?.toISOString() ?? null, deleteAt: deleteAt?.toISOString() ?? null };
   }
 
-  /** Admin: the shop pays for a plan. It stays active for good (no trial, no deletion). */
-  async activate(vendorId: string, plan: Plan) {
-    const v = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
-    if (!v) throw new NotFoundException({ code: 'vendor_not_found' });
-    return this.prisma.vendors.update({
-      where: { id: vendorId },
-      data: { plan_status: 'active', plan, trial_ends_at: null, delete_at: null, status: 'active' },
-      select: { id: true, plan_status: true, plan: true, trial_ends_at: true, delete_at: true, status: true },
+  /**
+   * Admin: the shop pays for a plan. It stays active for good (no trial, no deletion).
+   * `founding` takes one of the Founding Merchant spots (409 founding_full when none are left);
+   * leaving it out keeps the shop's current Founding status.
+   */
+  async activate(vendorId: string, plan: Plan, billingCycle: BillingCycle = 'monthly', founding?: boolean) {
+    return this.prisma.$transaction(async (tx) => {
+      const v = await tx.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
+      if (!v) throw new NotFoundException({ code: 'vendor_not_found' });
+      if (founding) await this.plans.takeFoundingSpot(tx, vendorId);
+      return tx.vendors.update({
+        where: { id: vendorId },
+        data: {
+          plan_status: 'active',
+          plan,
+          billing_cycle: billingCycle,
+          ...(founding === undefined ? {} : { founding }),
+          trial_ends_at: null,
+          delete_at: null,
+          status: 'active',
+        },
+        select: PLAN_SELECT,
+      });
     });
   }
 
@@ -198,7 +234,7 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     return this.prisma.vendors.update({
       where: { id: vendorId },
       data: { trial_ends_at: trialEndsAt, delete_at: deleteAt, status: 'active' },
-      select: { id: true, plan_status: true, plan: true, trial_ends_at: true, delete_at: true, status: true },
+      select: PLAN_SELECT,
     });
   }
 

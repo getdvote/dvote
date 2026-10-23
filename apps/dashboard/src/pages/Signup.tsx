@@ -1,6 +1,6 @@
 import { LetterIcon as Mail, LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { useCallback, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ErrorAlert } from '../components/ErrorAlert';
@@ -8,7 +8,7 @@ import { Field } from '../components/Field';
 import { t } from '../i18n';
 import { config } from '../lib/config';
 import { toEgyptianMobile } from '../lib/phone';
-import { api, errorMessage } from '../lib/api';
+import { api, errorMessage, type BillingCycle, type PlanName } from '../lib/api';
 import { Turnstile } from '../components/Turnstile';
 import { AuthShell, StepHeader } from './Login';
 
@@ -16,8 +16,12 @@ import { AuthShell, StepHeader } from './Login';
  * merchant.dvote.co/signup ("Get started" on dvote.co): a new merchant creates an email +
  * password account. Supabase emails a confirmation link; opening it signs them in on this
  * dashboard, which then opens their shop from the details below (auth.tsx openSignupShop) on a
- * 7-day free trial with every merchant-admin feature.
+ * 14-day free trial with every merchant-admin feature. `?plan=regular|loyal|chain&cycle=monthly|annual`
+ * (from dvote.co/pricing) is passed along and kept on the trial shop.
  */
+const PLANS: readonly PlanName[] = ['regular', 'loyal', 'chain'];
+const CYCLES: readonly BillingCycle[] = ['monthly', 'annual'];
+
 export function Signup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +29,9 @@ export function Signup() {
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
   const onToken = useCallback((token: string | null) => setCaptcha(token), []);
+  const [params] = useSearchParams();
+  const plan = PLANS.find((p) => p === params.get('plan'));
+  const billingCycle = CYCLES.find((c) => c === params.get('cycle'));
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,6 +56,8 @@ export function Signup() {
         phone,
         captchaToken: captcha ?? undefined,
         redirectTo: `${window.location.origin}/`,
+        plan,
+        billingCycle: plan ? billingCycle : undefined,
       });
       setSentTo(email);
     } catch (err) {
