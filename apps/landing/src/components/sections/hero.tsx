@@ -76,7 +76,7 @@ function DemoPhone() {
 
   return (
     <div className="relative isolate overflow-hidden rounded-[24px] bg-paper px-4 pt-6 pb-5 sm:px-8">
-      <div aria-hidden className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_85%)]" style={{ backgroundImage: 'radial-gradient(#cfcabe 1.1px, transparent 1.3px)', backgroundSize: '18px 18px' }} />
+      <div aria-hidden className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_85%)]" style={{ backgroundImage: 'radial-gradient(#e7cda2 1.1px, transparent 1.3px)', backgroundSize: '18px 18px' }} />
 
       {/* where the visitor is in the flow */}
       <div className="flex flex-col items-center gap-3">

@@ -451,6 +451,15 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 - Errors use stable `code`s: scans — `qr_invalid`, `qr_used`, `qr_expired`, `qr_cancelled`, `wrong_qr_type`, `vendor_mismatch`, `branch_required`, `no_active_rule`, `invalid_amount`, `no_points_earned`, `duplicate_receipt`, `reward_unavailable`, `reward_sold_out`, `insufficient_points`, `user_blocked`.
 - Never commit `.env`, secrets or keys.
 
+## Brand colours (brand v2.0, coffee palette, decided 2026-10-23; replaces v1.0 electric lime `#E1FF00` / ink `#11190C` / paper `#F3F1EE`)
+
+- **Palette:** Orange `#FF5500` (the accent) · Espresso `#18100F` (ink, dark surfaces) · White `#FFFFFF` · Froth `#F8F4F1` (light page) · Latte `#F3E3CB` · Cortado `#E7CDA2` · Egg Yolk `#FFCA48` · Shortcake `#FFC4A7` · Mint `#B8D9C5` · Plum `#5F2B4B`.
+- **Light mode:** Froth page, White cards, Espresso text; Latte / Cortado for soft fills and lines. **Dark mode:** Espresso surfaces (`#18100F` page, `#221816` cards), Froth text. The dashboard sidebar is Espresso in both themes.
+- **Orange is used sparingly, like cloudflare.com:** the one primary action of a screen (`Button variant="brand"`), active / selected states, focus rings, key highlights, small accents (logo mark, sparkles). Never a large background. Status, charts, badges and illustrations use the supporting colours (Egg Yolk, Shortcake, Mint, Plum).
+- **Contrast:** orange fills always carry Espresso text (`brand-foreground`, 5.9:1); white on orange fails AA. Orange as text on light surfaces uses `brand-text` `#B83D00` (5.2:1 on Froth); in dark mode `brand-text` is `#FF6A1F`.
+- **Tokens keep their v1 names** (`brand`, `brand-hover`, `brand-pressed`, `brand-text`, `brand-soft`, `paper`, `ink`; plus fixed `orange`, `latte`, `cortado`, `egg-yolk`, `shortcake`, `mint`, `plum`): values live in `apps/dashboard/src/styles.css` (source of truth), `apps/landing/src/styles.css`, `apps/web/src/styles.css`, `apps/staff/src/lib/theme.ts` and the email builders in `docs/email-templates/src/` (rebuild with `node docs/email-templates/src/build-assets.mjs` then `build-templates.mjs`). Brand SVGs in `public/brand` are identical in dashboard and landing. The logo components take `markColor` (orange mark, Espresso/Froth wordmark).
+- **Default loyalty card:** with no brand colour and no chosen design, cards use dvote Espresso (`DVOTE_DESIGN` in both `lib/cardDesigns.ts`, `DVOTE_CARD_COLOR` in `apps/api/src/loyalty-cards/card-design.ts`). The 10 numbered designs are unchanged, so merchants' saved choices look the same.
+
 ## Merchant dashboard localization (apps/dashboard, built 2026-10-11)
 
 - Same model as the customer app: **English default + Arabic**, switch in the merchant top bar and on the sign-in page (`components/LanguageToggle.tsx`), saved in the browser (localStorage `dvote-dashboard-language`; `index.html` applies `dir="rtl"` before the first paint).

@@ -40,7 +40,7 @@ export function Page({ children, wide = false, branding = true }: { children: Re
 }
 
 export function DvoteMark() {
-  return <DvoteLogo height={20} className="shrink-0 text-ink" />;
+  return <DvoteLogo height={20} markColor="var(--color-brand)" className="shrink-0 text-ink" />;
 }
 
 export function Button({
@@ -56,10 +56,10 @@ export function Button({
       disabled={props.disabled || busy}
       className={cx(
         'inline-flex h-13 w-full items-center justify-center gap-2 rounded-2xl px-5 text-[17px] font-semibold transition-[background,opacity,transform] active:scale-[0.99] disabled:opacity-50',
-        variant === 'primary' && 'bg-brand text-white hover:bg-brand/90',
+        variant === 'primary' && 'bg-brand text-ink hover:bg-brand-hover',
         variant === 'dark' && 'bg-ink text-white hover:bg-ink/90',
         variant === 'outline' && 'border border-line bg-white text-ink hover:bg-canvas',
-        variant === 'ghost' && 'h-auto py-2 text-[15px] font-medium text-brand underline-offset-4 hover:underline',
+        variant === 'ghost' && 'h-auto py-2 text-[15px] font-medium text-brand-text underline-offset-4 hover:underline',
         className,
       )}
     >

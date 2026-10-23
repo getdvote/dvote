@@ -254,8 +254,8 @@ export function SideLayout({
         {/* `dark`: the sidebar always uses the dark tokens, whatever the theme */}
         <Sidebar side={rtl ? 'right' : 'left'} variant="inset" collapsible="icon" className="dark">
           <SidebarHeader className="flex-row items-center gap-2 px-4 pt-4 pb-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0">
-            <DvoteLogo spinOnHover height={24} className="text-foreground group-data-[collapsible=icon]:hidden" />
-            <DvoteLogo spinOnHover height={26} wordmark={false} className="hidden text-foreground group-data-[collapsible=icon]:block" />
+            <DvoteLogo spinOnHover height={24} markColor="var(--brand)" className="text-foreground group-data-[collapsible=icon]:hidden" />
+            <DvoteLogo spinOnHover height={26} wordmark={false} markColor="var(--brand)" className="hidden text-foreground group-data-[collapsible=icon]:block" />
             {badge ? (
               <Badge variant="brand" className="font-bold tracking-wide group-data-[collapsible=icon]:hidden">
                 {badge}

@@ -106,7 +106,7 @@ export function Geo() {
                   <rect key={i} x={x} y={y} width={w} height={h} rx="1.4" fill="#1f2a18" />
                 ))}
                 <path d="M-4 66 L64 -4" stroke="#26331d" strokeWidth="3.4" />
-                <path d={`M16 92 Q 16 68 24 55`} stroke="#e1ff00" strokeOpacity="0.35" strokeWidth="0.45" strokeDasharray="1.1 1.1" fill="none" />
+                <path d={`M16 92 Q 16 68 24 55`} stroke="#ff5500" strokeOpacity="0.35" strokeWidth="0.45" strokeDasharray="1.1 1.1" fill="none" />
               </svg>
 
               {/* the orbit: lime rings radiating from the café (the brand pattern, here meaning "nearby") */}
@@ -126,7 +126,7 @@ export function Geo() {
               />
 
               <div className="absolute grid -translate-x-1/2 -translate-y-1/2 justify-items-center gap-1.5 text-[12px] font-medium text-paper" style={{ left: `${CAFE.x}%`, top: `${CAFE.y}%` }}>
-                <span className="flex size-11 items-center justify-center rounded-full bg-brand text-ink shadow-[0_0_0_6px_rgb(225_255_0/0.15)]">
+                <span className="flex size-11 items-center justify-center rounded-full bg-brand text-ink shadow-[0_0_0_6px_rgb(255_85_0/0.15)]">
                   <CupHotIcon className="size-5" />
                 </span>
                 <span className="rounded-md bg-ink/70 px-1.5">{g.venue}</span>

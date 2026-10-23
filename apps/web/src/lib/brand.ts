@@ -6,7 +6,7 @@ import { cardDesign } from './cardDesigns';
 function inkOn(hex: string): string {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  return 0.299 * r + 0.587 * g + 0.114 * b > 170 ? '#1C1C1E' : '#FFFFFF';
+  return 0.299 * r + 0.587 * g + 0.114 * b > 170 ? '#18100F' : '#FFFFFF';
 }
 
 /**
@@ -26,7 +26,7 @@ export function brandColors(vendor: PublicVendor) {
   const secondary = vendor.style.secondary ?? look.color2;
   const ink = vendor.style.primary ? inkOn(primary) : look.ink;
   // icons and coloured text on white: the brand colour, or dark ink when the colour is too light to read
-  const accent = inkOn(primary) === '#FFFFFF' ? primary : '#1C1C1E';
+  const accent = inkOn(primary) === '#FFFFFF' ? primary : '#18100F';
   return { primary, secondary, ink, accent };
 }
 

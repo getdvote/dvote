@@ -11,7 +11,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#18100F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -24,8 +24,8 @@
       "output": "single",
       "name": "dvote staff",
       "shortName": "dvote staff",
-      "themeColor": "#F0EFEC",
-      "backgroundColor": "#F0EFEC"
+      "themeColor": "#F8F4F1",
+      "backgroundColor": "#F8F4F1"
     },
     "plugins": [
       "expo-router",
@@ -40,7 +40,7 @@
       "expo-font"
     ],
     "scheme": "dvotestaff",
-    "backgroundColor": "#F0EFEC",
+    "backgroundColor": "#F8F4F1",
     "experiments": {
       "typedRoutes": true
     }

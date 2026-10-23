@@ -13,8 +13,10 @@ const sharp = createRequire(join(repo, 'apps/api/package.json'))('sharp');
 const out = join(repo, 'apps/web/public/email');
 mkdirSync(out, { recursive: true });
 
-// Brand kit palette (output/dvote brand/dvote-brand-kit/tokens).
-const Y = '#E1FF00', K = '#11190C', M = '#CAC4B7', P = '#F3F1EE', W = '#FFFFFF', G = '#787664';
+// Coffee palette (brand v2.0): orange Y only for the logo, sparks and small marks; the scene objects use the
+// supporting colours (egg yolk, shortcake, mint), like the illustrations in apps/*/public/brand.
+const Y = '#FF5500', K = '#18100F', M = '#E7CDA2', P = '#F8F4F1', W = '#FFFFFF', G = '#8C7B6E';
+const YOLK = '#FFCA48', CAKE = '#FFC4A7', MINT = '#B8D9C5';
 
 const logoPaths = [...readFileSync(join(here, 'dvote-logo.svg'), 'utf8').matchAll(/<path[^>]*d="([^"]+)"/g)].map((m) => m[1]);
 const SYMBOL_W = 208, LOGO_W = 665;
@@ -56,7 +58,7 @@ const cards = {
       stamps += i < 4 || p === 0 ? circle(cx, cy, 20, 'none', K, 3) : '';
       if (p > 0) stamps += symbol(cx, cy, 40 * p, K, (1 - p) * -120);
     }
-    const card = rect(0, 0, 350, 220, K, 24) + rect(-12, -12, 350, 220, Y, 24, K, 4) + logo(18, 14, 96) + stamps + path('M72 155h190', 'none', K, 4);
+    const card = rect(0, 0, 350, 220, K, 24) + rect(-12, -12, 350, 220, YOLK, 24, K, 4) + logo(18, 14, 96) + stamps + path('M72 155h190', 'none', K, 4);
     const done = seg(t, 0.85, 1);
     return base() + g(card, 150, 145, 1, `transform-origin="325 255"`).replace('scale(1)', `scale(1) rotate(${tilt} 175 110)`) +
       spark(500, 95, 29 * twinkle(t) * (0.4 + 0.6 * done)) + spark(100, 265, 16 * twinkle(t, 0.25)) + spark(540, 300, 14 * outBack(done));
@@ -70,7 +72,7 @@ const cards = {
       const p = outBack(seg(t, 0.1 + i * 0.09, 0.2 + i * 0.09));
       if (p > 0) dots += circle(222 + i * 39, 320, 9 * p, K);
     }
-    const body = rect(242, 186, 172, 124, K, 22) + rect(232, 176, 172, 124, Y, 22, K, 4);
+    const body = rect(242, 186, 172, 124, K, 22) + rect(232, 176, 172, 124, CAKE, 22, K, 4);
     const shackle = path(`M262 ${176 - lift}V${136 - lift}a56 56 0 0 1 112 0V${176 - lift}`, 'none', K, 14);
     const keyhole = circle(318, 228, 13, K) + rect(312, 232, 12, 32, K, 6);
     const field = rect(186, 290, 268, 60, K, 16) + rect(180, 284, 268, 60, W, 16, K, 4);
@@ -82,7 +84,7 @@ const cards = {
     const pop = outBack(seg(t, 0, 0.3));
     const draw = outCubic(seg(t, 0.3, 0.7));
     const len = 210;
-    return base() + g(circle(15, 15, 133, K) + circle(0, 0, 133, Y, K, 4), 315, 230, pop) +
+    return base() + g(circle(15, 15, 133, K) + circle(0, 0, 133, MINT, K, 4), 315, 230, pop) +
       path('m250 230 44 45 91-97', 'none', K, 14, `stroke-dasharray="${len}" stroke-dashoffset="${len * (1 - draw)}"`) +
       spark(125, 125, 28 * twinkle(t)) + spark(500, 340, 32 * outBack(seg(t, 0.7, 0.9))) +
       path('M470 115L492 90', 'none', K, 4) + path('M180 362L165 389', 'none', K, 4);
@@ -94,7 +96,7 @@ const cards = {
     const spin = 360 * outCubic(seg(t, 0.35, 0.85));
     const env = rect(14, 14, 300, 196, K, 18) + rect(0, 0, 300, 196, W, 18, K, 4) +
       path('M8 12L150 116L292 12', 'none', K, 4) + path('M8 188L118 92M292 188L182 92', 'none', K, 4) +
-      circle(150, 116, 40, Y, K, 4) + symbol(150, 116, 52, K, spin);
+      circle(150, 116, 40, YOLK, K, 4) + symbol(150, 116, 52, K, spin);
     return base() + g(env, 170 + x, 132 + y) +
       spark(500, 100, 26 * twinkle(t)) + spark(118, 150, 18 * twinkle(t, 0.4)) + spark(520, 330, 14 * outBack(seg(t, 0.8, 1)));
   },
@@ -105,7 +107,7 @@ const cards = {
     const mail = (x, y, fill, op = 1) => g(rect(8, 8, 150, 100, K, 12) + rect(0, 0, 150, 100, fill, 12, K, 4) + path('M6 8L75 60L144 8', 'none', K, 4), x, y, 1, `opacity="${op}"`);
     const arrow = path(`M250 250H${250 + 140 * move}`, 'none', K, 6) + (move > 0.9 ? path('M372 234l18 16-18 16', 'none', K, 6) : '');
     const check = outBack(seg(t, 0.65, 0.85));
-    return base() + mail(100, 200, P, 0.35 + 0.65 * fade) + arrow + mail(390, 200, Y) +
+    return base() + mail(100, 200, P, 0.35 + 0.65 * fade) + arrow + mail(390, 200, CAKE) +
       g(circle(0, 0, 22, K) + path('m-9 0 6 6 12-13', 'none', Y, 5), 540, 200, check) +
       spark(470, 120, 26 * twinkle(t)) + spark(160, 140, 18 * twinkle(t, 0.3));
   },
@@ -115,10 +117,10 @@ const cards = {
     for (let i = 0; i < 6; i++) {
       const p = outBack(seg(t, 0.08 + i * 0.1, 0.2 + i * 0.1));
       const x = 140 + i * 62;
-      boxes += rect(x + 5, 205, 50, 66, K, 12) + rect(x, 200, 50, 66, p > 0.5 ? Y : W, 12, K, 4);
+      boxes += rect(x + 5, 205, 50, 66, K, 12) + rect(x, 200, 50, 66, p > 0.5 ? YOLK : W, 12, K, 4);
       if (p > 0) boxes += circle(x + 25, 233, 9 * p, K);
     }
-    const shield = g(path('M0 -38L32 -26V0C32 22 16 36 0 44C-16 36 -32 22 -32 0V-26Z', Y, K, 4) + path('m-12 2 9 9 17-19', 'none', K, 5), 320, 132, outBack(seg(t, 0.7, 0.9)));
+    const shield = g(path('M0 -38L32 -26V0C32 22 16 36 0 44C-16 36 -32 22 -32 0V-26Z', MINT, K, 4) + path('m-12 2 9 9 17-19', 'none', K, 5), 320, 132, outBack(seg(t, 0.7, 0.9)));
     return base() + boxes + shield + spark(505, 120, 26 * twinkle(t)) + spark(130, 330, 16 * twinkle(t, 0.3));
   },
 };
@@ -146,8 +148,8 @@ for (const [name, draw] of Object.entries(cards)) await renderCard(name, draw);
 // Background pattern tile: scattered symbols and sparks on ink, quiet enough to sit behind text.
 const tile = 240;
 const tileBody = rect(0, 0, tile, tile, K) +
-  symbol(40, 46, 30, '#2B3424', 20) + symbol(170, 120, 22, '#2B3424', -30) + symbol(86, 196, 26, '#2B3424', 60) +
-  spark(200, 30, 7, '#3A4A12') + spark(120, 70, 5, '#3A4A12') + spark(26, 140, 6, '#3A4A12') + spark(212, 214, 6, '#3A4A12');
+  symbol(40, 46, 30, '#2B201D', 20) + symbol(170, 120, 22, '#2B201D', -30) + symbol(86, 196, 26, '#2B201D', 60) +
+  spark(200, 30, 7, '#4A2210') + spark(120, 70, 5, '#4A2210') + spark(26, 140, 6, '#4A2210') + spark(212, 214, 6, '#4A2210');
 await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${tile}" height="${tile}">${tileBody}</svg>`)).resize(tile * 2).png().toFile(join(out, 'pattern-ink.png'));
 
 // Logos: electric lockup for the ink header, electric symbol for the footer.

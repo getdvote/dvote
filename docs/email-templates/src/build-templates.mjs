@@ -9,10 +9,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const ASSETS = 'https://dvote.co/email/'; // apps/web/public/email, built by build-assets.mjs
 
-// Brand kit colours (tokens/dvote-tokens.json). Email clients need literal values.
+// Coffee palette (brand v2.0, same values as apps/dashboard/src/styles.css). Email clients need literal values.
+// Orange is the button and the accents on the espresso header/footer; brandText is orange that reads on white.
 const C = {
-  electric: '#E1FF00', ink: '#11190C', paper: '#F3F1EE', white: '#FFFFFF', stone: '#CAC4B7',
-  body: '#414638', muted: '#58594D', line: '#E8E5DE', brandText: '#4F5900', brandTint: '#F4F8CB',
+  orange: '#FF5500', ink: '#18100F', paper: '#F8F4F1', white: '#FFFFFF', stone: '#C2B3A6',
+  body: '#3D312D', muted: '#6B5E57', line: '#EADFD0', brandText: '#B83D00', brandTint: '#FFEDE3',
 };
 const FONT = {
   display: "'Barlow Condensed','Arial Narrow',Arial,sans-serif",
@@ -34,7 +35,7 @@ const ltr = (s) => `<span dir="ltr" style="unicode-bidi:isolate">${s}</span>`;
 // Bulletproof button: the cell carries the colour so it survives clients that drop padding on links.
 const button = (label, lang, href = '{{ .ConfirmationURL }}') => `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 0">
-  <tr><td bgcolor="${C.electric}" style="background:${C.electric};border:2px solid ${C.ink};border-radius:14px">
+  <tr><td bgcolor="${C.orange}" style="background:${C.orange};border:2px solid ${C.ink};border-radius:14px">
     <a href="${href}" target="_blank" style="display:inline-block;padding:15px 30px;font-family:${LANG[lang].font};font-size:16px;font-weight:700;line-height:20px;color:${C.ink};text-decoration:none;border-radius:12px">${label}&nbsp;${lang === 'ar' ? '&larr;' : '&rarr;'}</a>
   </td></tr>
 </table>`;
@@ -97,7 +98,7 @@ function layout({ name, preheader, en, ar, footerEn, footerAr }) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
 
     <tr><td align="center" style="padding:4px 0 28px">
-      <a href="https://dvote.co" target="_blank"><img src="${ASSETS}logo-electric.png" width="140" height="44" alt="dvote" style="display:block;width:140px;height:auto;font-family:${FONT.display};font-size:32px;font-weight:700;color:${C.electric}"></a>
+      <a href="https://dvote.co" target="_blank"><img src="${ASSETS}logo-electric.png" width="140" height="44" alt="dvote" style="display:block;width:140px;height:auto;font-family:${FONT.display};font-size:32px;font-weight:700;color:${C.orange}"></a>
     </td></tr>
 
     <tr><td bgcolor="${C.white}" style="background:${C.white};border-radius:28px;overflow:hidden">
@@ -115,14 +116,14 @@ function layout({ name, preheader, en, ar, footerEn, footerAr }) {
 
     <tr><td align="center" style="padding:36px 24px 8px">
       <img src="${ASSETS}symbol-electric.png" width="40" height="40" alt="" style="display:block;width:40px;height:40px">
-      <p style="margin:14px 0 4px;font-family:${FONT.display};font-size:22px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:${C.electric}">Good things come back.</p>
-      <p dir="rtl" style="margin:0 0 20px;font-family:${FONT.arabic};font-size:16px;font-weight:700;color:${C.electric}">الأشياء الجميلة تعود دائمًا.</p>
+      <p style="margin:14px 0 4px;font-family:${FONT.display};font-size:22px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:${C.orange}">Good things come back.</p>
+      <p dir="rtl" style="margin:0 0 20px;font-family:${FONT.arabic};font-size:16px;font-weight:700;color:${C.orange}">الأشياء الجميلة تعود دائمًا.</p>
       <p style="margin:0 0 6px;font-family:${FONT.body};font-size:12px;line-height:19px;color:${C.stone}">${footerEn}</p>
       <p dir="rtl" style="margin:0 0 18px;font-family:${FONT.arabic};font-size:12px;line-height:20px;color:${C.stone}">${footerAr}</p>
       <p style="margin:0;font-family:${FONT.body};font-size:12px;line-height:19px;color:${C.stone}">
-        <a href="https://dvote.co" target="_blank" style="color:${C.electric};text-decoration:underline">dvote.co</a>
+        <a href="https://dvote.co" target="_blank" style="color:${C.orange};text-decoration:underline">dvote.co</a>
         &nbsp;·&nbsp;
-        <a href="mailto:getdvote@gmail.com" style="color:${C.electric};text-decoration:underline">getdvote@gmail.com</a>
+        <a href="mailto:getdvote@gmail.com" style="color:${C.orange};text-decoration:underline">getdvote@gmail.com</a>
       </p>
     </td></tr>
 

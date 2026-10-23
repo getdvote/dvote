@@ -623,6 +623,7 @@ export const ar: Dictionary = {
     juice_bar: "محل عصائر",
   },
   designs: {
+    d0: "dvote",
     d1: "منتصف الليل",
     d2: "نعناع",
     d3: "محيط",
