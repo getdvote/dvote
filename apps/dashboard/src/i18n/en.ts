@@ -625,6 +625,7 @@ export const en = {
     juice_bar: "Juice bar",
   },
   designs: {
+    d0: "dvote",
     d1: "Midnight",
     d2: "Mint",
     d3: "Ocean",

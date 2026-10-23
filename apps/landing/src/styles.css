@@ -3,9 +3,10 @@
 @import "shadcn/tailwind.css";
 
 /*
- * dvote landing page, brand v1.0 (same system as apps/dashboard/src/styles.css): paper canvas,
- * white cards, ink type and frames, electric only as a fill (with ink on top) for the main action
- * and highlights, never as text on light surfaces (use brand-text). Inter for Latin, Cairo for Arabic.
+ * dvote landing page, brand v2.0 coffee palette (same system as apps/dashboard/src/styles.css): froth canvas,
+ * white cards, espresso type and frames. Orange is used sparingly (main action, key highlights, small accents),
+ * as a fill with espresso on top; for orange text on light surfaces use brand-text. Latte / Cortado are the soft
+ * fills; Egg Yolk, Shortcake, Mint and Plum are for badges and illustrations. Inter for Latin, Cairo for Arabic.
  * The shadcn variables (background, primary, muted, border, ...) resolve to the same brand tokens.
  */
 @theme inline {
@@ -38,12 +39,19 @@
   --color-brand-soft: var(--brand-soft);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
-  /* fixed brand paper + ink, and the hairline used on cards */
-  --color-paper: #f3f1ee;
-  --color-canvas: #f3f1ee;
-  --color-ink: #11190c;
-  --color-ink-soft: #242c1f;
-  --color-line: #dedad1;
+  /* fixed brand froth + espresso, the hairline used on cards, and the supporting palette */
+  --color-paper: #f8f4f1;
+  --color-canvas: #f8f4f1; /* froth */
+  --color-ink: #18100f; /* espresso */
+  --color-ink-soft: #2b201d;
+  --color-line: #eadfd0;
+  --color-orange: #ff5500;
+  --color-latte: #f3e3cb;
+  --color-cortado: #e7cda2;
+  --color-egg-yolk: #ffca48;
+  --color-shortcake: #ffc4a7;
+  --color-mint: #b8d9c5;
+  --color-plum: #5f2b4b;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -56,33 +64,33 @@
 :root {
   --app-font: "Inter", "Cairo", -apple-system, "Segoe UI", Roboto, sans-serif;
   --background: #ffffff;
-  --page: #f7f7f4; /* soft off-white page; cards are white */
-  --foreground: #11190c; /* ink */
+  --page: #f8f4f1; /* froth page; cards are white */
+  --foreground: #18100f; /* espresso */
   --card: #ffffff;
-  --card-foreground: #11190c;
+  --card-foreground: #18100f;
   --popover: #ffffff;
-  --popover-foreground: #11190c;
-  --primary: #11190c;
-  --primary-foreground: #f3f1ee;
-  --secondary: #e8e5de;
-  --secondary-foreground: #11190c;
-  --muted: #ebe8e2;
-  --muted-foreground: #58594d;
-  --accent: #f3f1ee;
-  --accent-foreground: #11190c;
+  --popover-foreground: #18100f;
+  --primary: #18100f;
+  --primary-foreground: #f8f4f1;
+  --secondary: #f3e3cb; /* latte */
+  --secondary-foreground: #18100f;
+  --muted: #f5ece0;
+  --muted-foreground: #6b5e57; /* warm taupe */
+  --accent: #f5ecdf; /* light latte */
+  --accent-foreground: #18100f;
   --destructive: #b42318;
-  --border: #dedad1;
-  --input: #787664;
-  --ring: #11190c;
-  /* electric: fills only, always with ink on top; as text on light use brand-text */
-  --brand: #e1ff00;
-  --brand-foreground: #11190c;
-  --brand-hover: #d2ed00;
-  --brand-pressed: #c1da00;
-  --brand-text: #4f5900;
-  --brand-soft: #f4f8cb;
-  --success: #196348;
-  --success-soft: #eaf6ec;
+  --border: #eadfd0; /* latte line */
+  --input: #8c7b6e;
+  --ring: #ff5500;
+  /* orange: fills with espresso on top (5.9:1); as text on light surfaces use brand-text */
+  --brand: #ff5500;
+  --brand-foreground: #18100f;
+  --brand-hover: #f04f00;
+  --brand-pressed: #e34b00;
+  --brand-text: #b83d00; /* 5.2:1 on froth */
+  --brand-soft: #ffede3;
+  --success: #1f6b47;
+  --success-soft: #e2efe7; /* mint tint */
   --radius: 0.75rem;
 }
 
@@ -100,7 +108,7 @@
   }
   html,
   body {
-    background: #11190c; /* the ink frame around the page, like the dashboard sidebar */
+    background: #18100f; /* the espresso frame around the page, like the dashboard sidebar */
     color: var(--foreground);
     -webkit-tap-highlight-color: transparent;
   }
@@ -177,16 +185,16 @@
 .animate-orbit-out {
   animation: orbit-out 4.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
-/* Hero demo: a gentle electric ring on whatever the visitor can tap next. */
+/* Hero demo: a gentle orange ring on whatever the visitor can tap next. */
 @keyframes tap-hint {
   0% {
-    box-shadow: 0 0 0 0 rgb(225 255 0 / 0.9);
+    box-shadow: 0 0 0 0 rgb(255 85 0 / 0.7);
   }
   70% {
-    box-shadow: 0 0 0 3cqw rgb(225 255 0 / 0);
+    box-shadow: 0 0 0 3cqw rgb(255 85 0 / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(225 255 0 / 0);
+    box-shadow: 0 0 0 0 rgb(255 85 0 / 0);
   }
 }
 .demo-tap {

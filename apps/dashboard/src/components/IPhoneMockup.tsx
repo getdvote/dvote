@@ -55,7 +55,7 @@ export function IPhoneMockup({ src, width = 300, reloadKey = 0, title, empty }: 
 /** 9:41, signal, Wi-Fi and battery, like Apple's own screenshots. */
 function StatusBar() {
   return (
-    <div className="flex items-center justify-between bg-[#f4f3fb] px-8 pt-[18px] text-black" style={{ height: STATUS_H }} aria-hidden>
+    <div className="flex items-center justify-between bg-paper px-8 pt-[18px] text-black" style={{ height: STATUS_H }} aria-hidden>
       <span className="w-[80px] text-center text-[17px] font-semibold tracking-tight">9:41</span>
       <span className="flex w-[80px] items-center justify-center gap-[6px]">
         <svg viewBox="0 0 18 12" className="h-[12px]" fill="currentColor">

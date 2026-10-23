@@ -107,7 +107,7 @@ export function CardPage() {
 
 
       <div className="mt-5 text-center">
-        <Link to={`/${card.vendor.slug}`} className="inline-block py-1 text-[15px] text-brand underline-offset-4 hover:underline">
+        <Link to={`/${card.vendor.slug}`} className="inline-block py-1 text-[15px] text-brand-text underline-offset-4 hover:underline">
           {t('card.visitShop', { shop: card.vendor.name })}
         </Link>
       </div>

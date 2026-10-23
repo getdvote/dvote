@@ -9,7 +9,7 @@ export function HomePage() {
   return (
     <Page>
       <div className="flex flex-col items-center py-6 text-center">
-        <span className="flex size-16 items-center justify-center rounded-[20px] bg-brand-soft text-brand">
+        <span className="flex size-16 items-center justify-center rounded-[20px] bg-brand-soft text-brand-text">
           <WalletCards className="size-8" />
         </span>
         <h1 className="mt-5 text-[26px] font-bold tracking-tight">{t('home.title')}</h1>

@@ -14,16 +14,21 @@ const WORD = [
   'M664.283 130.05H591.494C591.993 136.697 595.067 142.098 600.717 146.253C606.368 150.407 612.932 152.485 620.41 152.485C632.21 152.485 641.017 148.829 646.834 141.516L658.051 153.731C648.08 164.201 635.035 169.436 618.915 169.436C605.62 169.436 594.485 165.032 585.511 156.224C576.537 147.416 572.05 135.783 572.05 121.325C572.05 107.199 576.62 95.7323 585.761 86.9245C594.901 78.1166 605.952 73.7127 618.915 73.7127C631.877 73.7127 642.679 77.6181 651.321 85.4288C659.963 93.2395 664.283 103.626 664.283 116.589V130.05ZM644.84 114.594C644.84 107.116 642.43 101.216 637.611 96.8956C632.957 92.5748 626.892 90.4144 619.413 90.4144C611.935 90.4144 605.371 92.6579 599.72 97.1449C594.236 101.632 591.494 107.448 591.494 114.594H644.84Z',
 ];
 
-/** `height` sets the size; the width follows the logo's proportions. Colour: `color`, or the text colour (`className`). */
+/**
+ * `height` sets the size; the width follows the logo's proportions. Colour: `color`, or the text colour (`className`).
+ * `markColor` paints only the 5-petal mark (brand moments use the orange mark with an espresso or froth wordmark).
+ */
 export function DvoteLogo({
   height = 32,
   color = 'currentColor',
+  markColor,
   wordmark = true,
   spinOnHover = false,
   className,
 }: {
   height?: number;
   color?: string;
+  markColor?: string;
   wordmark?: boolean;
   spinOnHover?: boolean;
   className?: string;
@@ -32,7 +37,7 @@ export function DvoteLogo({
   return (
     <svg width={(height * box.w) / 208} height={height} viewBox={`0 0 ${box.w} 208`} role="img" aria-label="dvote" data-spin-on-hover={spinOnHover || undefined} className={className}>
       <g data-logo-mark>
-        {MARK.map((d) => <path key={d.slice(0, 24)} d={d} fill={color} />)}
+        {MARK.map((d) => <path key={d.slice(0, 24)} d={d} fill={markColor ?? color} />)}
       </g>
       {wordmark && (
         <g data-logo-wordmark>

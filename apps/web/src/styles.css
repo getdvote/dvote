@@ -1,19 +1,22 @@
 @import "tailwindcss";
 
 /*
- * dvote public site: mobile first, one white card on a soft canvas (like the tappi pages the
- * product follows). The merchant's own card colours are applied inline where they matter.
+ * dvote public site: mobile first, one white card on a soft froth canvas. dvote's own chrome uses the
+ * coffee palette (espresso type, orange used sparingly for the main action, links and focus); the
+ * merchant's own card colours are applied inline where they matter.
  */
 @theme {
   --font-sans: "Inter", "IBM Plex Sans Arabic", -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-brand: #6155f5;
-  --color-brand-soft: #eceaff;
-  --color-ink: #1c1c1e;
-  --color-muted: #6e6e73;
-  --color-canvas: #f4f3fb;
-  --color-line: #e5e5ea;
+  --color-brand: #ff5500; /* orange: fills with espresso on top */
+  --color-brand-hover: #f04f00;
+  --color-brand-text: #b83d00; /* orange as readable text on light surfaces */
+  --color-brand-soft: #ffede3;
+  --color-ink: #18100f; /* espresso */
+  --color-muted: #6b5e57;
+  --color-canvas: #f8f4f1; /* froth */
+  --color-line: #eadfd0;
   --color-danger: #d92d20;
-  --color-success: #12805c;
+  --color-success: #1f6b47;
 }
 
 html,

@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/85 aria-expanded:bg-primary/85",
-        /* electric: only for the one hero action of a screen */
+        /* orange: only for the one hero action of a screen (used sparingly) */
         brand: "bg-brand text-brand-foreground hover:bg-brand-hover active:bg-brand-pressed aria-expanded:bg-brand-hover",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",

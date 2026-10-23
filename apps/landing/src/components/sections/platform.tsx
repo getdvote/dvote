@@ -52,7 +52,7 @@ function DashboardPicture() {
             <div className="mt-3 rounded-xl border border-line p-3">
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-36 w-full rtl:-scale-x-100">
                 <path d={path(PREV)} fill="none" stroke="#787664" strokeWidth="1.2" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-                <path d={path(LINE)} fill="none" stroke="#11190c" strokeWidth="2.2" vectorEffect="non-scaling-stroke" />
+                <path d={path(LINE)} fill="none" stroke="#18100f" strokeWidth="2.2" vectorEffect="non-scaling-stroke" />
               </svg>
             </div>
           </div>
