@@ -13,12 +13,16 @@ import { api, errorMessage, type BillingCycle, type PlanName, type Vendor } from
 
 export const PLAN_LABEL: Record<PlanName, string> = { regular: 'Regular', loyal: 'Loyal', chain: 'Chain' };
 const CYCLE_LABEL: Record<BillingCycle, string> = { monthly: 'Monthly', annual: 'Annual' };
+/** Same as BILLING.graceDays in the API. */
+const GRACE_DAYS = 7;
 const fmt = (iso: string | null | undefined) => (iso ? dayjs(iso).format('D MMM YYYY, HH:mm') : '—');
 
 /**
  * Admin: the shop's plan. A self sign-up is on a 14-day free trial (locked after it, deleted for
  * good on its deletion date); until Paymob is built the admin activates a paid plan here after
- * the merchant pays, or extends the trial. A trial shop shows the plan picked on dvote.co/pricing.
+ * the merchant pays (paid for one period from now), renews the paid period when they pay again (a
+ * scheduled downgrade starts then), or extends the trial. A trial shop shows the plan picked on
+ * dvote.co/pricing; merchants change plan themselves on Settings → Billing.
  */
 export function PlanCard({ vendor }: { vendor: Vendor }) {
   const qc = useQueryClient();
@@ -32,7 +36,13 @@ export function PlanCard({ vendor }: { vendor: Vendor }) {
   const change = useMutation({
     mutationFn: (body: Parameters<typeof api.vendorPlan>[1]) => api.vendorPlan(vendor.id, body),
     onSuccess: (_r, body) => {
-      toast.success(body.action === 'activate' ? `Plan activated: ${PLAN_LABEL[body.plan]}, ${CYCLE_LABEL[body.billingCycle].toLowerCase()}` : `Trial extended by ${body.days} days`);
+      toast.success(
+        body.action === 'activate'
+          ? `Plan activated: ${PLAN_LABEL[body.plan]}, ${CYCLE_LABEL[body.billingCycle].toLowerCase()}`
+          : body.action === 'renew'
+            ? 'Paid period renewed'
+            : `Trial extended by ${body.days} days`,
+      );
       void qc.invalidateQueries({ queryKey: ['vendor', vendor.id] });
       void qc.invalidateQueries({ queryKey: ['vendors'] });
       void qc.invalidateQueries({ queryKey: ['founding'] });
@@ -63,7 +73,13 @@ export function PlanCard({ vendor }: { vendor: Vendor }) {
               {vendor.plan ? ` · picked ${PLAN_LABEL[vendor.plan]} (${CYCLE_LABEL[vendor.billingCycle ?? 'monthly'].toLowerCase()})` : ''}
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">Paid / managed by dvote: never deleted automatically.</p>
+            <p className="text-sm text-muted-foreground">
+              {vendor.paidUntil
+                ? `${Date.parse(vendor.paidUntil) > Date.now() ? 'Paid until' : 'Overdue since'} ${fmt(vendor.paidUntil)} · locks ${GRACE_DAYS} days after`
+                : 'Managed by dvote: no end date, never deleted automatically.'}
+              {vendor.nextPlan ? ` · moves to ${PLAN_LABEL[vendor.nextPlan]} (${CYCLE_LABEL[vendor.nextBillingCycle ?? 'monthly'].toLowerCase()}) at renewal` : ''}
+              {vendor.foundingUntil ? ` · Founding discount until ${fmt(vendor.foundingUntil)}` : ''}
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +124,11 @@ export function PlanCard({ vendor }: { vendor: Vendor }) {
             <Button variant="outline" disabled={change.isPending} onClick={() => change.mutate({ action: 'extend', days: 7 })}>
               Extend trial 7 days
             </Button>
-          ) : null}
+          ) : (
+            <Button variant="outline" disabled={change.isPending} onClick={() => change.mutate({ action: 'renew' })}>
+              Paid: renew {vendor.nextBillingCycle === 'annual' || (!vendor.nextPlan && vendor.billingCycle === 'annual') ? '1 year' : '1 month'}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -39,3 +39,54 @@ export function monthlyPrice(plan: Plan, branches: number, cycle: BillingCycle =
   const extra = Math.max(0, Math.floor(branches) - 1);
   return cycle === 'annual' ? p.annual + extra * p.extraBranch.annual : p.monthly + extra * p.extraBranch.monthly;
 }
+
+/** Billing period rules (decided 2026-10-23). */
+export const BILLING = {
+  /** After paid_until the shop keeps working this long (with a warning), then the dashboard locks. */
+  graceDays: 7,
+};
+
+/** Higher = more. Moving up applies at once; moving down waits for the end of the paid period. */
+export const PLAN_RANK: Record<Plan, number> = { regular: 1, loyal: 2, chain: 3 };
+
+/** The end of one billing period that starts at `from`. */
+export function addPeriod(from: Date, cycle: BillingCycle): Date {
+  const months = cycle === 'annual' ? 12 : 1;
+  const d = new Date(from);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  // Jan 31 + 1 month = Feb 28/29, not Mar 3
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, lastDay));
+  return d;
+}
+
+export interface PriceQuote {
+  /** The plan's own price per month (first branch), after any Founding discount. */
+  base: number;
+  /** Extra branches per month (never discounted). */
+  extraBranches: number;
+  /** Per month in total. */
+  monthly: number;
+  /** What one period costs: a month, or a year (the plan's yearly price + 12 months of extra branches). */
+  perPeriod: number;
+  foundingApplied: boolean;
+}
+
+/** What a shop with `branches` open branches pays on a plan. */
+export function quote(plan: Plan, cycle: BillingCycle, branches: number, founding = false): PriceQuote {
+  const p = PLAN_PRICES.find((x) => x.id === plan)!;
+  const extra = Math.max(0, Math.floor(branches) - 1);
+  const listBase = cycle === 'annual' ? p.annual : p.monthly;
+  const base = founding
+    ? cycle === 'annual'
+      ? Math.round((listBase * (100 - FOUNDING.discountPercent)) / 100)
+      : p.foundingMonthly
+    : listBase;
+  const extraBranches = extra * (cycle === 'annual' ? p.extraBranch.annual : p.extraBranch.monthly);
+  const monthly = base + extraBranches;
+  const off = (n: number) => (founding ? Math.round((n * (100 - FOUNDING.discountPercent)) / 100) : n);
+  const perPeriod = cycle === 'annual' ? off(p.annualTotal) + extraBranches * 12 : monthly;
+  return { base, extraBranches, monthly, perPeriod, foundingApplied: founding };
+}

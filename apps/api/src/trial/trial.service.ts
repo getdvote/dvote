@@ -17,7 +17,7 @@ import { SupabaseAdminService } from '../supabase/supabase-admin.service';
 import type { SupabaseClaims } from '../auth/supabase-jwt.verifier';
 import { TurnstileService } from './turnstile.service';
 import { TRIAL } from './trial-rules';
-import { BILLING_CYCLES, PLANS, type BillingCycle, type Plan } from '../plans/plans';
+import { addPeriod, BILLING_CYCLES, FOUNDING, PLANS, type BillingCycle, type Plan } from '../plans/plans';
 import { PlansService } from '../plans/plans.service';
 
 export { TRIAL } from './trial-rules';
@@ -32,6 +32,9 @@ const PLAN_SELECT = {
   founding: true,
   trial_ends_at: true,
   delete_at: true,
+  paid_until: true,
+  next_plan: true,
+  next_billing_cycle: true,
   status: true,
 } as const;
 
@@ -196,13 +199,16 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
   /**
    * Admin: the shop pays for a plan. It stays active for good (no trial, no deletion).
    * `founding` takes one of the Founding Merchant spots (409 founding_full when none are left);
-   * leaving it out keeps the shop's current Founding status.
+   * leaving it out keeps the shop's current Founding status. The shop is paid for one period from
+   * now (+1 month or +1 year); a scheduled change is dropped (this choice replaces it).
    */
-  async activate(vendorId: string, plan: Plan, billingCycle: BillingCycle = 'monthly', founding?: boolean) {
+  async activate(vendorId: string, plan: Plan, billingCycle: BillingCycle = 'monthly', founding?: boolean, now = new Date()) {
     return this.prisma.$transaction(async (tx) => {
-      const v = await tx.vendors.findUnique({ where: { id: vendorId }, select: { id: true } });
+      const v = await tx.vendors.findUnique({ where: { id: vendorId }, select: { id: true, founding_until: true } });
       if (!v) throw new NotFoundException({ code: 'vendor_not_found' });
       if (founding) await this.plans.takeFoundingSpot(tx, vendorId);
+      const foundingUntil = new Date(now);
+      foundingUntil.setUTCMonth(foundingUntil.getUTCMonth() + FOUNDING.months);
       return tx.vendors.update({
         where: { id: vendorId },
         data: {
@@ -210,10 +216,38 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
           plan,
           billing_cycle: billingCycle,
           ...(founding === undefined ? {} : { founding }),
+          ...(founding && !v.founding_until ? { founding_until: foundingUntil } : {}),
+          ...(founding === false ? { founding_until: null } : {}),
+          paid_until: addPeriod(now, billingCycle),
+          next_plan: null,
+          next_billing_cycle: null,
           trial_ends_at: null,
           delete_at: null,
           status: 'active',
         },
+        select: PLAN_SELECT,
+      });
+    });
+  }
+
+  /**
+   * Admin: the merchant paid for the next period. A scheduled change (downgrade / cycle switch)
+   * starts now, and the shop is paid one more period from its current end (or from now if it lapsed).
+   */
+  async renew(vendorId: string, now = new Date()) {
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM vendors WHERE id = ${vendorId}::uuid FOR UPDATE`;
+      if (!rows.length) throw new NotFoundException({ code: 'vendor_not_found' });
+      const v = await tx.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: PLAN_SELECT });
+      if (v.plan_status !== 'active' || !v.plan) {
+        throw new ConflictException({ code: 'not_active', message: 'Activate a plan first.' });
+      }
+      const plan = (v.next_plan ?? v.plan) as Plan;
+      const cycle = (v.next_billing_cycle ?? v.billing_cycle ?? 'monthly') as BillingCycle;
+      const from = v.paid_until && v.paid_until > now ? v.paid_until : now;
+      return tx.vendors.update({
+        where: { id: vendorId },
+        data: { plan, billing_cycle: cycle, next_plan: null, next_billing_cycle: null, paid_until: addPeriod(from, cycle), status: 'active' },
         select: PLAN_SELECT,
       });
     });
@@ -238,8 +272,14 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     });
   }
 
-  /** The background job: lock ended trials, delete overdue ones. Safe to run any time. */
-  async run(now = new Date()): Promise<{ locked: number; deleted: string[] }> {
+  /**
+   * The background job: lock ended trials, delete overdue ones, and move shops whose paid period
+   * is over onto their scheduled plan (downgrade / cycle switch). Safe to run any time.
+   */
+  async run(now = new Date()): Promise<{ locked: number; deleted: string[]; switched: number }> {
+    const switched = await this.prisma.$executeRaw`
+      UPDATE vendors SET plan = next_plan, billing_cycle = next_billing_cycle, next_plan = NULL, next_billing_cycle = NULL
+      WHERE next_plan IS NOT NULL AND paid_until <= ${now}`;
     const locked = await this.prisma.vendors.updateMany({
       where: { plan_status: 'trial', trial_ends_at: { lte: now }, status: 'active' },
       data: { status: 'suspended' },
@@ -258,7 +298,7 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
         this.log.warn(`Could not delete trial shop ${v.id}: ${String(err)}`);
       }
     }
-    return { locked: locked.count, deleted };
+    return { locked: locked.count, deleted, switched };
   }
 
   /**

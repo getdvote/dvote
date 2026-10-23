@@ -249,6 +249,10 @@ model vendors {
   wallet_nearby_enabled Boolean             @default(false)
   billing_cycle         String?             @db.VarChar(7)
   founding              Boolean             @default(false)
+  paid_until            DateTime?           @db.Timestamptz(6)
+  next_plan             String?             @db.VarChar(10)
+  next_billing_cycle    String?             @db.VarChar(7)
+  founding_until        DateTime?           @db.Timestamptz(6)
   admin_actions         admin_actions[]
   branches              branches[]
   cards                 cards[]

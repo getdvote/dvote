@@ -33,6 +33,7 @@ import { CreateVendorImageDto } from './dto/create-vendor-image.dto';
 import { ListVendorImagesQueryDto } from './dto/list-vendor-images-query.dto';
 import { VendorImageResponseDto } from './dto/vendor-image-response.dto';
 import { VendorImagesService } from './vendor-images.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 @ApiTags('vendor: images')
 @ApiBearerAuth()
@@ -46,7 +47,10 @@ import { VendorImagesService } from './vendor-images.service';
 @UseGuards(StaffAuthGuard)
 @Controller('vendor/images')
 export class VendorImagesController {
-  constructor(private readonly images: VendorImagesService) {}
+  constructor(
+    private readonly images: VendorImagesService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   /** Any staff role: the vendor's menu pages and branch photos. */
   @Get()
@@ -70,11 +74,12 @@ export class VendorImagesController {
   })
   @ApiCreatedResponse({ type: VendorImageResponseDto })
   @ApiConflictResponse({ description: 'too_many_images (20 menu pages, 3 photos per branch)' })
-  create(
+  async create(
     @CurrentStaff() ctx: StaffContext,
     @Body() dto: CreateVendorImageDto,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<VendorImageResponseDto> {
+    if (dto.kind === 'menu') await this.plans.checkLimit(ctx, 'menuImages');
     return this.images.create(ctx, dto, file.buffer);
   }
 

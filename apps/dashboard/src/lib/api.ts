@@ -1,6 +1,7 @@
 import type { CityKey } from './cities';
 import { config } from './config';
 import { errorText, t } from '../i18n';
+import type { Entitlements } from './entitlements';
 import { supabase } from './supabase';
 
 /**
@@ -143,9 +144,44 @@ export interface VendorPlan {
   status: 'trial' | 'active';
   plan: PlanName | null;
   billingCycle?: BillingCycle | null;
+  /** Paid until (then a short grace, then locked); null = no end date. */
+  paidUntil?: string | null;
+  /** What the plan includes (a trial or a shop without a plan: everything). */
+  entitlements?: Entitlements;
   trialEndsAt: string | null;
   /** An unpaid trial shop is deleted for good then. */
   deleteAt: string | null;
+}
+
+export interface PriceQuote {
+  base: number;
+  extraBranches: number;
+  monthly: number;
+  /** One period: a month, or a year. */
+  perPeriod: number;
+  foundingApplied: boolean;
+}
+
+/** GET /api/vendor/billing (merchant admin). */
+export interface Billing {
+  currency: string;
+  /** trial | active (paid) | grace (paid period over, still open) | expired | managed (no end date) */
+  state: 'trial' | 'active' | 'grace' | 'expired' | 'managed';
+  planStatus: 'trial' | 'active';
+  plan: PlanName | null;
+  billingCycle: BillingCycle | null;
+  branches: number;
+  price: PriceQuote | null;
+  trialEndsAt: string | null;
+  trialDays: number;
+  deleteAt: string | null;
+  paidUntil: string | null;
+  graceEndsAt: string | null;
+  graceDays: number;
+  founding: boolean;
+  foundingUntil: string | null;
+  scheduled: { plan: PlanName; billingCycle: BillingCycle; startsAt: string | null; price: PriceQuote } | null;
+  plans: { id: PlanName; monthly: PriceQuote; annual: PriceQuote }[];
 }
 
 export interface FoundingStatus {
@@ -181,6 +217,10 @@ export interface Vendor {
   billingCycle?: BillingCycle | null;
   /** Holds a Founding Merchant spot. */
   founding?: boolean;
+  foundingUntil?: string | null;
+  paidUntil?: string | null;
+  nextPlan?: PlanName | null;
+  nextBillingCycle?: BillingCycle | null;
   trialEndsAt?: string | null;
   deleteAt?: string | null;
   selfSignup?: boolean;
@@ -754,6 +794,16 @@ export class ApiError extends Error {
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+/** plan_required / plan_limit: say which plan has it, or how many the plan allows. */
+function planErrorText(code: string, body: Record<string, unknown>): string | undefined {
+  const name = (p: unknown) => (typeof p === 'string' ? t(`billing.plans.${p}.name` as never) : '');
+  if (code === 'plan_required') return t('errors.plan_required', { plan: name(body.requiredPlan) });
+  if (code === 'plan_limit' && typeof body.limit === 'string') {
+    return t(`errors.plan_limit_${body.limit}` as never, { max: Number(body.max ?? 0), plan: name(body.plan) });
+  }
+  return undefined;
+}
+
 async function call<T>(method: Method, path: string, body?: unknown): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -779,7 +829,7 @@ async function call<T>(method: Method, path: string, body?: unknown): Promise<T>
   if (!res.ok) {
     const code = json.code ?? `http_${res.status}`;
     const server = Array.isArray(json.message) ? json.message.join(', ') : json.message;
-    throw new ApiError(res.status, code, errorText(code) ?? server ?? t('common.somethingWrong'), json as Record<string, unknown>);
+    throw new ApiError(res.status, code, planErrorText(code, json) ?? errorText(code) ?? server ?? t('common.somethingWrong'), json as Record<string, unknown>);
   }
   return json as T;
 }
@@ -823,13 +873,16 @@ export const api = {
   /** Admin: activate a paid plan or extend a free trial. */
   vendorPlan: (
     vendorId: string,
-    body: { action: 'activate'; plan: PlanName; billingCycle: BillingCycle; founding?: boolean } | { action: 'extend'; days: number },
+    body: { action: 'activate'; plan: PlanName; billingCycle: BillingCycle; founding?: boolean } | { action: 'extend'; days: number } | { action: 'renew' },
   ) =>
     call<{
       planStatus: 'trial' | 'active';
       plan: PlanName | null;
       billingCycle: BillingCycle | null;
       founding: boolean;
+      paidUntil: string | null;
+      nextPlan: PlanName | null;
+      nextBillingCycle: BillingCycle | null;
       trialEndsAt: string | null;
       deleteAt: string | null;
     }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
@@ -1034,7 +1087,7 @@ export function createVendorApi(prefix = '/api/vendor') {
           unknown: number;
         }[]
       >('GET', '/api/vendor/broadcasts'),
-    broadcastQuota: () => request<{ used: number; nearby: boolean; remaining: number; resetsAt: string | null }>('GET', '/api/vendor/broadcasts/quota'),
+    broadcastQuota: () => request<{ used: number; nearby: boolean; remaining: number; resetsAt: string | null; max?: number; windowHours?: number }>('GET', '/api/vendor/broadcasts/quota'),
     campaigns: () => request<BroadcastCampaign[]>('GET', '/api/vendor/broadcasts/campaigns'),
     saveCampaign: (body: BroadcastCampaignInput, id?: string) => request<{ id: string }>(id ? 'PATCH' : 'POST', `/api/vendor/broadcasts/campaigns${id ? `/${id}` : ''}`, body),
     cancelCampaign: (id: string) => request<{ id: string }>('POST', `/api/vendor/broadcasts/campaigns/${id}/cancel`),
@@ -1061,6 +1114,9 @@ export function createVendorApi(prefix = '/api/vendor') {
     summary: (q: { branchId?: string } = {}) => request<VendorSummary>('GET', `/api/vendor/summary${qs({ ...q })}`),
     attention: () => request<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
     goLive: () => request<GoLive>('GET', '/api/vendor/go-live'),
+    billing: () => request<Billing>('GET', '/api/vendor/billing'),
+    changePlan: (plan: PlanName, billingCycle: BillingCycle) => request<Billing>('PUT', '/api/vendor/billing/plan', { plan, billingCycle }),
+    cancelScheduledPlan: () => request<Billing>('DELETE', '/api/vendor/billing/scheduled'),
     insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
       request<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
     rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>

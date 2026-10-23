@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { StaffResponseDto } from './staff-response.dto';
+import type { Entitlements } from '../../plans/entitlements';
 
 /** The shop's plan: a self sign-up is on a free trial until an admin activates a plan. */
 export class StaffMePlanDto {
@@ -11,6 +12,12 @@ export class StaffMePlanDto {
 
   @ApiProperty({ type: String, nullable: true, enum: ['monthly', 'annual'] })
   billingCycle: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Paid until (then 7 days of grace, then locked); null = no end' })
+  paidUntil: string | null;
+
+  @ApiProperty({ description: 'What the plan includes: {tier, trial, features, limits} (plans/entitlements.ts)' })
+  entitlements: Entitlements;
 
   @ApiProperty({ type: String, nullable: true, description: 'When the free trial ends (trial only)' })
   trialEndsAt: string | null;

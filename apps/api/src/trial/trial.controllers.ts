@@ -33,7 +33,7 @@ export class StartSignupDto {
 }
 
 export class PlanActionDto {
-  @IsIn(['activate', 'extend']) action: 'activate' | 'extend';
+  @IsIn(['activate', 'extend', 'renew']) action: 'activate' | 'extend' | 'renew';
   @ValidateIf((o: PlanActionDto) => o.action === 'activate') @IsIn(PLANS) plan?: Plan;
   /** Activate only; default monthly. */
   @IsOptional() @IsIn(BILLING_CYCLES) billingCycle?: BillingCycle;
@@ -101,7 +101,7 @@ export class PublicSignupController {
   }
 }
 
-/** POST /api/admin/vendors/{id}/plan: activate a paid plan, or extend a free trial. */
+/** POST /api/admin/vendors/{id}/plan: activate a paid plan, renew the paid period, or extend a free trial. */
 @AdminApi('admin: plans')
 @Controller('admin/vendors')
 export class AdminPlanController {
@@ -110,17 +110,22 @@ export class AdminPlanController {
   @Post(':id/plan')
   @HttpCode(200)
   @ApiBody({ type: PlanActionDto })
-  @ApiConflictResponse({ description: 'not_on_trial | founding_full' })
+  @ApiConflictResponse({ description: 'not_on_trial | founding_full | not_active' })
   async plan(@Param('id', ParseUuidPipe) id: string, @Body() dto: PlanActionDto) {
     const v =
       dto.action === 'activate'
         ? await this.trial.activate(id, dto.plan as Plan, dto.billingCycle, dto.founding)
-        : await this.trial.extend(id, dto.days as number);
+        : dto.action === 'renew'
+          ? await this.trial.renew(id)
+          : await this.trial.extend(id, dto.days as number);
     return {
       planStatus: v.plan_status,
       plan: v.plan,
       billingCycle: v.billing_cycle,
       founding: v.founding,
+      paidUntil: v.paid_until?.toISOString() ?? null,
+      nextPlan: v.next_plan,
+      nextBillingCycle: v.next_billing_cycle,
       trialEndsAt: v.trial_ends_at?.toISOString() ?? null,
       deleteAt: v.delete_at?.toISOString() ?? null,
       status: v.status,

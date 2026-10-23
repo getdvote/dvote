@@ -12,6 +12,7 @@ import { VendorApi } from '../auth/vendor-api.decorator';
 import { IsUuid } from '../common/uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { cairoDays, IsDay } from './cairo-days';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 /** A customer is "close" to a reward from this share of its cost (inclusive) until they can afford it. */
 export const CLOSE_SHARE = 0.8;
@@ -286,16 +287,20 @@ export class VendorRewardPerformanceService {
 @VendorApi('vendor: reward performance')
 @Controller('vendor/reward-performance')
 export class VendorRewardPerformanceController {
-  constructor(private readonly performance: VendorRewardPerformanceService) {}
+  constructor(
+    private readonly performance: VendorRewardPerformanceService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   /** Per reward: given in the period, customers who can afford it or are close now; and what held points are worth (counts only). */
   @Get()
   @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorRewardPerformanceDto })
-  get(
+  async get(
     @CurrentStaff() ctx: StaffContext,
     @Query() q: VendorRewardPerformanceQueryDto,
   ): Promise<VendorRewardPerformanceDto> {
+    await this.plans.require(ctx, 'insights');
     return this.performance.get(ctx, q);
   }
 }

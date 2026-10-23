@@ -71,6 +71,7 @@ import { ThemeSwitch } from '../components/ThemeToggle';
 import { LanguageSwitch } from '../components/LanguageToggle';
 import { t, useEnglishOnly, useI18n } from '../i18n';
 import { useAuth } from '../lib/auth';
+import { LockKeyholeMinimalisticIcon } from '@solar-icons/react/linear';
 
 function NavIcon({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = active ? (item.activeIcon ?? item.icon) : item.icon;
@@ -87,6 +88,8 @@ export interface NavItem {
   /** Section heading; items with the same group sit together under it (none = top section). */
   group?: string;
   /** A small button at the end of the row (e.g. preview), hidden when the sidebar is collapsed. */
+  /** Not in the merchant's plan: a small lock after the label (the page explains and links to Billing). */
+  locked?: boolean;
   action?: {
     icon: ComponentType<{ className?: string }>;
     label: string;
@@ -180,6 +183,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                   ) : null}
                   <NavIcon item={n} active={isActive(n.to)} />
                   <span data-nav-label>{n.label}</span>
+                  {n.locked ? <LockKeyholeMinimalisticIcon data-nav-label className="ms-auto size-3.5 opacity-60" aria-label={t('planLock.locked')} /> : null}
                 </NavLink>
               </SidebarMenuButton>
               {n.action ? (

@@ -20,6 +20,7 @@ import { MERCHANT_WIDE, PERMISSION_GROUPS, ROLE_PERMISSIONS } from '../../lib/pe
 import type { VendorScope } from '../../lib/scope';
 import { TabToolbar } from './TabToolbar';
 import { t } from '../../i18n';
+import { LimitNote } from '../../components/plan-lock';
 
 const ROLE: Record<StaffRole, 'brand' | 'secondary' | 'outline' | 'muted'> = {
   vendor_admin: 'brand',
@@ -65,6 +66,14 @@ export function StaffTab({ scope, selfId }: { scope: VendorScope; selfId?: strin
           </Button>
         ) : null}
       </TabToolbar>
+      {scope.can.inviteRoles.length && data ? (
+        <LimitNote
+          limit="staffPerBranch"
+          used={data.filter((s) => s.status === 'active' && s.role !== 'vendor_admin').length}
+          branches={(branches ?? []).filter((b) => b.status === 'active').length}
+          className="mb-4"
+        />
+      ) : null}
       <ErrorAlert error={error} className="mb-4" />
       <div className="overflow-hidden rounded-lg border">
         <Table>
