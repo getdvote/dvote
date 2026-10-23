@@ -29,7 +29,7 @@ export function WalletPage() {
       {error ? (
         <div className="grid gap-4 text-center">
           <ErrorNote>{error}</ErrorNote>
-          <Link to={`/c/${encodeURIComponent(publicId ?? '')}`} className="text-brand underline">
+          <Link to={`/c/${encodeURIComponent(publicId ?? '')}`} className="text-brand-text underline">
             {t('card.yours')}
           </Link>
         </div>

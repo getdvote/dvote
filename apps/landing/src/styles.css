@@ -1,22 +1,29 @@
 @import "tailwindcss";
 
 /*
- * dvote landing page, brand v1.0 (same system as apps/dashboard/src/styles.css): paper canvas,
- * white cards, ink type and frames, electric only as a fill (with ink on top) for the main action
- * and highlights, never as text on light surfaces (use brand-text). Inter for Latin, Cairo for Arabic.
+ * dvote landing page, brand v2.0 coffee palette (same system as apps/dashboard/src/styles.css): froth canvas,
+ * white cards, espresso type and frames. Orange is used sparingly (main action, key highlights, small accents),
+ * as a fill with espresso on top; for orange text on light surfaces use brand-text. Latte / Cortado are the soft
+ * fills; Egg Yolk, Shortcake, Mint and Plum are for badges and illustrations. Inter for Latin, Cairo for Arabic.
  */
 @theme {
   --font-sans: "Inter", "Cairo", -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-brand: #e1ff00; /* electric */
-  --color-brand-hover: #d2ed00;
-  --color-brand-pressed: #c1da00;
-  --color-brand-text: #4f5900; /* electric as readable text on light surfaces */
-  --color-brand-soft: #f4f8cb;
-  --color-ink: #11190c;
-  --color-ink-soft: #242c1f;
-  --color-muted: #58594d;
-  --color-canvas: #f3f1ee; /* paper */
-  --color-line: #dedad1;
+  --color-brand: #ff5500; /* orange */
+  --color-brand-hover: #f04f00;
+  --color-brand-pressed: #e34b00;
+  --color-brand-text: #b83d00; /* orange as readable text on light surfaces (5.2:1 on froth) */
+  --color-brand-soft: #ffede3;
+  --color-ink: #18100f; /* espresso */
+  --color-ink-soft: #2b201d;
+  --color-muted: #6b5e57;
+  --color-canvas: #f8f4f1; /* froth */
+  --color-line: #eadfd0;
+  --color-latte: #f3e3cb;
+  --color-cortado: #e7cda2;
+  --color-egg-yolk: #ffca48;
+  --color-shortcake: #ffc4a7;
+  --color-mint: #b8d9c5;
+  --color-plum: #5f2b4b;
 }
 
 html {

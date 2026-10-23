@@ -80,7 +80,7 @@ function Header() {
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur">
       <Container className="flex h-16 items-center justify-between gap-4">
         <Link to="/" className="flex items-center py-2" aria-label="dvote">
-          <DvoteLogo height={26} className="text-ink" />
+          <DvoteLogo height={26} markColor="var(--color-brand)" className="text-ink" />
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((l) => (
@@ -142,7 +142,7 @@ function Footer() {
     <footer className="border-t border-line bg-white">
       <Container className="grid gap-10 py-12 sm:grid-cols-3">
         <div>
-          <DvoteLogo height={24} className="text-ink" />
+          <DvoteLogo height={24} markColor="var(--color-brand)" className="text-ink" />
           <p className="mt-3 max-w-xs text-[15px] text-muted">{d.footer.tagline}</p>
         </div>
         <div className="grid content-start gap-2">
@@ -183,9 +183,9 @@ export function PassMock({ className }: { className?: string }) {
   const { d } = useI18n();
   return (
     <div className={cx('relative mx-auto w-full max-w-[320px]', className)} dir="ltr">
-      <div className="absolute -inset-6 -z-10 rounded-[48px] bg-brand/40 blur-3xl" aria-hidden />
+      <div className="absolute -inset-6 -z-10 rounded-[48px] bg-shortcake/60 blur-3xl" aria-hidden />
       <div className="rounded-[36px] border-[10px] border-ink bg-ink shadow-2xl">
-        <div className="overflow-hidden rounded-[26px] bg-[#f2f2f7] p-3 pb-6">
+        <div className="overflow-hidden rounded-[26px] bg-canvas p-3 pb-6">
           <div className="mx-auto mb-3 h-5 w-24 rounded-full bg-ink" aria-hidden />
           <div className="rounded-2xl bg-ink p-4 text-canvas shadow-lg">
             <div className="flex items-center gap-2.5">

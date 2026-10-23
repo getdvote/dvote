@@ -53,7 +53,7 @@ function NoticeFrame({ children }: { children: ReactNode }) {
     <div className="relative isolate flex min-h-svh flex-col overflow-hidden bg-background">
       <BrandPattern name="paper-grid" className="-z-10 [mask-image:radial-gradient(ellipse_at_center,transparent_35%,black_75%)]" />
       <header className="p-6">
-        <DvoteLogo />
+        <DvoteLogo markColor="var(--brand)" />
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-lg rounded-2xl bg-card px-2 shadow-sm ring-1 ring-border">{children}</div>
@@ -133,7 +133,7 @@ export function RouteErrorPage() {
       {/* quiet dot grid at the edges only; the message sits on a plain card */}
       <BrandPattern name="paper-grid" className="-z-10 [mask-image:radial-gradient(ellipse_at_center,transparent_35%,black_75%)]" />
       <header className="p-6">
-        <DvoteLogo />
+        <DvoteLogo markColor="var(--brand)" />
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-lg rounded-2xl bg-card px-2 shadow-sm ring-1 ring-border">

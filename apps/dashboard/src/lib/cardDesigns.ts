@@ -28,12 +28,13 @@ export const CARD_DESIGNS: CardDesign[] = [
   { id: 10, name: 'Latte', colors: ['#E9DCC9', '#F7F1E8'], ink: '#3E2723', pattern: 'petals' },
 ];
 
-/** The chosen design, or (none chosen) the one the app picks automatically from the vendor id. */
-export function cardDesign(vendorId: string, chosen?: number | null): CardDesign {
+/** The automatic design (no design chosen): dvote espresso with a plum glow, froth text. */
+export const DVOTE_DESIGN: CardDesign = { id: 0, name: 'dvote', colors: ['#18100F', '#5F2B4B'], ink: '#FFFFFF', pattern: 'petals' };
+
+/** The chosen design, or (none chosen) the dvote design. `vendorId` is kept for callers. */
+export function cardDesign(_vendorId: string, chosen?: number | null): CardDesign {
   if (chosen && chosen >= 1 && chosen <= CARD_DESIGNS.length) return CARD_DESIGNS[chosen - 1];
-  let h = 0;
-  for (const ch of vendorId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return CARD_DESIGNS[h % CARD_DESIGNS.length];
+  return DVOTE_DESIGN;
 }
 
 /** Business categories (same list as the API and the database CHECK). */

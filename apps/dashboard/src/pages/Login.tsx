@@ -36,7 +36,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <div className="grid min-h-screen bg-card p-3 lg:grid-cols-2">
       <div className="relative flex flex-col px-4 py-5 sm:px-8">
         <div className="flex items-center justify-between">
-          <DvoteLogo height={26} className="text-foreground" />
+          <DvoteLogo height={26} markColor="var(--brand)" className="text-foreground" />
           <div className="flex gap-1">
             <LanguageToggle />
             <ThemeToggle />

@@ -103,7 +103,7 @@ export function PrimaryButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={theme.onPrimary} />
+        <ActivityIndicator color={theme.onBrand} />
       ) : (
         <Text style={styles.buttonText}>{title}</Text>
       )}
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   staffBadge: {
     color: theme.onPrimary,
     fontSize: 12,
-    backgroundColor: '#2C2926',
+    backgroundColor: theme.sidebarAccent,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
@@ -279,13 +279,13 @@ const styles = StyleSheet.create({
   button: {
     height: theme.buttonHeight,
     borderRadius: theme.radius,
-    backgroundColor: theme.primary,
+    backgroundColor: theme.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonDisabled: { opacity: 0.35 },
   buttonPressed: { opacity: 0.8 },
-  buttonText: { color: theme.onPrimary, fontSize: 15, fontWeight: '600' },
+  buttonText: { color: theme.onBrand, fontSize: 15, fontWeight: '600' },
   link: { color: theme.text, fontSize: 14, fontWeight: '500', textAlign: 'center' },
   fieldWrap: { gap: 8 },
   label: { fontSize: 14, fontWeight: '500', color: theme.text },

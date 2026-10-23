@@ -41,8 +41,11 @@
 .branch-map-pin span { width: 9px; height: 9px; border-radius: 50%; background: var(--primary-foreground); }
 
 /*
- * dvote design (brand v1.0): paper canvas, white cards, ink frame and type, electric for the primary action
- * and selected states. Inter for Latin, Cairo for Arabic. Light is the default; .dark on <html> switches every token.
+ * dvote design (brand v2.0, coffee palette): froth canvas, white cards, espresso type and frame. Orange is the
+ * accent and is used sparingly (primary action, active and selected states, small highlights), never as a big
+ * background. Latte / Cortado are the soft fills and lines; Egg Yolk, Shortcake, Mint and Plum carry status,
+ * charts, badges and illustrations. Inter for Latin, Cairo for Arabic. Light is the default; .dark on <html>
+ * switches every token.
  */
 @theme inline {
     --font-heading: var(--font-sans);
@@ -92,9 +95,16 @@
     --color-warning: var(--warning);
     --color-warning-soft: var(--warning-soft);
     --color-destructive-soft: var(--destructive-soft);
-    /* fixed brand paper + ink (same in both themes): illustration panels and brand-moment surfaces */
-    --color-paper: #F3F1EE;
-    --color-ink: #11190C;
+    /* fixed brand colours (same in both themes): illustration panels, badges, charts and brand-moment surfaces */
+    --color-paper: #F8F4F1; /* froth */
+    --color-ink: #18100F; /* espresso */
+    --color-orange: #FF5500;
+    --color-latte: #F3E3CB;
+    --color-cortado: #E7CDA2;
+    --color-egg-yolk: #FFCA48;
+    --color-shortcake: #FFC4A7;
+    --color-mint: #B8D9C5;
+    --color-plum: #5F2B4B;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -105,56 +115,57 @@
 }
 
 :root {
-    /* dvote brand v1.0 (digital palette): paper canvas, white surfaces, ink type and frame, electric only for the primary action and selected states (product ratio ~65% light / 20% ink / 15% electric) */
+    /* palette: orange #FF5500 · espresso #18100F · white · froth #F8F4F1 · latte #F3E3CB · cortado #E7CDA2
+       · egg yolk #FFCA48 · shortcake #FFC4A7 · mint #B8D9C5 · plum #5F2B4B */
     --app-font: "Inter", "Cairo", -apple-system, "Segoe UI", Roboto, sans-serif;
-    --background: #F3F1EE; /* paper */
-    --foreground: #11190C; /* ink */
+    --background: #F8F4F1; /* froth */
+    --foreground: #18100F; /* espresso */
     --card: #FFFFFF;
-    --card-foreground: #11190C;
+    --card-foreground: #18100F;
     --popover: #FFFFFF;
-    --popover-foreground: #11190C;
-    /* primary = the strong neutral (ink): readable as text, borders and fills on light surfaces */
-    --primary: #11190C;
-    --primary-foreground: #F3F1EE;
-    --secondary: #E8E5DE;
-    --secondary-foreground: #11190C;
-    --muted: #F3F1EE;
-    --muted-foreground: #58594D;
-    --accent: #F3F1EE;
-    --accent-foreground: #11190C;
+    --popover-foreground: #18100F;
+    /* primary = the strong neutral (espresso): readable as text, borders and fills on light surfaces */
+    --primary: #18100F;
+    --primary-foreground: #F8F4F1;
+    --secondary: #F3E3CB; /* latte */
+    --secondary-foreground: #18100F;
+    --muted: #F8F4F1;
+    --muted-foreground: #6B5E57; /* warm taupe, 5.7:1 on froth */
+    --accent: #F5ECDF; /* light latte: hovered rows and menu items */
+    --accent-foreground: #18100F;
     --destructive: #B42318;
-    --border: #DEDAD1;
-    --input: #787664; /* olive gray: control boundaries need 3:1 */
-    --ring: #11190C;
-    /* brand = electric: fills only, always with ink on top; never as text on light surfaces (use brand-text) */
-    --brand: #E1FF00;
-    --brand-foreground: #11190C;
-    --brand-hover: #D2ED00;
-    --brand-pressed: #C1DA00;
-    --brand-text: #4F5900;
-    --brand-soft: #F4F8CB;
-    --success: #196348;
-    --success-soft: #EAF6EC;
-    --warning: #854A0E;
-    --warning-soft: #FFF4D6;
+    --border: #EADFD0; /* latte line */
+    --input: #8C7B6E; /* control boundaries need 3:1 */
+    --ring: #FF5500;
+    /* brand = orange: fills with espresso on top (5.9:1); for orange text on light surfaces use brand-text */
+    --brand: #FF5500;
+    --brand-foreground: #18100F;
+    --brand-hover: #F04F00;
+    --brand-pressed: #E34B00;
+    --brand-text: #B83D00; /* 5.2:1 on froth */
+    --brand-soft: #FFEDE3;
+    --success: #1F6B47;
+    --success-soft: #E2EFE7; /* mint tint */
+    --warning: #8A5A00;
+    --warning-soft: #FFF1CC; /* egg yolk tint */
     --destructive-soft: #FEF3F2;
-    --info: #175CD3;
-    --info-soft: #EFF8FF;
-    --chart-1: #11190C;
-    --chart-2: #4F5900;
-    --chart-3: #787664;
-    --chart-4: #175CD3;
-    --chart-5: #854A0E;
+    --info: #5F2B4B; /* plum */
+    --info-soft: #F1E6EC;
+    --chart-1: #18100F; /* espresso */
+    --chart-2: #FF5500; /* orange */
+    --chart-3: #5F2B4B; /* plum */
+    --chart-4: #E0A526; /* deep egg yolk */
+    --chart-5: #6FAF8A; /* deep mint */
     --radius: 0.75rem;
-    /* the sidebar is ink in both themes: it is also the frame around the page */
-    --sidebar: #11190C;
-    --sidebar-foreground: #F3F1EE;
-    --sidebar-primary: #E1FF00;
-    --sidebar-primary-foreground: #11190C;
-    --sidebar-accent: #242C1F;
-    --sidebar-accent-foreground: #F3F1EE;
-    --sidebar-border: rgb(243 241 238 / 10%);
-    --sidebar-ring: #E1FF00;
+    /* the sidebar is espresso in both themes: it is also the frame around the page */
+    --sidebar: #18100F;
+    --sidebar-foreground: #F8F4F1;
+    --sidebar-primary: #FF5500;
+    --sidebar-primary-foreground: #18100F;
+    --sidebar-accent: #2B201D;
+    --sidebar-accent-foreground: #F8F4F1;
+    --sidebar-border: rgb(248 244 241 / 10%);
+    --sidebar-ring: #FF5500;
 }
 
 :lang(ar) {
@@ -162,57 +173,57 @@
 }
 
 .dark {
-    /* warm neutral charcoals (not the green-tinted ink) so dark mode reads calm; electric stays the accent */
-    --background: #141412;
-    --foreground: #F3F1EE;
-    --card: #1D1D1A;
-    --card-foreground: #F3F1EE;
-    --popover: #262622;
-    --popover-foreground: #F3F1EE;
-    --primary: #F3F1EE;
-    --primary-foreground: #141412;
-    --secondary: #2A2A26;
-    --secondary-foreground: #F3F1EE;
-    --muted: #2A2A26;
-    --muted-foreground: #CAC4B7;
-    --accent: #2A2A26;
-    --accent-foreground: #F3F1EE;
+    /* espresso surfaces, froth type; orange stays the accent */
+    --background: #18100F;
+    --foreground: #F8F4F1;
+    --card: #221816;
+    --card-foreground: #F8F4F1;
+    --popover: #2B201D;
+    --popover-foreground: #F8F4F1;
+    --primary: #F8F4F1;
+    --primary-foreground: #18100F;
+    --secondary: #2E2320;
+    --secondary-foreground: #F8F4F1;
+    --muted: #2E2320;
+    --muted-foreground: #C2B3A6;
+    --accent: #2E2320;
+    --accent-foreground: #F8F4F1;
     --destructive: #FDA29B;
-    --border: #3A3934;
-    --input: #787664;
-    --ring: #E1FF00;
-    --brand: #E1FF00;
-    --brand-foreground: #11190C;
-    --brand-hover: #D2ED00;
-    --brand-pressed: #C1DA00;
-    --brand-text: #E1FF00;
-    --brand-soft: #2B2C22;
-    --success: #89D7AD;
-    --success-soft: #16291F;
-    --warning: #F5CC74;
-    --warning-soft: #332A17;
+    --border: #3A2D29;
+    --input: #8A7B70;
+    --ring: #FF6A1F;
+    --brand: #FF5500;
+    --brand-foreground: #18100F;
+    --brand-hover: #FF6A1F;
+    --brand-pressed: #FF7A33;
+    --brand-text: #FF6A1F; /* 6.1:1 on dark cards */
+    --brand-soft: #3A1F12;
+    --success: #9CCFB0; /* mint */
+    --success-soft: #1C2A22;
+    --warning: #FFCA48; /* egg yolk */
+    --warning-soft: #33280F;
     --destructive-soft: #36201D;
-    --info: #84CAFF;
-    --info-soft: #172739;
-    --chart-1: #F3F1EE;
-    --chart-2: #E1FF00;
-    --chart-3: #CAC4B7;
-    --chart-4: #84CAFF;
-    --chart-5: #F5CC74;
-    --sidebar: #141412;
-    --sidebar-foreground: #F3F1EE;
-    --sidebar-primary: #E1FF00;
-    --sidebar-primary-foreground: #11190C;
-    --sidebar-accent: #2A2A26;
-    --sidebar-accent-foreground: #F3F1EE;
-    --sidebar-border: rgb(243 241 238 / 10%);
-    --sidebar-ring: #E1FF00;
+    --info: #E3A9C9; /* light plum */
+    --info-soft: #2F1A26;
+    --chart-1: #F8F4F1;
+    --chart-2: #FF5500;
+    --chart-3: #E3A9C9;
+    --chart-4: #FFCA48;
+    --chart-5: #B8D9C5;
+    --sidebar: #18100F;
+    --sidebar-foreground: #F8F4F1;
+    --sidebar-primary: #FF5500;
+    --sidebar-primary-foreground: #18100F;
+    --sidebar-accent: #2E2320;
+    --sidebar-accent-foreground: #F8F4F1;
+    --sidebar-border: rgb(248 244 241 / 10%);
+    --sidebar-ring: #FF6A1F;
 }
 
-/* light theme: the always-dark sidebar and phone header keep the brand ink frame */
+/* light theme: the always-dark sidebar and phone header keep the brand espresso frame */
 :root:not(.dark) .dark {
-    --sidebar: #11190C;
-    --sidebar-accent: #242C1F;
+    --sidebar: #18100F;
+    --sidebar-accent: #2B201D;
 }
 
 @layer base {
