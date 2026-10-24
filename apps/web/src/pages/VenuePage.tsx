@@ -95,7 +95,7 @@ export function VenuePage() {
   );
 
   return (
-    <Page>
+    <Page branding={vendor.poweredBy !== false}>
       {vendor.style.pageStyle === 'playful' ? (
         <div className="rounded-3xl p-4" style={{ background: `color-mix(in srgb, ${colors.primary} 10%, white)` }}>
           <header className="mb-7 flex flex-col items-center gap-4 text-center">
@@ -282,7 +282,7 @@ export function VenueSectionPage({ kind }: { kind: 'rewards' | 'menu' | 'branche
   const title = kind === 'rewards' ? t('venue.rewards') : kind === 'menu' ? t('venue.menu') : t('venue.branches');
 
   return (
-    <Page>
+    <Page branding={vendor.poweredBy !== false}>
       <header className="-mt-2 mb-6">
         <Link to={`/${vendor.slug}${q}`} className="-ms-1 inline-flex max-w-full items-center gap-1 rounded-lg px-1 py-1 text-[15px] font-medium text-muted hover:text-ink">
           <ChevronLeft className="size-5 rtl:rotate-180" />

@@ -207,11 +207,17 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       plan: 'loyal',
       billingCycle: 'annual',
       founding: false,
+      paidUntil: expect.any(String),
+      nextPlan: null,
+      nextBillingCycle: null,
       trialEndsAt: null,
       deleteAt: null,
       status: 'active',
     });
-    expect((await me(a.token).expect(200)).body.vendor.plan).toMatchObject({ status: 'active', plan: 'loyal', billingCycle: 'annual' });
+    const paidDays = (Date.parse(act.paidUntil) - Date.now()) / DAY;
+    expect(paidDays).toBeGreaterThan(364);
+    expect(paidDays).toBeLessThan(367);
+    expect((await me(a.token).expect(200)).body.vendor.plan).toMatchObject({ status: 'active', plan: 'loyal', billingCycle: 'annual', paidUntil: act.paidUntil });
     await plan(adminToken, vendorId, { action: 'extend', days: 3 }).expect(409);
     await plan(adminToken, vendorId, { action: 'activate', plan: 'gold' }).expect(400);
     await plan(adminToken, vendorId, { action: 'activate', plan: 'growth' }).expect(400);
@@ -244,6 +250,85 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     vendorIds.push(vendorId);
     const v = await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId } });
     expect(v).toMatchObject({ plan_status: 'trial', plan: 'loyal', billing_cycle: 'annual', founding: false });
+  });
+
+  it('billing page: trial pick, upgrade now, downgrade at period end, grace, lock, renew', async () => {
+    const a = await account();
+    const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Billing ${run}` }).expect(200)).body;
+    vendorIds.push(vendorId);
+    await prisma.branches.createMany({
+      data: [
+        { vendor_id: vendorId, name: 'Main' },
+        { vendor_id: vendorId, name: 'Second' },
+        { vendor_id: vendorId, name: 'Old', status: 'closed' },
+      ],
+    });
+    const billing = () => http().get('/api/vendor/billing').set('Authorization', `Bearer ${a.token}`);
+    const choose = (plan: string, billingCycle: string) =>
+      http().put('/api/vendor/billing/plan').set('Authorization', `Bearer ${a.token}`).send({ plan, billingCycle });
+
+    // trial: no plan yet, every plan priced for the 2 open branches
+    let b = (await billing().expect(200)).body;
+    expect(b).toMatchObject({ state: 'trial', plan: null, branches: 2, trialDays: 14, paidUntil: null, scheduled: null });
+    expect(b.plans.find((p: { id: string }) => p.id === 'loyal').monthly).toMatchObject({ monthly: 999 + 399, perPeriod: 1398 });
+    // on a trial any pick applies at once (nothing is paid yet)
+    b = (await choose('chain', 'annual').expect(200)).body;
+    expect(b).toMatchObject({ state: 'trial', plan: 'chain', billingCycle: 'annual', price: { monthly: 1666 + 416, perPeriod: 19990 + 416 * 12 } });
+    await choose('gold', 'monthly').expect(400);
+
+    // dvote collects the money, activates Loyal monthly → paid for a month
+    await plan(adminToken, vendorId, { action: 'activate', plan: 'loyal', billingCycle: 'monthly' }).expect(200);
+    b = (await billing().expect(200)).body;
+    expect(b).toMatchObject({ state: 'active', plan: 'loyal', billingCycle: 'monthly', price: { monthly: 1398 } });
+    const paidUntil = b.paidUntil as string;
+
+    // upgrade: at once; switching to annual waits for the renewal
+    b = (await choose('chain', 'annual').expect(200)).body;
+    expect(b).toMatchObject({ plan: 'chain', billingCycle: 'monthly', paidUntil, scheduled: { plan: 'chain', billingCycle: 'annual', startsAt: paidUntil } });
+    // downgrade: scheduled for the end of the paid period, cancel drops it
+    b = (await choose('regular', 'monthly').expect(200)).body;
+    expect(b).toMatchObject({ plan: 'chain', scheduled: { plan: 'regular', billingCycle: 'monthly', price: { monthly: 499 + 299 } } });
+    b = (await http().delete('/api/vendor/billing/scheduled').set('Authorization', `Bearer ${a.token}`).expect(200)).body;
+    expect(b.scheduled).toBeNull();
+    await http().delete('/api/vendor/billing/scheduled').set('Authorization', `Bearer ${a.token}`).expect(409);
+    await choose('regular', 'monthly').expect(200);
+
+    // the period ends: grace (still works, warned), the job moves the shop to the scheduled plan
+    await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 2 * DAY) } });
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'chain' });
+    expect((await trial.run()).switched).toBeGreaterThanOrEqual(1);
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'regular', scheduled: null });
+
+    // grace over: locked everywhere (cards keep working: the public page stays up)
+    await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 8 * DAY) } });
+    const locked = (await billing().expect(403)).body;
+    expect(locked).toMatchObject({ code: 'subscription_expired', paidUntil: expect.any(String) });
+    await me(a.token).expect(403);
+    const { slug } = await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: { slug: true } });
+    await http().get(`/api/public/vendors/${slug}`).expect(200);
+
+    // dvote renews: paid one month from now, unlocked
+    const ren = (await plan(adminToken, vendorId, { action: 'renew' }).expect(200)).body;
+    expect((Date.parse(ren.paidUntil) - Date.now()) / DAY).toBeGreaterThan(27);
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'active', plan: 'regular' });
+
+    // renewing early adds a period to the current end and starts a scheduled change
+    await choose('loyal', 'annual').expect(200); // upgrade now, annual from the renewal
+    const ren2 = (await plan(adminToken, vendorId, { action: 'renew' }).expect(200)).body;
+    expect(ren2).toMatchObject({ plan: 'loyal', billingCycle: 'annual', nextPlan: null });
+    expect((Date.parse(ren2.paidUntil) - Date.parse(ren.paidUntil)) / DAY).toBeGreaterThan(364);
+  });
+
+  it('billing is for the merchant admin only; renew needs an active plan', async () => {
+    const a = await account();
+    const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Billing roles ${run}` }).expect(200)).body;
+    vendorIds.push(vendorId);
+    const sub = randomUUID();
+    await prisma.staff_users.create({ data: { vendor_id: vendorId, role: 'viewer', name: 'Vera Viewer', email: `viewer-${run}@test.dvote`, auth_user_id: sub } });
+    const viewer = await signer.sign(sub, { email: `viewer-${run}@test.dvote` });
+    await http().get('/api/vendor/billing').set('Authorization', `Bearer ${viewer}`).expect(403);
+    await http().put('/api/vendor/billing/plan').set('Authorization', `Bearer ${viewer}`).send({ plan: 'chain', billingCycle: 'monthly' }).expect(403);
+    expect((await plan(adminToken, vendorId, { action: 'renew' }).expect(409)).body.code).toBe('not_active');
   });
 
   it('Founding Merchants: admin sets the spots, public plans show what is left, the last spot is taken once', async () => {

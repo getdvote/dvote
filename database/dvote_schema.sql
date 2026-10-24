@@ -907,3 +907,18 @@ DO $$ BEGIN
   IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ON platform_settings FROM anon; END IF;
   IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN REVOKE ALL ON platform_settings FROM authenticated; END IF;
 END $$;
+
+-- =====================================================================
+-- 12. BILLING PERIOD (migration 33_billing_period, 2026-10-23)
+-- =====================================================================
+ALTER TABLE vendors
+  ADD COLUMN paid_until         timestamptz,
+  ADD COLUMN next_plan          varchar(10),
+  ADD COLUMN next_billing_cycle varchar(7),
+  ADD COLUMN founding_until     timestamptz,
+  ADD CONSTRAINT vendors_next_plan_ck CHECK (next_plan IS NULL OR next_plan IN ('regular', 'loyal', 'chain')),
+  ADD CONSTRAINT vendors_next_billing_cycle_ck CHECK (
+    (next_plan IS NULL AND next_billing_cycle IS NULL)
+    OR (next_plan IS NOT NULL AND next_billing_cycle IN ('monthly', 'annual'))
+  );
+CREATE INDEX vendors_billing_due_idx ON vendors (paid_until) WHERE next_plan IS NOT NULL;

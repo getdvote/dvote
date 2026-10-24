@@ -36,6 +36,7 @@ import {
 } from './dto/staff-response.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { StaffService } from './staff.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 @ApiTags('vendor: staff')
 @ApiBearerAuth()
@@ -51,7 +52,10 @@ import { StaffService } from './staff.service';
 @StaffRoles('vendor_admin', 'branch_manager')
 @Controller('vendor/staff')
 export class StaffController {
-  constructor(private readonly staff: StaffService) {}
+  constructor(
+    private readonly staff: StaffService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   /**
    * The signed-in staff member (any role) with vendor, branch(es) and active rule: what the
@@ -98,6 +102,8 @@ export class StaffController {
     @CurrentStaff() ctx: StaffContext,
     @Body() dto: CreateStaffDto,
   ): Promise<CreateStaffResponseDto> {
+    // plan limit: team members per open branch (the merchant admin doesn't count)
+    if (dto.role !== 'vendor_admin') await this.plans.checkLimit(ctx, 'staffPerBranch');
     const { staff, invited } = await this.staff.create(ctx, dto);
     return { ...StaffResponseDto.from(staff), invited };
   }
@@ -114,6 +120,10 @@ export class StaffController {
     @Param('id', ParseUuidPipe) id: string,
     @Body() dto: UpdateStaffDto,
   ): Promise<StaffResponseDto> {
+    if (dto.status === 'active') {
+      const row = await this.staff.get(ctx, id);
+      if (row.status !== 'active' && row.role !== 'vendor_admin') await this.plans.checkLimit(ctx, 'staffPerBranch');
+    }
     return StaffResponseDto.from(await this.staff.update(ctx, id, dto));
   }
 }

@@ -19,6 +19,7 @@ import { ListStaffQueryDto } from './dto/list-staff-query.dto';
 import { StaffMeResponseDto } from './dto/staff-me-response.dto';
 import { StaffResponseDto } from './dto/staff-response.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+import { entitlementsFor } from '../plans/entitlements';
 
 /** Role names shown in the invite email (same words as the dashboard). */
 const ROLE_NAMES: Record<staff_role, { en: string; ar: string }> = {
@@ -101,6 +102,8 @@ export class StaffService {
           status: vendor.plan_status === 'trial' ? 'trial' : 'active',
           plan: vendor.plan,
           billingCycle: vendor.billing_cycle,
+          paidUntil: vendor.paid_until?.toISOString() ?? null,
+          entitlements: entitlementsFor(vendor),
           trialEndsAt: vendor.trial_ends_at?.toISOString() ?? null,
           deleteAt: vendor.delete_at?.toISOString() ?? null,
         },

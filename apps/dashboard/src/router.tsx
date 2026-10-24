@@ -3,7 +3,7 @@ import { WORKSPACE_PAGES } from './lib/workspace-pages';
 import { LoaderIcon as Loader2 } from '@solar-icons/react/linear';
 import { createBrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { SetPassword } from './pages/SetPassword';
-import { NotFoundPage, RouteErrorPage, TrialEndedPage, WrongSitePage } from './components/ErrorPage';
+import { NotFoundPage, RouteErrorPage, SubscriptionEndedPage, TrialEndedPage, WrongSitePage } from './components/ErrorPage';
 import { Signup } from './pages/Signup';
 import { config, site } from './lib/config';
 import { AdminLayout } from './layouts/AdminLayout';
@@ -50,6 +50,7 @@ function Shell() {
     );
   }
   if (status === 'trialEnded') return <TrialEndedPage />;
+  if (status === 'subscriptionExpired') return <SubscriptionEndedPage />;
   if (status !== 'ready') return <Login />;
 
   // admin.dvote.co is for platform admins only, merchant.dvote.co for merchant accounts only

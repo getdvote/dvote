@@ -54,6 +54,10 @@ export class VendorResponseDto {
   billingCycle: string | null;
 
   @ApiProperty({ description: 'Holds a Founding Merchant spot (migration 32)' }) founding: boolean;
+  @ApiProperty({ type: String, nullable: true, description: 'Founding discount ends' }) foundingUntil: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Paid until (then 7 days of grace); null = no end' }) paidUntil: string | null;
+  @ApiProperty({ type: String, nullable: true, enum: ['regular', 'loyal', 'chain'] }) nextPlan: string | null;
+  @ApiProperty({ type: String, nullable: true, enum: ['monthly', 'annual'] }) nextBillingCycle: string | null;
 
   @ApiProperty({ type: String, nullable: true }) trialEndsAt: string | null;
   @ApiProperty({ type: String, nullable: true, description: 'Unpaid trial shops are deleted for good then' }) deleteAt: string | null;
@@ -94,6 +98,10 @@ export class VendorResponseDto {
       plan: v.plan,
       billingCycle: v.billing_cycle,
       founding: v.founding,
+      foundingUntil: v.founding_until?.toISOString() ?? null,
+      paidUntil: v.paid_until?.toISOString() ?? null,
+      nextPlan: v.next_plan,
+      nextBillingCycle: v.next_billing_cycle,
       trialEndsAt: v.trial_ends_at?.toISOString() ?? null,
       deleteAt: v.delete_at?.toISOString() ?? null,
       selfSignup: v.self_signup,

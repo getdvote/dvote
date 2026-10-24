@@ -27,6 +27,7 @@ import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { UpdateVendorProfileDto } from './dto/update-vendor-profile.dto';
 import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorsService } from './vendors.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 /**
  * A vendor's own profile, for its staff. No id in the URL: the vendor always comes
@@ -44,7 +45,10 @@ import { VendorsService } from './vendors.service';
 @UseGuards(StaffAuthGuard)
 @Controller('vendor/profile')
 export class VendorProfileController {
-  constructor(private readonly vendors: VendorsService) {}
+  constructor(
+    private readonly vendors: VendorsService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   @Get('username')
   @StaffRoles('vendor_admin')
@@ -73,6 +77,10 @@ export class VendorProfileController {
     @CurrentStaff() ctx: StaffContext,
     @Body() dto: UpdateVendorProfileDto,
   ): Promise<VendorResponseDto> {
+    // page style, brand colours and font are a plan feature (Regular keeps the dvote template)
+    if (dto.pageStyle !== undefined || dto.brandPrimary !== undefined || dto.brandSecondary !== undefined || dto.brandFont !== undefined) {
+      await this.plans.require(ctx, 'brand_style');
+    }
     return VendorResponseDto.from(await this.vendors.update(ctx.vendorId, dto));
   }
 

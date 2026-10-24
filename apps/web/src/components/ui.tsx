@@ -7,7 +7,8 @@ import { DvoteLogo } from './dvote-logo';
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
 /** The page frame: one white rounded card on the soft canvas, "Powered by dvote" and the language switch. */
-export function Page({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+/** `branding` false hides "Powered by dvote" (merchants whose plan removes it). */
+export function Page({ children, wide = false, branding = true }: { children: ReactNode; wide?: boolean; branding?: boolean }) {
   const { language, setLanguage } = useI18n();
   return (
     <div className="flex min-h-dvh flex-col items-center px-4 pt-4 pb-8 sm:pt-10">
@@ -15,10 +16,14 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
         {children}
       </main>
       <footer className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 whitespace-nowrap text-sm text-muted">
-        <Link to="/" className="flex items-center gap-1.5 py-2 hover:text-ink">
-          {t('common.poweredBy')} <DvoteMark />
-        </Link>
-        <span aria-hidden className="text-line">|</span>
+        {branding ? (
+          <>
+            <Link to="/" className="flex items-center gap-1.5 py-2 hover:text-ink">
+              {t('common.poweredBy')} <DvoteMark />
+            </Link>
+            <span aria-hidden className="text-line">|</span>
+          </>
+        ) : null}
         <button type="button" className="py-2 hover:text-ink" onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}>
           {t('common.switchLanguage')}
         </button>
