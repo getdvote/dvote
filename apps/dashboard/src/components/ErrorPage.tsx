@@ -121,6 +121,35 @@ export function TrialEndedPage() {
 }
 
 /**
+ * A paid shop whose paid period and its grace days are over (API subscription_expired): the
+ * dashboard and scans are locked until dvote renews it; customer cards keep working.
+ */
+export function SubscriptionEndedPage() {
+  const { lapsed, staff, signOut } = useAuth();
+  const paidUntil = lapsed?.paidUntil ? dayjs(lapsed.paidUntil).format('D MMMM YYYY') : null;
+  const message = encodeURIComponent(t('billing.renewMessage', { shop: staff?.vendor.name ?? '' }));
+  return (
+    <NoticeFrame>
+      <ErrorState
+        icon={DangerTriangleIcon}
+        illustration="reward-unlocked"
+        title={t('billing.lockedTitle')}
+        text={paidUntil ? t('billing.lockedTextDate', { date: paidUntil }) : t('billing.lockedText')}
+      >
+        <Button asChild variant="brand">
+          <a href={`https://wa.me/201207118966?text=${message}`} target="_blank" rel="noreferrer">
+            {t('billing.renewWhatsApp')}
+          </a>
+        </Button>
+        <Button variant="ghost" onClick={() => void signOut()}>
+          {t('site.signOut')}
+        </Button>
+      </ErrorState>
+    </NoticeFrame>
+  );
+}
+
+/**
  * The router's errorElement: a page crashed while rendering. Full screen (the layout may be what
  * broke), with a reload and a way home; the technical message only in development.
  */

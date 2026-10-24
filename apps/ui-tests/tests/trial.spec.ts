@@ -60,7 +60,8 @@ for (const vp of KEY_VIEWPORTS) {
         await signIn(page);
         await page.goto(DASHBOARD + '/');
         if (lang === 'en') await expect(page.getByText('Free trial: 3 days left')).toBeVisible();
-        await expect(page.locator('a[href="https://dvote.co/pricing"]').first()).toBeVisible();
+        // the merchant admin picks a plan on Settings → Billing
+        await expect(page.locator('a[href="/settings?tab=billing"]').first()).toBeVisible();
         await expectGoodLayout(page, testInfo);
       });
 

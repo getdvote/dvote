@@ -7,6 +7,7 @@ import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { VendorApi } from '../auth/vendor-api.decorator';
 import { IsUuid } from '../common/uuid';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 const TZ = 'Africa/Cairo';
 const TOP_MEMBERS = 10;
@@ -159,13 +160,17 @@ export class VendorPatternsService {
 @VendorApi('vendor: insights')
 @Controller('vendor/insights/patterns')
 export class VendorPatternsController {
-  constructor(private readonly patterns: VendorPatternsService) {}
+  constructor(
+    private readonly patterns: VendorPatternsService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   /** Top members, busiest hours, who comes back (fixed windows, not the page's date range). */
   @Get()
   @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorPatternsDto })
-  get(@CurrentStaff() ctx: StaffContext, @Query() q: VendorPatternsQueryDto): Promise<VendorPatternsDto> {
+  async get(@CurrentStaff() ctx: StaffContext, @Query() q: VendorPatternsQueryDto): Promise<VendorPatternsDto> {
+    await this.plans.require(ctx, 'insights');
     return this.patterns.get(ctx, q);
   }
 }

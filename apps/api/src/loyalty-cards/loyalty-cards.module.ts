@@ -32,6 +32,7 @@ import { IMAGE_CONTENT_TYPE, newImageName, toWebp } from '../storage/images';
 import { StorageModule } from '../storage/storage.module';
 import { BUCKETS, StorageService } from '../storage/storage.service';
 import { checkDesign, readDesign, type CardDesign } from './card-design';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 /** A cancelled card can be restored for this many days. */
 export const RESTORE_DAYS = 30;
@@ -394,7 +395,10 @@ export class LoyaltyCardsService {
 @VendorApi('vendor: loyalty card')
 @Controller('vendor/loyalty-card')
 export class LoyaltyCardController {
-  constructor(private readonly cards: LoyaltyCardsService) {}
+  constructor(
+    private readonly cards: LoyaltyCardsService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   @Get()
   @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
@@ -449,7 +453,9 @@ export class LoyaltyCardController {
   @Post('versions')
   @StaffRoles('vendor_admin')
   @ApiOkResponse({ description: 'A new live version; 400 invalid_design, 409 invalid_branch' })
-  save(@CurrentStaff() ctx: StaffContext, @Body() dto: SaveVersionDto) {
+  async save(@CurrentStaff() ctx: StaffContext, @Body() dto: SaveVersionDto) {
+    // the design editor is a plan feature (Regular keeps its current card look)
+    await this.plans.require(ctx, 'card_design');
     return this.cards.saveVersion(ctx, dto.design);
   }
 
@@ -457,7 +463,8 @@ export class LoyaltyCardController {
   @HttpCode(200)
   @StaffRoles('vendor_admin')
   @ApiOkResponse({ description: '404 version_not_found' })
-  makeLive(@CurrentStaff() ctx: StaffContext, @Param('id', ParseUuidPipe) id: string) {
+  async makeLive(@CurrentStaff() ctx: StaffContext, @Param('id', ParseUuidPipe) id: string) {
+    await this.plans.require(ctx, 'card_design');
     return this.cards.makeLive(ctx, id);
   }
 
@@ -465,7 +472,8 @@ export class LoyaltyCardController {
   @StaffRoles('vendor_admin')
   @ApiImageUpload()
   @ApiOkResponse({ description: '{imageUrl, imagePath}: put them in the design and save a version' })
-  background(@CurrentStaff() ctx: StaffContext, @UploadedFile() file: Express.Multer.File) {
+  async background(@CurrentStaff() ctx: StaffContext, @UploadedFile() file: Express.Multer.File) {
+    await this.plans.require(ctx, 'card_design');
     return this.cards.uploadBackground(ctx, file.buffer);
   }
 

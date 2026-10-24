@@ -11,6 +11,9 @@ import type { Request } from 'express';
 import type { staff_role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { bearerToken } from './bearer-token';
+import { BILLING } from '../plans/plans';
+
+const DAY = 24 * 60 * 60 * 1000;
 import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
 
 /**
@@ -63,7 +66,7 @@ export class StaffAuthGuard implements CanActivate {
     const staff = await this.prisma.staff_users.findUnique({
       where: { auth_user_id: claims.sub },
       include: {
-        vendors: { select: { status: true, plan_status: true, trial_ends_at: true, delete_at: true } },
+        vendors: { select: { status: true, plan_status: true, trial_ends_at: true, delete_at: true, paid_until: true } },
         branches: { select: { status: true } },
       },
     });
@@ -79,6 +82,14 @@ export class StaffAuthGuard implements CanActivate {
         message: 'The free trial has ended. Subscribe to a plan to continue.',
         trialEndedAt: v.trial_ends_at.toISOString(),
         deleteAt: v.delete_at?.toISOString() ?? null,
+      });
+    }
+    // a paid period that ran out: BILLING.graceDays of grace (dashboard warns), then locked until renewed
+    if (v.plan_status === 'active' && v.paid_until && v.paid_until.getTime() + BILLING.graceDays * DAY <= Date.now()) {
+      throw new ForbiddenException({
+        code: 'subscription_expired',
+        message: 'The subscription has ended. Renew it to continue.',
+        paidUntil: v.paid_until.toISOString(),
       });
     }
     if (staff.vendors.status !== 'active') {

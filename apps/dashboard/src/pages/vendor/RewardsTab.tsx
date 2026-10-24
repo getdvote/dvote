@@ -18,6 +18,7 @@ import { IMAGE_ACCEPT } from './ImagesTab';
 import { RewardAvailability } from './RewardAvailability';
 import { TabToolbar } from './TabToolbar';
 import { t } from '../../i18n';
+import { LimitNote } from '../../components/plan-lock';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts, drag rows to reorder, archive / restore. */
 export function RewardsTab({ scope }: { scope: VendorScope }) {
@@ -76,6 +77,9 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
           </Button>
         ) : null}
       </TabToolbar>
+      {scope.can.editVendor && data ? (
+        <LimitNote limit="activeRewards" used={data.filter((r) => r.status === 'active').length} className="mb-4" />
+      ) : null}
       <ErrorAlert error={error} className="mb-4" />
       <div className="overflow-hidden rounded-lg border">
         <Table>

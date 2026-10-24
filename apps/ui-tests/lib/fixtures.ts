@@ -4,6 +4,8 @@
  * large, so layouts are tested with realistic worst cases.
  */
 import type {
+  Billing,
+  PriceQuote,
   CardMemberPage,
   ActivityPage,
   AdminMe,
@@ -600,4 +602,49 @@ export const cardMembers: CardMemberPage = {
     { id: 'm4', name: 'Sara Ali', email: null, phone: null, code: 'Z8D-2QF', joinedAt: '2026-10-15T09:12:00Z', points: 0 },
     { id: 'm5', name: 'Youssef Tarek', email: null, phone: null, code: 'B5V-6KM', joinedAt: '2026-10-12T16:30:00Z', points: 860 },
   ],
+};
+
+/** Same price rules as apps/api/src/plans/plans.ts (quote). */
+const PRICE = {
+  regular: { monthly: 499, annual: 416, annualTotal: 4990, extra: { monthly: 299, annual: 249 }, founding: 349 },
+  loyal: { monthly: 999, annual: 833, annualTotal: 9990, extra: { monthly: 399, annual: 333 }, founding: 699 },
+  chain: { monthly: 1999, annual: 1666, annualTotal: 19990, extra: { monthly: 499, annual: 416 }, founding: 1399 },
+} as const;
+function quote(plan: keyof typeof PRICE, cycle: 'monthly' | 'annual', branches: number, founding: boolean): PriceQuote {
+  const p = PRICE[plan];
+  const base = founding ? (cycle === 'annual' ? Math.round(p.annual * 0.7) : p.founding) : p[cycle];
+  const extraBranches = (branches - 1) * p.extra[cycle];
+  const monthly = base + extraBranches;
+  const yearly = (founding ? Math.round(p.annualTotal * 0.7) : p.annualTotal) + extraBranches * 12;
+  return { base, extraBranches, monthly, perPeriod: cycle === 'annual' ? yearly : monthly, foundingApplied: founding };
+}
+const DAY_MS = 86_400_000;
+/** A paid Loyal shop with 3 branches, a Founding spot and a downgrade scheduled for the renewal. */
+export const billing: Billing = {
+  currency: 'EGP',
+  state: 'active',
+  planStatus: 'active',
+  plan: 'loyal',
+  billingCycle: 'monthly',
+  branches: 3,
+  price: quote('loyal', 'monthly', 3, true),
+  trialEndsAt: null,
+  trialDays: 14,
+  deleteAt: null,
+  paidUntil: new Date(Date.now() + 12 * DAY_MS).toISOString(),
+  graceEndsAt: new Date(Date.now() + 19 * DAY_MS).toISOString(),
+  graceDays: 7,
+  founding: true,
+  foundingUntil: new Date(Date.now() + 120 * DAY_MS).toISOString(),
+  scheduled: {
+    plan: 'regular',
+    billingCycle: 'monthly',
+    startsAt: new Date(Date.now() + 12 * DAY_MS).toISOString(),
+    price: quote('regular', 'monthly', 3, true),
+  },
+  plans: (['regular', 'loyal', 'chain'] as const).map((id) => ({
+    id,
+    monthly: quote(id, 'monthly', 3, true),
+    annual: quote(id, 'annual', 3, true),
+  })),
 };
