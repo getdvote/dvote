@@ -76,7 +76,7 @@ function DemoPhone() {
 
   return (
     <div className="relative isolate overflow-hidden rounded-[24px] bg-paper px-4 pt-6 pb-5 sm:px-8">
-      <div aria-hidden className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_85%)]" style={{ backgroundImage: 'radial-gradient(#e7cda2 1.1px, transparent 1.3px)', backgroundSize: '18px 18px' }} />
+      <div aria-hidden className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_85%)]" style={{ backgroundImage: 'radial-gradient(#e4dcd4 1.1px, transparent 1.3px)', backgroundSize: '18px 18px' }} />
 
       {/* where the visitor is in the flow */}
       <div className="flex flex-col items-center gap-3">
@@ -135,7 +135,7 @@ function DemoPhone() {
             {d.demo.visit}
           </button>
           {ready ? (
-            <button type="button" onClick={demo.redeem} className={cn(ctrl, 'demo-tap bg-brand text-ink hover:bg-brand-hover')}>
+            <button type="button" onClick={demo.redeem} className={cn(ctrl, 'demo-tap bg-brand text-brand-foreground hover:bg-brand-hover')}>
               <GiftIcon className="size-[18px]" aria-hidden />
               {d.demo.redeem}
             </button>
@@ -165,24 +165,24 @@ export function Hero() {
   const facts = [fill(d.hero.from, { price: from }), fill(d.hero.trial, { days: plans.trialDays }), d.hero.languages];
 
   return (
-    <section id="top" className="scroll-mt-20 px-4 pt-14 pb-16 sm:px-8 sm:pt-20 lg:px-12 lg:pb-12">
+    <section id="top" className="scroll-mt-20 rounded-[22px] bg-blue px-4 pt-14 pb-16 sm:px-8 sm:pt-20 md:rounded-[28px] lg:px-12 lg:pb-12">
       <div className="mx-auto grid max-w-[1160px] items-center gap-14 lg:grid-cols-[1fr_minmax(0,480px)]">
-        <div>
+        <div className="on-blue">
           <FoundingPill />
-          <h1 className="mt-7 text-[42px] leading-[1.03] font-semibold tracking-[-0.035em] text-balance sm:text-[60px] lg:text-[64px]">{d.hero.title}</h1>
-          <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-pretty text-muted-foreground">
-            <span className="font-medium text-ink">{d.hero.accent}</span> {d.hero.lead}
+          <h1 className="mt-7 text-[42px] leading-[1.03] font-black tracking-[-0.02em] text-balance sm:text-[60px] lg:text-[64px]">{d.hero.title}</h1>
+          <p className="mt-6 max-w-xl text-[18px] leading-relaxed font-light text-pretty text-muted-foreground">
+            <span className="font-medium text-white">{d.hero.accent}</span> {d.hero.lead}
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <TrialButton />
-            <ExternalLink href={whatsappLink(d.contact.whatsappMessage)} className="inline-flex h-12 items-center justify-center rounded-xl px-5 text-[15px] font-medium text-ink underline decoration-line decoration-2 underline-offset-[6px] transition duration-150 hover:decoration-ink">
+            <ExternalLink href={whatsappLink(d.contact.whatsappMessage)} className="inline-flex h-12 items-center justify-center rounded-xl px-5 text-[15px] font-medium text-white underline decoration-white/40 decoration-2 underline-offset-[6px] transition duration-150 hover:decoration-ink">
               {d.hero.talk}
             </ExternalLink>
           </div>
-          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t-2 border-dotted border-line pt-6 text-[14px] text-muted-foreground">
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t-2 border-dotted border-white/30 pt-6 text-[14px] text-muted-foreground">
             {facts.map((f) => (
               <li key={f} className="flex items-center gap-1.5">
-                <CheckCircleIcon className="size-4 text-ink/60" aria-hidden />
+                <CheckCircleIcon className="size-4 text-white/70" aria-hidden />
                 {f}
               </li>
             ))}

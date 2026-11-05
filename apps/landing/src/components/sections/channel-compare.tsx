@@ -13,7 +13,7 @@ export function ChannelCompare() {
   return (
     <Section className="pt-4 sm:pt-8">
       <Container>
-        <h2 className="mx-auto max-w-4xl text-center text-[32px] leading-[1.1] font-semibold tracking-[-0.03em] text-balance sm:text-5xl">{c.title}</h2>
+        <h2 className="mx-auto max-w-4xl text-center text-[32px] leading-[1.1] font-black tracking-[-0.02em] text-balance sm:text-5xl">{c.title}</h2>
         <Reveal className="mt-14 hidden md:block">
           <table className="w-full table-fixed border-separate border-spacing-0 text-start">
             <caption className="sr-only">{c.caption}</caption>

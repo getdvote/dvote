@@ -14,7 +14,7 @@ export function Stand() {
         <Reveal>
           <Card className="grid items-center gap-10 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:p-14">
             <div className="max-w-xl">
-              <h2 className="text-[32px] leading-[1.1] font-semibold tracking-[-0.03em] sm:text-[40px]">{s.title}</h2>
+              <h2 className="text-[32px] leading-[1.1] font-black tracking-[-0.02em] sm:text-[40px]">{s.title}</h2>
               <p className="mt-4 text-[17px] leading-relaxed text-muted-foreground">{s.text}</p>
             </div>
             <div className="flex flex-wrap gap-5 sm:flex-nowrap">

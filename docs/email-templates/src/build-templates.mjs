@@ -9,20 +9,20 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const ASSETS = 'https://dvote.co/email/'; // apps/web/public/email, built by build-assets.mjs
 
-// Coffee palette (brand v2.0, same values as apps/dashboard/src/styles.css). Email clients need literal values.
-// Orange is the button and the accents on the espresso header/footer; brandText is orange that reads on white.
+// Brand v3.0 (same values as apps/dashboard/src/styles.css). Email clients need literal values.
+// dvote Blue is the button with white text; the frame around the white card is neutral espresso.
 const C = {
-  orange: '#FF5500', ink: '#18100F', paper: '#F8F4F1', white: '#FFFFFF', stone: '#C2B3A6',
-  body: '#3D312D', muted: '#6B5E57', line: '#EADFD0', brandText: '#B83D00', brandTint: '#FFEDE3',
+  brand: '#1F3DFF', frame: '#18100F', ink: '#18100F', paper: '#F8F4F1', white: '#FFFFFF', stone: '#C2B3A6',
+  body: '#3D312D', muted: '#6B5E57', line: '#E4DCD4', brandText: '#1F3DFF', brandTint: '#E8EBFF',
 };
 const FONT = {
-  display: "'Barlow Condensed','Arial Narrow',Arial,sans-serif",
-  body: "Inter,'Segoe UI',Helvetica,Arial,sans-serif",
-  arabic: "Cairo,Tahoma,'Segoe UI',Arial,sans-serif",
+  display: "'DM Sans','Segoe UI',Helvetica,Arial,sans-serif",
+  body: "'DM Sans','Segoe UI',Helvetica,Arial,sans-serif",
+  arabic: "Alexandria,Tahoma,'Segoe UI',Arial,sans-serif",
 };
 
 const LANG = {
-  en: { dir: 'ltr', align: 'left', font: FONT.body, headFont: FONT.display, headSize: 44, headLine: 44, upper: true, lh: 26 },
+  en: { dir: 'ltr', align: 'left', font: FONT.body, headFont: FONT.display, headSize: 36, headLine: 42, upper: false, lh: 26 },
   ar: { dir: 'rtl', align: 'right', font: FONT.arabic, headFont: FONT.arabic, headSize: 30, headLine: 46, upper: false, lh: 30 },
 };
 
@@ -35,8 +35,8 @@ const ltr = (s) => `<span dir="ltr" style="unicode-bidi:isolate">${s}</span>`;
 // Bulletproof button: the cell carries the colour so it survives clients that drop padding on links.
 const button = (label, lang, href = '{{ .ConfirmationURL }}') => `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 0">
-  <tr><td bgcolor="${C.orange}" style="background:${C.orange};border:2px solid ${C.ink};border-radius:14px">
-    <a href="${href}" target="_blank" style="display:inline-block;padding:15px 30px;font-family:${LANG[lang].font};font-size:16px;font-weight:700;line-height:20px;color:${C.ink};text-decoration:none;border-radius:12px">${label}&nbsp;${lang === 'ar' ? '&larr;' : '&rarr;'}</a>
+  <tr><td bgcolor="${C.brand}" style="background:${C.brand};border:2px solid ${C.brand};border-radius:14px">
+    <a href="${href}" target="_blank" style="display:inline-block;padding:15px 30px;font-family:${LANG[lang].font};font-size:16px;font-weight:700;line-height:20px;color:${C.white};text-decoration:none;border-radius:12px">${label}&nbsp;${lang === 'ar' ? '&larr;' : '&rarr;'}</a>
   </td></tr>
 </table>`;
 
@@ -60,7 +60,7 @@ function section(lang, { eyebrow, title, body, action }) {
     <td bgcolor="${C.brandTint}" style="background:${C.brandTint};border-radius:999px;padding:5px 12px;font-family:${L.font};font-size:12px;font-weight:700;letter-spacing:${lang === 'en' ? '1.2px' : '0'};text-transform:${lang === 'en' ? 'uppercase' : 'none'};color:${C.brandText}">${eyebrow}</td>
   </tr></table>
   <div style="clear:both"></div>
-  <h1 class="h1-${lang}" style="margin:0;font-family:${L.headFont};font-size:${L.headSize}px;line-height:${L.headLine}px;font-weight:700;color:${C.ink};${L.upper ? 'text-transform:uppercase;letter-spacing:-0.5px;' : ''}">${title}</h1>
+  <h1 class="h1-${lang}" style="margin:0;font-family:${L.headFont};font-size:${L.headSize}px;line-height:${L.headLine}px;font-weight:900;color:${C.ink};${L.upper ? 'text-transform:uppercase;letter-spacing:-0.5px;' : ''}">${title}</h1>
   <img src="${ASSETS}underline.png" width="150" height="15" alt="" style="display:block;margin:10px 0 22px;${lang === 'ar' ? 'margin-right:0;margin-left:auto;transform:scaleX(-1);' : ''}border:0">
   ${body.map((b) => p(b, lang)).join('')}
   ${action}
@@ -78,27 +78,27 @@ function layout({ name, preheader, en, ar, footerEn, footerAr }) {
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light only">
 <title>dvote</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Cairo:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,700;9..40,900&family=Alexandria:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   body{margin:0;padding:0;-webkit-text-size-adjust:100%}
   img{border:0;outline:none;text-decoration:none}
   a{color:${C.brandText}}
   @media (max-width:600px){
     .px{padding-left:24px!important;padding-right:24px!important}
-    .h1-en{font-size:36px!important;line-height:38px!important}
+    .h1-en{font-size:30px!important;line-height:36px!important}
     .h1-ar{font-size:26px!important;line-height:40px!important}
     .hero{width:100%!important;height:auto!important}
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:${C.ink}">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${C.ink}">${preheader}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.ink}" background="${ASSETS}pattern-ink.png" style="background:${C.ink} url('${ASSETS}pattern-ink.png') repeat;background-size:240px 240px">
+<body style="margin:0;padding:0;background:${C.frame}">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${C.frame}">${preheader}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.frame}" background="${ASSETS}pattern-ink.png" style="background:${C.frame} url('${ASSETS}pattern-ink.png') repeat;background-size:240px 240px">
 <tr><td align="center" style="padding:36px 12px 28px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
 
     <tr><td align="center" style="padding:4px 0 28px">
-      <a href="https://dvote.co" target="_blank"><img src="${ASSETS}logo-electric.png" width="140" height="44" alt="dvote" style="display:block;width:140px;height:auto;font-family:${FONT.display};font-size:32px;font-weight:700;color:${C.orange}"></a>
+      <a href="https://dvote.co" target="_blank"><img src="${ASSETS}logo-electric.png" width="140" height="44" alt="dvote" style="display:block;width:140px;height:auto;font-family:${FONT.display};font-size:32px;font-weight:700;color:${C.white}"></a>
     </td></tr>
 
     <tr><td bgcolor="${C.white}" style="background:${C.white};border-radius:28px;overflow:hidden">
@@ -116,14 +116,14 @@ function layout({ name, preheader, en, ar, footerEn, footerAr }) {
 
     <tr><td align="center" style="padding:36px 24px 8px">
       <img src="${ASSETS}symbol-electric.png" width="40" height="40" alt="" style="display:block;width:40px;height:40px">
-      <p style="margin:14px 0 4px;font-family:${FONT.display};font-size:22px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:${C.orange}">Good things come back.</p>
-      <p dir="rtl" style="margin:0 0 20px;font-family:${FONT.arabic};font-size:16px;font-weight:700;color:${C.orange}">الأشياء الجميلة تعود دائمًا.</p>
+      <p style="margin:14px 0 4px;font-family:${FONT.display};font-size:22px;font-weight:900;font-style:italic;color:${C.white}">Good things come back.</p>
+      <p dir="rtl" style="margin:0 0 20px;font-family:${FONT.arabic};font-size:16px;font-weight:900;color:${C.white}">الأشياء الجميلة تعود دائمًا.</p>
       <p style="margin:0 0 6px;font-family:${FONT.body};font-size:12px;line-height:19px;color:${C.stone}">${footerEn}</p>
       <p dir="rtl" style="margin:0 0 18px;font-family:${FONT.arabic};font-size:12px;line-height:20px;color:${C.stone}">${footerAr}</p>
       <p style="margin:0;font-family:${FONT.body};font-size:12px;line-height:19px;color:${C.stone}">
-        <a href="https://dvote.co" target="_blank" style="color:${C.orange};text-decoration:underline">dvote.co</a>
+        <a href="https://dvote.co" target="_blank" style="color:${C.white};text-decoration:underline">dvote.co</a>
         &nbsp;·&nbsp;
-        <a href="mailto:getdvote@gmail.com" style="color:${C.orange};text-decoration:underline">getdvote@gmail.com</a>
+        <a href="mailto:getdvote@gmail.com" style="color:${C.white};text-decoration:underline">getdvote@gmail.com</a>
       </p>
     </td></tr>
 

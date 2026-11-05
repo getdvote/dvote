@@ -74,7 +74,7 @@ export function SetPassword() {
   return <main className="flex min-h-screen items-center justify-center bg-muted p-5">
     <section className="grid w-full max-w-md gap-5 rounded-2xl border bg-card p-7 shadow-sm">
       <div className="flex items-center justify-between"><DvoteLogo height={26} markColor="var(--brand)" /><LanguageToggle /></div>
-      <h1 className="text-2xl font-semibold">
+      <h1 className="text-2xl font-black">
         {email ? t(fromReset ? 'passwordSetup.newTitle' : 'passwordSetup.title') : forgot ? t('passwordSetup.forgotTitle') : t('passwordSetup.title')}
       </h1>
       {loading ? <p>{t('passwordSetup.loading')}</p> : email ? <>

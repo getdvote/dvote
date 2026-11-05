@@ -451,14 +451,17 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 - Errors use stable `code`s: scans — `qr_invalid`, `qr_used`, `qr_expired`, `qr_cancelled`, `wrong_qr_type`, `vendor_mismatch`, `branch_required`, `no_active_rule`, `invalid_amount`, `no_points_earned`, `duplicate_receipt`, `reward_unavailable`, `reward_sold_out`, `insufficient_points`, `user_blocked`.
 - Never commit `.env`, secrets or keys.
 
-## Brand colours (brand v2.0, coffee palette, decided 2026-10-23; replaces v1.0 electric lime `#E1FF00` / ink `#11190C` / paper `#F3F1EE`)
+## Brand (brand v3.0, decided 2026-11-05; replaces v2.0 coffee palette, orange `#FF5500` as the hero)
 
-- **Palette:** Orange `#FF5500` (the accent) · Espresso `#18100F` (ink, dark surfaces) · White `#FFFFFF` · Froth `#F8F4F1` (light page) · Latte `#F3E3CB` · Cortado `#E7CDA2` · Egg Yolk `#FFCA48` · Shortcake `#FFC4A7` · Mint `#B8D9C5` · Plum `#5F2B4B`.
-- **Light mode:** Froth page, White cards, Espresso text; Latte / Cortado for soft fills and lines. **Dark mode:** Espresso surfaces (`#18100F` page, `#221816` cards), Froth text. The dashboard sidebar is Espresso in both themes.
-- **Orange is used sparingly, like cloudflare.com:** the one primary action of a screen (`Button variant="brand"`), active / selected states, focus rings, key highlights, small accents (logo mark, sparkles). Never a large background. Status, charts, badges and illustrations use the supporting colours (Egg Yolk, Shortcake, Mint, Plum).
-- **Contrast:** orange fills always carry Espresso text (`brand-foreground`, 5.9:1); white on orange fails AA. Orange as text on light surfaces uses `brand-text` `#B83D00` (5.2:1 on Froth); in dark mode `brand-text` is `#FF6A1F`.
-- **Tokens keep their v1 names** (`brand`, `brand-hover`, `brand-pressed`, `brand-text`, `brand-soft`, `paper`, `ink`; plus fixed `orange`, `latte`, `cortado`, `egg-yolk`, `shortcake`, `mint`, `plum`): values live in `apps/dashboard/src/styles.css` (source of truth), `apps/landing/src/styles.css`, `apps/web/src/styles.css`, `apps/staff/src/lib/theme.ts` and the email builders in `docs/email-templates/src/` (rebuild with `node docs/email-templates/src/build-assets.mjs` then `build-templates.mjs`). Brand SVGs in `public/brand` are identical in dashboard and landing. The logo components take `markColor` (orange mark, Espresso/Froth wordmark).
-- **Default loyalty card:** with no brand colour and no chosen design, cards use dvote Espresso (`DVOTE_DESIGN` in both `lib/cardDesigns.ts`, `DVOTE_CARD_COLOR` in `apps/api/src/loyalty-cards/card-design.ts`). The 10 numbered designs are unchanged, so merchants' saved choices look the same.
+**Full guide: [`docs/brand/dvote-brand-guidelines.md`](docs/brand/dvote-brand-guidelines.md)**, tokens in `docs/brand/theme.css`, contrast check `python3 docs/brand/contrast-audit.py`.
+
+- **Palette:** dvote Blue `#1F3DFF` (hero) · Night Blue `#142AB8` · Espresso `#18100F` (text, dark surfaces) · White · Froth `#F8F4F1` · Oat `#EFE9E3` · accents Sky `#6EC1FF`, Orange `#FF5500`, Egg Yolk `#FFCA48`, Mint `#B8D9C5`, Plum `#5F2B4B`. Latte, Cortado and Shortcake are retired.
+- **Fonts:** DM Sans (Latin), Alexandria (Arabic). DM Sans has no tabular figures, so `.tabular-nums` also switches to Alexandria. Black headlines, Light subheads at 18 px or more. No letter spacing in Arabic.
+- **Contrast:** brand fills use `text-brand-foreground`, never a fixed colour: white in light mode, Espresso in dark mode (dvote Blue is only 2.83:1 on Espresso, so dark mode lifts `brand` to `#6F86FF`).
+- **Blue is an accent in the product (user's decision, 2026-11-05):** the dashboard stays neutral, with blue only on the main action, active and selected states, links, focus and the lead chart series. Don't use blue for sidebars, frames or large panels there.
+- **Frame:** the dashboard sidebar and phone header use `dark sidebar-neutral`: a Froth panel with Espresso text in the light theme, Espresso in the dark theme; the active item is `#E8EBFF` with blue text. The landing page and emails use a neutral Espresso frame; the landing hero is the one blue block (`.on-blue` scopes its tokens).
+- **Tokens keep their v1 names** (`brand`, `brand-hover`, `brand-pressed`, `brand-text`, `brand-soft`, `paper`, `ink`): values live in `apps/dashboard/src/styles.css` (source of truth), `apps/landing/src/styles.css`, `apps/web/src/styles.css`, `apps/staff/src/lib/theme.ts` and the email builders in `docs/email-templates/src/` (rebuild with `node docs/email-templates/src/build-assets.mjs` then `build-templates.mjs`). Brand SVGs in `public/brand` are identical in dashboard and landing.
+- **Default loyalty card:** still Espresso (`DVOTE_DESIGN`, `DVOTE_CARD_COLOR`), an open decision: it's a fallback, so changing it reaches live passes. The 10 numbered designs are unchanged.
 
 ## Merchant dashboard localization (apps/dashboard, built 2026-10-11)
 

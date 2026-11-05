@@ -15,13 +15,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../lib/theme';
 
-/** Explicit font faces keep Inter's weights consistent on native and web. */
+/** Explicit font faces keep DM Sans's weights consistent on native and web. */
 export function Text({ style, ...props }: TextProps) {
   const flat = StyleSheet.flatten(style);
   const weight = String(flat?.fontWeight ?? '400');
   const fontFamily =
     flat?.fontFamily ??
-    (['700', '800', '900', 'bold'].includes(weight)
+    (weight === '900'
+      ? theme.font.black
+      : ['700', '800', 'bold'].includes(weight)
       ? theme.font.bold
       : weight === '600'
         ? theme.font.semibold

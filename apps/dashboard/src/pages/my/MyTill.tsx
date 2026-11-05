@@ -117,7 +117,7 @@ export function MyTill() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-sm text-muted-foreground">{me.vendor.name}</div>
-          <h1 className="text-xl font-semibold tracking-tight">{t('till.title')}</h1>
+          <h1 className="text-xl font-black tracking-tight">{t('till.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
           {mustPick ? (

@@ -132,7 +132,7 @@ function CardDesignEditor() {
     <div className="pb-24 xl:pb-0">
       <BackLink />
       <div className="mt-2 mb-5">
-        <h1 className="text-2xl font-bold tracking-tight">{t('cards.editor.title')}</h1>
+        <h1 className="text-2xl font-black tracking-tight">{t('cards.editor.title')}</h1>
         <p className="mt-1 text-muted-foreground">{data?.card?.name}</p>
       </div>
       <ErrorAlert error={error} />

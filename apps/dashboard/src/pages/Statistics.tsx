@@ -39,7 +39,7 @@ import { api } from "../lib/api";
 /**
  * Two series everywhere on this page: master QR and shop QR. Colours checked with the dataviz
  * validator (lightness band, CVD and normal-vision separation, contrast): espresso / froth for master
- * and the brand orange for shop, in both themes. Identity is never colour alone: legend, labels, icons.
+ * and the brand blue for shop, in both themes. Identity is never colour alone: legend, labels, icons.
  */
 const COLORS =
   "[--qr-master:var(--chart-1)] [--qr-shop:var(--chart-2)]";

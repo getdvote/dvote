@@ -1,6 +1,6 @@
 /**
- * Native equivalents of the dashboard's coffee palette (brand v2.0) and Inter typography: froth canvas,
- * white surfaces, espresso type and header, orange only for the main action.
+ * Native equivalents of the dashboard's brand v3.0 palette and DM Sans typography: froth canvas,
+ * white surfaces, espresso type, an espresso header, dvote Blue for the main action.
  */
 export const theme = {
   background: '#F8F4F1', // froth
@@ -10,15 +10,15 @@ export const theme = {
   placeholder: '#8C7B6E',
   primary: '#18100F',
   onPrimary: '#F8F4F1',
-  brand: '#FF5500', // orange: fills with espresso on top (5.9:1)
-  onBrand: '#18100F',
-  border: '#EADFD0',
-  subtle: '#F3E3CB', // latte
+  brand: '#1F3DFF', // dvote blue: fills carry white (6.63:1)
+  onBrand: '#FFFFFF',
+  border: '#E4DCD4',
+  subtle: '#EFE9E3', // oat
   sidebar: '#18100F',
   sidebarAccent: '#2B201D',
   danger: '#B42318',
   dangerSoft: '#FEF3F2',
-  font: { regular: 'Inter_400Regular', medium: 'Inter_500Medium', semibold: 'Inter_600SemiBold', bold: 'Inter_700Bold' },
+  font: { regular: 'DMSans_400Regular', medium: 'DMSans_500Medium', semibold: 'DMSans_600SemiBold', bold: 'DMSans_700Bold', black: 'DMSans_900Black' },
   radius: 12,
   controlHeight: 52,
   buttonHeight: 52,
