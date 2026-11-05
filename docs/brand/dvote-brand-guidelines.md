@@ -111,7 +111,7 @@ Use facts the product can back up today:
 
 **Never invent numbers.** dvote has no published customer, visit or revenue figures yet. When real ones exist, add them here in this form: "*X* businesses, *Y* members, *Z* visits."
 
-**Check before claiming Apple Wallet.** The landing page promises Apple Wallet, but `CLAUDE.md` still lists Apple passes as not built. See [Open decisions](#20-open-decisions).
+**Apple Wallet counts as available.** Marketing and landing copy can name it alongside Google Wallet. Decided 5 November 2026.
 
 ### The rally cry
 
@@ -261,7 +261,7 @@ Arabic is a first language for dvote, not a translation.
 - Mirror direction: back and forward arrows, progress, sliding motion
 - Don't mirror: the logo, the Star, media controls, phone numbers, prices in Latin digits, QR codes
 
-**Arabic rally cry:** the emails use الأشياء الجميلة تعود دائمًا. A more Egyptian option is الحاجات الحلوة بترجع. Pick one in native review, then use it everywhere.
+**Arabic rally cry:** الحاجات الحلوة بترجع. Decided 5 November 2026. Use it everywhere, including the emails.
 
 ---
 
@@ -1134,11 +1134,10 @@ Do this as a single coordinated change. Half-orange, half-blue surfaces would lo
 
 ### Phase 1: decide and produce assets
 
-1. Approve the rally cry ([Open decisions](#20-open-decisions)). The hero colour and fonts are already decided
-2. Trademark check on the blue-led identity and the rally cry
-3. Export new logo files: all versions listed in [section 5](#5-logo), plus app icons and favicon
-4. Draw Blade and Star artwork from the master logo
-5. Native Arabic review of copy
+1. Approve the English rally cry ([Open decisions](#20-open-decisions)). The Arabic rally cry, hero colour and fonts are already decided
+2. Export new logo files: all versions listed in [section 5](#5-logo), plus app icons and favicon
+3. Draw Blade and Star artwork from the master logo
+4. Native Arabic review of copy
 
 ### Phase 2: change the code
 
@@ -1216,14 +1215,14 @@ Run this before anything goes out.
 
 ## 20. Open decisions
 
-Decision 1 is closed, and the fonts are decided: DM Sans and Alexandria. The others still need a person's decision. Everything else in this guide is ready to apply.
+Decisions 1, 2 and 3 are closed, and the fonts are decided: DM Sans and Alexandria. The others still need a person's decision. Everything else in this guide is ready to apply.
 
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | **Hero colour.** | **Decided 5 November 2026: dvote Blue `#1F3DFF`.** It's in the same family as the reference, deliberately not the same value |
-| 2 | **Legal check.** Global Payments is a blue-led brand in merchant payments, and its guide also mentions loyalty points. dvote would be a nearby blue | Ask a trademark lawyer before launch. Warm neutrals, orange and the logo add distance, but this guide isn't legal advice |
-| 3 | **Apple Wallet claim.** The landing page offers it now; `CLAUDE.md` says Apple passes aren't built | Confirm the status. If still pending, change the landing copy before this rebrand goes out |
-| 4 | **Rally cry.** "Good things come back." and its Arabic | Approve after native review and a trademark search |
+| 2 | **Legal check.** | **Closed 5 November 2026: no legal check.** Mohamed decided not to do one |
+| 3 | **Apple Wallet claim.** | **Closed 5 November 2026: treat Apple Wallet as available.** The landing copy stays as it is |
+| 4 | **Rally cry.** "Good things come back." and its Arabic | **Arabic decided 5 November 2026: الحاجات الحلوة بترجع.** The English line still needs approval |
 | 5 | **Default card colour.** Move default cards from Espresso to Blue? | Keep Espresso until decided. A change reaches every merchant without a chosen design, and their customers' passes |
 | 6 | **Print values.** Print Blue CMYK and Pantones are not yet tested | Get a proof from the stand's printer |
 | 7 | **Favicon.** A 16 px version of the symbol doesn't exist | Draw a simplified one |

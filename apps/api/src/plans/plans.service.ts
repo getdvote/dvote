@@ -16,7 +16,7 @@ export interface FoundingStatus extends FoundingSettings {
 
 type Db = PrismaService | Prisma.TransactionClient;
 
-/** The public price list and the Founding Merchants counter (set by the dvote team). */
+/** The public price list and the Launch Partner counter (set by the dvote team). */
 @Injectable()
 export class PlansService {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,7 +51,7 @@ export class PlansService {
   }
 
   /**
-   * Inside the activation transaction: take a Founding spot, or fail with founding_full.
+   * Inside the activation transaction: take a Launch Partner spot, or fail with founding_full.
    * Locks the settings row so two activations can't take the last spot together.
    */
   async takeFoundingSpot(tx: Prisma.TransactionClient, vendorId: string) {
@@ -59,7 +59,7 @@ export class PlansService {
     const already = await tx.vendors.count({ where: { id: vendorId, founding: true } });
     if (already) return;
     const f = await this.founding(tx);
-    if (f.left <= 0) throw new ConflictException({ code: 'founding_full', message: 'No Founding Merchant spots are left.' });
+    if (f.left <= 0) throw new ConflictException({ code: 'founding_full', message: 'No Launch Partner spots are left.' });
   }
 }
 

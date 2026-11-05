@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 const INCLUDED_ICONS = [QrCodeIcon, CalendarIcon, ShieldCheckIcon];
 
-/** Pricing: cycle switch, Founding banner, the plan cards, what every plan includes, full comparison. */
+/** Pricing: cycle switch, Launch Partners banner, the plan cards, what every plan includes, full comparison. */
 export function Pricing() {
   const { d } = useI18n();
   const data = usePlans();
