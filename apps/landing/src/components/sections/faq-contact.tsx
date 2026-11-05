@@ -26,7 +26,7 @@ export function FaqContact() {
         </div>
         <div id="contact" className="scroll-mt-24 lg:pt-2">
           <div className="lg:sticky lg:top-28">
-            <h2 className="text-[28px] leading-tight font-semibold tracking-[-0.03em]">{c.title}</h2>
+            <h2 className="text-[28px] leading-tight font-black tracking-[-0.02em]">{c.title}</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{c.lead}</p>
             <div className="mt-6 grid gap-3">
               <Card className="p-6">

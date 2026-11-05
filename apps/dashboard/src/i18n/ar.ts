@@ -1096,7 +1096,7 @@ export const ar: Dictionary = {
     reset: 'إعادة الضبط',
     font: 'خط العناوين',
     fontHint: 'يُستخدم لاسم متجرك والعناوين.',
-    defaultFont: 'الافتراضي (Inter)',
+    defaultFont: 'الافتراضي (DM Sans)',
     uploadFont: 'رفع خط',
   },
   settings: {

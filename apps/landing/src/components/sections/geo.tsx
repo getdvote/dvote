@@ -69,7 +69,7 @@ export function Geo() {
       <div className="relative isolate overflow-hidden rounded-[20px] bg-ink px-5 py-16 text-paper sm:px-10 sm:py-24 md:rounded-[24px]">
         <div className="mx-auto grid max-w-[1120px] items-center gap-14 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <h2 className="text-[32px] leading-[1.1] font-semibold tracking-[-0.03em] text-balance sm:text-[44px]">{g.title}</h2>
+            <h2 className="text-[32px] leading-[1.1] font-black tracking-[-0.02em] text-balance sm:text-[44px]">{g.title}</h2>
             <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-paper/70">{g.lead}</p>
             <ol className="mt-10 grid">
               {g.steps.map((s, i) => (
@@ -78,7 +78,7 @@ export function Geo() {
                   <span
                     className={cn(
                       'flex size-8 shrink-0 items-center justify-center rounded-full text-[14px] font-semibold transition duration-500',
-                      phase >= i ? 'bg-brand text-ink' : 'bg-paper/10 text-paper',
+                      phase >= i ? 'bg-brand text-brand-foreground' : 'bg-paper/10 text-paper',
                     )}
                   >
                     {i + 1}
@@ -106,7 +106,7 @@ export function Geo() {
                   <rect key={i} x={x} y={y} width={w} height={h} rx="1.4" fill="#1f2a18" />
                 ))}
                 <path d="M-4 66 L64 -4" stroke="#26331d" strokeWidth="3.4" />
-                <path d={`M16 92 Q 16 68 24 55`} stroke="#ff5500" strokeOpacity="0.35" strokeWidth="0.45" strokeDasharray="1.1 1.1" fill="none" />
+                <path d={`M16 92 Q 16 68 24 55`} stroke="#1f3dff" strokeOpacity="0.35" strokeWidth="0.45" strokeDasharray="1.1 1.1" fill="none" />
               </svg>
 
               {/* the orbit: lime rings radiating from the café (the brand pattern, here meaning "nearby") */}
@@ -126,7 +126,7 @@ export function Geo() {
               />
 
               <div className="absolute grid -translate-x-1/2 -translate-y-1/2 justify-items-center gap-1.5 text-[12px] font-medium text-paper" style={{ left: `${CAFE.x}%`, top: `${CAFE.y}%` }}>
-                <span className="flex size-11 items-center justify-center rounded-full bg-brand text-ink shadow-[0_0_0_6px_rgb(255_85_0/0.15)]">
+                <span className="flex size-11 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[0_0_0_6px_rgb(255_85_0/0.15)]">
                   <CupHotIcon className="size-5" />
                 </span>
                 <span className="rounded-md bg-ink/70 px-1.5">{g.venue}</span>

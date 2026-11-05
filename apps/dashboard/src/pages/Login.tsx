@@ -62,7 +62,7 @@ function Showcase() {
       {/* brand moment: the kit's orbit pattern, faded out under the heading so the text stays crisp */}
       <BrandPattern name="orbit-ink" fade="top" className="-z-10 bg-[position:70%_75%] opacity-70" />
       <div className="max-w-md px-12 pt-14">
-        <h2 className="text-2xl font-semibold tracking-tight">{t('login.showcaseTitle')}</h2>
+        <h2 className="text-2xl font-black tracking-tight">{t('login.showcaseTitle')}</h2>
         <p className="mt-2 text-paper/75">{t('login.showcaseText')}</p>
       </div>
       {/* a small, still picture of the merchant dashboard */}

@@ -102,7 +102,7 @@ export function FoundingPill({ className }: { className?: string }) {
       href="#pricing"
       className={cn('group inline-flex max-w-full items-center gap-2 rounded-full border border-line bg-white py-1 ps-3 pe-1 text-[13px] font-medium text-ink transition duration-150 hover:border-ink/30', className)}
     >
-      <span className="size-1.5 shrink-0 rounded-full bg-brand ring-1 ring-ink/25" aria-hidden />
+      <span className="size-1.5 shrink-0 rounded-full bg-blue" aria-hidden />
       <span className="truncate sm:hidden">{fill(d.founding.pillShort, params)}</span>
       <span className="hidden truncate sm:inline">{fill(d.founding.pill, params)}</span>
       <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-paper text-ink transition duration-100 group-hover:bg-ink group-hover:text-paper">

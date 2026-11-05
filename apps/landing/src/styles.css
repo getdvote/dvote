@@ -3,10 +3,9 @@
 @import "shadcn/tailwind.css";
 
 /*
- * dvote landing page, brand v2.0 coffee palette (same system as apps/dashboard/src/styles.css): froth canvas,
- * white cards, espresso type and frames. Orange is used sparingly (main action, key highlights, small accents),
- * as a fill with espresso on top; for orange text on light surfaces use brand-text. Latte / Cortado are the soft
- * fills; Egg Yolk, Shortcake, Mint and Plum are for badges and illustrations. Inter for Latin, Cairo for Arabic.
+ * dvote landing page, brand v3.0 (same system as apps/dashboard/src/styles.css): white and froth surfaces, espresso
+ * type, dvote Blue with white on top for the main action and brand moments. Sky, Orange, Egg Yolk, Mint and Plum are
+ * small accents. DM Sans for Latin, Alexandria for Arabic and for numbers that must line up.
  * The shadcn variables (background, primary, muted, border, ...) resolve to the same brand tokens.
  */
 @theme inline {
@@ -44,12 +43,12 @@
   --color-canvas: #f8f4f1; /* froth */
   --color-ink: #18100f; /* espresso */
   --color-ink-soft: #2b201d;
-  --color-line: #eadfd0;
+  --color-line: #e4dcd4;
+  --color-blue: #1f3dff;
+  --color-night: #142ab8;
+  --color-sky: #6ec1ff;
   --color-orange: #ff5500;
-  --color-latte: #f3e3cb;
-  --color-cortado: #e7cda2;
   --color-egg-yolk: #ffca48;
-  --color-shortcake: #ffc4a7;
   --color-mint: #b8d9c5;
   --color-plum: #5f2b4b;
   --radius-sm: calc(var(--radius) * 0.6);
@@ -62,40 +61,68 @@
 }
 
 :root {
-  --app-font: "Inter", "Cairo", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --app-font: "DM Sans", "Alexandria", -apple-system, "Segoe UI", Roboto, sans-serif;
   --background: #ffffff;
   --page: #f8f4f1; /* froth page; cards are white */
-  --foreground: #18100f; /* espresso */
+  --foreground: #18100f;
   --card: #ffffff;
   --card-foreground: #18100f;
   --popover: #ffffff;
   --popover-foreground: #18100f;
   --primary: #18100f;
   --primary-foreground: #f8f4f1;
-  --secondary: #f3e3cb; /* latte */
+  --secondary: #efe9e3;
   --secondary-foreground: #18100f;
-  --muted: #f5ece0;
-  --muted-foreground: #6b5e57; /* warm taupe */
-  --accent: #f5ecdf; /* light latte */
+  --muted: #efe9e3;
+  --muted-foreground: #6b5e57;
+  --accent: #efe9e3;
   --accent-foreground: #18100f;
   --destructive: #b42318;
-  --border: #eadfd0; /* latte line */
+  --border: #e4dcd4;
   --input: #8c7b6e;
-  --ring: #ff5500;
+  --ring: #1f3dff;
   /* orange: fills with espresso on top (5.9:1); as text on light surfaces use brand-text */
-  --brand: #ff5500;
-  --brand-foreground: #18100f;
-  --brand-hover: #f04f00;
-  --brand-pressed: #e34b00;
-  --brand-text: #b83d00; /* 5.2:1 on froth */
-  --brand-soft: #ffede3;
+  --brand: #1f3dff;
+  --brand-foreground: #ffffff;
+  --brand-hover: #1a36e6;
+  --brand-pressed: #142ab8;
+  --brand-text: #1f3dff;
+  --brand-soft: #e8ebff;
   --success: #1f6b47;
-  --success-soft: #e2efe7; /* mint tint */
+  --success-soft: #e2efe7;
   --radius: 0.75rem;
 }
 
+/* Arabic headlines have tall letters, so they need more room than the tight Latin leading. */
+:lang(ar) h1,
+:lang(ar) h2 {
+  line-height: 1.3;
+}
+
+/* Text on a dvote Blue block: white, and the main action flips to white with blue text. */
+.on-blue {
+  --foreground: #ffffff;
+  --muted-foreground: #ffffff;
+  --brand: #ffffff;
+  --brand-foreground: #1f3dff;
+  --brand-hover: #e8ebff;
+  --brand-pressed: #c9d1ff;
+  --ring: #ffffff;
+  color: #ffffff;
+}
+
+/* Letter spacing breaks the joins between Arabic letters. */
+:lang(ar) [class*="tracking-"] {
+  letter-spacing: 0;
+}
+
+/* DM Sans has no tabular figures, so numbers that must line up use Alexandria. */
+.tabular-nums {
+  font-family: "Alexandria", var(--app-font);
+}
+
 :lang(ar) {
-  --app-font: "Cairo", "Inter", -apple-system, "Segoe UI", Tahoma, sans-serif;
+  --app-font: "Alexandria", "DM Sans", -apple-system, "Segoe UI", Tahoma, sans-serif;
 }
 
 @layer base {
@@ -108,7 +135,7 @@
   }
   html,
   body {
-    background: #18100f; /* the espresso frame around the page, like the dashboard sidebar */
+    background: #18100f; /* the neutral espresso frame around the page */
     color: var(--foreground);
     -webkit-tap-highlight-color: transparent;
   }
@@ -188,13 +215,13 @@
 /* Hero demo: a gentle orange ring on whatever the visitor can tap next. */
 @keyframes tap-hint {
   0% {
-    box-shadow: 0 0 0 0 rgb(255 85 0 / 0.7);
+    box-shadow: 0 0 0 0 rgb(31 61 255 / 0.7);
   }
   70% {
-    box-shadow: 0 0 0 3cqw rgb(255 85 0 / 0);
+    box-shadow: 0 0 0 3cqw rgb(31 61 255 / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(255 85 0 / 0);
+    box-shadow: 0 0 0 0 rgb(31 61 255 / 0);
   }
 }
 .demo-tap {

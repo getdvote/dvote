@@ -13,10 +13,10 @@ const sharp = createRequire(join(repo, 'apps/api/package.json'))('sharp');
 const out = join(repo, 'apps/web/public/email');
 mkdirSync(out, { recursive: true });
 
-// Coffee palette (brand v2.0): orange Y only for the logo, sparks and small marks; the scene objects use the
-// supporting colours (egg yolk, shortcake, mint), like the illustrations in apps/*/public/brand.
-const Y = '#FF5500', K = '#18100F', M = '#E7CDA2', P = '#F8F4F1', W = '#FFFFFF', G = '#8C7B6E';
-const YOLK = '#FFCA48', CAKE = '#FFC4A7', MINT = '#B8D9C5';
+// Brand v3.0: blue Y for sparks and small marks; the scene objects use the supporting colours (egg yolk, sky,
+// mint), like the illustrations in apps/*/public/brand. Logos on the espresso frame are white.
+const Y = '#1F3DFF', K = '#18100F', M = '#E4DCD4', P = '#F8F4F1', W = '#FFFFFF', G = '#8C7B6E';
+const YOLK = '#FFCA48', CAKE = '#6EC1FF', MINT = '#B8D9C5';
 
 const logoPaths = [...readFileSync(join(here, 'dvote-logo.svg'), 'utf8').matchAll(/<path[^>]*d="([^"]+)"/g)].map((m) => m[1]);
 const SYMBOL_W = 208, LOGO_W = 665;
@@ -145,17 +145,17 @@ async function renderCard(name, draw) {
 
 for (const [name, draw] of Object.entries(cards)) await renderCard(name, draw);
 
-// Background pattern tile: scattered symbols and sparks on ink, quiet enough to sit behind text.
+// Background pattern tile: scattered symbols and sparks on espresso, quiet enough to sit behind text.
 const tile = 240;
 const tileBody = rect(0, 0, tile, tile, K) +
   symbol(40, 46, 30, '#2B201D', 20) + symbol(170, 120, 22, '#2B201D', -30) + symbol(86, 196, 26, '#2B201D', 60) +
-  spark(200, 30, 7, '#4A2210') + spark(120, 70, 5, '#4A2210') + spark(26, 140, 6, '#4A2210') + spark(212, 214, 6, '#4A2210');
+  spark(200, 30, 7, '#3A2D29') + spark(120, 70, 5, '#3A2D29') + spark(26, 140, 6, '#3A2D29') + spark(212, 214, 6, '#3A2D29');
 await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${tile}" height="${tile}">${tileBody}</svg>`)).resize(tile * 2).png().toFile(join(out, 'pattern-ink.png'));
 
-// Logos: electric lockup for the ink header, electric symbol for the footer.
+// Logos: white lockup for the espresso header, white symbol for the footer.
 const lockup = (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 665 208">${logoPaths.map((d) => `<path d="${d}" fill="${c}"/>`).join('')}</svg>`;
-await sharp(Buffer.from(lockup(Y))).resize(280).png().toFile(join(out, 'logo-electric.png'));
-const sym = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 208 208">${logoPaths.slice(0, 5).map((d) => `<path d="${d}" fill="${Y}"/>`).join('')}</svg>`;
+await sharp(Buffer.from(lockup(W))).resize(280).png().toFile(join(out, 'logo-electric.png'));
+const sym = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 208 208">${logoPaths.slice(0, 5).map((d) => `<path d="${d}" fill="${W}"/>`).join('')}</svg>`;
 await sharp(Buffer.from(sym)).resize(96).png().toFile(join(out, 'symbol-electric.png'));
 
 // Underline under the headline: a hand-drawn ink stroke with an electric spark.

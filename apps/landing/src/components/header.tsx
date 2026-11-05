@@ -56,7 +56,7 @@ export function Header() {
               aria-current={active === l.id ? 'true' : undefined}
               className={cn(
                 'rounded-lg px-3 py-1.5 text-[14px] font-medium transition duration-150',
-                active === l.id ? 'bg-brand text-ink' : 'text-paper/70 hover:bg-paper/10 hover:text-paper',
+                active === l.id ? 'bg-brand text-brand-foreground' : 'text-paper/70 hover:bg-paper/10 hover:text-paper',
               )}
             >
               {l.label}

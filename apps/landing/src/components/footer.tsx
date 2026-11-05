@@ -43,7 +43,7 @@ export function Footer() {
     <footer className="text-paper">
       <div className="relative isolate overflow-hidden px-5 pt-24 pb-28 text-center sm:pt-32 sm:pb-36">
         <img src="/brand/patterns/orbit-ink.svg" alt="" aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[150%] w-auto max-w-none -translate-x-1/2 -translate-y-1/2 opacity-40 [mask-image:radial-gradient(closest-side,black_45%,transparent)]" />
-        <h2 className="mx-auto max-w-2xl text-[36px] leading-[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-[52px]">{d.cta.title}</h2>
+        <h2 className="mx-auto max-w-2xl text-[36px] leading-[1.08] font-black tracking-[-0.02em] text-balance sm:text-[52px]">{d.cta.title}</h2>
         <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-paper/70">{fill(d.cta.text, { days: trialDays })}</p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
           <Button asChild size="xl" variant="brand" className="rounded-xl px-7">

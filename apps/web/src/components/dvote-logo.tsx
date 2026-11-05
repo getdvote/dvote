@@ -16,7 +16,7 @@ const WORD = [
 
 /**
  * `height` sets the size; the width follows the logo's proportions. Colour: `color`, or the text colour (`className`).
- * `markColor` paints only the 5-petal mark (brand moments use the orange mark with an espresso or froth wordmark).
+ * `markColor` paints only the 5-petal mark (brand moments use the blue mark with an espresso or froth wordmark).
  */
 export function DvoteLogo({
   height = 32,

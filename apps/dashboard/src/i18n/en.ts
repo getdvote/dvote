@@ -1094,7 +1094,7 @@ export const en = {
     reset: 'Reset',
     font: 'Heading font',
     fontHint: 'Used for your shop name and headings.',
-    defaultFont: 'Default (Inter)',
+    defaultFont: 'Default (DM Sans)',
     uploadFont: 'Upload font',
   },
   settings: {

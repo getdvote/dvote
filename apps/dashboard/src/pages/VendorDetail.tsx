@@ -173,7 +173,7 @@ function VendorHeader({ vendor }: { vendor: Vendor }) {
 
         <div className="min-w-56 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight">{vendor.name}</h1>
+            <h1 className="text-2xl font-black tracking-tight">{vendor.name}</h1>
             <StatusTag status={vendor.status} />
           </div>
           <p className="mt-1 text-muted-foreground">
