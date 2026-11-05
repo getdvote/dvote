@@ -93,6 +93,12 @@ BEGIN
     DELETE FROM merchant_feedback WHERE staff_id = s.id;
   END IF;
 
+  -- phones they paired, and their name on phones they disconnected
+  IF to_regclass('public.scanner_pairings') IS NOT NULL THEN
+    DELETE FROM scanner_pairings WHERE staff_id = s.id;
+    UPDATE scanner_pairings SET revoked_by_staff_id = NULL WHERE revoked_by_staff_id = s.id;
+  END IF;
+
   DELETE FROM staff_users WHERE id = s.id;
 
   -- the sign-in account

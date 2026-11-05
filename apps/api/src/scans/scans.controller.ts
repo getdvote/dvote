@@ -11,7 +11,8 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentStaff } from '../auth/current-staff.decorator';
-import { StaffAuthGuard, StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
+import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
+import { StaffOrScannerGuard } from '../scanner/scanner-session.guard';
 import { CollectScanDto, PreviewScanDto, RedeemScanDto } from './dto/scan.dto';
 import {
   CollectResponseDto,
@@ -22,13 +23,13 @@ import {
 import { LIMITS, UserLimit } from '../rate-limit/rate-limit';
 import { ScansService } from './scans.service';
 
-/** Used by the staff app after scanning a customer's QR. All staff roles. */
+/** Used by the staff app, the dashboard and paired phones after scanning a customer's QR. All staff roles. */
 @ApiTags('vendor: scans')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({
   description: 'missing_token | invalid_token | token_expired',
 })
-@UseGuards(StaffAuthGuard)
+@UseGuards(StaffOrScannerGuard)
 @UserLimit(LIMITS.scans)
 @StaffRoles('vendor_admin', 'branch_manager', 'staff') // not viewers: read-only
 @Controller('vendor/scans')

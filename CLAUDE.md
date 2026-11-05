@@ -487,6 +487,18 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 - **Fonts:** Inter for English, IBM Plex Sans Arabic for Arabic (`components/Text` picks by language; both loaded in `app/_layout`).
 - **Shop data in Arabic:** rewards have optional `name_ar`/`description_ar`; the API returns both (`nameAr`, `descriptionAr`, `rewardNameAr`) and the app picks with `localized(en, ar)` (falls back to English). Not translated yet: vendor and branch names/addresses, Supabase emails, the staff app.
 
+## Phone scanner pairing (built 2026-11-05, migration `34_scanner_pairings`)
+
+**The launch scanner is the dashboard Scan page. The Expo staff app (`apps/staff`) is parked (decided 2026-11-05): the code stays, it doesn't ship at launch.** Design: `docs/superpowers/specs/2026-11-05-phone-scanner-pairing-design.md`.
+
+Scan page → **Pair a phone** (`pages/my/pair-phone.tsx`, not in the admin workspace) → `POST /api/vendor/scanner-pairings {branchId}` → QR of `<merchant>/pair#<secret>` + 6-digit code (5 minutes, single use, 5 wrong tries; a new code cancels that person's unused one). `POST /api/public/scanner-pairings/claim {secret, code, deviceLabel?}` (10/min per IP, `IpLimit`; every failure is the same 400 `pairing_invalid`) → `{sessionToken: dvs_…, expiresAt}` (12 hours). Only SHA-256 hashes are stored (`src/scanner/scanner-token.ts`); rows are kept as the record. `GET|DELETE /api/vendor/scanner-pairings[/id]`: your own phones, a branch manager's branch, a merchant admin's whole shop; 404 `pairing_not_found`.
+
+**Access:** session tokens only work through `ScannerSessionGuard` (`src/scanner/scanner-session.guard.ts`): the scan routes, via `StaffOrScannerGuard` on `ScansController`, and `GET|DELETE /api/vendor/scanner/me`. Every other route refuses them. The guard builds a normal `StaffContext` for the person who paired, with `branchId` from the pairing, so `ScansService` writes the same ledger rows; a differing `branchId`/`previewBranchId` is 403 `forbidden_branch`. `src/auth/staff-access.ts` (`assertStaffCanWork`, `vendorLock`) is the one place for the staff and shop checks. Rate limit: per phone, `scanner:<token hash>` in `userTracker`.
+
+**Ended vs paused:** staff disabled, role changed or branch moved **end** the session for good: `revokeForStaffChange` runs in the same transaction as the staff write in `StaffService.update`/`adminUpdate`, and the guard revokes as a safety net. Disconnect, End session and the 12 hours also end it: 401 `scanner_session_ended` + `reason`. Shop or branch locks only **pause** it: the existing 403 `vendor_suspended`/`trial_ended`/`subscription_expired`/`branch_closed`, nothing written, and it resumes by itself. `TrialService.purge()` deletes the shop's pairings. **Any new code that changes a staff member's status, role or branch must call `revokeForStaffChange`.**
+
+**Phone page:** `/pair` (`pages/pair/pair-page.tsx`, before the sign-in check in `Shell`) reuses `MyTill phone` inside `VendorWorkspaceProvider`, with `createVendorApi(prefix, {token, onError})`, which never reads the Supabase session. Session in `localStorage` `dvote-scanner-session`; the QR's secret leaves the address bar at once and stays in `sessionStorage` for reloads (`lib/scanner-session.ts`). `normalizeCode` accepts Arabic digits. Texts: `pair.*`. Tests: `test/scanner-pairing.e2e-spec.ts`, ui-tests `tests/pair-phone.spec.ts`.
+
 ## Later (not v1)
 
 Push notifications (FCM), point expiry, vendor-side void of a mistyped collect (admins can undo one now), vendor promotions (double points), offline QR, POS integration, Apple sign-in, vendor billing.

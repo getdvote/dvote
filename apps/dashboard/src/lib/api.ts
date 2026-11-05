@@ -401,6 +401,29 @@ export interface StaffMe extends Staff {
   } | null;
 }
 
+export interface PairingCreated {
+  id: string;
+  secret: string;
+  code: string;
+  branchName: string;
+  expiresAt: string;
+  /** For the countdown, so a wrong laptop clock can't break it. */
+  expiresInSeconds: number;
+}
+
+export interface ScannerPairing {
+  id: string;
+  state: 'pending' | 'active' | 'paused';
+  pauseReason: 'vendor_suspended' | 'trial_ended' | 'subscription_expired' | 'branch_closed' | null;
+  deviceLabel: string | null;
+  branchId: string;
+  branchName: string;
+  staffName: string;
+  claimedAt: string | null;
+  sessionExpiresAt: string | null;
+  lastUsedAt: string | null;
+}
+
 /** GET /api/vendor/insights/patterns: fixed windows, not the page's date range. */
 export interface VendorPatterns {
   /** Last 365 days, most visit days then most spent. */
@@ -804,9 +827,23 @@ function planErrorText(code: string, body: Record<string, unknown>): string | un
   return undefined;
 }
 
-async function call<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+/** A client that signs in with its own token, such as a paired phone. Never the Supabase session. */
+export interface ClientAuth {
+  token: () => string | null;
+  onError?: (error: ApiError) => void;
+}
+
+async function call<T>(method: Method, path: string, body?: unknown, auth?: ClientAuth): Promise<T> {
+  try {
+    return await send<T>(method, path, body, auth);
+  } catch (err) {
+    if (auth?.onError && err instanceof ApiError) auth.onError(err);
+    throw err;
+  }
+}
+
+async function send<T>(method: Method, path: string, body?: unknown, auth?: ClientAuth): Promise<T> {
+  const token = auth ? auth.token() : (await supabase.auth.getSession()).data.session?.access_token;
   const isForm = body instanceof FormData;
   let res: Response;
   try {
@@ -1052,8 +1089,12 @@ export interface BroadcastCampaignInput extends MerchantCustomerQuery {
   name: string; body: string; mode: 'draft' | 'now' | 'schedule' | 'repeat'; nextAt?: string; repeatDays?: number;
 }
 
-export function createVendorApi(prefix = '/api/vendor') {
-  const request = <T>(method: Method, url: string, body?: unknown) => call<T>(method, url.replace(/^\/api\/vendor(?=\/|$)/, prefix), body);
+/** The phone trades the QR's secret and the 6 digits for a session. No sign-in. */
+export const claimPairing = (body: { secret: string; code: string; deviceLabel?: string }) =>
+  call<{ sessionToken: string; expiresAt: string }>('POST', '/api/public/scanner-pairings/claim', body, { token: () => null });
+
+export function createVendorApi(prefix = '/api/vendor', auth?: ClientAuth) {
+  const request = <T>(method: Method, url: string, body?: unknown) => call<T>(method, url.replace(/^\/api\/vendor(?=\/|$)/, prefix), body, auth);
   return {
     customerFeedback: (page = 1) =>
       request<{ items: CustomerFeedback[]; page: number; hasMore: boolean }>('GET', `/api/vendor/customer-feedback?page=${page}`),
@@ -1198,6 +1239,11 @@ export function createVendorApi(prefix = '/api/vendor') {
     redeem: (body: { code: string; rewardId?: string; expectedPointsCost?: number; branchId?: string; idempotencyKey: string }) =>
       request<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
     patterns: (q: { branchId?: string }) => request<VendorPatterns>('GET', `/api/vendor/insights/patterns${qs({ ...q })}`),
+    createPairing: (branchId: string) => request<PairingCreated>('POST', '/api/vendor/scanner-pairings', { branchId }),
+    scannerPairings: () => request<ScannerPairing[]>('GET', '/api/vendor/scanner-pairings'),
+    disconnectPairing: (id: string) => request<void>('DELETE', `/api/vendor/scanner-pairings/${encodeURIComponent(id)}`),
+    scannerMe: () => request<StaffMe>('GET', '/api/vendor/scanner/me'),
+    endScannerSession: () => request<void>('DELETE', '/api/vendor/scanner/me'),
     scansToday: () => request<{ collects: number; redemptions: number }>('GET', '/api/vendor/scans/today'),
 
     staff: () => request<Staff[]>('GET', '/api/vendor/staff'),

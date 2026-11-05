@@ -25,6 +25,7 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/vendor\/rewards\/sold-out$/, () => f.soldOuts],
   ['GET', /^\/api\/vendor\/images$/, () => f.images],
   ['GET', /^\/api\/vendor\/staff$/, () => f.staff],
+  ['GET', /^\/api\/vendor\/scanner-pairings$/, () => []],
   ['GET', /^\/api\/vendor\/scans\/today$/, () => ({ collects: 128, redemptions: 14 })],
   ['GET', /^\/api\/vendor\/events$/, () => f.activity],
   ['GET', /^\/api\/vendor\/redemptions$/, () => f.redemptions],
