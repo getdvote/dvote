@@ -25,7 +25,7 @@ No test suite was run for this audit, and no live site, account or real phone wa
 
 - [ ] **Blocker:** choose the host (Railway or Hetzner) and deploy one instance. Live updates, rate limits and background jobs are held in memory.
 - [ ] **Blocker:** create the production variables list. `DEPLOY.md` points to `apps/api/.env.production.example`, which is not in the repo.
-- [ ] **Blocker:** add `https://dvote.co` to the production `CORS_ORIGINS`. The list in `DEPLOY.md` leaves it out, and the landing page calls the API for plans and the Founding counter. Local `.env` has the same gap for `http://localhost:5175`.
+- [ ] **Blocker:** add `https://dvote.co` to the production `CORS_ORIGINS`. The list in `DEPLOY.md` leaves it out, and the landing page calls the API for plans and the Launch Partner counter. Local `.env` has the same gap for `http://localhost:5175`.
 - [ ] **Blocker:** set `TRUST_PROXY`, `ADMIN_MFA_REQUIRED=true`, `WALLET_TOKEN_SECRET` (never change it once cards exist) and `GOOGLE_WALLET_KEY_JSON`.
 - [ ] **Blocker:** confirm `https://api.dvote.co/api/health` returns ok.
 - [ ] Add the Cloudflare rate-limit rule on `api.dvote.co/api/public/*`.
@@ -74,7 +74,7 @@ No test suite was run for this audit, and no live site, account or real phone wa
 ### Done in code
 
 - [x] One-page redesign in English and Egyptian Arabic.
-- [x] Plans, pricing calculator, Founding counter and demo phone.
+- [x] Plans, pricing calculator, Launch Partner counter and demo phone.
 - [x] Meta description, WhatsApp and email contact links.
 - [x] Privacy and terms links, which point to the storefront.
 
@@ -82,7 +82,7 @@ No test suite was run for this audit, and no live site, account or real phone wa
 
 - [ ] **Blocker:** create the `dvote-landing` Worker with its build variables, including `VITE_API_URL`, which `DEPLOY.md` step 4 omits.
 - [ ] **Blocker:** move `dvote.co` from `dvote-web` to `dvote-landing`, after the storefront is on `m.dvote.co`.
-- [ ] **Blocker:** confirm plans and the Founding counter show real data, not a fallback, against the production API.
+- [ ] **Blocker:** confirm plans and the Launch Partner counter show real data, not a fallback, against the production API.
 - [ ] **Blocker:** have the privacy policy and terms reviewed, and check every link in both languages.
 - [ ] Turn on Always Use HTTPS in Cloudflare, and add the `dvote.co/m/*` redirect.
 - [ ] Add Open Graph and social tags. `index.html` has none, so shared links show no preview.

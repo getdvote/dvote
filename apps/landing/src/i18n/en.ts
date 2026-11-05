@@ -14,8 +14,8 @@ export const en = {
     language: 'العربية',
   },
   founding: {
-    pill: 'Founding Merchants: {left} of {total} spots left',
-    pillShort: '{left} of {total} Founding spots left',
+    pill: 'Launch Partners: {left} of {total} spots left',
+    pillShort: '{left} of {total} Launch Partner spots left',
   },
   hero: {
     title: 'A points card your regulars keep in their wallet.',
@@ -179,10 +179,10 @@ export const en = {
     popular: 'Recommended',
     cta: 'Start free trial',
     vat: 'Prices in Egyptian pounds, excluding 14% VAT.',
-    foundingTitle: 'Founding Merchants: 30% off for 6 months',
-    foundingText: 'The first {total} businesses get the plan price at 30% off for their first 6 months, a Founding badge and a direct line to us. Extra branches stay at full price.',
+    foundingTitle: 'Launch Partners: 30% off for 6 months',
+    foundingText: 'The first {total} businesses get the plan price at 30% off for their first 6 months, a Launch Partner badge and a direct line to us. Extra branches stay at full price.',
     foundingLeft: '{left} of {total} spots left',
-    foundingPrice: 'Founding price, first 6 months',
+    foundingPrice: 'Launch Partner price, first 6 months',
     plans: [
       {
         name: 'Regular',

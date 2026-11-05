@@ -91,7 +91,7 @@ export function TrialButton({ label, className }: { label?: string; className?: 
   );
 }
 
-/** "Founding Merchants · 7 of 10 spots left": hidden when the offer is closed or full. */
+/** "Launch Partners · 7 of 10 spots left": hidden when the offer is closed or full. */
 export function FoundingPill({ className }: { className?: string }) {
   const { d } = useI18n();
   const { founding } = usePlans();

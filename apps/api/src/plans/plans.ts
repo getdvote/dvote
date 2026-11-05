@@ -20,7 +20,7 @@ export interface PlanPrice {
   annualTotal: number;
   /** Each extra branch, per month. */
   extraBranch: { monthly: number; annual: number };
-  /** The plan price for Founding Merchants during their first FOUNDING.months (extra branches stay full price). */
+  /** The plan price for Launch Partners during their first FOUNDING.months (extra branches stay full price). */
   foundingMonthly: number;
 }
 
@@ -30,7 +30,7 @@ export const PLAN_PRICES: readonly PlanPrice[] = [
   { id: 'chain', monthly: 1999, annual: 1666, annualTotal: 19990, extraBranch: { monthly: 499, annual: 416 }, foundingMonthly: 1399 },
 ];
 
-/** Founding Merchants: the first merchants (not branches) get 30% off their plan for 6 months. */
+/** Launch Partners: the first merchants (not branches) get 30% off their plan for 6 months. */
 export const FOUNDING = { discountPercent: 30, months: 6, defaultTotal: 10, maxTotal: 100 };
 
 /** Monthly price of a plan for a number of branches. */
@@ -63,7 +63,7 @@ export function addPeriod(from: Date, cycle: BillingCycle): Date {
 }
 
 export interface PriceQuote {
-  /** The plan's own price per month (first branch), after any Founding discount. */
+  /** The plan's own price per month (first branch), after any Launch Partner discount. */
   base: number;
   /** Extra branches per month (never discounted). */
   extraBranches: number;

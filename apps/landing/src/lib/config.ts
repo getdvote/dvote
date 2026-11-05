@@ -6,7 +6,7 @@ export const config = {
   merchantUrl: clean(import.meta.env.VITE_MERCHANT_URL) || 'https://merchant.dvote.co',
   /** The customer storefront, where the privacy policy and terms live. */
   storefrontUrl: clean(import.meta.env.VITE_STOREFRONT_URL) || 'https://m.dvote.co',
-  /** The dvote API: public plans and the Founding Merchants counter. */
+  /** The dvote API: public plans and the Launch Partner counter. */
   apiUrl: clean(import.meta.env.VITE_API_URL) || 'https://api.dvote.co',
   whatsapp: '201207118966',
   whatsappDisplay: '+20 120 711 8966',
