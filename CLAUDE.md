@@ -453,6 +453,8 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 ## Brand (brand v3.0, decided 2026-11-05; replaces v2.0 coffee palette, orange `#FF5500` as the hero)
 
+**Dark mode (2026-11-05):** plain neutral greys (`#0F0F10` page, `#18181A` cards), near-white text, no brown or blue tint. Illustrations use their dark versions in `public/brand/illustrations/dark` (from `apps/dashboard/scripts/build-dark-illustrations.mjs`), with no light panel.
+
 **Full guide: [`docs/brand/dvote-brand-guidelines.md`](docs/brand/dvote-brand-guidelines.md)**, tokens in `docs/brand/theme.css`, contrast check `python3 docs/brand/contrast-audit.py`.
 
 - **Palette:** dvote Blue `#1F3DFF` (hero) · Night Blue `#142AB8` · Espresso `#18100F` (text, dark surfaces) · White · Froth `#F8F4F1` · Oat `#EFE9E3` · accents Sky `#6EC1FF`, Orange `#FF5500`, Egg Yolk `#FFCA48`, Mint `#B8D9C5`, Plum `#5F2B4B`. Latte, Cortado and Shortcake are retired.
@@ -465,7 +467,7 @@ Sign-in, refresh and account linking happen in the apps through the Supabase SDK
 
 ## Merchant dashboard localization (apps/dashboard, built 2026-10-11)
 
-- Same model as the customer app: **English default + Arabic**, switch in the merchant top bar and on the sign-in page (`components/LanguageToggle.tsx`), saved in the browser (localStorage `dvote-dashboard-language`; `index.html` applies `dir="rtl"` before the first paint).
+- **Arabic is the default (decided 2026-11-05; landing page too), English the other language**, switch in the merchant top bar and on the sign-in page (`components/LanguageToggle.tsx`), saved in the browser (localStorage `dvote-dashboard-language`, English only if saved; `index.html` starts `dir="rtl"`).
 - `src/i18n/`: `en.ts` is the source of every key, `ar.ts` is typed `Dictionary` (a missing Arabic text fails the typecheck). Use the plain `t('ns.key', params)` from `src/i18n` (also outside components: toasts, `lib/hours.ts`); `useI18n()` for `language`/`setLanguage`. Switching language remounts the app (queries stay cached), so module-level text must be a function, never a constant. Plurals `{one, other}` (+ Arabic zero/two/few/many) by `count`. Western digits; dayjs uses Arabic month names with Latin digits (`ar-latn`).
 - **Never hard-code user-facing text** in merchant pages or shared tabs; use logical classes (`ps/pe/ms/me/start/end/text-start/text-end`), mirror directional icons with `rtl:rotate-180`, wrap LTR runs (coordinates, times) with `dir="ltr"` or Unicode isolates.
 - API error codes → `errors.<code>` (`lib/api.ts` `call()`), else the server message. "Needs your attention" items: the API sends `params` (names, counts, times) with each item and the dashboard words known kinds from `attention.kinds.*` (English falls back to the API text).
@@ -497,7 +499,7 @@ Scan page → **Pair a phone** (`pages/my/pair-phone.tsx`, not in the admin work
 
 **Ended vs paused:** staff disabled, role changed or branch moved **end** the session for good: `revokeForStaffChange` runs in the same transaction as the staff write in `StaffService.update`/`adminUpdate`, and the guard revokes as a safety net. Disconnect, End session and the 12 hours also end it: 401 `scanner_session_ended` + `reason`. Shop or branch locks only **pause** it: the existing 403 `vendor_suspended`/`trial_ended`/`subscription_expired`/`branch_closed`, nothing written, and it resumes by itself. `TrialService.purge()` deletes the shop's pairings. **Any new code that changes a staff member's status, role or branch must call `revokeForStaffChange`.**
 
-**Phone page:** `/pair` (`pages/pair/pair-page.tsx`, before the sign-in check in `Shell`) reuses `MyTill phone` inside `VendorWorkspaceProvider`, with `createVendorApi(prefix, {token, onError})`, which never reads the Supabase session. Session in `localStorage` `dvote-scanner-session`; the QR's secret leaves the address bar at once and stays in `sessionStorage` for reloads (`lib/scanner-session.ts`). `normalizeCode` accepts Arabic digits. Texts: `pair.*`. Tests: `test/scanner-pairing.e2e-spec.ts`, ui-tests `tests/pair-phone.spec.ts`.
+**Phone page:** `/pair` (`pages/pair/pair-page.tsx`, before the sign-in check in `Shell`) reuses `MyTill phone` inside `VendorWorkspaceProvider`, with `createVendorApi(prefix, {token, onError})`, which never reads the Supabase session. Session in `localStorage` `dvote-scanner-session`; the QR's secret leaves the address bar at once and stays in `sessionStorage` for reloads (`lib/scanner-session.ts`). `normalizeCode` accepts Arabic digits, and the code submits itself at 6 digits. The phone rechecks `/scanner/me` every 5 seconds, so a Disconnect or a cleared lock shows up with no tap. Texts: `pair.*`. Tests: `test/scanner-pairing.e2e-spec.ts`, ui-tests `tests/pair-phone.spec.ts`.
 
 ## Later (not v1)
 

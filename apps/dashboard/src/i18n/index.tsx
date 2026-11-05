@@ -6,7 +6,7 @@ import { ar } from './ar';
 import { en, type Dictionary, type PluralForms } from './en';
 
 /**
- * Dashboard languages, like the customer app: English is the default, Arabic the other one.
+ * Dashboard languages: Arabic is the default (decided 2026-11-05), English the other one.
  * The choice is saved in this browser (localStorage) and applied before the first paint
  * (index.html), so Arabic pages never flash left-to-right.
  *
@@ -29,9 +29,9 @@ const dictionaries: Record<Language, Dictionary> = { en, ar };
 
 function savedLanguage(): Language {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'ar' ? 'ar' : 'en';
+    return localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'ar';
   } catch {
-    return 'en';
+    return 'ar';
   }
 }
 
