@@ -629,11 +629,12 @@ export class ScansService {
 
   /**
    * The branch where the sale happens: always the staff member's own branch; vendor admins
-   * (no branch) must name one of their vendor's active branches.
+   * (no branch) must name one of their vendor's active branches. A paired phone's context
+   * always has a branch, whatever the role, so it stays there.
    */
   private async resolveBranch(ctx: StaffContext, requested?: string) {
     let branchId: string;
-    if (ctx.role === 'vendor_admin') {
+    if (ctx.role === 'vendor_admin' && !ctx.branchId) {
       if (!requested)
         throw new BadRequestException({ code: 'branch_required' });
       branchId = requested;

@@ -348,6 +348,7 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
         await tx.$executeRaw`UPDATE loyalty_cards SET live_version_id = NULL WHERE vendor_id = ${id}::uuid`;
         await tx.$executeRaw`DELETE FROM loyalty_card_versions WHERE vendor_id = ${id}::uuid`;
         await tx.$executeRaw`DELETE FROM loyalty_cards WHERE vendor_id = ${id}::uuid`;
+        await tx.$executeRaw`DELETE FROM scanner_pairings WHERE vendor_id = ${id}::uuid`;
         await tx.$executeRaw`DELETE FROM point_rules WHERE vendor_id = ${id}::uuid`;
         await tx.$executeRaw`DELETE FROM rewards WHERE vendor_id = ${id}::uuid`;
         await tx.$executeRaw`DELETE FROM staff_users WHERE vendor_id = ${id}::uuid`;

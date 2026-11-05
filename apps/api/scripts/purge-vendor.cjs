@@ -34,6 +34,7 @@ const steps = [
   ['vendor_images', 'DELETE FROM vendor_images WHERE vendor_id = $1', 'SELECT count(*) FROM vendor_images WHERE vendor_id = $1'],
   ['rewards', 'DELETE FROM rewards WHERE vendor_id = $1', 'SELECT count(*) FROM rewards WHERE vendor_id = $1'],
   ['point_rules', 'DELETE FROM point_rules WHERE vendor_id = $1', 'SELECT count(*) FROM point_rules WHERE vendor_id = $1'],
+  ['scanner_pairings', 'DELETE FROM scanner_pairings WHERE vendor_id = $1', 'SELECT count(*) FROM scanner_pairings WHERE vendor_id = $1'],
   ['staff_users', 'DELETE FROM staff_users WHERE vendor_id = $1', 'SELECT count(*) FROM staff_users WHERE vendor_id = $1'],
   ['branches', 'DELETE FROM branches WHERE vendor_id = $1', 'SELECT count(*) FROM branches WHERE vendor_id = $1'],
   ['vendors', 'DELETE FROM vendors WHERE id = $1', 'SELECT count(*) FROM vendors WHERE id = $1'],
