@@ -11,9 +11,7 @@ import type { Request } from 'express';
 import type { staff_role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { bearerToken } from './bearer-token';
-import { BILLING } from '../plans/plans';
-
-const DAY = 24 * 60 * 60 * 1000;
+import { assertStaffCanWork } from './staff-access';
 import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
 
 /**
@@ -34,7 +32,7 @@ export interface StaffRequest extends Request {
   staff: StaffContext;
 }
 
-const STAFF_ROLES_KEY = 'staffRoles';
+export const STAFF_ROLES_KEY = 'staffRoles';
 
 /** Restricts a controller or route to these staff roles (default: any active staff). */
 export const StaffRoles = (...roles: staff_role[]) =>
@@ -71,41 +69,10 @@ export class StaffAuthGuard implements CanActivate {
       },
     });
     if (!staff) throw new ForbiddenException({ code: 'not_staff' });
-    if (staff.status !== 'active') {
-      throw new ForbiddenException({ code: 'staff_disabled' });
-    }
-    // a free trial that has run out locks the whole shop (dashboard, scans) until a plan is active
-    const v = staff.vendors;
-    if (v.plan_status === 'trial' && v.trial_ends_at && v.trial_ends_at <= new Date()) {
-      throw new ForbiddenException({
-        code: 'trial_ended',
-        message: 'The free trial has ended. Subscribe to a plan to continue.',
-        trialEndedAt: v.trial_ends_at.toISOString(),
-        deleteAt: v.delete_at?.toISOString() ?? null,
-      });
-    }
-    // a paid period that ran out: BILLING.graceDays of grace (dashboard warns), then locked until renewed
-    if (v.plan_status === 'active' && v.paid_until && v.paid_until.getTime() + BILLING.graceDays * DAY <= Date.now()) {
-      throw new ForbiddenException({
-        code: 'subscription_expired',
-        message: 'The subscription has ended. Renew it to continue.',
-        paidUntil: v.paid_until.toISOString(),
-      });
-    }
-    if (staff.vendors.status !== 'active') {
-      throw new ForbiddenException({ code: 'vendor_suspended' });
-    }
-    if (staff.branches && staff.branches.status !== 'active') {
-      throw new ForbiddenException({ code: 'branch_closed' });
-    }
-
-    const allowed = this.reflector.getAllAndOverride<staff_role[] | undefined>(
-      STAFF_ROLES_KEY,
-      [context.getHandler(), context.getClass()],
+    assertStaffCanWork(
+      staff,
+      this.reflector.getAllAndOverride<staff_role[] | undefined>(STAFF_ROLES_KEY, [context.getHandler(), context.getClass()]),
     );
-    if (allowed && !allowed.includes(staff.role)) {
-      throw new ForbiddenException({ code: 'forbidden_role' });
-    }
 
     req.staff = {
       staffId: staff.id,

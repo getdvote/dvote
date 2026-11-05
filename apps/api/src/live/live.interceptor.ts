@@ -12,7 +12,7 @@ import { LiveService } from './live.service';
 /** Dashboard writes that change what customers see. Staff accounts and scans don't. */
 const DASHBOARD_WRITE = /^\/api\/(admin|vendor)\//;
 const NOT_FOR_CUSTOMERS =
-  /^\/api\/(vendor\/(scans|staff|broadcasts)|admin\/(staff|users|me))(\/|$)|\/admins$/;
+  /^\/api\/(vendor\/(scans|scanner|scanner-pairings|staff|broadcasts)|admin\/(staff|users|me))(\/|$)|\/admins$/;
 const ADMIN_VENDOR = /^\/api\/admin\/vendors\/([0-9a-fA-F-]{36})(\/|$)/;
 
 /**

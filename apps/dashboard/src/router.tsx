@@ -22,6 +22,7 @@ import { MyMessages } from './pages/my/MyMessages';
 import { MyStoreIds } from './pages/my/MyStoreIds';
 import { MySettings } from './pages/my/MySettings';
 import { MyTill } from './pages/my/MyTill';
+import { PairPage } from './pages/pair/pair-page';
 import { MyBranches, MyRewards } from './pages/my/MySections';
 import { Overview } from './pages/Overview';
 import { Statistics } from './pages/Statistics';
@@ -40,6 +41,8 @@ function Shell() {
   const { status, admin, staff } = useAuth();
   const location = useLocation();
   if (location.pathname === '/set-password') return <SetPassword />;
+  // a paired phone has no sign-in: it runs on its own session, whatever this browser is signed in to
+  if (location.pathname === '/pair' && site !== 'admin') return <PairPage />;
   // self sign-up lives on the merchant dashboard only (not admin.dvote.co); signed-in people go home
   if (location.pathname === '/signup' && site !== 'admin' && status !== 'ready' && status !== 'loading') return <Signup />;
   if (status === 'loading') {

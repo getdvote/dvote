@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { Throttle, ThrottlerGuard, ThrottlerModule, type ThrottlerLimitDetail } from '@nestjs/throttler';
 import { decodeJwt } from 'jose';
 import type { Env } from '../config/env.validation';
+import { SESSION_PREFIX, sha256 } from '../scanner/scanner-token';
 
 const MINUTE = 60_000;
 
@@ -11,10 +12,12 @@ const MINUTE = 60_000;
  * Who a request counts against for the per-user limit: the signed-in user (the token's `sub`),
  * or the IP address without a token. The token is only read here, not verified (the auth guards
  * do that after): a forged token just gets its own bucket, and the per-IP limit still applies.
+ * A paired phone's session token isn't a JWT, so each phone counts by a hash of its token.
  */
 export function userTracker(req: { ip?: string; headers?: Record<string, string | string[] | undefined> }): string {
   const auth = req.headers?.authorization;
   const token = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (token?.startsWith(SESSION_PREFIX)) return `scanner:${sha256(token).slice(0, 16)}`;
   if (token) {
     try {
       const sub = decodeJwt(token).sub;
@@ -38,10 +41,18 @@ export const LIMITS = {
   join: 30,
   /** Merchant sign-up from the public page, per IP (each one sends an email). */
   signup: 5,
+  /** Phone pairing claims, per IP: the code itself allows 5 tries. */
+  pairClaim: 10,
 } as const;
 
 /** A stricter per-user limit on one endpoint (the per-IP limit still applies too). */
 export const UserLimit = (perMinute: number) => Throttle({ user: { limit: perMinute, ttl: MINUTE } });
+
+/**
+ * A stricter per-IP limit on one endpoint. For public routes where a made-up token must not earn
+ * its own bucket, as it would under UserLimit.
+ */
+export const IpLimit = (perMinute: number) => Throttle({ ip: { limit: perMinute, ttl: MINUTE } });
 
 /** Same as ThrottlerGuard, but the 429 carries our stable error code. */
 @Injectable()

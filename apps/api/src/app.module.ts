@@ -24,6 +24,7 @@ import { SystemModule } from './system/system.module';
 import { FraudFlagsModule } from './fraud-flags/fraud-flags';
 import { RateLimitModule } from './rate-limit/rate-limit';
 import { PublicJoinModule } from './public-join/public-join.module';
+import { ScannerModule } from './scanner/scanner.module';
 import { TrialModule } from './trial/trial.module';
 import { PlansModule } from './plans/plans.module';
 import { BillingModule } from './billing/billing.module';
@@ -62,6 +63,7 @@ import { LoyaltyCardsModule } from './loyalty-cards/loyalty-cards.module';
     StorefrontModule,
     LoyaltyCardsModule,
     PublicJoinModule,
+    ScannerModule,
     TrialModule,
     PlansModule,
     BillingModule,
