@@ -77,7 +77,9 @@ const json = (route: Route, status: number, body: unknown) =>
   });
 
 /** Answers every call to the fake API and Supabase hosts. */
-export async function mockApi(page: Page, role: Role) {
+export async function mockApi(page: Page, role: Role, opts: { firstVisit?: boolean } = {}) {
+  // the app starts in Arabic; these tests read English labels unless they choose a language
+  if (!opts.firstVisit) await page.addInitScript(() => { if (!window.localStorage.getItem('dvote-dashboard-language')) window.localStorage.setItem('dvote-dashboard-language', 'en'); });
   await page.route('http://supabase.mock/**', (route) => json(route, 200, {}));
   await page.route('http://api.mock/**', async (route) => {
     const req = route.request();

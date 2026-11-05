@@ -58,12 +58,12 @@ export function AuthShell({ children }: { children: ReactNode }) {
 function Showcase() {
   const bars = [30, 44, 38, 52, 47, 60, 55, 70, 64, 78, 72, 90, 84, 96];
   return (
-    <div className="relative isolate hidden overflow-hidden rounded-3xl bg-ink text-paper lg:block" aria-hidden>
+    <div data-testid="login-panel" className="relative isolate hidden overflow-hidden rounded-3xl bg-ink text-paper lg:block dark:bg-card dark:text-foreground" aria-hidden>
       {/* brand moment: the kit's orbit pattern, faded out under the heading so the text stays crisp */}
       <BrandPattern name="orbit-ink" fade="top" className="-z-10 bg-[position:70%_75%] opacity-70" />
       <div className="max-w-md px-12 pt-14">
         <h2 className="text-2xl font-black tracking-tight">{t('login.showcaseTitle')}</h2>
-        <p className="mt-2 text-paper/75">{t('login.showcaseText')}</p>
+        <p className="mt-2 text-paper/75 dark:text-muted-foreground">{t('login.showcaseText')}</p>
       </div>
       {/* a small, still picture of the merchant dashboard */}
       <div className="absolute start-14 top-60 w-[760px] origin-top-left [transform:perspective(1800px)_rotateY(-12deg)_rotateX(5deg)_rotateZ(-2deg)] rtl:origin-top-right rtl:[transform:perspective(1800px)_rotateY(12deg)_rotateX(5deg)_rotateZ(2deg)]">

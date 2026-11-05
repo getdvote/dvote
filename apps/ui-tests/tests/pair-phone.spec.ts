@@ -183,7 +183,6 @@ async function mockPhone(page: Page, opts: { me?: (route: Route) => unknown; cla
 const stored = (page: Page) => page.evaluate((k) => localStorage.getItem(k), STORE);
 const enterCode = async (page: Page, code: string) => {
   await page.getByLabel('6-digit code').fill(code);
-  await page.getByRole('button', { name: 'Connect' }).click();
 };
 const startWithToken = (page: Page) => page.addInitScript(([k, v]) => localStorage.setItem(k, v), [STORE, SESSION]);
 
@@ -239,6 +238,60 @@ test.describe('Phone scanner page', () => {
     await expect(page.getByRole('alert')).toContainText('code');
     await expect(page.getByLabel('6-digit code')).toBeVisible();
     expect(await stored(page)).toBeNull();
+  });
+
+  test('submits by itself once all 6 digits are in, once', async ({ page }) => {
+    const codes: string[] = [];
+    await mockPhone(page, { claim: (b) => { codes.push(b.code); return [200, { sessionToken: SESSION, expiresAt: new Date(Date.now() + 3_600_000).toISOString() }]; } });
+    await page.goto(`${DASHBOARD}/pair#${SECRET}`);
+    await page.getByLabel('6-digit code').pressSequentially('427910');
+    await expect(page.getByRole('button', { name: /^Scan card/ })).toBeVisible();
+    expect(codes).toEqual(['427910']);
+  });
+
+  test('waits until all 6 digits are in', async ({ page }) => {
+    const codes: string[] = [];
+    await mockPhone(page, { claim: (b) => { codes.push(b.code); return [400, { code: 'pairing_invalid', message: 'x' }]; } });
+    await page.goto(`${DASHBOARD}/pair#${SECRET}`);
+    await page.getByLabel('6-digit code').pressSequentially('42791');
+    await page.waitForTimeout(300);
+    expect(codes).toEqual([]);
+  });
+
+  test('a wrong code clears the field and tries only once', async ({ page }) => {
+    const codes: string[] = [];
+    await mockPhone(page, { claim: (b) => { codes.push(b.code); return [400, { code: 'pairing_invalid', message: 'x' }]; } });
+    await page.goto(`${DASHBOARD}/pair#${SECRET}`);
+    await page.getByLabel('6-digit code').pressSequentially('111111');
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByLabel('6-digit code')).toHaveValue('');
+    await expect(page.getByLabel('6-digit code')).toBeEnabled();
+    expect(codes).toEqual(['111111']);
+    await page.getByLabel('6-digit code').pressSequentially('427910');
+    await expect.poll(() => codes.length).toBe(2);
+  });
+
+  test('a lost connection keeps the code so Connect can retry', async ({ page }) => {
+    await mockPhone(page);
+    await page.route(`${API}/api/public/scanner-pairings/claim`, (route) => route.abort(), { times: 1 });
+    await page.goto(`${DASHBOARD}/pair#${SECRET}`);
+    await page.getByLabel('6-digit code').fill('427910');
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByLabel('6-digit code')).toHaveValue('427910');
+    await page.getByRole('button', { name: 'Connect' }).click();
+    await expect(page.getByRole('button', { name: /^Scan card/ })).toBeVisible();
+  });
+
+  test('Disconnect on the laptop ends the phone within seconds, with no tap', async ({ page }) => {
+    let disconnected = false;
+    const base = { ...staffMe('staff'), branch: { id: branches[0].id, name: branches[0].name }, branches: [{ id: branches[0].id, name: branches[0].name }] };
+    await mockPhone(page, { me: (route) => (disconnected ? json(route as Route, 401, { code: 'scanner_session_ended', reason: 'disconnected' }) : json(route as Route, 200, base)) });
+    await startWithToken(page);
+    await page.goto(`${DASHBOARD}/pair`);
+    await expect(page.getByRole('button', { name: /^Scan card/ })).toBeVisible();
+    disconnected = true;
+    await expect(page.locator('body')).toContainText('disconnected from the Scan page', { timeout: 7000 });
+    await expect.poll(() => stored(page)).toBeNull();
   });
 
   test('uses the session token, not a dashboard session', async ({ page }) => {
