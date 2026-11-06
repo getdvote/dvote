@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 const SECTIONS = ['how', 'features', 'pricing', 'faq'] as const;
 
-/** Which section is on screen, for the lime pill in the header (like the dashboard sidebar). */
+/** Which section is on screen, for the quiet highlight in the header. */
 function useActiveSection() {
   const [active, setActive] = useState<string | null>(null);
   useEffect(() => {
@@ -29,7 +29,7 @@ function useActiveSection() {
   return active;
 }
 
-/** The header sits on the ink frame: paper logo, section links, lime "Start free trial". */
+/** A floating white pill: logo, section links, language, log in, and the one blue action. */
 export function Header() {
   const { d, language, setLanguage } = useI18n();
   const [open, setOpen] = useState(false);
@@ -43,10 +43,10 @@ export function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-ink">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-6 px-3 md:px-5">
+    <header className="sticky top-3 z-40 mx-auto mt-3 max-w-[1200px] px-3 md:px-5">
+      <div className="flex h-14 items-center gap-5 rounded-full border border-line bg-white/90 ps-5 pe-2 backdrop-blur">
         <a href="#top" className="flex shrink-0 items-center py-2" aria-label="dvote">
-          <DvoteLogo height={24} spinOnHover className="text-paper" />
+          <DvoteLogo height={22} markColor="#1F3DFF" spinOnHover className="text-ink" />
         </a>
         <nav className="hidden items-center gap-0.5 lg:flex">
           {links.map((l) => (
@@ -55,8 +55,8 @@ export function Header() {
               href={`#${l.id}`}
               aria-current={active === l.id ? 'true' : undefined}
               className={cn(
-                'rounded-lg px-3 py-1.5 text-[14px] font-medium transition duration-150',
-                active === l.id ? 'bg-brand text-brand-foreground' : 'text-paper/70 hover:bg-paper/10 hover:text-paper',
+                'rounded-full px-3 py-1.5 text-[14px] font-medium transition duration-150',
+                active === l.id ? 'bg-paper text-ink' : 'text-muted-foreground hover:text-ink',
               )}
             >
               {l.label}
@@ -64,49 +64,49 @@ export function Header() {
           ))}
         </nav>
         <div className="ms-auto hidden items-center gap-1 lg:flex">
-          <button type="button" onClick={switchLanguage} className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-[14px] text-paper/70 transition duration-150 hover:bg-paper/10 hover:text-paper">
+          <button type="button" onClick={switchLanguage} className="flex h-10 items-center gap-1.5 rounded-full px-3 text-[14px] text-muted-foreground transition duration-150 hover:text-ink">
             <GlobalIcon className="size-4" aria-hidden />
             {d.nav.language}
           </button>
-          <a href={config.merchantUrl} className="flex h-9 items-center rounded-lg px-3 text-[14px] font-medium text-paper transition duration-150 hover:bg-paper/10">
+          <a href={config.merchantUrl} className="flex h-10 items-center rounded-full border border-line px-4 text-[14px] font-medium transition duration-150 hover:border-ink/30">
             {d.nav.logIn}
           </a>
-          <Button asChild variant="brand" className="ms-1 h-9 rounded-lg px-4 text-[14px] font-semibold">
+          <Button asChild size="md" variant="brand" className="ms-1 px-5 text-[14px]">
             <a href={signupUrl()}>{d.nav.getStarted}</a>
           </Button>
         </div>
         <div className="ms-auto flex items-center gap-1 lg:hidden">
-          <Button asChild variant="brand" className="hidden h-9 rounded-lg px-4 text-[14px] font-semibold sm:inline-flex">
+          <Button asChild size="md" variant="brand" className="px-4 text-[14px]">
             <a href={signupUrl()}>{d.nav.getStarted}</a>
           </Button>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <button type="button" className="flex size-11 items-center justify-center rounded-xl text-paper hover:bg-paper/10" aria-label={d.nav.menu}>
-                <HamburgerMenuIcon className="size-6" />
+              <button type="button" className="flex size-10 items-center justify-center rounded-full hover:bg-paper" aria-label={d.nav.menu}>
+                <HamburgerMenuIcon className="size-5" />
               </button>
             </SheetTrigger>
-            <SheetContent className="w-full gap-0 border-0 bg-ink p-0 text-paper data-[side=left]:w-full data-[side=right]:w-full sm:max-w-md [&>button]:text-paper">
+            <SheetContent className="w-full gap-0 border-0 bg-white p-0 data-[side=left]:w-full data-[side=right]:w-full sm:max-w-md">
               <SheetTitle className="sr-only">{d.nav.menu}</SheetTitle>
               <div className="flex h-16 items-center px-5">
-                <DvoteLogo height={22} className="text-paper" />
+                <DvoteLogo height={22} markColor="#1F3DFF" className="text-ink" />
               </div>
               <nav className="flex-1 overflow-y-auto px-5">
                 {links.map((l) => (
-                  <a key={l.id} href={`#${l.id}`} onClick={() => setOpen(false)} className="flex items-center justify-between border-b-2 border-dotted border-paper/15 py-5 text-2xl font-semibold tracking-tight">
+                  <a key={l.id} href={`#${l.id}`} onClick={() => setOpen(false)} className="flex items-center justify-between border-b border-line py-5 text-[22px] font-semibold">
                     {l.label}
-                    <AltArrowRightIcon className="size-5 text-paper/50 rtl:rotate-180" aria-hidden />
+                    <AltArrowRightIcon className="size-5 text-muted-foreground rtl:rotate-180" aria-hidden />
                   </a>
                 ))}
-                <button type="button" onClick={switchLanguage} className="flex w-full items-center gap-2 py-5 text-start text-lg text-paper/70">
+                <button type="button" onClick={switchLanguage} className="flex w-full items-center gap-2 py-5 text-start text-[17px] text-muted-foreground">
                   <GlobalIcon className="size-5" aria-hidden />
                   {d.nav.language}
                 </button>
               </nav>
               <div className="grid gap-3 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                <Button asChild size="xl" variant="brand" className="w-full rounded-xl">
+                <Button asChild size="xl" variant="brand" className="w-full">
                   <a href={signupUrl()}>{d.nav.signUp}</a>
                 </Button>
-                <Button asChild size="xl" variant="outline" className="w-full rounded-xl border-paper/20 bg-transparent text-paper hover:bg-paper/10 hover:text-paper">
+                <Button asChild size="xl" variant="outline" className="w-full">
                   <a href={config.merchantUrl}>{d.nav.logIn}</a>
                 </Button>
               </div>

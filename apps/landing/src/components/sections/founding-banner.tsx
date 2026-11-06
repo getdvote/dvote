@@ -9,12 +9,12 @@ export function FoundingBanner({ data }: { data: PlansData }) {
   if (!f.open || f.left <= 0) return null;
   const taken = Math.min(f.total, Math.max(0, f.total - f.left));
   return (
-    <div id="launch-partners" className="flex scroll-mt-24 flex-col gap-5 rounded-[24px] border border-line bg-white p-5 sm:flex-row sm:items-center sm:p-6">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-ink text-brand">
+    <div id="launch-partners" className="flex scroll-mt-24 flex-col gap-5 rounded-[20px] border border-line bg-white p-5 sm:flex-row sm:items-center sm:p-6">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-paper text-ink">
         <CrownStarIcon className="size-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[17px]">{d.pricing.foundingTitle}</p>
+        <p className="text-[17px] font-semibold">{d.pricing.foundingTitle}</p>
         <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">{fill(d.pricing.foundingText, { total: f.total })}</p>
       </div>
       <div className="shrink-0 sm:w-48">

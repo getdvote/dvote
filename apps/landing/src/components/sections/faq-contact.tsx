@@ -1,64 +1,52 @@
 import { ChatRoundDotsIcon, LetterIcon } from '@solar-icons/react/linear';
-import { Card, Container, ExternalLink, IconTile, Section, SectionHeading } from '@/components/common';
+import { Container, ExternalLink, IconTile, Section, SectionHeading } from '@/components/common';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { config, whatsappLink } from '@/lib/config';
 
-/** FAQ (general + pricing questions) beside the contact cards. */
+/** The heading and the ways to reach us on one side, the questions on the other. */
 export function FaqContact() {
   const { d } = useI18n();
   const items = [...d.faq.items, ...d.pricing.faq];
   const c = d.contact;
   return (
-    <Section id="faq">
-      <Container className="grid gap-14 lg:grid-cols-[1.4fr_1fr]">
+    <Section id="faq" className="pt-0 sm:pt-0">
+      <Container className="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-20">
         <div>
-          <SectionHeading title={d.faq.title} />
-          <Accordion type="single" collapsible className="mt-8 border-t border-line">
-            {items.map((f, i) => (
-              <AccordionItem key={f.q} value={String(i)} className="border-b border-line">
-                <AccordionTrigger className="py-5 text-start text-[17px] font-medium hover:no-underline">{f.q}</AccordionTrigger>
-                <AccordionContent className="pb-5 text-[15px] leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-        <div id="contact" className="scroll-mt-24 lg:pt-2">
           <div className="lg:sticky lg:top-28">
-            <h2 className="text-[28px] leading-tight font-black tracking-[-0.02em]">{c.title}</h2>
-            <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{c.lead}</p>
-            <div className="mt-6 grid gap-3">
-              <Card className="p-6">
-                <div className="flex items-start gap-4">
+            <SectionHeading title={d.faq.title} />
+            <div id="contact" className="mt-8 scroll-mt-28">
+              <p className="text-[18px] font-semibold">{c.title}</p>
+              <p className="mt-1.5 max-w-[38ch] text-[15px] leading-relaxed text-muted-foreground">{c.lead}</p>
+              <div className="mt-5 grid gap-2.5">
+                <ExternalLink href={whatsappLink(c.whatsappMessage)} className="flex items-center gap-3.5 rounded-2xl border border-line p-3.5 transition duration-150 hover:border-ink/30">
                   <IconTile icon={ChatRoundDotsIcon} />
-                  <div className="min-w-0">
-                    <p className="text-[16px]">{c.whatsapp}</p>
-                    <p className="mt-0.5 text-[14px] text-muted-foreground">{c.whatsappText}</p>
-                    <p className="mt-2 text-[15px]" dir="ltr">
-                      {config.whatsappDisplay}
-                    </p>
-                  </div>
-                </div>
-                <Button asChild size="md" className="mt-5 h-10 w-full rounded-xl">
-                  <ExternalLink href={whatsappLink(c.whatsappMessage)}>{c.whatsappCta}</ExternalLink>
-                </Button>
-              </Card>
-              <Card className="p-6">
-                <div className="flex items-start gap-4">
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-medium">{c.whatsapp}</span>
+                    <span className="block text-[13px] text-muted-foreground">{c.whatsappText}</span>
+                  </span>
+                </ExternalLink>
+                <a href={`mailto:${config.email}`} className="flex items-center gap-3.5 rounded-2xl border border-line p-3.5 transition duration-150 hover:border-ink/30">
                   <IconTile icon={LetterIcon} />
-                  <div className="min-w-0">
-                    <p className="text-[16px]">{c.email}</p>
-                    <p className="mt-0.5 text-[14px] text-muted-foreground">{c.emailText}</p>
-                    <a href={`mailto:${config.email}`} className="mt-1.5 inline-block py-0.5 text-[15px] underline decoration-black/20 underline-offset-4 hover:decoration-ink">
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-medium">{c.email}</span>
+                    <span className="block truncate text-[13px] text-muted-foreground" dir="ltr">
                       {config.email}
-                    </a>
-                  </div>
-                </div>
-              </Card>
+                    </span>
+                  </span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
+        <Accordion type="single" collapsible className="border-t border-line">
+          {items.map((f, i) => (
+            <AccordionItem key={f.q} value={String(i)} className="border-b border-line">
+              <AccordionTrigger className="py-5 text-start text-[16px] font-medium hover:no-underline">{f.q}</AccordionTrigger>
+              <AccordionContent className="pb-5 text-[15px] leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </Container>
     </Section>
   );
