@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { LoaderIcon as Loader2 } from '@solar-icons/react/linear';
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DvoteLogo } from '../../components/DvoteLogo';
@@ -18,8 +18,8 @@ type PauseCode = (typeof PAUSE_CODES)[number];
 const END_REASONS = ['disconnected', 'expired', 'ended_by_phone', 'staff_disabled', 'role_changed', 'branch_changed'] as const;
 type EndReason = (typeof END_REASONS)[number];
 
-const RETRY_PAUSED_MS = 30_000;
-const CHECK_SESSION_MS = 60_000;
+/** How soon the phone notices a Disconnect or a lock clearing, with nobody touching it. */
+const CHECK_SESSION_MS = 5_000;
 
 /** A short reason from the API, or `unknown` for one this build doesn't know. */
 const endReason = (value: unknown): EndReason | 'unknown' =>
@@ -116,11 +116,11 @@ function CodeEntry({ secret, onPaired, onBack }: { secret: string; onPaired: (to
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sending = useRef(false);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const code = normalizeCode(value);
-    if (code.length !== 6) return setError(t('pair.badCode'));
+  const send = async (code: string) => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -128,12 +128,29 @@ function CodeEntry({ secret, onPaired, onBack }: { secret: string; onPaired: (to
       onPaired(sessionToken);
     } catch (err) {
       setError(errorMessage(err));
+      // a wrong code needs typing again; after a lost connection, Connect retries the same one
+      if (err instanceof ApiError && err.code === 'pairing_invalid') setValue('');
+    } finally {
+      sending.current = false;
       setBusy(false);
     }
   };
 
+  const change = (text: string) => {
+    setValue(text);
+    const code = normalizeCode(text);
+    if (code.length === 6) void send(code);
+  };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const code = normalizeCode(value);
+    if (code.length !== 6) return setError(t('pair.badCode'));
+    void send(code);
+  };
+
   return (
-    <form onSubmit={(e) => void submit(e)} className="mx-auto grid max-w-sm gap-4 py-6">
+    <form onSubmit={submit} className="mx-auto grid max-w-sm gap-4 py-6">
       <div className="grid gap-1">
         <h1 className="text-xl font-semibold tracking-tight">{t('pair.enterTitle')}</h1>
         <p className="text-sm text-muted-foreground">{t('pair.enterHint')}</p>
@@ -147,7 +164,7 @@ function CodeEntry({ secret, onPaired, onBack }: { secret: string; onPaired: (to
           autoFocus
           value={value}
           maxLength={16}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => change(e.target.value)}
           className="h-12 text-center text-2xl tracking-widest tabular-nums"
         />
       </Field>
@@ -187,7 +204,7 @@ function PhoneScanner({ token, onEnded }: { token: string; onEnded: (reason: End
     queryKey: ['scanner', 'me', token],
     queryFn: client.scannerMe,
     retry: false,
-    refetchInterval: paused ? RETRY_PAUSED_MS : CHECK_SESSION_MS,
+    refetchInterval: CHECK_SESSION_MS,
   });
 
   const { isSuccess, dataUpdatedAt } = me;

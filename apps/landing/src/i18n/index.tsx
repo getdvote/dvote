@@ -3,27 +3,30 @@ import { ar } from './ar';
 import { en, type Dictionary } from './en';
 
 /**
- * English (default) + Arabic. The first visit follows the browser's language; the switch in the
- * header is remembered in this browser (localStorage). Arabic is right-to-left (index.html sets it
- * before the first paint). Pages read their words from `d` (the current dictionary).
+ * Arabic (default, decided 2026-11-05) + English. The switch in the header is remembered in this
+ * browser (localStorage). Arabic is right-to-left (index.html sets it before the first paint). Pages read their words from `d` (the current dictionary).
  */
 export type Language = 'en' | 'ar';
 const KEY = 'dvote-landing-language';
 const dictionaries: Record<Language, Dictionary> = { en, ar };
+const TITLES: Record<Language, string> = {
+  ar: 'dvote · كروت الولاء في محفظة زباينك',
+  en: "dvote · Loyalty cards in your customers' wallet",
+};
 
 function initial(): Language {
   try {
-    const saved = localStorage.getItem(KEY);
-    if (saved === 'ar' || saved === 'en') return saved;
+    if (localStorage.getItem(KEY) === 'en') return 'en';
   } catch {
-    // storage blocked: follow the browser
+    // storage blocked: the default
   }
-  return navigator.language.toLowerCase().startsWith('ar') ? 'ar' : 'en';
+  return 'ar';
 }
 
 function apply(lang: Language) {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.title = TITLES[lang];
 }
 
 /** `{name}` placeholders. */
