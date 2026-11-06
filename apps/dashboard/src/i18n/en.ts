@@ -1151,7 +1151,7 @@ export const en = {
     placeholderEn: "Prompt in English",
     placeholderAr: "Prompt in Arabic",
     defaultEn: "How was your visit? Tell us what you think.",
-    defaultAr: "كيف كانت زيارتك؟ شاركنا رأيك.",
+    defaultAr: "إيه رأيك في زيارتك؟ احكيلنا.",
     bothRequired: "Write the prompt in both English and Arabic.",
     savePlaceholder: "Save prompt",
     view: "View feedback",

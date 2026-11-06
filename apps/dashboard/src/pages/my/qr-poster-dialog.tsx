@@ -33,8 +33,8 @@ const COPY: Record<PosterLanguage, { headline: string; body: string; poweredBy: 
     poweredBy: 'Powered by',
   },
   ar: {
-    headline: 'امسح الرمز وانضم لبطاقة الولاء',
-    body: 'اجمع النقاط مع كل زيارة. بطاقتك في محفظة هاتفك، بدون تثبيت أي تطبيق.',
+    headline: 'اعمل سكان وخد كارت النقط',
+    body: 'اجمع نقط في كل زيارة. كارتك في Apple Wallet أو Google Wallet، من غير ما تنزّل أي تطبيق.',
     poweredBy: 'بدعم من',
   },
 };

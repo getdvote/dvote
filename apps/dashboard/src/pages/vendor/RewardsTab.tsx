@@ -322,7 +322,7 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
             <Input id="reward-name" name="name" dir="ltr" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="Free coffee" autoFocus />
           </Field>
           <Field label={t('rewards.nameAr')} htmlFor="reward-name-ar">
-            <Input id="reward-name-ar" name="nameAr" dir="rtl" maxLength={120} defaultValue={current?.nameAr ?? ''} placeholder="قهوة مجانية" />
+            <Input id="reward-name-ar" name="nameAr" dir="rtl" maxLength={120} defaultValue={current?.nameAr ?? ''} placeholder="قهوة مجانًا" />
           </Field>
           <Field label={t('rewards.descEn')} htmlFor="reward-desc">
             <Textarea id="reward-desc" name="description" dir="ltr" rows={2} maxLength={500} defaultValue={current?.description ?? ''} placeholder="Any coffee, any size" />
