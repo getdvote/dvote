@@ -53,7 +53,7 @@ test.describe('phone pairing', () => {
     await mockApi(page, 'staff', { firstVisit: true });
     await page.route(`${API}/**`, (route) => route.fallback());
     await page.goto(`${DASHBOARD}/pair#${SECRET}`);
-    await expect(page.getByRole('heading', { name: 'اربط هذا الهاتف' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'اربط الموبايل ده' })).toBeVisible();
     expect(await direction(page)).toEqual({ lang: 'ar', dir: 'rtl' });
   });
 });

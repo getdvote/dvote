@@ -28,7 +28,7 @@ for (const vp of KEY_VIEWPORTS) {
       await withoutCard(page);
       await signIn(page);
       await page.goto(DASHBOARD + '/card');
-      await page.getByRole('button', { name: language === 'en' ? 'Create my card' : 'إنشاء بطاقتي' }).click();
+      await page.getByRole('button', { name: language === 'en' ? 'Create my card' : 'اعمل كارتي' }).click();
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible();
 
@@ -39,7 +39,7 @@ for (const vp of KEY_VIEWPORTS) {
         if (SHOTS) await page.screenshot({ path: `${SHOTS}/funnel-${step}-${language}-${vp.name}.png` });
         if (step !== 'review') await next.click();
       }
-      await expect(dialog.getByRole('button', { name: language === 'en' ? 'Create card' : 'إنشاء البطاقة' })).toBeEnabled();
+      await expect(dialog.getByRole('button', { name: language === 'en' ? 'Create card' : 'اعمل الكارت' })).toBeEnabled();
     });
   }
 }
