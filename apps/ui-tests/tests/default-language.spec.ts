@@ -64,7 +64,7 @@ test.describe('landing page', () => {
   test('a first visit from an English browser is in Arabic', async ({ page }) => {
     await blockApi(page);
     await page.goto(LANDING);
-    await expect(page.locator('h1')).toContainText('كارت');
+    await expect(page.locator('h1')).toContainText('زبونك');
     expect(await direction(page)).toEqual({ lang: 'ar', dir: 'rtl' });
   });
 
@@ -76,7 +76,7 @@ test.describe('landing page', () => {
     await blockApi(page);
     await page.addInitScript(() => localStorage.setItem('dvote-landing-language', 'en'));
     await page.goto(LANDING);
-    await expect(page.locator('h1')).not.toContainText('كارت');
+    await expect(page.locator('h1')).toContainText('They tried you once');
     expect(await direction(page)).toEqual({ lang: 'en', dir: 'ltr' });
   });
 });
