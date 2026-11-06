@@ -24,6 +24,7 @@ import { CameraBlockedHelp, useCameraGranted } from '../../components/camera-hel
 import { QrScanner, type CameraProblem } from '../../components/QrScanner';
 import { PairPhone } from './pair-phone';
 import { errorText, t } from '../../i18n';
+import { ltrMoney } from '../../lib/card-look';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { ApiError, errorMessage, type RedeemPreview, type StaffMe, type WalletCardPreview } from '../../lib/api';
 import { branchState, OPENING_HOURS, stateLabel, type BranchState } from '../../lib/hours';
@@ -59,6 +60,12 @@ function estimatePoints(minor: number, rule: Rule): number {
 }
 
 const money = (v: string) => v.replace(/\.00$/, '');
+
+/** "10 EGP = 1 points". The amount stays one left-to-right run inside the Arabic line. */
+function ruleLine(rule: Rule, currency: string) {
+  const spend = ltrMoney(money(rule.spendAmount), currency);
+  return t('till.rule', { spend: spend.amount, currency: spend.currency, points: rule.pointsPerSpend });
+}
 
 /**
  * The till: the scan → bill amount / confirm reward → done, in the dashboard.
@@ -168,11 +175,7 @@ export function MyTill({ phone = false }: { phone?: boolean }) {
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
         {me.activeRule
-          ? t('till.rule', {
-              spend: money(me.activeRule.spendAmount),
-              currency: me.vendor.currency,
-              points: me.activeRule.pointsPerSpend,
-            })
+          ? ruleLine(me.activeRule, me.vendor.currency)
           : t('till.noRule')}
       </p>
 
@@ -569,13 +572,7 @@ function AmountStep({
       <DialogHeader>
         <DialogTitle>{t('till.amountTitle')}</DialogTitle>
         {rule ? (
-          <DialogDescription>
-            {t('till.rule', {
-              spend: money(rule.spendAmount),
-              currency,
-              points: rule.pointsPerSpend,
-            })}
-          </DialogDescription>
+          <DialogDescription>{ruleLine(rule, currency)}</DialogDescription>
         ) : null}
       </DialogHeader>
       <div className="relative">

@@ -173,3 +173,9 @@ export function designProblem(d: CardDesign): DesignProblem | null {
 
 /** Keeps a left-to-right run (an amount like "10 EGP") in order inside Arabic text. */
 export const ltr = (text: string) => `\u2066${text}\u2069`;
+
+/**
+ * The same for a template with the amount and currency as neighbouring placeholders ("{amount} {currency}"):
+ * the amount opens the left-to-right run and the currency closes it.
+ */
+export const ltrMoney = (amount: string, currency: string) => ({ amount: `\u2066${amount}`, currency: `${currency}\u2069` });
