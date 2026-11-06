@@ -94,7 +94,7 @@ export function CafePass({ points = 240, goal = 300, qr = true, className, note,
 }
 
 const PASS_COLOURS = [
-  'linear-gradient(135deg,#1f4f86,#2f6db3)', // bank card
+  '#1f4f86', // bank card
   '#1c1c1e',
   '#7a3b16',
   '#f2b632',

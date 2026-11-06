@@ -97,6 +97,7 @@
 :lang(ar) h1,
 :lang(ar) h2 {
   line-height: 1.3;
+  font-weight: 500; /* Alexandria runs heavier than DM Sans at the same weight */
 }
 
 /* Text on a dvote Blue block: white, and the main action flips to white with blue text. */
@@ -135,7 +136,7 @@
   }
   html,
   body {
-    background: #18100f; /* the neutral espresso frame around the page */
+    background: #ffffff;
     color: var(--foreground);
     -webkit-tap-highlight-color: transparent;
   }
