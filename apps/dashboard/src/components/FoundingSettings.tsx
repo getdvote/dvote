@@ -11,7 +11,7 @@ import { api, errorMessage } from '../lib/api';
 import { Field } from './Field';
 
 /**
- * Admin: the Founding Merchants offer shown on dvote.co ("N of 10 spots left"). Spots left =
+ * Admin: the Launch Partners offer shown on dvote.co ("N of 10 spots left"). Spots left =
  * total minus shops holding a spot (given on the shop's Plan box).
  */
 export function FoundingSettings() {
@@ -30,7 +30,7 @@ export function FoundingSettings() {
     mutationFn: () => api.setFounding({ total: Number(total), open: isOpen }),
     onSuccess: (r) => {
       qc.setQueryData(['founding'], r);
-      toast.success(`Founding offer saved: ${r.left} spots left`);
+      toast.success(`Launch Partners offer saved: ${r.left} spots left`);
       setOpen(false);
     },
     onError: (err) => toast.error(errorMessage(err)),
@@ -40,12 +40,12 @@ export function FoundingSettings() {
   return (
     <>
       <Button size="lg" variant="outline" onClick={() => setOpen(true)}>
-        Founding {data ? `${data.left} / ${data.total}` : ''}
+        Launch Partners {data ? `${data.left} / ${data.total}` : ''}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Founding Merchants</DialogTitle>
+            <DialogTitle>Launch Partners</DialogTitle>
             <DialogDescription>
               30% off the plan for the first 6 months. dvote.co shows how many spots are left. {data ? `${data.taken} taken now.` : ''}
             </DialogDescription>

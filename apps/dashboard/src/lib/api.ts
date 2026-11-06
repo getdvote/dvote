@@ -215,7 +215,7 @@ export interface Vendor {
   planStatus?: 'trial' | 'active';
   plan?: PlanName | null;
   billingCycle?: BillingCycle | null;
-  /** Holds a Founding Merchant spot. */
+  /** Holds a Launch Partner spot. */
   founding?: boolean;
   foundingUntil?: string | null;
   paidUntil?: string | null;
@@ -923,7 +923,7 @@ export const api = {
       trialEndsAt: string | null;
       deleteAt: string | null;
     }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
-  /** Admin: the Founding Merchants offer (spots and whether it is open). */
+  /** Admin: the Launch Partners offer (spots and whether it is open). */
   founding: () => call<FoundingStatus>('GET', '/api/admin/settings/founding'),
   setFounding: (body: { total: number; open: boolean }) => call<FoundingStatus>('PUT', '/api/admin/settings/founding', body),
   overview: () => call<Overview>('GET', '/api/admin/overview'),

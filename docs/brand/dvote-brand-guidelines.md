@@ -111,7 +111,7 @@ Use facts the product can back up today:
 
 **Never invent numbers.** dvote has no published customer, visit or revenue figures yet. When real ones exist, add them here in this form: "*X* businesses, *Y* members, *Z* visits."
 
-**Check before claiming Apple Wallet.** The landing page promises Apple Wallet, but `CLAUDE.md` still lists Apple passes as not built. See [Open decisions](#20-open-decisions).
+**Apple Wallet counts as available.** Marketing and landing copy can name it alongside Google Wallet. Decided 5 November 2026.
 
 ### The rally cry
 
@@ -261,7 +261,7 @@ Arabic is a first language for dvote, not a translation.
 - Mirror direction: back and forward arrows, progress, sliding motion
 - Don't mirror: the logo, the Star, media controls, phone numbers, prices in Latin digits, QR codes
 
-**Arabic rally cry:** the emails use الأشياء الجميلة تعود دائمًا. A more Egyptian option is الحاجات الحلوة بترجع. Pick one in native review, then use it everywhere.
+**Arabic rally cry:** الحاجات الحلوة بترجع. Decided 5 November 2026. Use it everywhere, including the emails.
 
 ---
 
@@ -281,7 +281,7 @@ The supplied master artwork is final: proportions 665 × 208. Never redraw it.
 |---|---|---|---|
 | **Primary** | All white | dvote Blue or Night Blue | Most brand moments |
 | **Secondary** | Blue symbol, Espresso wordmark | White or Froth | When a blue background isn't possible, including most product screens |
-| **Dark** | Lifted Blue `#6F86FF` symbol, Froth wordmark | Espresso | Dark mode only |
+| **Dark** | Lifted Blue `#6F86FF` symbol, near-white wordmark | Neutral dark | Dark mode only |
 | **Photo** | All white | Calm, dark areas of a photo | Photography only |
 | **Mono** | All Espresso or all white | Single-colour jobs: engraving, stamps, receipts, embossing | Print limits only |
 
@@ -765,28 +765,28 @@ All values are in [theme.css](theme.css). `apps/dashboard/src/styles.css` stays 
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `background` | `#F8F4F1` | `#18100F` | Page |
-| `foreground` | `#18100F` | `#F8F4F1` | Text |
-| `card` | `#FFFFFF` | `#221816` | Cards |
-| `popover` | `#FFFFFF` | `#2B201D` | Menus, dialogs |
-| `primary` | `#18100F` | `#F8F4F1` | Strong neutral actions |
-| `secondary` | `#EFE9E3` | `#2E2320` | Quiet actions, soft fills |
-| `muted-foreground` | `#6B5E57` | `#C2B3A6` | Secondary text |
-| `accent` | `#EFE9E3` | `#2E2320` | Hovered rows and menu items |
-| `border` | `#E4DCD4` | `#3A2D29` | Decorative lines |
-| `input` | `#8C7B6E` | `#8A7B70` | Control borders |
+| `background` | `#F8F4F1` | `#0F0F10` | Page |
+| `foreground` | `#18100F` | `#FAFAFA` | Text |
+| `card` | `#FFFFFF` | `#18181A` | Cards |
+| `popover` | `#FFFFFF` | `#1E1E21` | Menus, dialogs |
+| `primary` | `#18100F` | `#FAFAFA` | Strong neutral actions |
+| `secondary` | `#EFE9E3` | `#27272A` | Quiet actions, soft fills |
+| `muted-foreground` | `#6B5E57` | `#A1A1AA` | Secondary text |
+| `accent` | `#EFE9E3` | `#27272A` | Hovered rows and menu items |
+| `border` | `#E4DCD4` | `#2C2C30` | Decorative lines |
+| `input` | `#8C7B6E` | `#747478` | Control borders |
 | `ring` | `#1F3DFF` | `#8C9EFF` | Focus |
 | `brand` | `#1F3DFF` | `#6F86FF` | Main action, selected |
-| `brand-foreground` | `#FFFFFF` | `#18100F` | Text on brand fill |
+| `brand-foreground` | `#FFFFFF` | `#0F0F10` | Text on brand fill |
 | `brand-hover` | `#1A36E6` | `#8C9EFF` | Hover |
 | `brand-pressed` | `#142AB8` | `#A3B2FF` | Pressed |
 | `brand-text` | `#1F3DFF` | `#8C9EFF` | Links, brand-coloured text |
-| `brand-soft` | `#E8EBFF` | `#1B2147` | Selected rows, tinted panels |
-| `sidebar` | `#F8F4F1` | `#18100F` | Sidebar and page frame |
+| `brand-soft` | `#E8EBFF` | `#25252B` | Selected rows, tinted panels |
+| `sidebar` | `#F8F4F1` | `#0F0F10` | Sidebar and page frame |
 | `sidebar-primary` | `#E8EBFF` | `#6F86FF` | Active sidebar item |
-| `sidebar-primary-foreground` | `#1F3DFF` | `#18100F` | Text on active item |
+| `sidebar-primary-foreground` | `#1F3DFF` | `#0F0F10` | Text on active item |
 
-**Watch out:** the text on a brand fill switches between themes. It's white in light mode and Espresso in dark mode, because blue is too dark to read against Espresso. Always use `text-brand-foreground`, never a fixed colour.
+**Watch out:** the text on a brand fill switches between themes. It's white in light mode and near-black in dark mode, because blue is too dark to read against Espresso. Always use `text-brand-foreground`, never a fixed colour.
 
 ### Spacing
 
@@ -831,7 +831,7 @@ The brand is flat first. Use a border before a shadow.
 | 2 | Menus, popovers | `0 8px 24px rgb(24 16 15 / 12%)` |
 | 3 | Dialogs | `0 16px 48px rgb(24 16 15 / 18%)` |
 
-In dark mode, raise surfaces with lighter colours rather than shadows.
+In dark mode, use plain neutral greys with no brown or blue tint, and raise surfaces with lighter colours rather than shadows. Illustrations use their own dark versions, with no light panel behind them.
 
 ---
 
@@ -867,7 +867,7 @@ Design from 320 px up. The tests already cover 320 to 2560.
 
 ### Dashboard shell
 
-- Neutral Froth sidebar on `md` and up (Espresso in dark mode); a phone header and bottom bar below that
+- Neutral Froth sidebar on `md` and up (neutral dark in dark mode); a phone header and bottom bar below that
 - Froth canvas, White cards
 - One page title per screen, one main action in the top-end corner
 - Metric rows are a small bento: equal heights, consistent gaps
@@ -1134,11 +1134,10 @@ Do this as a single coordinated change. Half-orange, half-blue surfaces would lo
 
 ### Phase 1: decide and produce assets
 
-1. Approve the rally cry ([Open decisions](#20-open-decisions)). The hero colour and fonts are already decided
-2. Trademark check on the blue-led identity and the rally cry
-3. Export new logo files: all versions listed in [section 5](#5-logo), plus app icons and favicon
-4. Draw Blade and Star artwork from the master logo
-5. Native Arabic review of copy
+1. Approve the English rally cry ([Open decisions](#20-open-decisions)). The Arabic rally cry, hero colour and fonts are already decided
+2. Export new logo files: all versions listed in [section 5](#5-logo), plus app icons and favicon
+3. Draw Blade and Star artwork from the master logo
+4. Native Arabic review of copy
 
 ### Phase 2: change the code
 
@@ -1216,14 +1215,14 @@ Run this before anything goes out.
 
 ## 20. Open decisions
 
-Decision 1 is closed, and the fonts are decided: DM Sans and Alexandria. The others still need a person's decision. Everything else in this guide is ready to apply.
+Decisions 1, 2 and 3 are closed, and the fonts are decided: DM Sans and Alexandria. The others still need a person's decision. Everything else in this guide is ready to apply.
 
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | **Hero colour.** | **Decided 5 November 2026: dvote Blue `#1F3DFF`.** It's in the same family as the reference, deliberately not the same value |
-| 2 | **Legal check.** Global Payments is a blue-led brand in merchant payments, and its guide also mentions loyalty points. dvote would be a nearby blue | Ask a trademark lawyer before launch. Warm neutrals, orange and the logo add distance, but this guide isn't legal advice |
-| 3 | **Apple Wallet claim.** The landing page offers it now; `CLAUDE.md` says Apple passes aren't built | Confirm the status. If still pending, change the landing copy before this rebrand goes out |
-| 4 | **Rally cry.** "Good things come back." and its Arabic | Approve after native review and a trademark search |
+| 2 | **Legal check.** | **Closed 5 November 2026: no legal check.** Mohamed decided not to do one |
+| 3 | **Apple Wallet claim.** | **Closed 5 November 2026: treat Apple Wallet as available.** The landing copy stays as it is |
+| 4 | **Rally cry.** "Good things come back." and its Arabic | **Arabic decided 5 November 2026: الحاجات الحلوة بترجع.** The English line still needs approval |
 | 5 | **Default card colour.** Move default cards from Espresso to Blue? | Keep Espresso until decided. A change reaches every merchant without a chosen design, and their customers' passes |
 | 6 | **Print values.** Print Blue CMYK and Pantones are not yet tested | Get a proof from the stand's printer |
 | 7 | **Favicon.** A 16 px version of the symbol doesn't exist | Draw a simplified one |
@@ -1291,9 +1290,9 @@ Recalculate with `python3 contrast-audit.py`. Last run: 5 November 2026. All 53 
 | White on Plum | 10.86 | 4.5 |
 | Stone border on White | 4.06 | 3.0 |
 | Stone border on Froth | 3.71 | 3.0 |
-| Dark: Froth on card | 15.87 | 4.5 |
-| Dark: Espresso on brand fill | 5.83 | 4.5 |
-| Dark: brand text on card | 6.98 | 4.5 |
+| Dark: Near-white on card | 16.99 | 4.5 |
+| Dark: Near-black on brand fill | 5.96 | 4.5 |
+| Dark: brand text on card | 7.13 | 4.5 |
 | Chart Orange on White | 3.21 | 3.0 |
 | Chart River on White | 3.90 | 3.0 |
 | Chart Pine on White | 4.21 | 3.0 |
