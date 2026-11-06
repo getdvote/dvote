@@ -34,12 +34,12 @@ function PlanCard({ plan, index, data, cycle, branches, setBranches }: { plan: P
   return (
     <li
       className={cn(
-        'relative flex flex-col rounded-2xl border bg-white p-7 sm:p-8',
-        popular ? 'border-ink shadow-[0_30px_60px_-30px_rgb(17_25_12/0.35)]' : 'border-line',
+        'relative flex flex-col rounded-[20px] border bg-white p-7 sm:p-8',
+        popular ? 'border-blue ring-1 ring-blue' : 'border-line',
       )}
     >
       {popular ? (
-        <span className="absolute -top-3.5 start-1/2 -translate-x-1/2 rounded-full bg-brand px-3.5 py-1 text-[12px] font-semibold text-ink ring-4 ring-white rtl:translate-x-1/2">
+        <span className="absolute -top-3.5 start-1/2 -translate-x-1/2 rounded-full bg-brand px-3.5 py-1 text-[12px] font-semibold text-brand-foreground ring-4 ring-white rtl:translate-x-1/2">
           {d.pricing.popular}
         </span>
       ) : null}
@@ -53,7 +53,7 @@ function PlanCard({ plan, index, data, cycle, branches, setBranches }: { plan: P
           </p>
         ) : null}
         <p className="flex flex-wrap items-baseline gap-x-1">
-          <span key={`${cycle}-${branches}`} className="animate-in text-[44px] leading-none font-semibold tracking-[-0.035em] tabular-nums duration-300 fade-in-0 slide-in-from-bottom-1 motion-reduce:animate-none" data-testid={`price-${plan.id}`}>
+          <span key={`${cycle}-${branches}`} className="animate-in text-[38px] leading-none font-semibold tracking-[-0.03em] tabular-nums duration-300 fade-in-0 slide-in-from-bottom-1 motion-reduce:animate-none" data-testid={`price-${plan.id}`}>
             {money(founding ?? price)}
           </span>
           <span className="text-[15px] text-muted-foreground">{d.pricing.perMonth}</span>
@@ -93,7 +93,7 @@ function PlanCard({ plan, index, data, cycle, branches, setBranches }: { plan: P
         <p className="mt-3 text-[13px] text-muted-foreground">{fill(d.pricing.extraBranch, { currency: cur, amount: formatMoney(extra) })}</p>
       </div>
 
-      <Button asChild size="xl" variant={popular ? 'default' : 'outline'} className="mt-6 w-full rounded-xl">
+      <Button asChild size="xl" variant={popular ? 'brand' : 'outline'} className="mt-6 w-full">
         <a href={signupUrl(plan.id, cycle)}>{d.pricing.cta}</a>
       </Button>
       <p className="mt-3 text-center text-[13px] text-muted-foreground">{fill(d.pricing.trialNote, { days: data.trialDays })}</p>

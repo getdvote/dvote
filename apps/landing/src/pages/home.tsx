@@ -1,26 +1,26 @@
-import { Channel } from '@/components/sections/channel';
-import { ChannelCompare } from '@/components/sections/channel-compare';
+import { Comeback } from '@/components/sections/comeback';
 import { FaqContact } from '@/components/sections/faq-contact';
-import { Geo } from '@/components/sections/geo';
 import { Hero } from '@/components/sections/hero';
 import { Platform } from '@/components/sections/platform';
 import { Pricing } from '@/components/sections/pricing';
 import { Problem } from '@/components/sections/problem';
-import { Stand } from '@/components/sections/stand';
 import { Steps } from '@/components/sections/steps';
+import { Trust } from '@/components/sections/trust';
 
-/** dvote.co is one page; the header links jump to its sections. */
+/**
+ * dvote.co is one page, told in order to a shop owner: the promise and a demo they can press, why
+ * customers don't come back, how the card works, how you bring them back, what you get, why there's
+ * no risk, the price, questions. The footer closes on the rally cry.
+ */
 export function HomePage() {
   return (
     <>
       <Hero />
       <Problem />
       <Steps />
-      <Stand />
+      <Comeback />
       <Platform />
-      <Channel />
-      <ChannelCompare />
-      <Geo />
+      <Trust />
       <Pricing />
       <FaqContact />
     </>

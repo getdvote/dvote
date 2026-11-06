@@ -85,13 +85,13 @@ export function TrialButton({ label, className }: { label?: string; className?: 
   const { d } = useI18n();
   const { trialDays } = usePlans();
   return (
-    <Button asChild size="xl" variant="brand" className={cn('rounded-xl px-7', className)}>
+    <Button asChild size="xl" variant="brand" className={cn('px-7', className)}>
       <a href={signupUrl()}>{label ?? fill(d.hero.cta, { days: trialDays })}</a>
     </Button>
   );
 }
 
-/** "Founding Merchants · 7 of 10 spots left": hidden when the offer is closed or full. */
+/** "Launch Partners: 7 of 10 spots left": hidden when the offer is closed or full. */
 export function FoundingPill({ className }: { className?: string }) {
   const { d } = useI18n();
   const { founding } = usePlans();
