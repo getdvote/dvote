@@ -37,7 +37,7 @@ export class PlanActionDto {
   @ValidateIf((o: PlanActionDto) => o.action === 'activate') @IsIn(PLANS) plan?: Plan;
   /** Activate only; default monthly. */
   @IsOptional() @IsIn(BILLING_CYCLES) billingCycle?: BillingCycle;
-  /** Activate only: take (true) or give back (false) a Founding Merchant spot; left out = unchanged. */
+  /** Activate only: take (true) or give back (false) a Launch Partner spot; left out = unchanged. */
   @IsOptional() @IsBoolean() founding?: boolean;
   @ValidateIf((o: PlanActionDto) => o.action === 'extend') @Type(() => Number) @IsInt() @Min(1) @Max(60) days?: number;
 }

@@ -117,7 +117,7 @@ function layout({ name, preheader, en, ar, footerEn, footerAr }) {
     <tr><td align="center" style="padding:36px 24px 8px">
       <img src="${ASSETS}symbol-electric.png" width="40" height="40" alt="" style="display:block;width:40px;height:40px">
       <p style="margin:14px 0 4px;font-family:${FONT.display};font-size:22px;font-weight:900;font-style:italic;color:${C.white}">Good things come back.</p>
-      <p dir="rtl" style="margin:0 0 20px;font-family:${FONT.arabic};font-size:16px;font-weight:900;color:${C.white}">الأشياء الجميلة تعود دائمًا.</p>
+      <p dir="rtl" style="margin:0 0 20px;font-family:${FONT.arabic};font-size:16px;font-weight:900;color:${C.white}">الحاجات الحلوة بترجع.</p>
       <p style="margin:0 0 6px;font-family:${FONT.body};font-size:12px;line-height:19px;color:${C.stone}">${footerEn}</p>
       <p dir="rtl" style="margin:0 0 18px;font-family:${FONT.arabic};font-size:12px;line-height:20px;color:${C.stone}">${footerAr}</p>
       <p style="margin:0;font-family:${FONT.body};font-size:12px;line-height:19px;color:${C.stone}">

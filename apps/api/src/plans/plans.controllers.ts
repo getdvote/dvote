@@ -7,13 +7,13 @@ import { FOUNDING } from './plans';
 import { PlansService } from './plans.service';
 
 export class FoundingSettingsDto {
-  /** How many Founding Merchant spots exist (taken ones included). */
+  /** How many Launch Partner spots exist (taken ones included). */
   @IsInt() @Min(0) @Max(FOUNDING.maxTotal) total: number;
-  /** Show the offer on dvote.co and allow new Founding activations. */
+  /** Show the offer on dvote.co and allow new Launch Partner activations. */
   @IsBoolean() open: boolean;
 }
 
-/** GET /api/public/plans: prices, trial length and Founding spots left, for dvote.co/pricing. */
+/** GET /api/public/plans: prices, trial length and Launch Partner spots left, for dvote.co/pricing. */
 @ApiTags('public: plans')
 @Controller('public/plans')
 export class PublicPlansController {
@@ -27,7 +27,7 @@ export class PublicPlansController {
   }
 }
 
-/** GET|PUT /api/admin/settings/founding: the dvote team sets the Founding Merchants offer. */
+/** GET|PUT /api/admin/settings/founding: the dvote team sets the Launch Partners offer. */
 @AdminApi('admin: plans')
 @Controller('admin/settings/founding')
 export class AdminFoundingController {

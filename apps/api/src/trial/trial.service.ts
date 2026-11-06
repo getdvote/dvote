@@ -198,8 +198,8 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
 
   /**
    * Admin: the shop pays for a plan. It stays active for good (no trial, no deletion).
-   * `founding` takes one of the Founding Merchant spots (409 founding_full when none are left);
-   * leaving it out keeps the shop's current Founding status. The shop is paid for one period from
+   * `founding` takes one of the Launch Partner spots (409 founding_full when none are left);
+   * leaving it out keeps the shop's current Launch Partner status. The shop is paid for one period from
    * now (+1 month or +1 year); a scheduled change is dropped (this choice replaces it).
    */
   async activate(vendorId: string, plan: Plan, billingCycle: BillingCycle = 'monthly', founding?: boolean, now = new Date()) {

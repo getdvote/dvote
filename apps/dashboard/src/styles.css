@@ -216,50 +216,51 @@
 }
 
 .dark {
-    /* espresso surfaces, froth type; dvote Blue is lifted so it reads on espresso, and fills carry espresso */
-    --background: #18100F;
-    --foreground: #F8F4F1;
-    --card: #221816;
-    --card-foreground: #F8F4F1;
-    --popover: #2B201D;
-    --popover-foreground: #F8F4F1;
-    --primary: #F8F4F1;
-    --primary-foreground: #18100F;
-    --secondary: #2E2320;
-    --secondary-foreground: #F8F4F1;
-    --muted: #2E2320;
-    --muted-foreground: #C2B3A6;
-    --accent: #2E2320;
-    --accent-foreground: #F8F4F1;
+    /* plain neutral greys, raised with lighter colours rather than shadows. dvote Blue is lifted so
+       it reads on dark, and stays a small accent. Status tints stay faint. */
+    --background: #0F0F10;
+    --foreground: #FAFAFA;
+    --card: #18181A;
+    --card-foreground: #FAFAFA;
+    --popover: #1E1E21;
+    --popover-foreground: #FAFAFA;
+    --primary: #FAFAFA;
+    --primary-foreground: #0F0F10;
+    --secondary: #27272A;
+    --secondary-foreground: #FAFAFA;
+    --muted: #27272A;
+    --muted-foreground: #A1A1AA;
+    --accent: #27272A;
+    --accent-foreground: #FAFAFA;
     --destructive: #FDA29B;
-    --border: #3A2D29;
-    --input: #8A7B70;
+    --border: #2C2C30;
+    --input: #747478;
     --ring: #8C9EFF;
     --brand: #6F86FF;
-    --brand-foreground: #18100F;
+    --brand-foreground: #0F0F10;
     --brand-hover: #8C9EFF;
     --brand-pressed: #A3B2FF;
     --brand-text: #8C9EFF;
-    --brand-soft: #1B2147;
+    --brand-soft: #25252B;
     --success: #9CCFB0;
-    --success-soft: #1C2A22;
+    --success-soft: #17241D;
     --warning: #FFCA48;
-    --warning-soft: #33280F;
-    --destructive-soft: #36201D;
+    --warning-soft: #2A2310;
+    --destructive-soft: #2D1B1B;
     --info: #8C9EFF;
-    --info-soft: #1B2147;
+    --info-soft: #25252B;
     --chart-1: #8C9EFF;
     --chart-2: #FF5500;
     --chart-3: #E3A9C9;
     --chart-4: #6EC1FF;
     --chart-5: #B8D9C5;
-    --sidebar: #18100F;
-    --sidebar-foreground: #F8F4F1;
+    --sidebar: #0F0F10;
+    --sidebar-foreground: #FAFAFA;
     --sidebar-primary: #6F86FF;
-    --sidebar-primary-foreground: #18100F;
-    --sidebar-accent: #2E2320;
-    --sidebar-accent-foreground: #F8F4F1;
-    --sidebar-border: rgb(248 244 241 / 10%);
+    --sidebar-primary-foreground: #0F0F10;
+    --sidebar-accent: #27272A;
+    --sidebar-accent-foreground: #FAFAFA;
+    --sidebar-border: rgb(255 255 255 / 10%);
     --sidebar-ring: #8C9EFF;
 }
 

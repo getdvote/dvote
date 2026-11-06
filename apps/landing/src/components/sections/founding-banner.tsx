@@ -9,7 +9,7 @@ export function FoundingBanner({ data }: { data: PlansData }) {
   if (!f.open || f.left <= 0) return null;
   const taken = Math.min(f.total, Math.max(0, f.total - f.left));
   return (
-    <div id="founding" className="flex scroll-mt-24 flex-col gap-5 rounded-[24px] border border-line bg-white p-5 sm:flex-row sm:items-center sm:p-6">
+    <div id="launch-partners" className="flex scroll-mt-24 flex-col gap-5 rounded-[24px] border border-line bg-white p-5 sm:flex-row sm:items-center sm:p-6">
       <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-ink text-brand">
         <CrownStarIcon className="size-5" aria-hidden />
       </span>
