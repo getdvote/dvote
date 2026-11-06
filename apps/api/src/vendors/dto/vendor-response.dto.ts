@@ -53,8 +53,8 @@ export class VendorResponseDto {
   @ApiProperty({ type: String, nullable: true, enum: ['monthly', 'annual'] })
   billingCycle: string | null;
 
-  @ApiProperty({ description: 'Holds a Founding Merchant spot (migration 32)' }) founding: boolean;
-  @ApiProperty({ type: String, nullable: true, description: 'Founding discount ends' }) foundingUntil: string | null;
+  @ApiProperty({ description: 'Holds a Launch Partner spot (migration 32)' }) founding: boolean;
+  @ApiProperty({ type: String, nullable: true, description: 'Launch Partner discount ends' }) foundingUntil: string | null;
   @ApiProperty({ type: String, nullable: true, description: 'Paid until (then 7 days of grace); null = no end' }) paidUntil: string | null;
   @ApiProperty({ type: String, nullable: true, enum: ['regular', 'loyal', 'chain'] }) nextPlan: string | null;
   @ApiProperty({ type: String, nullable: true, enum: ['monthly', 'annual'] }) nextBillingCycle: string | null;

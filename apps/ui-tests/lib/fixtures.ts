@@ -619,7 +619,7 @@ function quote(plan: keyof typeof PRICE, cycle: 'monthly' | 'annual', branches: 
   return { base, extraBranches, monthly, perPeriod: cycle === 'annual' ? yearly : monthly, foundingApplied: founding };
 }
 const DAY_MS = 86_400_000;
-/** A paid Loyal shop with 3 branches, a Founding spot and a downgrade scheduled for the renewal. */
+/** A paid Loyal shop with 3 branches, a Launch Partner spot and a downgrade scheduled for the renewal. */
 export const billing: Billing = {
   currency: 'EGP',
   state: 'active',

@@ -6,6 +6,7 @@ import { defineConfig } from '@playwright/test';
  */
 export const DASHBOARD = 'http://localhost:5199';
 export const WEB = 'http://localhost:5198';
+export const LANDING = 'http://localhost:5196';
 const MOCK_ENV = {
   VITE_API_URL: 'http://api.mock',
   VITE_SUPABASE_URL: 'http://supabase.mock',
@@ -24,6 +25,14 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: { trace: 'retain-on-failure', reducedMotion: 'reduce' },
   webServer: [
+    {
+      command: 'npx vite --port 5196 --strictPort',
+      cwd: '../landing',
+      url: LANDING,
+      env: MOCK_ENV,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
     {
       command: 'npx vite --port 5199 --strictPort',
       cwd: '../dashboard',

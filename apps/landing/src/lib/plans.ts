@@ -49,7 +49,7 @@ export function yearlyPrice(plan: Plan, branches: number): number {
   return (plan.monthly + Math.max(0, branches - 1) * plan.extraBranch.monthly) * 10;
 }
 
-/** Founding price per month: 30% off the plan for 6 months; extra branches stay at full monthly price. */
+/** Launch Partner price per month: 30% off the plan for 6 months; extra branches stay at full monthly price. */
 export function foundingPrice(plan: Plan, branches: number): number {
   return plan.foundingMonthly + Math.max(0, branches - 1) * plan.extraBranch.monthly;
 }
@@ -76,7 +76,7 @@ function load(): Promise<PlansData | null> {
   return cache;
 }
 
-/** Plans + Founding counter; the fallback until (or unless) the API answers. */
+/** Plans + Launch Partner counter; the fallback until (or unless) the API answers. */
 export function usePlans(): PlansData {
   const [data, setData] = useState<PlansData>(FALLBACK_PLANS);
   useEffect(() => {

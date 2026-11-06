@@ -46,7 +46,7 @@ All the tricks together cost about EGP 34,700 in year 1, about 14% of revenue.
 
 | Trick | How it works | Year-1 cost (base case) |
 | --- | --- | --- |
-| Founding Merchants | The first 10 merchants (not branches) get 30% off their plan price for their first 6 months: EGP 349 Regular, EGP 699 Loyal, EGP 1,399 Chain. Extra branches stay at full price. They also get a Founding badge on their storefront and a direct WhatsApp line to you. In return: a testimonial, a photo of the stand in use, and a monthly 15-minute feedback chat. Live counter on the page: "7 of 10 Founding spots left". | About EGP 11,800 |
+| Launch Partners | The first 10 merchants (not branches) get 30% off their plan price for their first 6 months: EGP 349 Regular, EGP 699 Loyal, EGP 1,399 Chain. Extra branches stay at full price. They also get a Launch Partner badge on their storefront and a direct WhatsApp line to you. In return: a testimonial, a photo of the stand in use, and a monthly 15-minute feedback chat. Live counter on the page: "7 of 10 Launch Partner spots left". | About EGP 11,800 |
 | 14 days free, no payment | Self-serve sign-up starts on Loyal features; the owner picks a plan at the end. No card, no Paymob link until day 14. | About 2 weeks of revenue per merchant (not in the model) |
 | Done-for-you pilot | Merchants you hunt in person get 30 days: you build their storefront, card and rewards, then convert them to a paid plan. | Your time, about 1–2 hours per café |
 | Free QR stand per branch | One printed stand on every counter, on every plan. Extra stands and NFC tags at cost. | About EGP 14,400 (EGP 200 per stand, a placeholder until you get a printer quote) |
@@ -75,7 +75,7 @@ In the base case dvote collects EGP 247,400 in year 1 and keeps EGP 99,900 after
 
 Across all 60 sign-ups that averages 6.5 paid months each, and about 5.6 once 4% monthly churn is counted. So year-1 revenue is roughly half of what the same 60 merchants would pay over a full year. That money isn't lost, it lands in year 2: by month 12 the merchants who stayed are paying EGP 37,054 every month.
 
-- **The Founding offer is now small.** 30% off the plan price for 6 months, for the first 10 merchants only, costs about EGP 11,800. The old offer (50% for 12 months, first 30, branches included) would cost about EGP 95,000.
+- **The Launch Partners offer is now small.** 30% off the plan price for 6 months, for the first 10 merchants only, costs about EGP 11,800. The old offer (50% for 12 months, first 30, branches included) would cost about EGP 95,000.
 - **Churn compounds.** At 4% a month, 12 of the 60 merchants are gone by month 12.
 - **Costs are small next to revenue.** Paymob takes 3%; running costs are counted at your EGP 10,000 ceiling. At EGP 5,000 a month, year-1 profit is EGP 159,900.
 
@@ -83,7 +83,7 @@ Across all 60 sign-ups that averages 6.5 paid months each, and about 5.6 once 4%
 
 Per month, for one branch. Paymob charges 2.75% + EGP 3 per payment.
 
-|  | List price | Paymob fee per monthly payment | You keep | Founding price (first 6 months) | Annual, per month |
+|  | List price | Paymob fee per monthly payment | You keep | Launch Partner price (first 6 months) | Annual, per month |
 | --- | --- | --- | --- | --- | --- |
 | Regular | EGP 499 | EGP 17 | EGP 482 | EGP 349 | EGP 416 |
 | Loyal | EGP 999 | EGP 30 | EGP 969 | EGP 699 | EGP 833 |
@@ -143,11 +143,11 @@ Each row changes one thing from the base case.
 | 8 new merchants a month | EGP 59,287 | EGP 402,700 | EGP 241,800 |
 | Running costs EGP 5,000, not 10,000 | EGP 37,054 | EGP 247,400 | EGP 159,900 |
 | Churn 2% a month, not 4% | EGP 41,195 | EGP 265,700 | EGP 117,700 |
-| No Founding offer at all | EGP 37,054 | EGP 258,800 | EGP 111,000 |
-| Founding offer for 20 merchants, not 10 | EGP 37,054 | EGP 236,000 | EGP 88,800 |
-| Founding offer for 12 months, not 6 | EGP 35,686 | EGP 239,100 | EGP 91,900 |
+| No Launch Partners offer at all | EGP 37,054 | EGP 258,800 | EGP 111,000 |
+| Launch Partners offer for 20 merchants, not 10 | EGP 37,054 | EGP 236,000 | EGP 88,800 |
+| Launch Partners offer for 12 months, not 6 | EGP 35,686 | EGP 239,100 | EGP 91,900 |
 | Old offer: 50% off for 12 months, first 30, branches included | EGP 28,920 | EGP 167,000 | EGP 21,700 |
 
-One extra merchant a month is worth more than any discount choice. The new Founding offer costs only EGP 11,100 of profit against no offer, which is cheap for 10 testimonials and early feedback.
+One extra merchant a month is worth more than any discount choice. The new Launch Partners offer costs only EGP 11,100 of profit against no offer, which is cheap for 10 testimonials and early feedback.
 
 **Model assumptions:** plan mix 65% Regular, 30% Loyal, 5% Chain; 1.2 branches per merchant; 20% of merchants on annual billing; 4% monthly churn; prices exclude VAT, which may add 14% to the customer's bill.
