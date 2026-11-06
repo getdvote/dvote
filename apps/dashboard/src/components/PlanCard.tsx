@@ -64,7 +64,7 @@ export function PlanCard({ vendor }: { vendor: Vendor }) {
                 {vendor.billingCycle ? ` · ${CYCLE_LABEL[vendor.billingCycle]}` : ''}
               </Badge>
             )}
-            {vendor.founding ? <Badge variant="outline">Founding</Badge> : null}
+            {vendor.founding ? <Badge variant="outline">Launch Partner</Badge> : null}
             {vendor.selfSignup ? <span className="text-xs text-muted-foreground">Signed up by itself</span> : null}
           </div>
           {trial ? (
@@ -78,7 +78,7 @@ export function PlanCard({ vendor }: { vendor: Vendor }) {
                 ? `${Date.parse(vendor.paidUntil) > Date.now() ? 'Paid until' : 'Overdue since'} ${fmt(vendor.paidUntil)} · locks ${GRACE_DAYS} days after`
                 : 'Managed by dvote: no end date, never deleted automatically.'}
               {vendor.nextPlan ? ` · moves to ${PLAN_LABEL[vendor.nextPlan]} (${CYCLE_LABEL[vendor.nextBillingCycle ?? 'monthly'].toLowerCase()}) at renewal` : ''}
-              {vendor.foundingUntil ? ` · Founding discount until ${fmt(vendor.foundingUntil)}` : ''}
+              {vendor.foundingUntil ? ` · Launch Partner discount until ${fmt(vendor.foundingUntil)}` : ''}
             </p>
           )}
         </div>
@@ -110,7 +110,7 @@ export function PlanCard({ vendor }: { vendor: Vendor }) {
           <div className="flex items-center gap-2 px-1">
             <Switch id={`founding-${vendor.id}`} checked={founding} onCheckedChange={setFounding} />
             <Label htmlFor={`founding-${vendor.id}`} className="text-sm font-normal">
-              Founding{spots.data && !vendor.founding ? ` (${spots.data.left} left)` : ''}
+              Launch Partners{spots.data && !vendor.founding ? ` (${spots.data.left} left)` : ''}
             </Label>
           </div>
           <Button
