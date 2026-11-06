@@ -41,8 +41,10 @@
 .branch-map-pin span { width: 9px; height: 9px; border-radius: 50%; background: var(--primary-foreground); }
 
 /*
- * dvote design (brand v1.0): paper canvas, white cards, ink frame and type, electric for the primary action
- * and selected states. Inter for Latin, Cairo for Arabic. Light is the default; .dark on <html> switches every token.
+ * dvote design (brand v3.0): froth canvas, white cards, espresso type, a neutral froth sidebar and frame. dvote Blue marks the
+ * main action, active and selected states, links, focus and the lead chart series, nothing larger. Fills carry white in light mode and espresso in dark
+ * mode, so always use brand-foreground. Sky, Orange, Egg Yolk, Mint and Plum are small accents. DM Sans for Latin,
+ * Alexandria for Arabic and for numbers that must line up. Light is the default; .dark on <html> switches every token.
  */
 @theme inline {
     --font-heading: var(--font-sans);
@@ -92,9 +94,16 @@
     --color-warning: var(--warning);
     --color-warning-soft: var(--warning-soft);
     --color-destructive-soft: var(--destructive-soft);
-    /* fixed brand paper + ink (same in both themes): illustration panels and brand-moment surfaces */
-    --color-paper: #F3F1EE;
-    --color-ink: #11190C;
+    /* fixed brand colours (same in both themes): illustration panels, badges, charts and brand-moment surfaces */
+    --color-paper: #F8F4F1; /* froth */
+    --color-ink: #18100F; /* espresso */
+    --color-blue: #1F3DFF;
+    --color-night: #142AB8;
+    --color-sky: #6EC1FF;
+    --color-orange: #FF5500;
+    --color-egg-yolk: #FFCA48;
+    --color-mint: #B8D9C5;
+    --color-plum: #5F2B4B;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -105,114 +114,154 @@
 }
 
 :root {
-    /* dvote brand v1.0 (digital palette): paper canvas, white surfaces, ink type and frame, electric only for the primary action and selected states (product ratio ~65% light / 20% ink / 15% electric) */
-    --app-font: "Inter", "Cairo", -apple-system, "Segoe UI", Roboto, sans-serif;
-    --background: #F3F1EE; /* paper */
-    --foreground: #11190C; /* ink */
+    /* palette: dvote blue #1F3DFF · night blue #142AB8 · espresso #18100F · white · froth #F8F4F1 · oat #EFE9E3
+       · sky #6EC1FF · orange #FF5500 · egg yolk #FFCA48 · mint #B8D9C5 · plum #5F2B4B */
+    --app-font: "DM Sans", "Alexandria", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --background: #F8F4F1;
+    --foreground: #18100F;
     --card: #FFFFFF;
-    --card-foreground: #11190C;
+    --card-foreground: #18100F;
     --popover: #FFFFFF;
-    --popover-foreground: #11190C;
-    /* primary = the strong neutral (ink): readable as text, borders and fills on light surfaces */
-    --primary: #11190C;
-    --primary-foreground: #F3F1EE;
-    --secondary: #E8E5DE;
-    --secondary-foreground: #11190C;
-    --muted: #F3F1EE;
-    --muted-foreground: #58594D;
-    --accent: #F3F1EE;
-    --accent-foreground: #11190C;
+    --popover-foreground: #18100F;
+    /* primary = the strong neutral (espresso): readable as text, borders and fills on light surfaces */
+    --primary: #18100F;
+    --primary-foreground: #F8F4F1;
+    --secondary: #EFE9E3;
+    --secondary-foreground: #18100F;
+    --muted: #F8F4F1;
+    --muted-foreground: #6B5E57;
+    --accent: #EFE9E3;
+    --accent-foreground: #18100F;
     --destructive: #B42318;
-    --border: #DEDAD1;
-    --input: #787664; /* olive gray: control boundaries need 3:1 */
-    --ring: #11190C;
-    /* brand = electric: fills only, always with ink on top; never as text on light surfaces (use brand-text) */
-    --brand: #E1FF00;
-    --brand-foreground: #11190C;
-    --brand-hover: #D2ED00;
-    --brand-pressed: #C1DA00;
-    --brand-text: #4F5900;
-    --brand-soft: #F4F8CB;
-    --success: #196348;
-    --success-soft: #EAF6EC;
-    --warning: #854A0E;
-    --warning-soft: #FFF4D6;
+    --border: #E4DCD4;
+    --input: #8C7B6E;
+    --ring: #1F3DFF;
+    /* brand = orange: fills with espresso on top (5.9:1); for orange text on light surfaces use brand-text */
+    --brand: #1F3DFF;
+    --brand-foreground: #FFFFFF;
+    --brand-hover: #1A36E6;
+    --brand-pressed: #142AB8;
+    --brand-text: #1F3DFF;
+    --brand-soft: #E8EBFF;
+    --success: #1F6B47;
+    --success-soft: #E2EFE7;
+    --warning: #8A5A00;
+    --warning-soft: #FFF1CC;
     --destructive-soft: #FEF3F2;
-    --info: #175CD3;
-    --info-soft: #EFF8FF;
-    --chart-1: #11190C;
-    --chart-2: #4F5900;
-    --chart-3: #787664;
-    --chart-4: #175CD3;
-    --chart-5: #854A0E;
+    --info: #142AB8;
+    --info-soft: #E8EBFF;
+    --chart-1: #1F3DFF;
+    --chart-2: #FF5500;
+    --chart-3: #5F2B4B;
+    --chart-4: #1C86D1;
+    --chart-5: #2E8B62;
     --radius: 0.75rem;
-    /* the sidebar is ink in both themes: it is also the frame around the page */
-    --sidebar: #11190C;
-    --sidebar-foreground: #F3F1EE;
-    --sidebar-primary: #E1FF00;
-    --sidebar-primary-foreground: #11190C;
-    --sidebar-accent: #242C1F;
-    --sidebar-accent-foreground: #F3F1EE;
-    --sidebar-border: rgb(243 241 238 / 10%);
-    --sidebar-ring: #E1FF00;
+    /* the sidebar is espresso in both themes: it is also the frame around the page */
+    --sidebar: #F8F4F1;
+    --sidebar-foreground: #18100F;
+    --sidebar-primary: #E8EBFF;
+    --sidebar-primary-foreground: #1F3DFF;
+    --sidebar-accent: #EFE9E3;
+    --sidebar-accent-foreground: #18100F;
+    --sidebar-border: #E4DCD4;
+    --sidebar-ring: #1F3DFF;
+}
+
+/* Letter spacing breaks the joins between Arabic letters. */
+:lang(ar) [class*="tracking-"] {
+  letter-spacing: 0;
+}
+
+/* DM Sans has no tabular figures, so numbers that must line up use Alexandria. */
+.tabular-nums {
+  font-family: "Alexandria", var(--app-font);
+}
+
+/*
+ * The sidebar carries the dark tokens for the dark theme. In the light theme it is neutral: a froth panel with
+ * espresso text. Blue only marks the active item, like every other active state.
+ */
+:root:not(.dark) .sidebar-neutral {
+    --sidebar: #F8F4F1;
+    --sidebar-foreground: #18100F;
+    --sidebar-primary: #E8EBFF;
+    --sidebar-primary-foreground: #1F3DFF;
+    --sidebar-accent: #EFE9E3;
+    --sidebar-accent-foreground: #18100F;
+    --sidebar-border: #E4DCD4;
+    --sidebar-ring: #1F3DFF;
+    --background: #F8F4F1;
+    --foreground: #18100F;
+    --card: #FFFFFF;
+    --card-foreground: #18100F;
+    --muted: #EFE9E3;
+    --muted-foreground: #6B5E57;
+    --accent: #EFE9E3;
+    --accent-foreground: #18100F;
+    --secondary: #EFE9E3;
+    --secondary-foreground: #18100F;
+    --border: #E4DCD4;
+    --input: #8C7B6E;
+    --ring: #1F3DFF;
+    --brand: #1F3DFF;
+    --brand-foreground: #FFFFFF;
+    --brand-hover: #1A36E6;
+    --brand-pressed: #142AB8;
+    --brand-text: #1F3DFF;
+    --brand-soft: #E8EBFF;
 }
 
 :lang(ar) {
-    --app-font: "Cairo", "Inter", -apple-system, "Segoe UI", Tahoma, sans-serif;
+    --app-font: "Alexandria", "DM Sans", -apple-system, "Segoe UI", Tahoma, sans-serif;
 }
 
 .dark {
-    /* warm neutral charcoals (not the green-tinted ink) so dark mode reads calm; electric stays the accent */
-    --background: #141412;
-    --foreground: #F3F1EE;
-    --card: #1D1D1A;
-    --card-foreground: #F3F1EE;
-    --popover: #262622;
-    --popover-foreground: #F3F1EE;
-    --primary: #F3F1EE;
-    --primary-foreground: #141412;
-    --secondary: #2A2A26;
-    --secondary-foreground: #F3F1EE;
-    --muted: #2A2A26;
-    --muted-foreground: #CAC4B7;
-    --accent: #2A2A26;
-    --accent-foreground: #F3F1EE;
+    /* plain neutral greys, raised with lighter colours rather than shadows. dvote Blue is lifted so
+       it reads on dark, and stays a small accent. Status tints stay faint. */
+    --background: #0F0F10;
+    --foreground: #FAFAFA;
+    --card: #18181A;
+    --card-foreground: #FAFAFA;
+    --popover: #1E1E21;
+    --popover-foreground: #FAFAFA;
+    --primary: #FAFAFA;
+    --primary-foreground: #0F0F10;
+    --secondary: #27272A;
+    --secondary-foreground: #FAFAFA;
+    --muted: #27272A;
+    --muted-foreground: #A1A1AA;
+    --accent: #27272A;
+    --accent-foreground: #FAFAFA;
     --destructive: #FDA29B;
-    --border: #3A3934;
-    --input: #787664;
-    --ring: #E1FF00;
-    --brand: #E1FF00;
-    --brand-foreground: #11190C;
-    --brand-hover: #D2ED00;
-    --brand-pressed: #C1DA00;
-    --brand-text: #E1FF00;
-    --brand-soft: #2B2C22;
-    --success: #89D7AD;
-    --success-soft: #16291F;
-    --warning: #F5CC74;
-    --warning-soft: #332A17;
-    --destructive-soft: #36201D;
-    --info: #84CAFF;
-    --info-soft: #172739;
-    --chart-1: #F3F1EE;
-    --chart-2: #E1FF00;
-    --chart-3: #CAC4B7;
-    --chart-4: #84CAFF;
-    --chart-5: #F5CC74;
-    --sidebar: #141412;
-    --sidebar-foreground: #F3F1EE;
-    --sidebar-primary: #E1FF00;
-    --sidebar-primary-foreground: #11190C;
-    --sidebar-accent: #2A2A26;
-    --sidebar-accent-foreground: #F3F1EE;
-    --sidebar-border: rgb(243 241 238 / 10%);
-    --sidebar-ring: #E1FF00;
-}
-
-/* light theme: the always-dark sidebar and phone header keep the brand ink frame */
-:root:not(.dark) .dark {
-    --sidebar: #11190C;
-    --sidebar-accent: #242C1F;
+    --border: #2C2C30;
+    --input: #747478;
+    --ring: #8C9EFF;
+    --brand: #6F86FF;
+    --brand-foreground: #0F0F10;
+    --brand-hover: #8C9EFF;
+    --brand-pressed: #A3B2FF;
+    --brand-text: #8C9EFF;
+    --brand-soft: #25252B;
+    --success: #9CCFB0;
+    --success-soft: #17241D;
+    --warning: #FFCA48;
+    --warning-soft: #2A2310;
+    --destructive-soft: #2D1B1B;
+    --info: #8C9EFF;
+    --info-soft: #25252B;
+    --chart-1: #8C9EFF;
+    --chart-2: #FF5500;
+    --chart-3: #E3A9C9;
+    --chart-4: #6EC1FF;
+    --chart-5: #B8D9C5;
+    --sidebar: #0F0F10;
+    --sidebar-foreground: #FAFAFA;
+    --sidebar-primary: #6F86FF;
+    --sidebar-primary-foreground: #0F0F10;
+    --sidebar-accent: #27272A;
+    --sidebar-accent-foreground: #FAFAFA;
+    --sidebar-border: rgb(255 255 255 / 10%);
+    --sidebar-ring: #8C9EFF;
 }
 
 @layer base {

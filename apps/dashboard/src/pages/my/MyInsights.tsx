@@ -29,6 +29,8 @@ import { InsightsPattern } from './InsightsPatterns';
 import { BrandIllustration } from '../../components/BrandArt';
 import { CustomLayout, useCustomLayout, type LayoutSection } from '../../components/CustomLayout';
 import { Button } from '@/components/ui/button';
+import { PlanLock, PlanNotice } from '../../components/plan-lock';
+import { useHasFeature } from '../../lib/entitlements';
 
 type Metric = 'sales' | 'visits';
 
@@ -62,7 +64,21 @@ const KPIS: {
  * rewards, for a period and the one just before it; then how each reward performs. Counts only,
  * never who the customers are.
  */
+/** Insights is a plan feature (Regular has Home totals and Activity): locked page with the way to Billing. */
 export function MyInsights() {
+  const has = useHasFeature('insights');
+  const me = useMe();
+  const vendor = useMyVendor();
+  if (has) return <InsightsContent />;
+  return (
+    <>
+      <PageHeader title={t('nav.insights')} subtitle={t('insights.subtitle', { shop: me.branch?.name ?? vendor.name })} />
+      <PlanLock feature="insights" />
+    </>
+  );
+}
+
+function InsightsContent() {
   const vendorApi = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
@@ -73,6 +89,7 @@ export function MyInsights() {
   const [branchId, setBranchId] = useState('all');
   const [metric, setMetric] = useState<Metric>('sales');
   const layout = useCustomLayout('dvote-insights-layout');
+  const hasComparison = useHasFeature('branch_comparison');
 
   const { from, to } = period.dates;
   const query = {
@@ -231,6 +248,17 @@ export function MyInsights() {
       min: 'half',
       node: <RewardPerformance query={query} money={money} />,
     },
+    // the by-branch comparison is a Chain feature: a merchant-wide account with 2+ branches is shown the lock
+    ...(!hasComparison && !branchOnly && (branches?.filter((b) => b.status === 'active').length ?? 0) > 1
+      ? [
+          {
+            key: 'branches',
+            title: t('insights.byBranch'),
+            min: 'half' as const,
+            node: <PlanNotice feature="branch_comparison" />,
+          },
+        ]
+      : []),
     ...(data?.branches.length
       ? [
           {

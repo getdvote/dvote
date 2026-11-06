@@ -66,6 +66,9 @@ export function readableInk(hex: string): string {
 }
 
 /** A first card: the merchant's colour, solid background, the default wording. */
+/** dvote espresso: the card colour when a merchant has no brand colour or chosen design yet. */
+export const DVOTE_CARD_COLOR = '#18100F';
+
 export function defaultDesign(name: string, background: string): CardDesign {
   const ink = readableInk(background);
   return {
@@ -186,7 +189,7 @@ export function readDesign(json: unknown, name: string): CardDesign {
     return checkDesign(json);
   } catch {
     const fallback = obj(obj(json).colors).background;
-    return defaultDesign(name, typeof fallback === 'string' && HEX.test(fallback) ? fallback : '#2F6BDE');
+    return defaultDesign(name, typeof fallback === 'string' && HEX.test(fallback) ? fallback : DVOTE_CARD_COLOR);
   }
 }
 

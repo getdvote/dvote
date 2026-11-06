@@ -61,6 +61,8 @@ import type {
   CustomerSegment,
   MerchantCustomerQuery,
 } from "../../lib/api";
+import { PlanNotice } from '../../components/plan-lock';
+import { useHasFeature } from '../../lib/entitlements';
 
 const dateText = (v: string | null) =>
   v
@@ -222,6 +224,7 @@ export function MyMessages() {
     ) ?? [];
   const selected =
     branchSelection ?? nearby.data?.branchIds ?? eligible.map((b) => b.id);
+  const hasNearby = useHasFeature('nearby');
   const settings = useMutation({
     mutationFn: (enabled: boolean) =>
       api.setNearbyNotifications(enabled, selected),
@@ -332,6 +335,9 @@ export function MyMessages() {
       </>
     );
   const remaining = quota.data?.remaining ?? 0;
+  // the plan's allowance: Regular 2 a week, Loyal 3 a day, Chain 3 a day per branch
+  const allowance = quota.data?.max ?? 3;
+  const weekly = (quota.data?.windowHours ?? 24) > 24;
   const summary = (
     <Card className="mb-6 gap-0 py-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.2fr)] lg:divide-x divide-y lg:divide-y-0">
       {/* how many can still go out */}
@@ -344,11 +350,11 @@ export function MyMessages() {
             {quota.data ? remaining : "–"}
           </span>
           <span className="text-sm text-muted-foreground">
-            {t("broadcast.leftOf")}
+            {t("broadcast.leftOf", { max: allowance })}
           </span>
         </p>
         <div className="flex gap-1" aria-hidden>
-          {[1, 2, 3].map((n) => (
+          {Array.from({ length: Math.min(allowance, 12) }, (_, i) => i + 1).map((n) => (
             <span
               key={n}
               className={cn(
@@ -359,7 +365,7 @@ export function MyMessages() {
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          {quota.data?.resetsAt && remaining < 3
+          {quota.data?.resetsAt && remaining < allowance
             ? t("broadcast.freesUp", {
                 time: new Date(quota.data.resetsAt).toLocaleString(localeOf(), {
                   weekday: "short",
@@ -367,7 +373,7 @@ export function MyMessages() {
                   minute: "2-digit",
                 }),
               })
-            : t("broadcast.rolling")}
+            : t(weekly ? "broadcast.rollingWeek" : "broadcast.rolling", { max: allowance })}
         </p>
       </section>
 
@@ -745,9 +751,11 @@ export function MyMessages() {
                   </p>
                 )}
               </fieldset>
+              {!hasNearby ? <PlanNotice feature="nearby" /> : null}
               <div className="flex flex-wrap gap-3">
                 <Button
                   disabled={
+                    !hasNearby ||
                     !nearby.data ||
                     settings.isPending ||
                     !selected.length ||

@@ -16,9 +16,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseAdminService } from '../supabase/supabase-admin.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { ListStaffQueryDto } from './dto/list-staff-query.dto';
+import { revokeForStaffChange } from '../scanner/revoke-for-staff-change';
 import { StaffMeResponseDto } from './dto/staff-me-response.dto';
 import { StaffResponseDto } from './dto/staff-response.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+import { entitlementsFor } from '../plans/entitlements';
 
 /** Role names shown in the invite email (same words as the dashboard). */
 const ROLE_NAMES: Record<staff_role, { en: string; ar: string }> = {
@@ -100,6 +102,9 @@ export class StaffService {
         plan: {
           status: vendor.plan_status === 'trial' ? 'trial' : 'active',
           plan: vendor.plan,
+          billingCycle: vendor.billing_cycle,
+          paidUntil: vendor.paid_until?.toISOString() ?? null,
+          entitlements: entitlementsFor(vendor),
           trialEndsAt: vendor.trial_ends_at?.toISOString() ?? null,
           deleteAt: vendor.delete_at?.toISOString() ?? null,
         },
@@ -194,24 +199,18 @@ export class StaffService {
       await this.assertRoleBranch(ctx.vendorId, role, branchId);
     }
 
-    if (role === 'vendor_admin' && target.role !== 'vendor_admin') {
-      return this.prisma.$transaction(async (tx) => {
+    const promoting = role === 'vendor_admin' && target.role !== 'vendor_admin';
+    return this.prisma.$transaction(async (tx) => {
+      if (promoting) {
         await tx.$queryRaw`SELECT id FROM vendors WHERE id=${ctx.vendorId}::uuid FOR UPDATE`;
         await this.assertSingleAdmin(tx, ctx.vendorId, target.id);
-        return tx.staff_users.update({
-          where: { id: target.id },
-          data: {
-            name: dto.name,
-            role,
-            branch_id: branchId,
-            status: dto.status,
-          },
-        });
+      }
+      const updated = await tx.staff_users.update({
+        where: { id: target.id },
+        data: { name: dto.name, role, branch_id: branchId, status: dto.status },
       });
-    }
-    return this.prisma.staff_users.update({
-      where: { id: target.id },
-      data: { name: dto.name, role, branch_id: branchId, status: dto.status },
+      await revokeForStaffChange(tx, target.id, target, updated);
+      return updated;
     });
   }
 
@@ -233,14 +232,15 @@ export class StaffService {
     id: string,
     dto: Pick<UpdateStaffDto, 'name' | 'status'>,
   ): Promise<staff_users> {
-    const found = await this.prisma.staff_users.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+    const found = await this.prisma.staff_users.findUnique({ where: { id } });
     if (!found) throw new NotFoundException({ code: 'staff_not_found' });
-    return this.prisma.staff_users.update({
-      where: { id },
-      data: { name: dto.name, status: dto.status },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.staff_users.update({
+        where: { id },
+        data: { name: dto.name, status: dto.status },
+      });
+      await revokeForStaffChange(tx, id, found, updated);
+      return updated;
     });
   }
 

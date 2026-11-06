@@ -18,7 +18,7 @@ import { createTestSigner, type TestSigner } from './helpers/test-auth';
 const run = randomUUID().slice(0, 8);
 const DAY = 86_400_000;
 
-describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid trials (e2e)', () => {
+describe('Self sign-up, 14-day free trial, plan activation and deletion of unpaid trials (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
   let signer: TestSigner;
@@ -50,6 +50,7 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
 
   let adminToken = '';
   let adminAuthId = '';
+  let adminId = '';
   beforeAll(async () => {
     signer = await createTestSigner();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -69,9 +70,10 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
     trial = app.get(TrialService);
     const adminAuth = randomUUID();
     adminAuthId = adminAuth;
-    await prisma.platform_admins.create({
+    const admin = await prisma.platform_admins.create({
       data: { name: 'Trial admin', email: `trial-admin-${run}@test.dvote`, auth_user_id: adminAuth },
     });
+    adminId = admin.id;
     adminToken = await signer.sign(adminAuth, { aal: 'aal2' });
   });
 
@@ -86,6 +88,7 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
       await tx.branches.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.vendors.deleteMany({ where: { id: { in: v } } });
       await tx.users.deleteMany({ where: { name: { startsWith: `TrialCustomer ${run}` } } });
+      await tx.platform_settings.updateMany({ where: { updated_by: adminId }, data: { updated_by: null } });
       await tx.platform_admins.deleteMany({ where: { email: `trial-admin-${run}@test.dvote` } });
     });
     await app.close();
@@ -119,14 +122,14 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
     expect(await prisma.staff_users.count({ where: { auth_user_id: sub } })).toBe(0);
   });
 
-  it('sign-up creates the shop on a 7-day trial; the account is its merchant admin; once only', async () => {
+  it('sign-up creates the shop on a 14-day trial; the account is its merchant admin; once only', async () => {
     const a = await account();
     const res = await signup(a.token).expect(200);
     vendorIds.push(res.body.vendorId);
     const trialDays = (Date.parse(res.body.trialEndsAt) - Date.now()) / DAY;
     const deleteDays = (Date.parse(res.body.deleteAt) - Date.now()) / DAY;
-    expect(trialDays).toBeGreaterThan(6.99);
-    expect(trialDays).toBeLessThan(7.01);
+    expect(trialDays).toBeGreaterThan(13.99);
+    expect(trialDays).toBeLessThan(14.01);
     expect(deleteDays).toBeGreaterThan(29.99);
     expect(deleteDays).toBeLessThan(30.01);
 
@@ -176,7 +179,7 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
     const slug = (await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId } })).slug;
     await http().get(`/api/public/vendors/${slug}`).expect(200);
 
-    // the 7 days pass
+    // the 14 days pass
     await prisma.vendors.update({ where: { id: vendorId }, data: { trial_ends_at: new Date(Date.now() - 1000) } });
     const ended = (await me(a.token).expect(403)).body;
     expect(ended).toMatchObject({ code: 'trial_ended' });
@@ -198,12 +201,178 @@ describe('Self sign-up, 7-day free trial, plan activation and deletion of unpaid
     await http().get(`/api/public/vendors/${slug}`).expect(200);
 
     // admin: activate a paid plan → no trial, never deleted
-    const act = (await plan(adminToken, vendorId, { action: 'activate', plan: 'growth' }).expect(200)).body;
-    expect(act).toEqual({ planStatus: 'active', plan: 'growth', trialEndsAt: null, deleteAt: null, status: 'active' });
-    expect((await me(a.token).expect(200)).body.vendor.plan).toMatchObject({ status: 'active', plan: 'growth' });
+    const act = (await plan(adminToken, vendorId, { action: 'activate', plan: 'loyal', billingCycle: 'annual' }).expect(200)).body;
+    expect(act).toEqual({
+      planStatus: 'active',
+      plan: 'loyal',
+      billingCycle: 'annual',
+      founding: false,
+      paidUntil: expect.any(String),
+      nextPlan: null,
+      nextBillingCycle: null,
+      trialEndsAt: null,
+      deleteAt: null,
+      status: 'active',
+    });
+    const paidDays = (Date.parse(act.paidUntil) - Date.now()) / DAY;
+    expect(paidDays).toBeGreaterThan(364);
+    expect(paidDays).toBeLessThan(367);
+    expect((await me(a.token).expect(200)).body.vendor.plan).toMatchObject({ status: 'active', plan: 'loyal', billingCycle: 'annual', paidUntil: act.paidUntil });
     await plan(adminToken, vendorId, { action: 'extend', days: 3 }).expect(409);
     await plan(adminToken, vendorId, { action: 'activate', plan: 'gold' }).expect(400);
-    await plan(a.token, vendorId, { action: 'activate', plan: 'starter' }).expect(403);
+    await plan(adminToken, vendorId, { action: 'activate', plan: 'growth' }).expect(400);
+    await plan(adminToken, vendorId, { action: 'activate', plan: 'loyal', billingCycle: 'weekly' }).expect(400);
+    await plan(a.token, vendorId, { action: 'activate', plan: 'regular' }).expect(403);
+  });
+
+  it('the plan picked on dvote.co/pricing rides along the sign-up and is kept on the trial shop', async () => {
+    captcha.verify.mockClear();
+    fakeAuthAdmin.createSignupAccount.mockClear();
+    await http()
+      .post('/api/public/merchant-signup')
+      .send({ ownerName: 'Picky Owner', shopName: 'Picky Cafe', email: `picky-${run}@test.dvote`, password: 'secret123', phone: '01012345678', captchaToken: 'ok', plan: 'loyal', billingCycle: 'annual' })
+      .expect(200);
+    expect(fakeAuthAdmin.createSignupAccount.mock.calls[0]).toEqual(
+      expect.arrayContaining([expect.objectContaining({ plan: 'loyal', billing_cycle: 'annual' })]),
+    );
+    await http()
+      .post('/api/public/merchant-signup')
+      .send({ ownerName: 'Picky Owner', shopName: 'Picky Cafe', email: `picky2-${run}@test.dvote`, password: 'secret123', phone: '01012345678', captchaToken: 'ok', plan: 'gold' })
+      .expect(400);
+
+    const sub = randomUUID();
+    const token = await signer.sign(sub, {
+      email: `picky-${run}@test.dvote`,
+      app_metadata: { provider: 'email', providers: ['email'], dvote_signup: true },
+      user_metadata: { full_name: 'Picky Owner', plan: 'loyal', billing_cycle: 'annual' },
+    });
+    const { vendorId } = (await signup(token, { ...defaultForm, shopName: `Picky ${run}` }).expect(200)).body;
+    vendorIds.push(vendorId);
+    const v = await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId } });
+    expect(v).toMatchObject({ plan_status: 'trial', plan: 'loyal', billing_cycle: 'annual', founding: false });
+  });
+
+  it('billing page: trial pick, upgrade now, downgrade at period end, grace, lock, renew', async () => {
+    const a = await account();
+    const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Billing ${run}` }).expect(200)).body;
+    vendorIds.push(vendorId);
+    await prisma.branches.createMany({
+      data: [
+        { vendor_id: vendorId, name: 'Main' },
+        { vendor_id: vendorId, name: 'Second' },
+        { vendor_id: vendorId, name: 'Old', status: 'closed' },
+      ],
+    });
+    const billing = () => http().get('/api/vendor/billing').set('Authorization', `Bearer ${a.token}`);
+    const choose = (plan: string, billingCycle: string) =>
+      http().put('/api/vendor/billing/plan').set('Authorization', `Bearer ${a.token}`).send({ plan, billingCycle });
+
+    // trial: no plan yet, every plan priced for the 2 open branches
+    let b = (await billing().expect(200)).body;
+    expect(b).toMatchObject({ state: 'trial', plan: null, branches: 2, trialDays: 14, paidUntil: null, scheduled: null });
+    expect(b.plans.find((p: { id: string }) => p.id === 'loyal').monthly).toMatchObject({ monthly: 999 + 399, perPeriod: 1398 });
+    // on a trial any pick applies at once (nothing is paid yet)
+    b = (await choose('chain', 'annual').expect(200)).body;
+    expect(b).toMatchObject({ state: 'trial', plan: 'chain', billingCycle: 'annual', price: { monthly: 1666 + 416, perPeriod: 19990 + 416 * 12 } });
+    await choose('gold', 'monthly').expect(400);
+
+    // dvote collects the money, activates Loyal monthly → paid for a month
+    await plan(adminToken, vendorId, { action: 'activate', plan: 'loyal', billingCycle: 'monthly' }).expect(200);
+    b = (await billing().expect(200)).body;
+    expect(b).toMatchObject({ state: 'active', plan: 'loyal', billingCycle: 'monthly', price: { monthly: 1398 } });
+    const paidUntil = b.paidUntil as string;
+
+    // upgrade: at once; switching to annual waits for the renewal
+    b = (await choose('chain', 'annual').expect(200)).body;
+    expect(b).toMatchObject({ plan: 'chain', billingCycle: 'monthly', paidUntil, scheduled: { plan: 'chain', billingCycle: 'annual', startsAt: paidUntil } });
+    // downgrade: scheduled for the end of the paid period, cancel drops it
+    b = (await choose('regular', 'monthly').expect(200)).body;
+    expect(b).toMatchObject({ plan: 'chain', scheduled: { plan: 'regular', billingCycle: 'monthly', price: { monthly: 499 + 299 } } });
+    b = (await http().delete('/api/vendor/billing/scheduled').set('Authorization', `Bearer ${a.token}`).expect(200)).body;
+    expect(b.scheduled).toBeNull();
+    await http().delete('/api/vendor/billing/scheduled').set('Authorization', `Bearer ${a.token}`).expect(409);
+    await choose('regular', 'monthly').expect(200);
+
+    // the period ends: grace (still works, warned), the job moves the shop to the scheduled plan
+    await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 2 * DAY) } });
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'chain' });
+    expect((await trial.run()).switched).toBeGreaterThanOrEqual(1);
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'regular', scheduled: null });
+
+    // grace over: locked everywhere (cards keep working: the public page stays up)
+    await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 8 * DAY) } });
+    const locked = (await billing().expect(403)).body;
+    expect(locked).toMatchObject({ code: 'subscription_expired', paidUntil: expect.any(String) });
+    await me(a.token).expect(403);
+    const { slug } = await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: { slug: true } });
+    await http().get(`/api/public/vendors/${slug}`).expect(200);
+
+    // dvote renews: paid one month from now, unlocked
+    const ren = (await plan(adminToken, vendorId, { action: 'renew' }).expect(200)).body;
+    expect((Date.parse(ren.paidUntil) - Date.now()) / DAY).toBeGreaterThan(27);
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'active', plan: 'regular' });
+
+    // renewing early adds a period to the current end and starts a scheduled change
+    await choose('loyal', 'annual').expect(200); // upgrade now, annual from the renewal
+    const ren2 = (await plan(adminToken, vendorId, { action: 'renew' }).expect(200)).body;
+    expect(ren2).toMatchObject({ plan: 'loyal', billingCycle: 'annual', nextPlan: null });
+    expect((Date.parse(ren2.paidUntil) - Date.parse(ren.paidUntil)) / DAY).toBeGreaterThan(364);
+  });
+
+  it('billing is for the merchant admin only; renew needs an active plan', async () => {
+    const a = await account();
+    const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Billing roles ${run}` }).expect(200)).body;
+    vendorIds.push(vendorId);
+    const sub = randomUUID();
+    await prisma.staff_users.create({ data: { vendor_id: vendorId, role: 'viewer', name: 'Vera Viewer', email: `viewer-${run}@test.dvote`, auth_user_id: sub } });
+    const viewer = await signer.sign(sub, { email: `viewer-${run}@test.dvote` });
+    await http().get('/api/vendor/billing').set('Authorization', `Bearer ${viewer}`).expect(403);
+    await http().put('/api/vendor/billing/plan').set('Authorization', `Bearer ${viewer}`).send({ plan: 'chain', billingCycle: 'monthly' }).expect(403);
+    expect((await plan(adminToken, vendorId, { action: 'renew' }).expect(409)).body.code).toBe('not_active');
+  });
+
+  it('Founding Merchants: admin sets the spots, public plans show what is left, the last spot is taken once', async () => {
+    const before = await prisma.platform_settings.findUniqueOrThrow({ where: { key: 'founding' } });
+    try {
+      const pub = (await http().get('/api/public/plans').expect(200)).body;
+      expect(pub).toMatchObject({ currency: 'EGP', trialDays: 14 });
+      expect(pub.plans.map((p: { id: string; monthly: number }) => [p.id, p.monthly])).toEqual([
+        ['regular', 499],
+        ['loyal', 999],
+        ['chain', 1999],
+      ]);
+      await http().put('/api/admin/settings/founding').send({ total: 3, open: true }).expect(401);
+
+      // exactly one spot left
+      const taken = await prisma.vendors.count({ where: { founding: true } });
+      const set = (await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: taken + 1, open: true }).expect(200)).body;
+      expect(set).toEqual({ total: taken + 1, open: true, taken, left: 1 });
+      expect((await http().get('/api/public/plans').expect(200)).body.founding).toMatchObject({ left: 1, discountPercent: 30, months: 6 });
+      await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: -1, open: true }).expect(400);
+
+      const shops = [];
+      for (let i = 0; i < 2; i++) {
+        const a = await account();
+        const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Founding ${i} ${run}` }).expect(200)).body;
+        vendorIds.push(vendorId);
+        shops.push(vendorId as string);
+      }
+      // both ask for the last spot at once: exactly one gets it
+      const res = await Promise.all(shops.map((id) => plan(adminToken, id, { action: 'activate', plan: 'regular', founding: true })));
+      expect(res.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(res.find((r) => r.status === 409)?.body.code).toBe('founding_full');
+      const winner = res.find((r) => r.status === 200)!.body;
+      expect(winner).toMatchObject({ plan: 'regular', billingCycle: 'monthly', founding: true });
+      expect((await http().get('/api/public/plans').expect(200)).body.founding).toMatchObject({ taken: taken + 1, left: 0 });
+
+      // a founding shop changing plan keeps its spot; closed offer shows 0 left
+      const winnerId = shops[res.findIndex((r) => r.status === 200)];
+      await plan(adminToken, winnerId, { action: 'activate', plan: 'chain', founding: true }).expect(200);
+      await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: 50, open: false }).expect(200);
+      expect((await http().get('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).expect(200)).body.left).toBe(0);
+    } finally {
+      await prisma.platform_settings.update({ where: { key: 'founding' }, data: { value: before.value as object, updated_by: before.updated_by } });
+    }
   });
 
   it('day 30: an unpaid trial shop is deleted with its data, images, logins and only-there customers; nothing else', async () => {

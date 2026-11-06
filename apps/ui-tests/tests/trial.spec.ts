@@ -5,7 +5,7 @@ import { staffMe } from '../lib/fixtures';
 import { mockApi, setLanguage, signIn } from '../lib/mock-api';
 import { KEY_VIEWPORTS } from '../lib/viewports';
 
-/** Self sign-up and the 7-day free trial: sign-up page, trial banner, "trial ended" screen. */
+/** Self sign-up and the 14-day free trial: sign-up page, trial banner, "trial ended" screen. */
 const DAY = 86_400_000;
 
 async function trialMe(page: Page, daysLeft: number) {
@@ -60,7 +60,8 @@ for (const vp of KEY_VIEWPORTS) {
         await signIn(page);
         await page.goto(DASHBOARD + '/');
         if (lang === 'en') await expect(page.getByText('Free trial: 3 days left')).toBeVisible();
-        await expect(page.locator('a[href="https://dvote.co/pricing"]').first()).toBeVisible();
+        // the merchant admin picks a plan on Settings → Billing
+        await expect(page.locator('a[href="/settings?tab=billing"]').first()).toBeVisible();
         await expectGoodLayout(page, testInfo);
       });
 
@@ -85,7 +86,7 @@ test('sign-in page links to the free trial (merchant), and the sign-up page has 
   await setLanguage(page, 'en');
   await mockApi(page, 'vendor_admin');
   await page.goto(DASHBOARD + '/');
-  await page.getByRole('link', { name: 'Start a 7-day free trial' }).click();
+  await page.getByRole('link', { name: 'Start a 14-day free trial' }).click();
   await expect(page).toHaveURL(/\/signup$/);
   for (const id of ['ownerName', 'shopName', 'email', 'phone', 'password']) await expect(page.locator(`#${id}`)).toBeVisible();
 });

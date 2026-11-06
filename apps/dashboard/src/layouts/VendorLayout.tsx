@@ -14,6 +14,7 @@ import {
   SettingsIcon as SettingsActive,
 } from '@solar-icons/react/bold-duotone';
 import { useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import {
   GraphUpIcon as ChartLine,
   QuestionCircleIcon as CircleHelp,
@@ -42,6 +43,7 @@ import { t } from '../i18n';
 import { config } from '../lib/config';
 import { StorefrontPreviewDialog } from '../pages/my/storefront-editor';
 import { EyeIcon as Eye } from '@solar-icons/react/linear';
+import { useHasFeature } from '../lib/entitlements';
 
 /** The signed-in vendor account (only call inside the vendor routes). */
 export function useMe(): StaffMe {
@@ -113,6 +115,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
   };
   const cashier = me.role === 'staff';
   const viewer = me.role === 'viewer'; // read-only: no till, no team
+  const hasInsights = useHasFeature('insights');
   const nav: NavItem[] = cashier
     ? [till]
     : [
@@ -179,6 +182,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
           activeIcon: ChartLineActive,
           label: t('nav.insights'),
           group: t('nav.workspaceGroup'),
+          locked: !hasInsights,
         },
         {
           to: '/customers',
@@ -244,6 +248,7 @@ export function VendorLayout({ children }: { children: ReactNode }) {
       }}
     >
       <TrialBanner />
+      <OverdueBanner />
       {children}
     </SideLayout>
   );
@@ -251,7 +256,9 @@ export function VendorLayout({ children }: { children: ReactNode }) {
 
 /** A self sign-up shop on its free trial: days left and the way to the plans (dvote.co/pricing). */
 function TrialBanner() {
-  const plan = useMe().vendor.plan;
+  const me = useMe();
+  const plan = me.vendor.plan;
+  const workspace = useWorkspace();
   if (plan?.status !== 'trial' || !plan.trialEndsAt) return null;
   const days = Math.max(0, Math.ceil((Date.parse(plan.trialEndsAt) - Date.now()) / 86_400_000));
   return (
@@ -260,9 +267,34 @@ function TrialBanner() {
         <span className="font-semibold">{days === 0 ? t('trial.lastDay') : t('trial.daysLeft', { count: days })}</span>
         <span className="text-muted-foreground"> · {t('trial.banner')}</span>
       </p>
-      <a href={`${config.landingUrl}/pricing`} className="inline-flex min-h-8 items-center font-semibold text-brand-text underline-offset-4 hover:underline">
-        {t('trial.seePlans')}
-      </a>
+      {me.role === 'vendor_admin' && !workspace ? (
+        <Link to="/settings?tab=billing" className="inline-flex min-h-8 items-center font-semibold text-brand-text underline-offset-4 hover:underline">
+          {t('trial.seePlans')}
+        </Link>
+      ) : (
+        <a href={`${config.landingUrl}/pricing`} className="inline-flex min-h-8 items-center font-semibold text-brand-text underline-offset-4 hover:underline">
+          {t('trial.seePlans')}
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** A paid period that ran out (the 7 grace days before the dashboard locks). */
+function OverdueBanner() {
+  const me = useMe();
+  const workspace = useWorkspace();
+  const paidUntil = me.vendor.plan?.status === 'active' ? me.vendor.plan.paidUntil : null;
+  if (!paidUntil || Date.parse(paidUntil) > Date.now()) return null;
+  const locks = dayjs(paidUntil).add(7, 'day').format('D MMMM');
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+      <p className="font-semibold text-destructive">{t('billing.overdueBanner', { date: locks })}</p>
+      {me.role === 'vendor_admin' && !workspace ? (
+        <Link to="/settings?tab=billing" className="inline-flex min-h-8 items-center font-semibold underline-offset-4 hover:underline">
+          {t('billing.openBilling')}
+        </Link>
+      ) : null}
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { errorMessage, type VendorImage } from '../../lib/api';
 import type { VendorScope } from '../../lib/scope';
 import { t } from '../../i18n';
+import { LimitNote } from '../../components/plan-lock';
+import { useEntitlements } from '../../lib/entitlements';
 
 export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/heic';
 
@@ -25,16 +27,21 @@ const BRANCH_TILE = 'aspect-[4/3] w-full';
 /** Menu pages, shown on the shop page in order. (Branch photos live on the Branches page.) */
 export function ImagesTab({ scope }: { scope: VendorScope }) {
   const { data: images, isLoading, error } = useQuery({ queryKey: ['images', scope.key], queryFn: () => scope.images() });
+  // the plan may allow fewer menu pages (Regular: 3)
+  const planMax = useEntitlements()?.limits.menuImages ?? null;
+  const max = planMax === null ? MAX_MENU_IMAGES : Math.min(planMax, MAX_MENU_IMAGES);
+  const menu = (images ?? []).filter((i) => i.kind === 'menu');
 
   return (
     <div className="grid gap-8">
       <ErrorAlert error={error} />
+      {scope.can.editVendor && images ? <LimitNote limit="menuImages" used={menu.length} /> : null}
       <Section
         title={t('images.menuPages')}
-        hint={t('images.menuHint', { max: MAX_MENU_IMAGES })}
+        hint={t('images.menuHint', { max })}
         scope={scope}
         kind="menu"
-        max={MAX_MENU_IMAGES}
+        max={max}
         canEdit={scope.can.editVendor}
         images={(images ?? []).filter((i) => i.kind === 'menu')}
         loading={isLoading}

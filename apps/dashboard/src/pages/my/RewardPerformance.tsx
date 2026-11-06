@@ -11,6 +11,7 @@ import { num } from '../../components/PageHeader';
 import { rangeText } from '../../components/PeriodFilter';
 import { type RewardPerformance as Performance } from '../../lib/api';
 import { t } from '../../i18n';
+import { ltr } from '../../lib/card-look';
 import { Thumb } from './MyRedemptions';
 
 /**
@@ -60,7 +61,7 @@ export function RewardPerformance({ query, money }: { query: { from?: string; to
                   {money(held.worth)}
                   <Sub>
                     {t('insights.rewards.worthRate', {
-                      spend: money(held.rate.spendAmount),
+                      spend: ltr(money(held.rate.spendAmount)),
                       points: num(held.rate.pointsPerSpend),
                     })}
                   </Sub>

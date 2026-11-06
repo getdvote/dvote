@@ -101,6 +101,9 @@ BEGIN
   RAISE NOTICE 'Cards deleted: %', n;
   DELETE FROM point_rules      WHERE vendor_id = v;
   DELETE FROM rewards          WHERE vendor_id = v;
+  IF to_regclass('public.scanner_pairings') IS NOT NULL THEN
+    DELETE FROM scanner_pairings WHERE vendor_id = v;
+  END IF;
   DELETE FROM staff_users      WHERE vendor_id = v;
   DELETE FROM branches         WHERE vendor_id = v;
   DELETE FROM vendors          WHERE id = v;

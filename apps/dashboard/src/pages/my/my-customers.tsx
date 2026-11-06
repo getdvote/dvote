@@ -27,6 +27,9 @@ import { localeOf, t } from '../../i18n';
 import { formatEgyptianMobile } from '../../lib/phone';
 import { BrandIllustration } from '../../components/BrandArt';
 import { CustomSegmentBadge, exportCustomers, SegmentBadge, segmentLabel, Segmentation, SEGMENTS, segmentText } from './customer-segments';
+import { PlanChip } from '../../components/plan-lock';
+import { WorkspaceLink as Link } from '../../lib/vendor-workspace';
+import { useHasFeature } from '../../lib/entitlements';
 
 const PAGE_SIZE = 25;
 const date = (value: string | null) =>
@@ -81,6 +84,7 @@ export function MyCustomers() {
     pageSize: PAGE_SIZE,
   };
   const [exporting, setExporting] = useState(false);
+  const canExport = useHasFeature('customer_export');
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['merchant-customers', me.id, vendor.id, query],
     queryFn: () => vendorApi.customers(query),
@@ -217,12 +221,21 @@ export function MyCustomers() {
                   </Select>
                   <div className="flex items-center gap-3">
                     <p className="text-xs text-muted-foreground">{data ? t('customers.matching', { n: data.total }) : t('customers.loading')}</p>
-                    {isAdmin && (
-                      <Button variant="outline" size="sm" disabled={exporting || !data?.total} onClick={exportList}>
-                        {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-                        {t('customers.exportList')}
-                      </Button>
-                    )}
+                    {isAdmin &&
+                      (canExport ? (
+                        <Button variant="outline" size="sm" disabled={exporting || !data?.total} onClick={exportList}>
+                          {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+                          {t('customers.exportList')}
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to="/settings?tab=billing">
+                            <Download />
+                            {t('customers.exportList')}
+                            <PlanChip feature="customer_export" />
+                          </Link>
+                        </Button>
+                      ))}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 p-4">

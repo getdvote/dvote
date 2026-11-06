@@ -9,6 +9,7 @@ import { CreateRewardDto, RewardResponseDto, UpdateRewardDto } from './dto/rewar
 import { ClearSoldOutQueryDto, SetSoldOutDto, SoldOutResponseDto } from './dto/sold-out.dto';
 import { RewardSoldOutsService } from './reward-sold-outs.service';
 import { RewardsService } from './rewards.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 /** My vendor's reward catalogue (vendor dashboard). Reading: admins + managers; changing: vendor_admin. */
 @VendorApi('vendor: rewards')
@@ -17,6 +18,7 @@ export class VendorRewardsController {
   constructor(
     private readonly rewards: RewardsService,
     private readonly soldOuts: RewardSoldOutsService,
+    private readonly plans: EntitlementsService,
   ) {}
 
   @Get()
@@ -65,6 +67,8 @@ export class VendorRewardsController {
   @StaffRoles('vendor_admin')
   @ApiCreatedResponse({ type: RewardResponseDto })
   async create(@CurrentStaff() ctx: StaffContext, @Body() dto: CreateRewardDto): Promise<RewardResponseDto> {
+    // plan limit on active rewards (a new reward is active)
+    await this.plans.checkLimit(ctx, 'activeRewards');
     return RewardResponseDto.from(await this.rewards.create(ctx.vendorId, dto));
   }
 
@@ -77,6 +81,10 @@ export class VendorRewardsController {
     @Param('id', ParseUuidPipe) id: string,
     @Body() dto: UpdateRewardDto,
   ): Promise<RewardResponseDto> {
+    // switching an archived reward back on counts against the plan's active-reward limit
+    if (dto.status === 'active' && (await this.rewards.list(ctx.vendorId)).some((r) => r.id === id && r.status !== 'active')) {
+      await this.plans.checkLimit(ctx, 'activeRewards');
+    }
     return RewardResponseDto.from(await this.rewards.update(id, dto, ctx.vendorId));
   }
 

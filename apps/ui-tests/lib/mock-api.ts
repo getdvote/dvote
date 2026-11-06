@@ -12,6 +12,8 @@ type Handler = (url: URL, method: string) => unknown;
 const routes: [string, RegExp, Handler][] = [
   // vendor (merchant) API
   ['GET', /^\/api\/vendor\/staff\/me$/, () => null], // filled per role below
+  ['GET', /^\/api\/vendor\/billing$/, () => f.billing],
+  ['GET', /^\/api\/admin\/settings\/founding$/, () => ({ total: 10, open: true, taken: 3, left: 7 })],
   ['GET', /^\/api\/vendor\/profile$/, () => f.vendor],
   ['GET', /^\/api\/vendor\/profile\/username$/, () => ({ available: true })],
   ['GET', /^\/api\/vendor\/summary$/, () => f.summary],
@@ -23,6 +25,7 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/vendor\/rewards\/sold-out$/, () => f.soldOuts],
   ['GET', /^\/api\/vendor\/images$/, () => f.images],
   ['GET', /^\/api\/vendor\/staff$/, () => f.staff],
+  ['GET', /^\/api\/vendor\/scanner-pairings$/, () => []],
   ['GET', /^\/api\/vendor\/scans\/today$/, () => ({ collects: 128, redemptions: 14 })],
   ['GET', /^\/api\/vendor\/events$/, () => f.activity],
   ['GET', /^\/api\/vendor\/redemptions$/, () => f.redemptions],
@@ -74,7 +77,9 @@ const json = (route: Route, status: number, body: unknown) =>
   });
 
 /** Answers every call to the fake API and Supabase hosts. */
-export async function mockApi(page: Page, role: Role) {
+export async function mockApi(page: Page, role: Role, opts: { firstVisit?: boolean } = {}) {
+  // the app starts in Arabic; these tests read English labels unless they choose a language
+  if (!opts.firstVisit) await page.addInitScript(() => { if (!window.localStorage.getItem('dvote-dashboard-language')) window.localStorage.setItem('dvote-dashboard-language', 'en'); });
   await page.route('http://supabase.mock/**', (route) => json(route, 200, {}));
   await page.route('http://api.mock/**', async (route) => {
     const req = route.request();

@@ -39,6 +39,8 @@ import {
   type SegmentRuleField,
 } from '../../lib/api';
 import { t } from '../../i18n';
+import { PlanNotice } from '../../components/plan-lock';
+import { useHasFeature } from '../../lib/entitlements';
 
 /** Built-in segments in display order (same order as the API). */
 export const SEGMENTS: {
@@ -136,7 +138,7 @@ function ExportButton({ run }: { run: () => Promise<void> }) {
     <Button
       variant="link"
       size="sm"
-      className="h-auto px-0"
+      className="h-auto min-h-6 px-0"
       disabled={busy}
       onClick={() => {
         setBusy(true);
@@ -215,18 +217,21 @@ export function Segmentation({
   const [editing, setEditing] = useState<CustomSegment | 'new' | null>(null);
   const [deleting, setDeleting] = useState<CustomSegment | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ['merchant-customers'] });
+  // custom segments and CSV export are plan features: what was made stays, and counts keep working
+  const canCustom = useHasFeature('custom_segments');
+  const canExport = useHasFeature('customer_export');
 
   const seeActions = (see: () => void, message: string, exp: () => Promise<void>) => (
     <>
-      <Button variant="link" size="sm" className="h-auto px-0" onClick={see}>
+      <Button variant="link" size="sm" className="h-auto min-h-6 px-0" onClick={see}>
         {t('customers.seeThem')}
       </Button>
-      <Button variant="link" size="sm" className="h-auto px-0" asChild>
+      <Button variant="link" size="sm" className="h-auto min-h-6 px-0" asChild>
         <Link to={message}>
           <Send /> {t('customers.sendMessage')}
         </Link>
       </Button>
-      {canEdit ? <ExportButton run={exp} /> : null}
+      {canEdit && canExport ? <ExportButton run={exp} /> : null}
     </>
   );
 
@@ -262,12 +267,13 @@ export function Segmentation({
             <h2 className="font-semibold">{t('customers.custom')}</h2>
             <p className="text-sm text-muted-foreground">{t('customers.customHint')}</p>
           </div>
-          {canEdit ? (
+          {canEdit && canCustom ? (
             <Button onClick={() => setEditing('new')}>
               <Plus /> {t('customers.newSegment')}
             </Button>
           ) : null}
         </div>
+        {!canCustom ? <PlanNotice feature="custom_segments" /> : null}
         {data && !data.customSegments.length ? (
           <Card className="items-center gap-2 border-dashed p-8 text-center">
             <UsersGroup className="size-8 text-muted-foreground" aria-hidden />
@@ -290,7 +296,7 @@ export function Segmentation({
                   () => exportCustomers({ branchId, customSegment: s.id }, s.name, vendorApi),
                 )}
                 menu={
-                  canEdit ? (
+                  canEdit && canCustom ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon-sm" aria-label={t('customers.editSegment')}>

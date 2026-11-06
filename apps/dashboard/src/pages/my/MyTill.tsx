@@ -22,7 +22,9 @@ import { Segmented } from '../../components/segmented';
 import { num } from '../../components/PageHeader';
 import { CameraBlockedHelp, useCameraGranted } from '../../components/camera-help';
 import { QrScanner, type CameraProblem } from '../../components/QrScanner';
+import { PairPhone } from './pair-phone';
 import { errorText, t } from '../../i18n';
+import { ltrMoney } from '../../lib/card-look';
 import { useMe, useMyScope } from '../../layouts/VendorLayout';
 import { ApiError, errorMessage, type RedeemPreview, type StaffMe, type WalletCardPreview } from '../../lib/api';
 import { branchState, OPENING_HOURS, stateLabel, type BranchState } from '../../lib/hours';
@@ -59,13 +61,20 @@ function estimatePoints(minor: number, rule: Rule): number {
 
 const money = (v: string) => v.replace(/\.00$/, '');
 
+/** "10 EGP = 1 points". The amount stays one left-to-right run inside the Arabic line. */
+function ruleLine(rule: Rule, currency: string) {
+  const spend = ltrMoney(money(rule.spendAmount), currency);
+  return t('till.rule', { spend: spend.amount, currency: spend.currency, points: rule.pointsPerSpend });
+}
+
 /**
- * The till: the staff app's scan → bill amount / confirm reward → done, in the dashboard.
+ * The till: the scan → bill amount / confirm reward → done, in the dashboard.
  * Every account can use it (plain staff get only this page). The camera reads the QR, or a
  * hand scanner / the keyboard types it. Vendor and branch come from the signed-in account;
  * a merchant admin picks the branch they are working at (remembered in this browser).
+ * `phone`: a paired phone, which can only scan, so no link to other pages or pairing.
  */
-export function MyTill() {
+export function MyTill({ phone = false }: { phone?: boolean }) {
   const vendorApi = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
@@ -100,7 +109,7 @@ export function MyTill() {
   const { data: branches } = useQuery({
     queryKey: ['branches', scope.key],
     queryFn: () => scope.branches(),
-    enabled: OPENING_HOURS && me.role !== 'staff',
+    enabled: OPENING_HOURS && me.role !== 'staff' && !phone,
     refetchInterval: 60_000,
   });
   const branch = branches?.find((b) => b.id === branchId);
@@ -117,7 +126,7 @@ export function MyTill() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-sm text-muted-foreground">{me.vendor.name}</div>
-          <h1 className="text-xl font-semibold tracking-tight">{t('till.title')}</h1>
+          <h1 className="text-xl font-black tracking-tight">{t('till.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
           {mustPick ? (
@@ -166,37 +175,46 @@ export function MyTill() {
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
         {me.activeRule
-          ? t('till.rule', {
-              spend: money(me.activeRule.spendAmount),
-              currency: me.vendor.currency,
-              points: me.activeRule.pointsPerSpend,
-            })
+          ? ruleLine(me.activeRule, me.vendor.currency)
           : t('till.noRule')}
       </p>
 
-      <Link
-        to={`/activity?period=today&staff=${me.id}`}
-        className="mt-10 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {/* nothing scanned yet today: the idle till gets its scene */}
-        {today && !today.collects && !today.redemptions ? <BrandIllustration name="scan-and-earn" className="w-20 sm:w-24" /> : null}
-        <div className="min-w-0">
-          <div className="font-medium">
-            {t('till.today', {
-              collects: num(today?.collects ?? 0),
-              redemptions: num(today?.redemptions ?? 0),
-            })}
-          </div>
-          <div className="text-sm text-muted-foreground">{t('till.todayBy')}</div>
+      {phone ? null : <PairPhone branchId={branchId} />}
+
+      {phone ? (
+        <div className="mt-10 flex items-center gap-4 rounded-xl border bg-card px-5 py-4">
+          <TodayTally today={today} />
         </div>
-      </Link>
+      ) : (
+        <Link to={`/activity?period=today&staff=${me.id}`} className="mt-10 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <TodayTally today={today} />
+        </Link>
+      )}
 
       <Dialog open={!!step} onOpenChange={(o) => (o ? null : setStep(null))}>
         <DialogContent className="sm:max-w-md">
-          {step ? <TillFlow key={step.kind} step={step} setStep={setStep} me={me} branchId={branchId} onDone={done} /> : null}
+          {step ? <TillFlow key={step.kind} step={step} setStep={setStep} me={me} branchId={branchId} onDone={done} phone={phone} /> : null}
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function TodayTally({ today }: { today: { collects: number; redemptions: number } | undefined }) {
+  return (
+    <>
+          {/* nothing scanned yet today: the idle till gets its scene */}
+          {today && !today.collects && !today.redemptions ? <BrandIllustration name="scan-and-earn" className="w-20 sm:w-24" /> : null}
+          <div className="min-w-0">
+            <div className="font-medium">
+              {t('till.today', {
+                collects: num(today?.collects ?? 0),
+                redemptions: num(today?.redemptions ?? 0),
+              })}
+            </div>
+            <div className="text-sm text-muted-foreground">{t('till.todayBy')}</div>
+          </div>
+    </>
   );
 }
 
@@ -250,18 +268,20 @@ function TillFlow({
   me,
   branchId,
   onDone,
+  phone,
 }: {
   step: Step;
   setStep: (s: Step | null) => void;
   me: StaffMe;
   branchId: string | null;
   onDone: () => void;
+  phone?: boolean;
 }) {
   // Vendor admins have no branch of their own: send the one picked on the till.
   const sendBranch = me.branch ? undefined : (branchId ?? undefined);
   switch (step.kind) {
     case 'scan':
-      return <ScanStep step={step} setStep={setStep} branchId={sendBranch} />;
+      return <ScanStep step={step} setStep={setStep} branchId={sendBranch} phone={phone} />;
     case 'amount':
       return (
         <AmountStep code={step.code} rule={me.activeRule} currency={me.vendor.currency} branchId={sendBranch} setStep={setStep} onDone={onDone} />
@@ -305,9 +325,9 @@ const FULL_CODE = /^dvote:(q1|c1):[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url,
  * Read the customer's QR: with a hand scanner (first and default: most cafés have one and no
  * camera at the till) or the computer's camera. The scanner "types" into a field that keeps focus.
  */
-function ScanStep({ step, setStep, branchId }: { step: Extract<Step, { kind: 'scan' }>; setStep: (s: Step) => void; branchId?: string }) {
+function ScanStep({ step, setStep, branchId, phone }: { phone?: boolean; step: Extract<Step, { kind: 'scan' }>; setStep: (s: Step) => void; branchId?: string }) {
   const vendorApi = useVendorApi();
-  const [mode, setMode] = useState<ScanMode>('scanner');
+  const [mode, setMode] = useState<ScanMode>(phone ? 'camera' : 'scanner');
   const [typed, setTyped] = useState('');
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -552,13 +572,7 @@ function AmountStep({
       <DialogHeader>
         <DialogTitle>{t('till.amountTitle')}</DialogTitle>
         {rule ? (
-          <DialogDescription>
-            {t('till.rule', {
-              spend: money(rule.spendAmount),
-              currency,
-              points: rule.pointsPerSpend,
-            })}
-          </DialogDescription>
+          <DialogDescription>{ruleLine(rule, currency)}</DialogDescription>
         ) : null}
       </DialogHeader>
       <div className="relative">

@@ -3,7 +3,7 @@
 Supabase has one template per email type (not one per language), so each email carries both languages.
 Paste them in **Supabase → Authentication → Emails → Templates**. Keep the `{{ … }}` parts exactly as they are: `{{ .ConfirmationURL }}` is the link, `{{ .Token }}` the code.
 
-All six share one dvote layout: ink background with the symbol pattern, electric logo, a white card with an **animated illustration card** (GIF), the headline in Barlow Condensed with the hand-drawn underline, electric button, then the Arabic half, then the "Good things come back." footer.
+All six share one dvote layout: espresso background with the symbol pattern, orange logo (coffee palette, brand v2.0), a white card with an **animated illustration card** (GIF), the headline in Barlow Condensed with the hand-drawn underline, orange button with espresso text, then the Arabic half, then the "Good things come back." footer.
 
 | Template in Supabase | Subject (paste in "Subject heading") | Body (paste the whole file in "Message body") |
 |---|---|---|

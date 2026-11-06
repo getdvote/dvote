@@ -123,7 +123,7 @@ export function FeedbackPage() {
           )}
           <Link
             to={back}
-            className="mt-6 block text-center text-brand underline"
+            className="mt-6 block text-center text-brand-text underline"
           >
             {t("feedback.back")}
           </Link>

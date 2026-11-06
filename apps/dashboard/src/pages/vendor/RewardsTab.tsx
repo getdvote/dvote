@@ -18,6 +18,7 @@ import { IMAGE_ACCEPT } from './ImagesTab';
 import { RewardAvailability } from './RewardAvailability';
 import { TabToolbar } from './TabToolbar';
 import { t } from '../../i18n';
+import { LimitNote } from '../../components/plan-lock';
 
 /** The reward catalogue (English + Arabic): add, edit price/texts, drag rows to reorder, archive / restore. */
 export function RewardsTab({ scope }: { scope: VendorScope }) {
@@ -76,6 +77,9 @@ export function RewardsTab({ scope }: { scope: VendorScope }) {
           </Button>
         ) : null}
       </TabToolbar>
+      {scope.can.editVendor && data ? (
+        <LimitNote limit="activeRewards" used={data.filter((r) => r.status === 'active').length} className="mb-4" />
+      ) : null}
       <ErrorAlert error={error} className="mb-4" />
       <div className="overflow-hidden rounded-lg border">
         <Table>
@@ -318,7 +322,7 @@ function RewardDialog({ scope, reward, onClose }: { scope: VendorScope; reward: 
             <Input id="reward-name" name="name" dir="ltr" required maxLength={120} pattern=".*\S.*" defaultValue={current?.name} placeholder="Free coffee" autoFocus />
           </Field>
           <Field label={t('rewards.nameAr')} htmlFor="reward-name-ar">
-            <Input id="reward-name-ar" name="nameAr" dir="rtl" maxLength={120} defaultValue={current?.nameAr ?? ''} placeholder="قهوة مجانية" />
+            <Input id="reward-name-ar" name="nameAr" dir="rtl" maxLength={120} defaultValue={current?.nameAr ?? ''} placeholder="قهوة مجانًا" />
           </Field>
           <Field label={t('rewards.descEn')} htmlFor="reward-desc">
             <Textarea id="reward-desc" name="description" dir="ltr" rows={2} maxLength={500} defaultValue={current?.description ?? ''} placeholder="Any coffee, any size" />

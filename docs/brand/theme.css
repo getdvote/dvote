@@ -1,0 +1,152 @@
+/*
+ * dvote brand v3.0. Hero colour decided 2026-11-05. Not applied to any app yet.
+ * Same token names as apps/dashboard/src/styles.css, so moving to v3 means changing values.
+ * Every approved pair is checked by contrast-audit.py.
+ *
+ * Fonts: DM Sans (Latin) and Alexandria (Arabic, and tabular numbers), both 300 400 500 600 700 900.
+ */
+
+:root {
+    --app-font: "DM Sans", "Alexandria", -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    /* surfaces and type */
+    --background: #F8F4F1; /* froth */
+    --foreground: #18100F; /* espresso */
+    --card: #FFFFFF;
+    --card-foreground: #18100F;
+    --popover: #FFFFFF;
+    --popover-foreground: #18100F;
+
+    /* primary = the strong neutral, as in v2 */
+    --primary: #18100F;
+    --primary-foreground: #F8F4F1;
+    --secondary: #EFE9E3; /* oat, was latte */
+    --secondary-foreground: #18100F;
+    --muted: #F8F4F1;
+    --muted-foreground: #6B5E57; /* taupe */
+    --accent: #EFE9E3; /* hovered rows and menu items */
+    --accent-foreground: #18100F;
+
+    /* lines */
+    --border: #E4DCD4; /* decorative only */
+    --input: #8C7B6E; /* stone: control boundaries, 3:1 or better */
+    --ring: #1F3DFF;
+
+    /* brand = dvote Blue. Fills carry WHITE in light mode (v2 orange carried espresso). */
+    --brand: #1F3DFF;
+    --brand-foreground: #FFFFFF;
+    --brand-hover: #1A36E6;
+    --brand-pressed: #142AB8;
+    --brand-text: #1F3DFF;
+    --brand-soft: #E8EBFF;
+
+    /* status */
+    --success: #1F6B47;
+    --success-soft: #E2EFE7;
+    --warning: #8A5A00;
+    --warning-soft: #FFF1CC;
+    --destructive: #B42318; /* negative meaning only */
+    --destructive-soft: #FEF3F2;
+    --info: #142AB8; /* night blue, was plum */
+    --info-soft: #E8EBFF;
+
+    /* charts: blue leads; every series is 3:1 or better on white */
+    --chart-1: #1F3DFF;
+    --chart-2: #FF5500;
+    --chart-3: #5F2B4B;
+    --chart-4: #1C86D1;
+    --chart-5: #2E8B62;
+
+    --radius: 0.75rem;
+
+    /* a neutral frame and sidebar: blue only marks the active item */
+    --sidebar: #F8F4F1;
+    --sidebar-foreground: #18100F;
+    --sidebar-primary: #E8EBFF;
+    --sidebar-primary-foreground: #1F3DFF;
+    --sidebar-accent: #EFE9E3;
+    --sidebar-accent-foreground: #18100F;
+    --sidebar-border: #E4DCD4;
+    --sidebar-ring: #1F3DFF;
+
+    /* fixed brand colours, same in both themes */
+    --color-blue: #1F3DFF;
+    --color-night: #142AB8;
+    --color-sky: #6EC1FF;
+    --color-orange: #FF5500;
+    --color-egg-yolk: #FFCA48;
+    --color-mint: #B8D9C5;
+    --color-plum: #5F2B4B;
+    --color-paper: #F8F4F1;
+    --color-ink: #18100F;
+
+    /* motion */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-micro: 120ms;
+    --duration-small: 200ms;
+    --duration-medium: 280ms;
+    --duration-large: 400ms;
+    --duration-story: 800ms;
+}
+
+:lang(ar) {
+    --app-font: "Alexandria", "DM Sans", -apple-system, "Segoe UI", Tahoma, sans-serif;
+}
+
+.dark {
+    /* plain neutral greys, raised with lighter colours rather than shadows. dvote Blue is lifted so
+       it reads on dark, and stays a small accent. Status tints stay faint. */
+    --background: #0F0F10;
+    --foreground: #FAFAFA;
+    --card: #18181A;
+    --card-foreground: #FAFAFA;
+    --popover: #1E1E21;
+    --popover-foreground: #FAFAFA;
+    --primary: #FAFAFA;
+    --primary-foreground: #0F0F10;
+    --secondary: #27272A;
+    --secondary-foreground: #FAFAFA;
+    --muted: #27272A;
+    --muted-foreground: #A1A1AA;
+    --accent: #27272A;
+    --accent-foreground: #FAFAFA;
+    --destructive: #FDA29B;
+    --border: #2C2C30;
+    --input: #747478;
+    --ring: #8C9EFF;
+    --brand: #6F86FF;
+    --brand-foreground: #0F0F10;
+    --brand-hover: #8C9EFF;
+    --brand-pressed: #A3B2FF;
+    --brand-text: #8C9EFF;
+    --brand-soft: #25252B;
+    --success: #9CCFB0;
+    --success-soft: #17241D;
+    --warning: #FFCA48;
+    --warning-soft: #2A2310;
+    --destructive-soft: #2D1B1B;
+    --info: #8C9EFF;
+    --info-soft: #25252B;
+    --chart-1: #8C9EFF;
+    --chart-2: #FF5500;
+    --chart-3: #E3A9C9;
+    --chart-4: #6EC1FF;
+    --chart-5: #B8D9C5;
+    --sidebar: #0F0F10;
+    --sidebar-foreground: #FAFAFA;
+    --sidebar-primary: #6F86FF;
+    --sidebar-primary-foreground: #0F0F10;
+    --sidebar-accent: #27272A;
+    --sidebar-accent-foreground: #FAFAFA;
+    --sidebar-border: rgb(255 255 255 / 10%);
+    --sidebar-ring: #8C9EFF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-medium: 1ms;
+        --duration-large: 1ms;
+        --duration-story: 1ms;
+    }
+}

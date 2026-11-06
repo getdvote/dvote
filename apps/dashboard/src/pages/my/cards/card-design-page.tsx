@@ -44,9 +44,24 @@ import { useVendorApi, WorkspaceLink } from '../../../lib/vendor-workspace';
 import { storefrontUrl } from '../storefront-editor';
 import { BackgroundPicker, BilingualField, CardHoursEditor, ColorField } from './card-fields';
 import { CardPreview, type PreviewInput } from './card-preview';
+import { PlanLock } from '../../../components/plan-lock';
+import { useHasFeature } from '../../../lib/entitlements';
+import { PageHeader } from '../../../components/PageHeader';
 
 /** Loyalty → Cards → Design card: the look, the buttons and the back of the card, with a live preview and history. */
+/** The design editor is a plan feature: on Regular the card keeps its current look and the editor is locked. */
 export function CardDesignPage() {
+  const has = useHasFeature('card_design');
+  if (has) return <CardDesignEditor />;
+  return (
+    <>
+      <PageHeader title={t('nav.card')} subtitle={t('planLock.features.card_design')} />
+      <PlanLock feature="card_design" />
+    </>
+  );
+}
+
+function CardDesignEditor() {
   const api = useVendorApi();
   const me = useMe();
   const scope = useMyScope();
@@ -117,7 +132,7 @@ export function CardDesignPage() {
     <div className="pb-24 xl:pb-0">
       <BackLink />
       <div className="mt-2 mb-5">
-        <h1 className="text-2xl font-bold tracking-tight">{t('cards.editor.title')}</h1>
+        <h1 className="text-2xl font-black tracking-tight">{t('cards.editor.title')}</h1>
         <p className="mt-1 text-muted-foreground">{data?.card?.name}</p>
       </div>
       <ErrorAlert error={error} />

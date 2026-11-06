@@ -45,6 +45,7 @@ import {
   GoogleWalletService,
   WalletRequestError,
 } from '../wallet/google-wallet.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 const trim = Transform(({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value,
@@ -128,7 +129,19 @@ export class BroadcastsService
     private readonly prisma: PrismaService,
     private readonly customers: MerchantCustomersService,
     private readonly google: GoogleWalletService,
+    private readonly plans: EntitlementsService,
   ) {}
+
+  /**
+   * The plan's broadcast allowance: Regular 2 a week, Loyal 3 a day, Chain 3 a day per open branch.
+   * With nearby reminders on, one slot is kept for them (as before plans).
+   */
+  private async allowance(vendorId: string): Promise<{ max: number; hours: number }> {
+    const e = await this.plans.of(vendorId);
+    const b = e.limits.broadcasts;
+    const branches = b.perBranch ? Math.max(1, await this.prisma.branches.count({ where: { vendor_id: vendorId, status: 'active' } })) : 1;
+    return { max: b.count * branches, hours: b.windowHours };
+  }
 
   onApplicationBootstrap() {
     // tests run the worker themselves (processPending), scoped to their own shop
@@ -204,12 +217,13 @@ export class BroadcastsService
       if (campaignId) {
         // Serialize submissions for this merchant so two workers cannot reserve the last slot.
         await tx.$queryRaw`SELECT id FROM vendors WHERE id=${ctx.vendorId}::uuid FOR UPDATE`;
+        const allowed = await this.allowance(ctx.vendorId);
         const [quota] = await tx.$queryRaw<{ used: number; nearby: boolean }[]>`
-          SELECT (SELECT count(*)::int FROM wallet_broadcasts b WHERE b.vendor_id=v.id AND b.created_at>now()-interval '24 hours'
+          SELECT (SELECT count(*)::int FROM wallet_broadcasts b WHERE b.vendor_id=v.id AND b.created_at>now()-make_interval(hours => ${allowed.hours}::int)
           AND EXISTS(SELECT 1 FROM wallet_broadcast_recipients r WHERE r.broadcast_id=b.id AND r.status IN ('pending','processing','accepted','unknown'))) AS used,
           v.wallet_nearby_enabled AS nearby FROM vendors v WHERE v.id=${ctx.vendorId}::uuid`;
-        if (quota.used >= (quota.nearby ? 2 : 3))
-          throw new ConflictException({ code: 'broadcast_daily_limit' });
+        if (quota.used >= allowed.max - (quota.nearby ? 1 : 0))
+          throw new ConflictException({ code: 'broadcast_daily_limit', max: allowed.max, windowHours: allowed.hours });
       }
       const [row] = await tx.$queryRaw<{ id: string }[]>`
         INSERT INTO wallet_broadcasts(vendor_id,created_by,created_by_admin_id,title,body,audience,idempotency_key)
@@ -250,6 +264,8 @@ export class BroadcastsService
     return row;
   }
   async setNearby(ctx: StaffContext, enabled: boolean, branchIds?: string[]) {
+    // nearby reminders are a plan feature; switching them off is always allowed
+    if (enabled) await this.plans.require(ctx, 'nearby');
     if (branchIds) {
       const valid = await this.prisma.branches.findMany({
         where: {
@@ -276,18 +292,21 @@ export class BroadcastsService
   }
 
   async quota(ctx: StaffContext) {
+    const allowed = await this.allowance(ctx.vendorId);
     const [row] = await this.prisma.$queryRaw<
       { used: number; nearby: boolean; resetsAt: Date | null }[]
     >`
-      SELECT LEAST(3,count(DISTINCT b.id)::int) AS used,
+      SELECT LEAST(${allowed.max}::int,count(DISTINCT b.id)::int) AS used,
       (SELECT wallet_nearby_enabled FROM vendors WHERE id=${ctx.vendorId}::uuid) AS nearby,
-      min(b.created_at)+interval '24 hours' AS "resetsAt"
+      min(b.created_at)+make_interval(hours => ${allowed.hours}::int) AS "resetsAt"
       FROM wallet_broadcasts b WHERE b.vendor_id=${ctx.vendorId}::uuid
-      AND b.created_at > now()-interval '24 hours'
+      AND b.created_at > now()-make_interval(hours => ${allowed.hours}::int)
       AND EXISTS(SELECT 1 FROM wallet_broadcast_recipients r WHERE r.broadcast_id=b.id AND r.status IN ('pending','processing','accepted','unknown'))`;
     return {
       ...row,
-      remaining: Math.max(0, 3 - row.used - (row.nearby ? 1 : 0)),
+      max: allowed.max,
+      windowHours: allowed.hours,
+      remaining: Math.max(0, allowed.max - row.used - (row.nearby ? 1 : 0)),
     };
   }
 

@@ -6,7 +6,7 @@ import {
   UsersGroupRoundedIcon,
 } from '@solar-icons/react/linear';
 import type { ComponentType } from 'react';
-import { useWorkspaceSearchParams as useSearchParams } from '../../lib/vendor-workspace';
+import { useWorkspace, useWorkspaceSearchParams as useSearchParams } from '../../lib/vendor-workspace';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { t } from '../../i18n';
 import { StaffTab } from '../vendor/StaffTab';
 import { GeneralSettings } from './general-settings';
 import { BrandStyleEditor } from './brand-style';
+import { BillingSettings } from './billing-settings';
 import { ProfileEditor } from './MyProfile';
 
 const TABS: { key: SettingsTab; icon: ComponentType<{ className?: string }> }[] = [
@@ -34,16 +35,20 @@ type SettingsTab =
 
 /**
  * Settings, in tabs (?tab=…). Team is the team page (invite with a role, the sign-in link) and
- * Branding the shop profile (merchant admins only), General the account-wide choices; Billing is
- * empty for now. Viewers
- * (read-only) don't get Team.
+ * Branding the shop profile (merchant admins only), General the account-wide choices, Billing the
+ * plan and payments (merchant admins only; not in the dvote team's merchant workspace, which uses
+ * the shop's admin Plan box). Viewers (read-only) don't get Team.
  */
 export function MySettings() {
   const me = useMe();
   const scope = useMyScope();
+  const workspace = useWorkspace();
   const [params, setParams] = useSearchParams();
   const tabs = TABS.filter(
-    (x) => (x.key !== 'team' || me.role !== 'viewer') && (x.key !== 'branding' || me.role === 'vendor_admin'),
+    (x) =>
+      (x.key !== 'team' || me.role !== 'viewer') &&
+      (x.key !== 'branding' || me.role === 'vendor_admin') &&
+      (x.key !== 'billing' || (me.role === 'vendor_admin' && !workspace)),
   );
   const tab = tabs.find((x) => x.key === params.get('tab'))?.key ?? 'general';
   const go = (v: string) => setParams(v === 'general' ? {} : { tab: v }, { replace: true });
@@ -85,6 +90,8 @@ export function MySettings() {
                 <ProfileEditor />
                 <BrandStyleEditor />
               </div>
+            ) : x.key === 'billing' ? (
+              <BillingSettings />
             ) : (
               <Soon title={t(`settings.tabs.${x.key}`)} icon={x.icon} />
             )}

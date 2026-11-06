@@ -57,7 +57,7 @@ export function JoinPage() {
   };
 
   return (
-    <Page>
+    <Page branding={vendor.poweredBy !== false}>
       <Link to={`/${vendor.slug}${keep.toString() ? `?${keep}` : ''}`} className="-mt-2 mb-2 inline-flex max-w-full items-center gap-1 py-1 text-[15px] text-muted hover:text-ink">
         <ArrowLeft className="size-4 rtl:rotate-180" /> {vendor.name}
       </Link>

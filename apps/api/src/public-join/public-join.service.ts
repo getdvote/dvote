@@ -10,6 +10,7 @@ import { BRAND_FONTS, readStorefront, type BrandFont, type PageStyle } from '../
 import { readDesign } from '../loyalty-cards/card-design';
 import type { PublicCardLookDto } from './dto/public-join.dto';
 import type { JoinResultDto, JoinVendorDto, PublicCardDto, PublicVendorDto } from './dto/public-join.dto';
+import { entitlementsFor } from '../plans/entitlements';
 
 /** Letters and digits that can't be confused when read aloud or typed (no 0/O, 1/I/L). */
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -114,6 +115,8 @@ export class PublicJoinService {
       // a branch's own storefront when the page is opened for it (?b=), else the shop's
       sections: readStorefront(v.branches.find((b) => b.id === branchId)?.storefront ?? v.storefront).sections,
       menu: v.vendor_images.map((i) => this.storage.publicUrl(BUCKETS.vendors, i.storage_path)),
+      // plans without remove_branding show "Powered by dvote" on the storefront
+      poweredBy: !entitlementsFor(v).features.remove_branding,
     };
   }
 

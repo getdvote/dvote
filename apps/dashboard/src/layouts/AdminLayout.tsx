@@ -71,6 +71,7 @@ import { ThemeSwitch } from '../components/ThemeToggle';
 import { LanguageSwitch } from '../components/LanguageToggle';
 import { t, useEnglishOnly, useI18n } from '../i18n';
 import { useAuth } from '../lib/auth';
+import { LockKeyholeMinimalisticIcon } from '@solar-icons/react/linear';
 
 function NavIcon({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = active ? (item.activeIcon ?? item.icon) : item.icon;
@@ -87,6 +88,8 @@ export interface NavItem {
   /** Section heading; items with the same group sit together under it (none = top section). */
   group?: string;
   /** A small button at the end of the row (e.g. preview), hidden when the sidebar is collapsed. */
+  /** Not in the merchant's plan: a small lock after the label (the page explains and links to Billing). */
+  locked?: boolean;
   action?: {
     icon: ComponentType<{ className?: string }>;
     label: string;
@@ -180,6 +183,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                   ) : null}
                   <NavIcon item={n} active={isActive(n.to)} />
                   <span data-nav-label>{n.label}</span>
+                  {n.locked ? <LockKeyholeMinimalisticIcon data-nav-label className="ms-auto size-3.5 opacity-60" aria-label={t('planLock.locked')} /> : null}
                 </NavLink>
               </SidebarMenuButton>
               {n.action ? (
@@ -247,11 +251,11 @@ export function SideLayout({
     // motion follows the computer's "reduce motion" setting
     <MotionConfig reducedMotion="user">
       <SidebarProvider className="h-dvh min-h-0 overflow-hidden bg-sidebar">
-        {/* `dark`: the sidebar always uses the dark tokens, whatever the theme */}
-        <Sidebar side={rtl ? 'right' : 'left'} variant="inset" collapsible="icon" className="dark">
+        {/* `dark` + `sidebar-neutral`: a neutral panel in the light theme, the dark tokens in the dark theme */}
+        <Sidebar side={rtl ? 'right' : 'left'} variant="inset" collapsible="icon" className="dark sidebar-neutral">
           <SidebarHeader className="flex-row items-center gap-2 px-4 pt-4 pb-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0">
-            <DvoteLogo spinOnHover height={24} className="text-foreground group-data-[collapsible=icon]:hidden" />
-            <DvoteLogo spinOnHover height={26} wordmark={false} className="hidden text-foreground group-data-[collapsible=icon]:block" />
+            <DvoteLogo spinOnHover height={24} markColor="var(--brand)" className="text-foreground group-data-[collapsible=icon]:hidden" />
+            <DvoteLogo spinOnHover height={26} wordmark={false} markColor="var(--brand)" className="hidden text-foreground group-data-[collapsible=icon]:block" />
             {badge ? (
               <Badge variant="brand" className="font-bold tracking-wide group-data-[collapsible=icon]:hidden">
                 {badge}
@@ -288,7 +292,7 @@ export function SideLayout({
             languageSwitch={languageSwitch}
             isActive={isActive}
           />
-          {/* phones: the white page sits in the dark frame with rounded top corners */}
+          {/* phones: the white page sits in the neutral frame with rounded top corners */}
           <div
             ref={contentRef}
             className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-card motion-safe:scroll-smooth max-md:rounded-t-2xl max-md:pt-5 md:bg-transparent"
@@ -503,7 +507,7 @@ function PhoneSheet({ open, onOpenChange, title, children }: { open: boolean; on
 }
 
 /**
- * Phones only: the dark band at the top, part of the dark frame the white page sits in. The dvote
+ * Phones only: the band at the top, part of the neutral frame the white page sits in. The dvote
  * logo on one side, the account toggle on the other; the toggle opens the account sheet (account
  * pages, links, language, theme, sign out).
  */
@@ -527,8 +531,8 @@ function MobileHeader({
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   return (
     <>
-      <header className="dark flex h-16 shrink-0 items-center justify-between gap-3 px-4 text-foreground md:hidden">
-        <DvoteLogo height={24} />
+      <header className="dark sidebar-neutral flex h-16 shrink-0 items-center justify-between gap-3 px-4 text-foreground md:hidden">
+        <DvoteLogo height={24} markColor="var(--brand)" />
         <button
           type="button"
           onClick={() => setOpen(true)}

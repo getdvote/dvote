@@ -14,6 +14,8 @@ import { errorMessage, type PageStyle, type Vendor } from '../../lib/api';
 import { useCardColors } from '../../lib/use-card-colors';
 import { BRAND_FONTS, loadFonts, PAGE_STYLES } from '../../lib/storefront';
 import { t } from '../../i18n';
+import { PlanNotice } from '../../components/plan-lock';
+import { useHasFeature } from '../../lib/entitlements';
 
 const SAVE_KEY = ['vendor-style', 'save'];
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -22,7 +24,14 @@ const HEX = /^#[0-9a-f]{6}$/i;
  * Settings → Branding, the public page's look: page style (5 layouts), brand colours and the
  * settings. Saves on its own; the customer page (and the Storefront preview) follow.
  */
+/** Page style, brand colours and font are a plan feature (Regular keeps the current look). */
 export function BrandStyleEditor() {
+  const has = useHasFeature('brand_style');
+  if (!has) return <PlanNotice feature="brand_style" />;
+  return <BrandStyleForm />;
+}
+
+function BrandStyleForm() {
   const vendorApi = useVendorApi();
   const vendor = useMyVendor();
   const qc = useQueryClient();

@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 import type { AdminMe, StaffMe } from './api';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'mfaVerify' | 'mfaEnroll' | 'ready' | 'trialEnded';
+export type AuthStatus = 'loading' | 'signedOut' | 'mfaVerify' | 'mfaEnroll' | 'ready' | 'trialEnded' | 'subscriptionExpired';
 
 export interface Enrollment {
   factorId: string;
@@ -18,6 +18,8 @@ export interface AuthState {
   notice: string | null;
   /** Set with status 'trialEnded': the shop's free trial is over. */
   trial: { trialEndedAt: string | null; deleteAt: string | null } | null;
+  /** Set with status 'subscriptionExpired': the paid period and its grace are over. */
+  lapsed: { paidUntil: string | null } | null;
   signIn: (email: string, password: string) => Promise<void>;
   verifyCode: (code: string) => Promise<void>;
   startEnroll: () => Promise<Enrollment>;

@@ -28,22 +28,26 @@ const ILLUSTRATION_SIZE = {
 const asset = (path: string) => `${import.meta.env.BASE_URL}brand/${path}`;
 
 /**
- * One brand scene (640 × 480, scaled proportionally). The scenes are paper-backed, so on dark
- * surfaces they sit in a light paper panel (kit: "place paper-backed scenes in a light panel").
+ * One brand scene (640 × 480, scaled proportionally). Dark mode has its own drawing with no light
+ * background (`illustrations/dark`, from scripts/build-dark-illustrations.mjs).
  */
 export function BrandIllustration({ name, size = 'md', className }: { name: IllustrationName; size?: keyof typeof ILLUSTRATION_SIZE; className?: string }) {
+  const image = (path: string, theme: string) => (
+    <img
+      src={asset(path)}
+      alt=""
+      width={640}
+      height={480}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      className={cn('aspect-[4/3] h-auto w-full select-none', theme)}
+    />
+  );
   return (
-    <div aria-hidden className={cn('shrink-0 dark:rounded-2xl dark:bg-paper dark:p-1.5', ILLUSTRATION_SIZE[size], className)}>
-      <img
-        src={asset(`illustrations/${name}.svg`)}
-        alt=""
-        width={640}
-        height={480}
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        className="block aspect-[4/3] h-auto w-full select-none"
-      />
+    <div aria-hidden className={cn('shrink-0', ILLUSTRATION_SIZE[size], className)}>
+      {image(`illustrations/${name}.svg`, 'block dark:hidden')}
+      {image(`illustrations/dark/${name}.svg`, 'hidden dark:block')}
     </div>
   );
 }

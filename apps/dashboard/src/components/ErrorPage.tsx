@@ -53,7 +53,7 @@ function NoticeFrame({ children }: { children: ReactNode }) {
     <div className="relative isolate flex min-h-svh flex-col overflow-hidden bg-background">
       <BrandPattern name="paper-grid" className="-z-10 [mask-image:radial-gradient(ellipse_at_center,transparent_35%,black_75%)]" />
       <header className="p-6">
-        <DvoteLogo />
+        <DvoteLogo markColor="var(--brand)" />
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-lg rounded-2xl bg-card px-2 shadow-sm ring-1 ring-border">{children}</div>
@@ -90,7 +90,7 @@ export function WrongSitePage({ belongsTo, href }: { belongsTo: 'admin' | 'merch
 }
 
 /**
- * A self sign-up shop whose 7-day free trial is over (API trial_ended): nothing else is
+ * A self sign-up shop whose 14-day free trial is over (API trial_ended): nothing else is
  * reachable. Points to the plans on dvote.co/pricing and says when the shop will be deleted.
  */
 export function TrialEndedPage() {
@@ -121,6 +121,35 @@ export function TrialEndedPage() {
 }
 
 /**
+ * A paid shop whose paid period and its grace days are over (API subscription_expired): the
+ * dashboard and scans are locked until dvote renews it; customer cards keep working.
+ */
+export function SubscriptionEndedPage() {
+  const { lapsed, staff, signOut } = useAuth();
+  const paidUntil = lapsed?.paidUntil ? dayjs(lapsed.paidUntil).format('D MMMM YYYY') : null;
+  const message = encodeURIComponent(t('billing.renewMessage', { shop: staff?.vendor.name ?? '' }));
+  return (
+    <NoticeFrame>
+      <ErrorState
+        icon={DangerTriangleIcon}
+        illustration="reward-unlocked"
+        title={t('billing.lockedTitle')}
+        text={paidUntil ? t('billing.lockedTextDate', { date: paidUntil }) : t('billing.lockedText')}
+      >
+        <Button asChild variant="brand">
+          <a href={`https://wa.me/201207118966?text=${message}`} target="_blank" rel="noreferrer">
+            {t('billing.renewWhatsApp')}
+          </a>
+        </Button>
+        <Button variant="ghost" onClick={() => void signOut()}>
+          {t('site.signOut')}
+        </Button>
+      </ErrorState>
+    </NoticeFrame>
+  );
+}
+
+/**
  * The router's errorElement: a page crashed while rendering. Full screen (the layout may be what
  * broke), with a reload and a way home; the technical message only in development.
  */
@@ -133,7 +162,7 @@ export function RouteErrorPage() {
       {/* quiet dot grid at the edges only; the message sits on a plain card */}
       <BrandPattern name="paper-grid" className="-z-10 [mask-image:radial-gradient(ellipse_at_center,transparent_35%,black_75%)]" />
       <header className="p-6">
-        <DvoteLogo />
+        <DvoteLogo markColor="var(--brand)" />
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-lg rounded-2xl bg-card px-2 shadow-sm ring-1 ring-border">

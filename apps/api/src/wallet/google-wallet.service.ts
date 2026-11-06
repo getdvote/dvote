@@ -7,16 +7,14 @@ import type { Env } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
 import { cardQr, cardSecret, hashCardSecret } from './card-token';
 import { WalletLogoService } from '../storage/wallet-logo.service';
-import { defaultDesign, readDesign, type CardDesign } from '../loyalty-cards/card-design';
+import { DVOTE_CARD_COLOR, defaultDesign, readDesign, type CardDesign } from '../loyalty-cards/card-design';
 import { passClassFields, passPoints } from './card-pass';
 
-/** First colour of each card design (1-10), same order as CARD_DESIGNS in the dashboard and web. */
+/** First colour of each card design (1-10), same order as CARD_DESIGNS in the dashboard and web; none chosen = dvote espresso (DVOTE_DESIGN). */
 const DESIGN_COLORS = ['#1C1C1E', '#2E9E6B', '#2F6BDE', '#F2B33D', '#6155F5', '#E0533D', '#0E8C99', '#3E2723', '#AD1457', '#E9DCC9'];
-const designColor = (vendorId: string, chosen: number | null) => {
+const designColor = (_vendorId: string, chosen: number | null) => {
   if (chosen && chosen >= 1 && chosen <= DESIGN_COLORS.length) return DESIGN_COLORS[chosen - 1];
-  let h = 0;
-  for (const ch of vendorId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return DESIGN_COLORS[h % DESIGN_COLORS.length];
+  return DVOTE_CARD_COLOR;
 };
 
 interface ServiceAccount {

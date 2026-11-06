@@ -18,6 +18,7 @@ import { VendorApi } from '../auth/vendor-api.decorator';
 import { IsUuid } from '../common/uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { cairoDays, IsDay } from './cairo-days';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 const TZ = 'Africa/Cairo';
 const MAX_DAYS = 366;
@@ -330,16 +331,23 @@ export class VendorInsightsService {
 @VendorApi('vendor: insights')
 @Controller('vendor/insights')
 export class VendorInsightsController {
-  constructor(private readonly insights: VendorInsightsService) {}
+  constructor(
+    private readonly insights: VendorInsightsService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   /** Loyalty performance for a period vs the one before (counts only, no customer data). */
   @Get()
   @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
   @ApiOkResponse({ type: VendorInsightsDto })
-  get(
+  async get(
     @CurrentStaff() ctx: StaffContext,
     @Query() q: VendorInsightsQueryDto,
   ): Promise<VendorInsightsDto> {
-    return this.insights.get(ctx, q);
+    await this.plans.require(ctx, 'insights');
+    const result = await this.insights.get(ctx, q);
+    // the by-branch comparison is a Chain feature
+    if (!ctx.adminId && !(await this.plans.of(ctx.vendorId)).features.branch_comparison) return { ...result, branches: [] };
+    return result;
   }
 }

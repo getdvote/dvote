@@ -1,6 +1,7 @@
 import type { CityKey } from './cities';
 import { config } from './config';
 import { errorText, t } from '../i18n';
+import type { Entitlements } from './entitlements';
 import { supabase } from './supabase';
 
 /**
@@ -137,13 +138,57 @@ export interface QrSources {
   }[];
 }
 
-export type PlanName = 'starter' | 'growth' | 'chain';
+export type PlanName = 'regular' | 'loyal' | 'chain';
+export type BillingCycle = 'monthly' | 'annual';
 export interface VendorPlan {
   status: 'trial' | 'active';
   plan: PlanName | null;
+  billingCycle?: BillingCycle | null;
+  /** Paid until (then a short grace, then locked); null = no end date. */
+  paidUntil?: string | null;
+  /** What the plan includes (a trial or a shop without a plan: everything). */
+  entitlements?: Entitlements;
   trialEndsAt: string | null;
   /** An unpaid trial shop is deleted for good then. */
   deleteAt: string | null;
+}
+
+export interface PriceQuote {
+  base: number;
+  extraBranches: number;
+  monthly: number;
+  /** One period: a month, or a year. */
+  perPeriod: number;
+  foundingApplied: boolean;
+}
+
+/** GET /api/vendor/billing (merchant admin). */
+export interface Billing {
+  currency: string;
+  /** trial | active (paid) | grace (paid period over, still open) | expired | managed (no end date) */
+  state: 'trial' | 'active' | 'grace' | 'expired' | 'managed';
+  planStatus: 'trial' | 'active';
+  plan: PlanName | null;
+  billingCycle: BillingCycle | null;
+  branches: number;
+  price: PriceQuote | null;
+  trialEndsAt: string | null;
+  trialDays: number;
+  deleteAt: string | null;
+  paidUntil: string | null;
+  graceEndsAt: string | null;
+  graceDays: number;
+  founding: boolean;
+  foundingUntil: string | null;
+  scheduled: { plan: PlanName; billingCycle: BillingCycle; startsAt: string | null; price: PriceQuote } | null;
+  plans: { id: PlanName; monthly: PriceQuote; annual: PriceQuote }[];
+}
+
+export interface FoundingStatus {
+  total: number;
+  open: boolean;
+  taken: number;
+  left: number;
 }
 
 export interface Vendor {
@@ -169,6 +214,13 @@ export interface Vendor {
   status: VendorStatus;
   planStatus?: 'trial' | 'active';
   plan?: PlanName | null;
+  billingCycle?: BillingCycle | null;
+  /** Holds a Launch Partner spot. */
+  founding?: boolean;
+  foundingUntil?: string | null;
+  paidUntil?: string | null;
+  nextPlan?: PlanName | null;
+  nextBillingCycle?: BillingCycle | null;
   trialEndsAt?: string | null;
   deleteAt?: string | null;
   selfSignup?: boolean;
@@ -347,6 +399,29 @@ export interface StaffMe extends Staff {
     minPurchase: string;
     maxPointsPerPurchase: number | null;
   } | null;
+}
+
+export interface PairingCreated {
+  id: string;
+  secret: string;
+  code: string;
+  branchName: string;
+  expiresAt: string;
+  /** For the countdown, so a wrong laptop clock can't break it. */
+  expiresInSeconds: number;
+}
+
+export interface ScannerPairing {
+  id: string;
+  state: 'pending' | 'active' | 'paused';
+  pauseReason: 'vendor_suspended' | 'trial_ended' | 'subscription_expired' | 'branch_closed' | null;
+  deviceLabel: string | null;
+  branchId: string;
+  branchName: string;
+  staffName: string;
+  claimedAt: string | null;
+  sessionExpiresAt: string | null;
+  lastUsedAt: string | null;
 }
 
 /** GET /api/vendor/insights/patterns: fixed windows, not the page's date range. */
@@ -742,9 +817,33 @@ export class ApiError extends Error {
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
-async function call<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+/** plan_required / plan_limit: say which plan has it, or how many the plan allows. */
+function planErrorText(code: string, body: Record<string, unknown>): string | undefined {
+  const name = (p: unknown) => (typeof p === 'string' ? t(`billing.plans.${p}.name` as never) : '');
+  if (code === 'plan_required') return t('errors.plan_required', { plan: name(body.requiredPlan) });
+  if (code === 'plan_limit' && typeof body.limit === 'string') {
+    return t(`errors.plan_limit_${body.limit}` as never, { max: Number(body.max ?? 0), plan: name(body.plan) });
+  }
+  return undefined;
+}
+
+/** A client that signs in with its own token, such as a paired phone. Never the Supabase session. */
+export interface ClientAuth {
+  token: () => string | null;
+  onError?: (error: ApiError) => void;
+}
+
+async function call<T>(method: Method, path: string, body?: unknown, auth?: ClientAuth): Promise<T> {
+  try {
+    return await send<T>(method, path, body, auth);
+  } catch (err) {
+    if (auth?.onError && err instanceof ApiError) auth.onError(err);
+    throw err;
+  }
+}
+
+async function send<T>(method: Method, path: string, body?: unknown, auth?: ClientAuth): Promise<T> {
+  const token = auth ? auth.token() : (await supabase.auth.getSession()).data.session?.access_token;
   const isForm = body instanceof FormData;
   let res: Response;
   try {
@@ -767,7 +866,7 @@ async function call<T>(method: Method, path: string, body?: unknown): Promise<T>
   if (!res.ok) {
     const code = json.code ?? `http_${res.status}`;
     const server = Array.isArray(json.message) ? json.message.join(', ') : json.message;
-    throw new ApiError(res.status, code, errorText(code) ?? server ?? t('common.somethingWrong'), json as Record<string, unknown>);
+    throw new ApiError(res.status, code, planErrorText(code, json) ?? errorText(code) ?? server ?? t('common.somethingWrong'), json as Record<string, unknown>);
   }
   return json as T;
 }
@@ -803,14 +902,30 @@ export const api = {
     }>('GET', `/api/admin/workspace/${section}${qs(q)}`),
   me: () => call<AdminMe>('GET', '/api/admin/me'),
   /** Merchant sign-up, step 1 (no sign-in, captcha): the account + confirmation email. */
-  merchantSignup: (body: { ownerName: string; shopName: string; email: string; password: string; phone: string; captchaToken?: string; redirectTo: string }) =>
+  merchantSignup: (body: { ownerName: string; shopName: string; email: string; password: string; phone: string; captchaToken?: string; redirectTo: string; plan?: PlanName; billingCycle?: BillingCycle }) =>
     call<{ sent: true }>('POST', '/api/public/merchant-signup', body),
   /** A confirmed new account opens its shop (free trial). */
   signup: (body: { shopName: string; ownerName: string; phone: string }) =>
     call<{ vendorId: string; trialEndsAt: string; deleteAt: string }>('POST', '/api/vendor/signup', body),
   /** Admin: activate a paid plan or extend a free trial. */
-  vendorPlan: (vendorId: string, body: { action: 'activate'; plan: PlanName } | { action: 'extend'; days: number }) =>
-    call<{ planStatus: 'trial' | 'active'; plan: PlanName | null; trialEndsAt: string | null; deleteAt: string | null }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
+  vendorPlan: (
+    vendorId: string,
+    body: { action: 'activate'; plan: PlanName; billingCycle: BillingCycle; founding?: boolean } | { action: 'extend'; days: number } | { action: 'renew' },
+  ) =>
+    call<{
+      planStatus: 'trial' | 'active';
+      plan: PlanName | null;
+      billingCycle: BillingCycle | null;
+      founding: boolean;
+      paidUntil: string | null;
+      nextPlan: PlanName | null;
+      nextBillingCycle: BillingCycle | null;
+      trialEndsAt: string | null;
+      deleteAt: string | null;
+    }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
+  /** Admin: the Launch Partners offer (spots and whether it is open). */
+  founding: () => call<FoundingStatus>('GET', '/api/admin/settings/founding'),
+  setFounding: (body: { total: number; open: boolean }) => call<FoundingStatus>('PUT', '/api/admin/settings/founding', body),
   overview: () => call<Overview>('GET', '/api/admin/overview'),
   qrSources: (days: number) => call<QrSources>('GET', `/api/admin/stats/qr-sources?days=${days}`),
   systemDatabase: () => call<SystemDatabase>('GET', '/api/admin/system/database'),
@@ -974,8 +1089,12 @@ export interface BroadcastCampaignInput extends MerchantCustomerQuery {
   name: string; body: string; mode: 'draft' | 'now' | 'schedule' | 'repeat'; nextAt?: string; repeatDays?: number;
 }
 
-export function createVendorApi(prefix = '/api/vendor') {
-  const request = <T>(method: Method, url: string, body?: unknown) => call<T>(method, url.replace(/^\/api\/vendor(?=\/|$)/, prefix), body);
+/** The phone trades the QR's secret and the 6 digits for a session. No sign-in. */
+export const claimPairing = (body: { secret: string; code: string; deviceLabel?: string }) =>
+  call<{ sessionToken: string; expiresAt: string }>('POST', '/api/public/scanner-pairings/claim', body, { token: () => null });
+
+export function createVendorApi(prefix = '/api/vendor', auth?: ClientAuth) {
+  const request = <T>(method: Method, url: string, body?: unknown) => call<T>(method, url.replace(/^\/api\/vendor(?=\/|$)/, prefix), body, auth);
   return {
     customerFeedback: (page = 1) =>
       request<{ items: CustomerFeedback[]; page: number; hasMore: boolean }>('GET', `/api/vendor/customer-feedback?page=${page}`),
@@ -1009,7 +1128,7 @@ export function createVendorApi(prefix = '/api/vendor') {
           unknown: number;
         }[]
       >('GET', '/api/vendor/broadcasts'),
-    broadcastQuota: () => request<{ used: number; nearby: boolean; remaining: number; resetsAt: string | null }>('GET', '/api/vendor/broadcasts/quota'),
+    broadcastQuota: () => request<{ used: number; nearby: boolean; remaining: number; resetsAt: string | null; max?: number; windowHours?: number }>('GET', '/api/vendor/broadcasts/quota'),
     campaigns: () => request<BroadcastCampaign[]>('GET', '/api/vendor/broadcasts/campaigns'),
     saveCampaign: (body: BroadcastCampaignInput, id?: string) => request<{ id: string }>(id ? 'PATCH' : 'POST', `/api/vendor/broadcasts/campaigns${id ? `/${id}` : ''}`, body),
     cancelCampaign: (id: string) => request<{ id: string }>('POST', `/api/vendor/broadcasts/campaigns/${id}/cancel`),
@@ -1036,6 +1155,9 @@ export function createVendorApi(prefix = '/api/vendor') {
     summary: (q: { branchId?: string } = {}) => request<VendorSummary>('GET', `/api/vendor/summary${qs({ ...q })}`),
     attention: () => request<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
     goLive: () => request<GoLive>('GET', '/api/vendor/go-live'),
+    billing: () => request<Billing>('GET', '/api/vendor/billing'),
+    changePlan: (plan: PlanName, billingCycle: BillingCycle) => request<Billing>('PUT', '/api/vendor/billing/plan', { plan, billingCycle }),
+    cancelScheduledPlan: () => request<Billing>('DELETE', '/api/vendor/billing/scheduled'),
     insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
       request<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),
     rewardPerformance: (q: { from: string; to: string; branchId?: string }) =>
@@ -1117,6 +1239,11 @@ export function createVendorApi(prefix = '/api/vendor') {
     redeem: (body: { code: string; rewardId?: string; expectedPointsCost?: number; branchId?: string; idempotencyKey: string }) =>
       request<RedeemResult>('POST', '/api/vendor/scans/redeem', body),
     patterns: (q: { branchId?: string }) => request<VendorPatterns>('GET', `/api/vendor/insights/patterns${qs({ ...q })}`),
+    createPairing: (branchId: string) => request<PairingCreated>('POST', '/api/vendor/scanner-pairings', { branchId }),
+    scannerPairings: () => request<ScannerPairing[]>('GET', '/api/vendor/scanner-pairings'),
+    disconnectPairing: (id: string) => request<void>('DELETE', `/api/vendor/scanner-pairings/${encodeURIComponent(id)}`),
+    scannerMe: () => request<StaffMe>('GET', '/api/vendor/scanner/me'),
+    endScannerSession: () => request<void>('DELETE', '/api/vendor/scanner/me'),
     scansToday: () => request<{ collects: number; redemptions: number }>('GET', '/api/vendor/scans/today'),
 
     staff: () => request<Staff[]>('GET', '/api/vendor/staff'),

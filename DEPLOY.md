@@ -13,7 +13,7 @@ Follow top to bottom. Everything in `<angle brackets>` is yours to fill. Never p
 | `m.dvote.co` | **Customer storefront**: what the QR / NFC at the till opens (`m.dvote.co/<shop>`), join, card page, wallet links, privacy, terms | `apps/web` | Cloudflare (Worker `dvote-web`) | built; domain to move here |
 | `dvote.co/m/<shop>` | short form: forwards to `m.dvote.co/<shop>` | — | Cloudflare redirect rule | later, with the landing page |
 | `api.dvote.co` | **API** | `apps/api` (Dockerfile) | Railway or Hetzner (to decide) | not deployed |
-| Staff app | Android APK sent to merchants | `apps/staff` | — | — |
+| Staff app | Not at launch (decided 2026-11-05): cashiers use the Scan page on `merchant.dvote.co`, on a phone through **Pair a phone**. The code stays in the repo | `apps/staff` | — | parked |
 
 **Print `m.dvote.co/<shop>?b=<branch-id>` on QR posters and NFC tags** (the direct address; it keeps working whatever happens to the landing page).
 
@@ -102,7 +102,7 @@ Test: `https://api.dvote.co/api/health` → ok. Until the API is live, storefron
 3. Create the first merchant + its merchant admin (invite arrives; opens `merchant.dvote.co/set-password`).
 4. `https://merchant.dvote.co` → merchant admin → set up card, rewards (photo + Arabic), branches with map pins, staff.
 5. Phone: `https://m.dvote.co/<shop>` → join → **Add to Google Wallet**.
-6. Staff phone: `merchant.dvote.co` → **Scan** → collect → the pass updates within a minute → redeem.
+6. Laptop: `merchant.dvote.co` → **Scan** → **Pair a phone**. Phone: scan the QR → enter the 6 digits → collect → the pass updates within a minute → redeem. Then **Disconnect** on the laptop and check the phone stops.
 7. Admin → **System**: all green. Print QR posters / write NFC tags: `https://m.dvote.co/<shop>?b=<branch-id>`.
 
 ## Backups
@@ -110,5 +110,6 @@ Test: `https://api.dvote.co/api/health` → ok. Until the API is live, storefron
 
 ## After launch / rollback
 - Uptime monitor on `https://api.dvote.co/api/health` and `https://m.dvote.co`.
+- Scanner pairing needs migration `34_scanner_pairings` on production before the API that uses it, and `database/supabase_lockdown.sql` re-run.
 - New migration: apply to production from your PC (`prisma migrate deploy` with the production `DATABASE_URL`), re-run `supabase_lockdown.sql` if it adds a table, then deploy the API.
 - Rollback: Cloudflare Worker → Deployments → previous → **Rollback**; Railway → Deployments → previous → **Redeploy**; database: a `db:backup` file or Supabase Pro backups.

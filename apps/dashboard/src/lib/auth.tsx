@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [staff, setStaff] = useState<StaffMe | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [trial, setTrial] = useState<AuthState['trial']>(null);
+  const [lapsed, setLapsed] = useState<AuthState['lapsed']>(null);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut().catch(() => undefined);
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setStaff(me);
       setTrial(null);
+      setLapsed(null);
       setNotice(null);
       setStatus('ready');
     } catch (err) {
@@ -66,6 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           deleteAt: typeof err.details.deleteAt === 'string' ? err.details.deleteAt : null,
         });
         setStatus('trialEnded');
+        return;
+      }
+      if (err instanceof ApiError && err.code === 'subscription_expired') {
+        setLapsed({ paidUntil: typeof err.details.paidUntil === 'string' ? err.details.paidUntil : null });
+        setStatus('subscriptionExpired');
         return;
       }
       setNotice(err instanceof ApiError && err.code === 'not_staff' ? 'This account has no access to the dvote dashboard.' : errorMessage(err));
@@ -148,8 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ status, admin, staff, notice, trial, signIn, verifyCode, startEnroll, confirmEnroll, signOut }),
-    [status, admin, staff, notice, trial, signIn, verifyCode, startEnroll, confirmEnroll, signOut],
+    () => ({ status, admin, staff, notice, trial, lapsed, signIn, verifyCode, startEnroll, confirmEnroll, signOut }),
+    [status, admin, staff, notice, trial, lapsed, signIn, verifyCode, startEnroll, confirmEnroll, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

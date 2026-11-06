@@ -9,7 +9,7 @@ const PAGES = [
   ['home', '/'],
   ['scan', '/scan'],
   ['customers', '/customers'],
-  ['customers-segments', '/customers?tab=segments'],
+  ['customers-segments', '/customers?view=segmentation'],
   ['insights', '/insights'],
   ['activity', '/activity'],
   ['branches', '/branches'],
@@ -21,6 +21,7 @@ const PAGES = [
   ['settings-general', '/settings?tab=general'],
   ['settings-team', '/settings?tab=team'],
   ['settings-branding', '/settings?tab=branding'],
+  ['settings-billing', '/settings?tab=billing'],
   ['feedback', '/feedback'],
   ['broadcast', '/broadcast'],
 ] as const;

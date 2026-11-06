@@ -74,4 +74,17 @@ describe('Rate limiting: per user, per IP, stricter QR limit (e2e)', () => {
     }
     expect(limited).toBe(true);
   });
+
+  it('limits phone pairing claims per IP, whatever token is sent', async () => {
+    const claim = (i: number) =>
+      request(app.getHttpServer())
+        .post('/api/public/scanner-pairings/claim')
+        .set('X-Forwarded-For', '203.0.113.77')
+        .set('Authorization', `Bearer ${tokens[i % tokens.length]}`)
+        .send({ secret: 'f'.repeat(32), code: '123456' });
+    for (let i = 0; i < LIMITS.pairClaim; i++) expect((await claim(i)).status).toBe(400);
+    const over = await claim(0);
+    expect(over.status).toBe(429);
+    expect(over.body.code).toBe('rate_limited');
+  });
 });

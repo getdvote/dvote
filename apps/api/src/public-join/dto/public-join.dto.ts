@@ -101,6 +101,7 @@ export class PublicVendorDto {
   @ApiProperty({ type: PublicStyleDto }) style: PublicStyleDto;
   @ApiProperty({ description: 'Page sections in order ({type, ...}); the branch copy when ?b= names a branch that has one' }) sections: Storefront['sections'];
   @ApiProperty({ type: [String], description: 'Menu page images, in order' }) menu: string[];
+  @ApiProperty({ description: 'Show "Powered by dvote" (plans without remove_branding)' }) poweredBy: boolean;
 }
 
 /** One customer's loyalty card at one merchant, as the card page and the wallet pass show it. */

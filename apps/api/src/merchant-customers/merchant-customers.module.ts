@@ -18,12 +18,16 @@ import {
   UpdateCustomerSegmentDto,
 } from './customer.dto';
 import { MerchantCustomersService } from './merchant-customers.service';
+import { EntitlementsService } from '../plans/entitlements.service';
 
 @VendorApi('vendor: customers')
 @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
 @Controller('vendor/customers')
 export class MerchantCustomersController {
-  constructor(private readonly customers: MerchantCustomersService) {}
+  constructor(
+    private readonly customers: MerchantCustomersService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ type: MerchantCustomerListDto })
@@ -35,7 +39,8 @@ export class MerchantCustomersController {
   @Get('export')
   @StaffRoles('vendor_admin')
   @ApiOkResponse({ type: CustomerExportDto })
-  export(@CurrentStaff() ctx: StaffContext, @Query() q: CustomerListQuery) {
+  async export(@CurrentStaff() ctx: StaffContext, @Query() q: CustomerListQuery) {
+    await this.plans.require(ctx, 'customer_export');
     return this.customers.export(ctx, q);
   }
 
@@ -59,12 +64,16 @@ export class MerchantCustomersController {
 @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
 @Controller('vendor/customer-segments')
 export class CustomerSegmentsController {
-  constructor(private readonly customers: MerchantCustomersService) {}
+  constructor(
+    private readonly customers: MerchantCustomersService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   @Post('preview')
   @HttpCode(200)
   @ApiOkResponse({ type: SegmentPreviewResultDto })
-  preview(@CurrentStaff() ctx: StaffContext, @Body() dto: SegmentPreviewDto) {
+  async preview(@CurrentStaff() ctx: StaffContext, @Body() dto: SegmentPreviewDto) {
+    await this.plans.require(ctx, 'custom_segments');
     return this.customers.previewSegment(ctx, dto);
   }
 
@@ -72,7 +81,8 @@ export class CustomerSegmentsController {
   @StaffRoles('vendor_admin')
   @ApiOkResponse({ type: CustomSegmentDto })
   @ApiConflictResponse({ description: 'segment_name_taken' })
-  create(@CurrentStaff() ctx: StaffContext, @Body() dto: CreateCustomerSegmentDto) {
+  async create(@CurrentStaff() ctx: StaffContext, @Body() dto: CreateCustomerSegmentDto) {
+    await this.plans.require(ctx, 'custom_segments');
     return this.customers.createSegment(ctx, dto);
   }
 
@@ -81,7 +91,8 @@ export class CustomerSegmentsController {
   @ApiOkResponse({ type: CustomSegmentDto })
   @ApiNotFoundResponse({ description: 'segment_not_found' })
   @ApiConflictResponse({ description: 'segment_name_taken' })
-  update(@CurrentStaff() ctx: StaffContext, @Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateCustomerSegmentDto) {
+  async update(@CurrentStaff() ctx: StaffContext, @Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateCustomerSegmentDto) {
+    await this.plans.require(ctx, 'custom_segments');
     return this.customers.updateSegment(ctx, id, dto);
   }
 
@@ -99,11 +110,12 @@ export class CustomerSegmentsController {
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'Added by hand (and taken out of any other hand-made segment)' })
   @ApiNotFoundResponse({ description: 'segment_not_found, customer_not_found' })
-  add(
+  async add(
     @CurrentStaff() ctx: StaffContext,
     @Param('id', ParseUuidPipe) id: string,
     @Param('cardId', ParseUuidPipe) cardId: string,
   ) {
+    await this.plans.require(ctx, 'custom_segments');
     return this.customers.addMember(ctx, id, cardId);
   }
 

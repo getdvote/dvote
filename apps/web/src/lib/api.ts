@@ -23,6 +23,8 @@ export interface PublicVendor {
   sections: Section[];
   /** Menu page images, in order. */
   menu: string[];
+  /** Show "Powered by dvote" (the merchant's plan doesn't remove it). */
+  poweredBy?: boolean;
 }
 
 /** Same shape as the API's PublicCardLookDto; drawn by lib/card-look.ts. */

@@ -7,7 +7,8 @@ import { DvoteLogo } from './dvote-logo';
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
 /** The page frame: one white rounded card on the soft canvas, "Powered by dvote" and the language switch. */
-export function Page({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+/** `branding` false hides "Powered by dvote" (merchants whose plan removes it). */
+export function Page({ children, wide = false, branding = true }: { children: ReactNode; wide?: boolean; branding?: boolean }) {
   const { language, setLanguage } = useI18n();
   return (
     <div className="flex min-h-dvh flex-col items-center px-4 pt-4 pb-8 sm:pt-10">
@@ -15,10 +16,14 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
         {children}
       </main>
       <footer className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 whitespace-nowrap text-sm text-muted">
-        <Link to="/" className="flex items-center gap-1.5 py-2 hover:text-ink">
-          {t('common.poweredBy')} <DvoteMark />
-        </Link>
-        <span aria-hidden className="text-line">|</span>
+        {branding ? (
+          <>
+            <Link to="/" className="flex items-center gap-1.5 py-2 hover:text-ink">
+              {t('common.poweredBy')} <DvoteMark />
+            </Link>
+            <span aria-hidden className="text-line">|</span>
+          </>
+        ) : null}
         <button type="button" className="py-2 hover:text-ink" onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}>
           {t('common.switchLanguage')}
         </button>
@@ -35,7 +40,7 @@ export function Page({ children, wide = false }: { children: ReactNode; wide?: b
 }
 
 export function DvoteMark() {
-  return <DvoteLogo height={20} className="shrink-0 text-ink" />;
+  return <DvoteLogo height={20} markColor="var(--color-brand)" className="shrink-0 text-ink" />;
 }
 
 export function Button({
@@ -51,10 +56,10 @@ export function Button({
       disabled={props.disabled || busy}
       className={cx(
         'inline-flex h-13 w-full items-center justify-center gap-2 rounded-2xl px-5 text-[17px] font-semibold transition-[background,opacity,transform] active:scale-[0.99] disabled:opacity-50',
-        variant === 'primary' && 'bg-brand text-white hover:bg-brand/90',
+        variant === 'primary' && 'bg-brand text-brand-foreground hover:bg-brand-hover',
         variant === 'dark' && 'bg-ink text-white hover:bg-ink/90',
         variant === 'outline' && 'border border-line bg-white text-ink hover:bg-canvas',
-        variant === 'ghost' && 'h-auto py-2 text-[15px] font-medium text-brand underline-offset-4 hover:underline',
+        variant === 'ghost' && 'h-auto py-2 text-[15px] font-medium text-brand-text underline-offset-4 hover:underline',
         className,
       )}
     >
