@@ -704,3 +704,19 @@ export const planRequests: { total: number; pending: number; items: AdminPlanReq
     },
   ],
 };
+
+/** Who the latest broadcast reached (30 customers). */
+export const broadcastRecipients = {
+  broadcast: { id: 'b-1', title: 'Free coffee this weekend', body: 'Use your points at our shop.', sentAt: new Date(Date.now() - 7_200_000).toISOString() },
+  counts: { sent: 24, not_in_wallet: 4, skipped: 1, failed: 0, uncertain: 1, waiting: 0 },
+  recipients: 30,
+  total: 30,
+  page: 1,
+  pageSize: 50,
+  items: [
+    { cardId: 'c-1', name: 'Mona Ali', shortCode: 'CZW-QNM', group: 'sent' as const, reason: null, at: new Date().toISOString() },
+    { cardId: 'c-2', name: 'Ahmed Hassan', shortCode: 'KTR-PLX', group: 'not_in_wallet' as const, reason: 'not_saved', at: new Date().toISOString() },
+    { cardId: 'c-3', name: 'منى عبد الرحمن محمود', shortCode: 'BWQ-NRT', group: 'skipped' as const, reason: 'daily_limit', at: new Date().toISOString() },
+    { cardId: 'c-4', name: null, shortCode: null, group: 'uncertain' as const, reason: 'provider_error', at: null },
+  ],
+};

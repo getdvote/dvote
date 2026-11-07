@@ -13,6 +13,7 @@ import {
   Param,
   NotFoundException,
   Post,
+  Query,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
@@ -26,10 +27,12 @@ import {
   IsString,
   Length,
   Matches,
+  Max,
   MaxLength,
+  Min,
   validate,
 } from 'class-validator';
-import { Transform, plainToInstance } from 'class-transformer';
+import { Transform, Type, plainToInstance } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { AuthModule } from '../auth/auth.module';
 import { CurrentStaff } from '../auth/current-staff.decorator';
@@ -38,6 +41,7 @@ import { VendorApi } from '../auth/vendor-api.decorator';
 import { CustomerListQuery } from '../merchant-customers/customer.dto';
 import { MerchantCustomersModule } from '../merchant-customers/merchant-customers.module';
 import { MerchantCustomersService } from '../merchant-customers/merchant-customers.service';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletModule } from '../wallet/wallet.module';
 import {
@@ -253,6 +257,46 @@ export class BroadcastsService
       FROM wallet_broadcasts b LEFT JOIN wallet_broadcast_recipients r ON r.broadcast_id=b.id
       WHERE b.vendor_id=${ctx.vendorId}::uuid AND b.audience->>'type' IS DISTINCT FROM 'redemption' AND b.audience->>'campaignId' IS NULL
       GROUP BY b.id ORDER BY b.created_at DESC LIMIT 30`;
+  }
+
+  /**
+   * Who a broadcast reached (decided 2026-11-07). `id` is a broadcast or a campaign (then its latest
+   * send). Per customer: sent (Google accepted the message for the pass), not_in_wallet (the card
+   * isn't saved in a wallet), skipped (daily limit, blocked customer, Google's quota), failed,
+   * uncertain (network error: never resent blindly), waiting. Google gives no read receipts, so
+   * whether a customer saw it is not known.
+   */
+  async recipients(ctx: StaffContext, id: string, group: RecipientGroup | undefined, page: number, pageSize: number) {
+    const [b] = await this.prisma.$queryRaw<{ id: string; title: string; body: string; createdAt: Date }[]>`
+      SELECT b.id,b.title,b.body,b.created_at AS "createdAt" FROM wallet_broadcasts b
+      WHERE b.vendor_id=${ctx.vendorId}::uuid AND (b.id::text=${id} OR b.audience->>'campaignId'=${id})
+      ORDER BY b.created_at DESC LIMIT 1`;
+    if (!b) throw new NotFoundException({ code: 'broadcast_not_found' });
+    const groupSql = Prisma.sql`CASE WHEN r.status IN ('pending','processing') THEN 'waiting' WHEN r.status='accepted' THEN 'sent'
+      WHEN r.status='skipped' AND r.reason='not_saved' THEN 'not_in_wallet' WHEN r.status='skipped' THEN 'skipped'
+      WHEN r.status='failed' THEN 'failed' ELSE 'uncertain' END`;
+    const counts = await this.prisma.$queryRaw<{ group: RecipientGroup; n: number }[]>`
+      SELECT ${groupSql} AS "group",count(*)::int AS n FROM wallet_broadcast_recipients r
+      WHERE r.broadcast_id=${b.id}::uuid AND r.vendor_id=${ctx.vendorId}::uuid GROUP BY 1`;
+    const filter = group ? Prisma.sql`AND ${groupSql}=${group}` : Prisma.empty;
+    const items = await this.prisma.$queryRaw<
+      { cardId: string; name: string | null; shortCode: string | null; group: RecipientGroup; reason: string | null; at: Date | null }[]
+    >`
+      SELECT c.id AS "cardId",u.name,c.short_code AS "shortCode",${groupSql} AS "group",r.reason,COALESCE(r.attempted_at,r.updated_at) AS at
+      FROM wallet_broadcast_recipients r JOIN cards c ON c.id=r.card_id AND c.vendor_id=r.vendor_id JOIN users u ON u.id=c.user_id
+      WHERE r.broadcast_id=${b.id}::uuid AND r.vendor_id=${ctx.vendorId}::uuid ${filter}
+      ORDER BY u.name NULLS LAST,c.id LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`;
+    const by = Object.fromEntries(counts.map((c) => [c.group, c.n])) as Partial<Record<RecipientGroup, number>>;
+    const all = counts.reduce((sum, c) => sum + c.n, 0);
+    return {
+      broadcast: { id: b.id, title: b.title, body: b.body, sentAt: b.createdAt },
+      counts: Object.fromEntries(RECIPIENT_GROUPS.map((g) => [g, by[g] ?? 0])) as Record<RecipientGroup, number>,
+      recipients: all,
+      total: group ? (by[group] ?? 0) : all,
+      page,
+      pageSize,
+      items,
+    };
   }
 
   async nearby(ctx: StaffContext) {
@@ -533,6 +577,14 @@ export class BroadcastsService
   }
 }
 
+export const RECIPIENT_GROUPS = ['sent', 'not_in_wallet', 'skipped', 'failed', 'uncertain', 'waiting'] as const;
+export type RecipientGroup = (typeof RECIPIENT_GROUPS)[number];
+export class RecipientsQuery {
+  @IsOptional() @IsIn(RECIPIENT_GROUPS) status?: RecipientGroup;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;
+}
+
 @VendorApi('vendor: broadcasts')
 @StaffRoles('vendor_admin')
 @Controller('vendor/broadcasts')
@@ -577,6 +629,14 @@ export class BroadcastsController {
     @Param('id') id: string,
   ) {
     return this.service.cancelCampaign(ctx, id);
+  }
+  /** Who a broadcast (or a campaign's latest send) reached, per customer. */
+  @Get(':id/recipients') recipients(
+    @CurrentStaff() ctx: StaffContext,
+    @Param('id') id: string,
+    @Query() q: RecipientsQuery,
+  ) {
+    return this.service.recipients(ctx, id, q.status, q.page ?? 1, q.pageSize ?? 50);
   }
   @Get('nearby') nearby(@CurrentStaff() ctx: StaffContext) {
     return this.service.nearby(ctx);

@@ -146,6 +146,8 @@ Dashboard `MyMessages` is fully EN/AR: audience preview, composition, explicit s
 result history, Google availability and Apple-pending explanation. Branch filter means historical
 branch activity, not current location. Only vendor_admin gets sending/settings APIs.
 
+**Broadcast status (2026-11-07):** `GET /api/vendor/broadcasts/{id}/recipients?status&page&pageSize` (merchant admin; `id` = a broadcast or a campaign = its latest send; 404 `broadcast_not_found`) → per customer: sent (Google accepted it), not_in_wallet (`not_saved`), skipped (daily limit, blocked, Google quota), failed, uncertain, waiting + counts. Google gives **no read receipts**: "seen" is never shown; nearby reminders are shown by Google on the phone and report nothing. Dashboard: Campaigns → each sent row → **Status** (`pages/my/broadcast-status.tsx`, keys `broadcast.status.*`).
+
 GET/PATCH `/broadcasts/nearby` reads/sets `vendors.wallet_nearby_enabled` (default false).
 Google class save/sync includes `merchantLocations` for up to 10 active branches with map pins,
 ordered by branch UUID; disabling clears the array. Google controls nearby notification wording,

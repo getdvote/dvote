@@ -43,6 +43,7 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/vendor\/broadcasts\/quota$/, () => ({ used: 0, nearby: true, remaining: 2, resetsAt: null })],
   ['GET', /^\/api\/vendor\/broadcasts$/, () => f.broadcasts],
   ['GET', /^\/api\/vendor\/broadcasts\/nearby$/, () => ({ enabled: true, locations: 2 })],
+  ['GET', /^\/api\/vendor\/broadcasts\/[^/]+\/recipients$/, () => f.broadcastRecipients],
   ['POST', /^\/api\/vendor\/broadcasts\/preview$/, () => ({ matched: 4200, linked: 3900, unavailable: 300, configured: true })],
   ['POST', /^\/api\/vendor\/customer-segments\/preview$/, () => ({ count: 412, customersTotal: 12_480 })],
   // admin API

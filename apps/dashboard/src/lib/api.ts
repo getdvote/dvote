@@ -1151,6 +1151,17 @@ export interface BroadcastCampaign {
   status: 'draft' | 'scheduled' | 'repeating' | 'processing' | 'sent' | 'failed' | 'cancelled';
   nextAt: string | null; repeatDays: number | null; createdAt: string; accepted: number; deliveryStatus?: 'processing' | 'failed' | 'sent';
 }
+/** sent = Google accepted it for the pass; not_in_wallet = the card isn't saved; no read receipts exist. */
+export type BroadcastRecipientGroup = 'sent' | 'not_in_wallet' | 'skipped' | 'failed' | 'uncertain' | 'waiting';
+export interface BroadcastRecipients {
+  broadcast: { id: string; title: string; body: string; sentAt: string };
+  counts: Record<BroadcastRecipientGroup, number>;
+  recipients: number;
+  total: number;
+  page: number;
+  pageSize: number;
+  items: { cardId: string; name: string | null; shortCode: string | null; group: BroadcastRecipientGroup; reason: string | null; at: string | null }[];
+}
 export interface BroadcastCampaignInput extends MerchantCustomerQuery {
   clientDraftId?: string; draftMode?: 'now' | 'schedule' | 'repeat';
   name: string; body: string; mode: 'draft' | 'now' | 'schedule' | 'repeat'; nextAt?: string; repeatDays?: number;
@@ -1199,6 +1210,8 @@ export function createVendorApi(prefix = '/api/vendor', auth?: ClientAuth) {
     campaigns: () => request<BroadcastCampaign[]>('GET', '/api/vendor/broadcasts/campaigns'),
     saveCampaign: (body: BroadcastCampaignInput, id?: string) => request<{ id: string }>(id ? 'PATCH' : 'POST', `/api/vendor/broadcasts/campaigns${id ? `/${id}` : ''}`, body),
     cancelCampaign: (id: string) => request<{ id: string }>('POST', `/api/vendor/broadcasts/campaigns/${id}/cancel`),
+    broadcastRecipients: (id: string, q: { status?: BroadcastRecipientGroup; page?: number; pageSize?: number } = {}) =>
+      request<BroadcastRecipients>('GET', `/api/vendor/broadcasts/${encodeURIComponent(id)}/recipients${qs({ ...q })}`),
     nearbyNotifications: () => request<{ enabled: boolean; locations: number; branchIds: string[] | null }>('GET', '/api/vendor/broadcasts/nearby'),
     setNearbyNotifications: (enabled: boolean, branchIds?: string[]) =>
       request<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled, branchIds }),

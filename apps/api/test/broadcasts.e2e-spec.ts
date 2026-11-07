@@ -182,6 +182,37 @@ describe('Segmented Wallet broadcasts (e2e)', () => {
     expect((await call('other', '', 'get').expect(200)).body).toEqual([]);
   });
 
+  it('shows who a broadcast reached: sent, not in a wallet, per customer; merchant admin of the shop only', async () => {
+    // one card is saved in a wallet, the other was removed from it
+    google.notifyCard
+      .mockResolvedValueOnce({ status: 'accepted', reason: null })
+      .mockResolvedValueOnce({ status: 'skipped', reason: 'not_saved' });
+    const sent = await call('admin').send(message({ segment: 'new' })).expect(201);
+    const before = (await call('admin', `/${sent.body.id}/recipients`, 'get').expect(200)).body;
+    expect(before.counts).toMatchObject({ waiting: 2, sent: 0 });
+    await service.processPending(vendor);
+
+    const status = (await call('admin', `/${sent.body.id}/recipients`, 'get').expect(200)).body;
+    expect(status).toMatchObject({
+      broadcast: { id: sent.body.id, title: 'Free coffee this weekend' },
+      recipients: 2,
+      total: 2,
+      counts: { sent: 1, not_in_wallet: 1, waiting: 0, failed: 0, uncertain: 0, skipped: 0 },
+    });
+    expect(status.items.map((i: { name: string; group: string }) => i.group).sort()).toEqual(['not_in_wallet', 'sent']);
+    expect(status.items[0]).toMatchObject({ name: expect.stringMatching(/^Broadcast /), cardId: expect.any(String) });
+
+    // filter by status
+    const notSaved = (await call('admin', `/${sent.body.id}/recipients?status=not_in_wallet`, 'get').expect(200)).body;
+    expect(notSaved).toMatchObject({ total: 1, items: [{ group: 'not_in_wallet', reason: 'not_saved' }] });
+    await call('admin', `/${sent.body.id}/recipients?status=seen`, 'get').expect(400);
+
+    // another shop, a manager, an unknown id: nothing
+    await call('other', `/${sent.body.id}/recipients`, 'get').expect(404);
+    await call('manager', `/${sent.body.id}/recipients`, 'get').expect(403);
+    await call('admin', `/${randomUUID()}/recipients`, 'get').expect(404);
+  });
+
   it('caps each card at three notifications in a rolling day and never automatically repeats uncertain sends', async () => {
     for (let i = 0; i < 4; i++) {
       await call('admin').send(message()).expect(201);
