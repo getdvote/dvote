@@ -179,10 +179,11 @@ export const en = {
     popular: 'Recommended',
     cta: 'Start free trial',
     vat: 'Prices in Egyptian pounds, excluding 14% VAT.',
-    foundingTitle: 'Launch Partners: 30% off for 6 months',
-    foundingText: 'The first {total} businesses get the plan price at 30% off for their first 6 months, a Launch Partner badge and a direct line to us. Extra branches stay at full price.',
+    foundingTitle: 'Launch Partners: 30% off your first year',
+    foundingText: 'The first {total} businesses that pay annually get 30% off the plan for their first year, a Launch Partner badge and a direct line to us. Extra branches stay at full price.',
     foundingLeft: '{left} of {total} spots left',
-    foundingPrice: 'Launch Partner price, first 6 months',
+    foundingPrice: 'Launch Partner price: {currency} {amount} for your first year',
+    foundingMonthlyHint: 'Billed monthly · pay annually to get 30% off as a Launch Partner',
     plans: [
       {
         name: 'Regular',

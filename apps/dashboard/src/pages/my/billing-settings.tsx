@@ -368,6 +368,9 @@ function PlanPicker({ billing: b }: { billing: Billing }) {
                   {cycle === 'annual' ? t('billing.billedYearly', { price: egp(q.perPeriod) }) : t('billing.billedMonthly')}
                   {q.foundingApplied ? ` · ${t('billing.foundingApplied')}` : ''}
                 </p>
+                {b.foundingUntil && cycle === 'monthly' ? (
+                  <p className="mt-1 text-xs font-medium text-brand-text">{t('billing.foundingAnnualHint', { price: egp(priced.annual.perPeriod) })}</p>
+                ) : null}
                 {b.branches > 1 ? (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t('billing.cardBreakdown', {

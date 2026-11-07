@@ -4,6 +4,7 @@ import type { Env } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
 import { BILLING } from '../plans/plans';
 import { EmailService } from './email.service';
+import { dvoteEmail, esc } from './email-layout';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -92,73 +93,71 @@ export class BillingRemindersService {
   }
 }
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
 function dateText(d: Date, lang: 'ar' | 'en') {
   return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Cairo' }).format(d);
 }
 
-/** The colour logo for white emails (built by docs/email-templates/src/build-assets.mjs). */
-export const EMAIL_LOGO_URL = 'https://dvote.co/email/logo-colour.png';
-
 /**
- * Arabic first (the dashboard's default language), then English. Written like an account email: white,
- * a small logo and slogan, a greeting by name, a text link (no banner or big button), a quiet footer.
- * Inbox providers sort that as a personal / transactional message rather than marketing.
+ * Arabic first (the dashboard's default language), then English, in the same frame as the dvote
+ * sign-in emails (`email-layout.ts`): eyebrow, headline, a greeting by name, the text, a button to
+ * Billing and "reply to this email". Replies go to EMAIL_REPLY_TO.
  */
-export function reminderEmail(due: Due, merchantUrl: string, personName: string | null = null, logoUrl = EMAIL_LOGO_URL): { subject: string; html: string; text: string } {
+export function reminderEmail(due: Due, merchantUrl: string, personName: string | null = null): { subject: string; html: string; text: string } {
   const ar = dateText(due.endsAt, 'ar');
   const en = dateText(due.endsAt, 'en');
   const link = `${merchantUrl}/settings?tab=billing`;
   const lock = BILLING.graceDays;
   const first = personName?.trim().split(/\s+/)[0] || null;
-  const texts: Record<ReminderKind, { subject: string; ar: string; en: string }> = {
+  const shop = due.name;
+  type Copy = { subject: string; preheader: string; ar: { eyebrow: string; title: string; text: string }; en: { eyebrow: string; title: string; text: string } };
+  const texts: Record<ReminderKind, Copy> = {
     trial_soon: {
-      subject: `${due.name}: تجربة dvote بتخلص ${ar} · trial ends ${en}`,
-      ar: `التجربة المجانية لـ ${due.name} بتخلص يوم ${ar}. عشان لوحة التحكم والمسح يفضلوا شغالين، اختار باقة من صفحة الاشتراك وكلّمنا عشان الدفع.`,
-      en: `The free trial for ${due.name} ends on ${en}. To keep your dashboard and scanning working, pick a plan on your billing page and contact us to pay.`,
+      subject: `${shop}: تجربة dvote بتخلص ${ar} · trial ends ${en}`,
+      preheader: `Your free trial ends on ${en}. Pick a plan to keep going.`,
+      ar: { eyebrow: 'تجربتك المجانية', title: `باقي أيام قليلة على تجربتك`, text: `التجربة المجانية لـ ${shop} بتخلص يوم ${ar}. عشان لوحة التحكم والمسح يفضلوا شغالين، اختار باقة من صفحة الاشتراك وكلّمنا عشان الدفع.` },
+      en: { eyebrow: 'Your free trial', title: 'Your trial ends soon', text: `The free trial for ${shop} ends on ${en}. To keep your dashboard and scanning working, pick a plan on your billing page and contact us to pay.` },
     },
     trial_ended: {
-      subject: `${due.name}: تجربة dvote خلصت · trial ended`,
-      ar: `التجربة المجانية لـ ${due.name} خلصت يوم ${ar}، فلوحة التحكم والمسح اتقفلوا. بياناتك محفوظة، وأول ما تشترك في باقة هنفتحلك المحل تاني.`,
-      en: `The free trial for ${due.name} ended on ${en}, so the dashboard and scanning are locked. Your data is kept, and once you subscribe to a plan we'll open the shop again.`,
+      subject: `${shop}: تجربة dvote خلصت · trial ended`,
+      preheader: 'Your free trial has ended. Your data is kept.',
+      ar: { eyebrow: 'تجربتك المجانية', title: 'تجربتك المجانية خلصت', text: `التجربة المجانية لـ ${shop} خلصت يوم ${ar}، فلوحة التحكم والمسح اتقفلوا. بياناتك محفوظة، وأول ما تشترك في باقة هنفتحلك المحل تاني.` },
+      en: { eyebrow: 'Your free trial', title: 'Your trial has ended', text: `The free trial for ${shop} ended on ${en}, so the dashboard and scanning are locked. Your data is kept, and once you subscribe to a plan we'll open the shop again.` },
     },
     paid_soon: {
-      subject: `${due.name}: اشتراك dvote بيتجدد ${ar} · renews ${en}`,
-      ar: `اشتراك ${due.name} مدفوع لحد ${ar}. كلّمنا عشان تجدد قبلها، علشان ما يحصلش أي توقف.`,
-      en: `The subscription for ${due.name} is paid until ${en}. Contact us to renew before then so nothing stops.`,
+      subject: `${shop}: اشتراك dvote بيتجدد ${ar} · renews ${en}`,
+      preheader: `Your plan is paid until ${en}. Renew to keep going.`,
+      ar: { eyebrow: 'اشتراكك', title: 'اشتراكك قرّب يخلص', text: `اشتراك ${shop} مدفوع لحد ${ar}. كلّمنا عشان تجدد قبلها، علشان ما يحصلش أي توقف.` },
+      en: { eyebrow: 'Your subscription', title: 'Time to renew', text: `The subscription for ${shop} is paid until ${en}. Contact us to renew before then so nothing stops.` },
     },
     paid_ended: {
-      subject: `${due.name}: اشتراك dvote خلص · subscription ended`,
-      ar: `اشتراك ${due.name} خلص يوم ${ar}. عندك ${lock} أيام قبل ما لوحة التحكم والمسح يتقفلوا، فجدد اشتراكك قبلها.`,
-      en: `The subscription for ${due.name} ended on ${en}. You have ${lock} days before the dashboard and scanning lock, so please renew before then.`,
+      subject: `${shop}: اشتراك dvote خلص · subscription ended`,
+      preheader: `Your subscription ended. ${lock} days before the dashboard locks.`,
+      ar: { eyebrow: 'اشتراكك', title: 'اشتراكك خلص', text: `اشتراك ${shop} خلص يوم ${ar}. عندك ${lock} أيام قبل ما لوحة التحكم والمسح يتقفلوا، فجدد اشتراكك قبلها.` },
+      en: { eyebrow: 'Your subscription', title: 'Your subscription ended', text: `The subscription for ${shop} ended on ${en}. You have ${lock} days before the dashboard and scanning lock, so please renew before then.` },
     },
   };
   const t = texts[due.kind];
   const hiAr = first ? `أهلًا ${first}،` : 'أهلًا،';
   const hiEn = first ? `Hi ${first},` : 'Hi,';
-  const a = (label: string) => `<a href="${esc(link)}" style="color:#1F3DFF">${label}</a>`;
-  const p = 'margin:0 0 14px;font-size:15px;line-height:1.6';
-  const small = 'margin:0;font-size:12px;line-height:1.6;color:#6B5F57';
-  const html = `<!doctype html><html><body style="margin:0;padding:24px 16px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#18100F">
-<div style="max-width:560px">
-<a href="https://dvote.co" style="text-decoration:none"><img src="${logoUrl}" width="104" height="33" alt="dvote" style="display:block;border:0"></a>
-<p style="${small};margin:6px 0 24px">Loyalty cards in your customers' wallet · كروت ولاء في محفظة زباينك</p>
-<div dir="rtl" style="text-align:right">
-<p style="${p}">${esc(hiAr)}</p>
-<p style="${p}">${esc(t.ar)}</p>
-<p style="${p}">صفحة الاشتراك: ${a(esc(link))}</p>
-<p style="${p}">لو عندك أي سؤال، رد على الإيميل ده.<br>فريق dvote</p>
-</div>
-<hr style="border:none;border-top:1px solid #EFE9E3;margin:24px 0">
-<p style="${p}">${esc(hiEn)}</p>
-<p style="${p}">${esc(t.en)}</p>
-<p style="${p}">Your billing page: ${a(esc(link))}</p>
-<p style="${p}">Any questions? Just reply to this email.<br>The dvote team</p>
-<hr style="border:none;border-top:1px solid #EFE9E3;margin:24px 0 16px">
-<p style="${small}">You get this email because you manage ${esc(due.name)} on dvote. · وصلك الإيميل ده عشان إنت مسؤول ${esc(due.name)} على dvote.</p>
-<p style="${small};margin-top:6px">dvote · Made in Egypt · <a href="https://dvote.co" style="color:#6B5F57">dvote.co</a></p>
-</div></body></html>`;
-  const text = `${hiAr}\n\n${t.ar}\n\nصفحة الاشتراك: ${link}\n\nلو عندك أي سؤال، رد على الإيميل ده.\nفريق dvote\n\n---\n\n${hiEn}\n\n${t.en}\n\nYour billing page: ${link}\n\nAny questions? Just reply to this email.\nThe dvote team\n\n---\nYou get this email because you manage ${due.name} on dvote. dvote · Made in Egypt · https://dvote.co`;
+  const html = dvoteEmail({
+    preheader: t.preheader,
+    ar: {
+      eyebrow: t.ar.eyebrow,
+      title: esc(t.ar.title),
+      body: [esc(hiAr), esc(t.ar.text)],
+      button: { label: 'افتح صفحة الاشتراك', href: link },
+      note: 'لو عندك أي سؤال، رد على الإيميل ده وهنرد عليك.',
+    },
+    en: {
+      eyebrow: t.en.eyebrow,
+      title: esc(t.en.title),
+      body: [esc(hiEn), esc(t.en.text)],
+      button: { label: 'Open billing', href: link },
+      note: 'Any questions? Just reply to this email and we\'ll get back to you.',
+    },
+    footerAr: `وصلك الإيميل ده عشان إنت مسؤول ${esc(shop)} على dvote.`,
+    footerEn: `You get this email because you manage ${esc(shop)} on dvote.`,
+  });
+  const text = `${hiAr}\n\n${t.ar.text}\n\nصفحة الاشتراك: ${link}\n\nلو عندك أي سؤال، رد على الإيميل ده.\nفريق dvote\n\n---\n\n${hiEn}\n\n${t.en.text}\n\nYour billing page: ${link}\n\nAny questions? Just reply to this email.\nThe dvote team\n\n---\nGood things come back. · dvote.co`;
   return { subject: t.subject, html, text };
 }

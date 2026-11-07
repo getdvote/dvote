@@ -20,7 +20,7 @@ export interface PlanPrice {
   annualTotal: number;
   /** Each extra branch, per month. */
   extraBranch: { monthly: number; annual: number };
-  /** The plan price for Launch Partners during their first FOUNDING.months (extra branches stay full price). */
+  /** Old monthly Launch Partner price (no longer used: the discount is annual only since 2026-11-07). */
   foundingMonthly: number;
 }
 
@@ -31,7 +31,12 @@ export const PLAN_PRICES: readonly PlanPrice[] = [
 ];
 
 /** Launch Partners: the first merchants (not branches) get 30% off their plan for 6 months. */
-export const FOUNDING = { discountPercent: 30, months: 6, defaultTotal: 10, maxTotal: 100 };
+/**
+ * Launch Partners (decided 2026-11-07, replaces "30% off for 6 months"): the first shops get 30% off
+ * the plan price on **annual billing only**, for the 12 months after they get the spot (so their first
+ * annual payment). Monthly billing is full price. Extra branches are never discounted.
+ */
+export const FOUNDING = { discountPercent: 30, months: 12, defaultTotal: 10, maxTotal: 100 };
 
 /** Monthly price of a plan for a number of branches. */
 export function monthlyPrice(plan: Plan, branches: number, cycle: BillingCycle = 'monthly'): number {
@@ -79,16 +84,14 @@ export function quote(plan: Plan, cycle: BillingCycle, branches: number, foundin
   const p = PLAN_PRICES.find((x) => x.id === plan)!;
   const extra = Math.max(0, Math.floor(branches) - 1);
   const listBase = cycle === 'annual' ? p.annual : p.monthly;
-  const base = founding
-    ? cycle === 'annual'
-      ? Math.round((listBase * (100 - FOUNDING.discountPercent)) / 100)
-      : p.foundingMonthly
-    : listBase;
+  // the Launch Partner discount only applies to annual billing
+  const discounted = founding && cycle === 'annual';
+  const off = (n: number) => (discounted ? Math.round((n * (100 - FOUNDING.discountPercent)) / 100) : n);
+  const base = off(listBase);
   const extraBranches = extra * (cycle === 'annual' ? p.extraBranch.annual : p.extraBranch.monthly);
   const monthly = base + extraBranches;
-  const off = (n: number) => (founding ? Math.round((n * (100 - FOUNDING.discountPercent)) / 100) : n);
   const perPeriod = cycle === 'annual' ? off(p.annualTotal) + extraBranches * 12 : monthly;
-  return { base, extraBranches, monthly, perPeriod, foundingApplied: founding };
+  return { base, extraBranches, monthly, perPeriod, foundingApplied: discounted };
 }
 
 /** The start of the paid period that ends at `paidUntil` (one month or year before it). */

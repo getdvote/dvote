@@ -44,14 +44,20 @@ export function monthlyPrice(plan: Plan, cycle: Cycle, branches: number): number
   return cycle === 'annual' ? plan.annual + extra * plan.extraBranch.annual : plan.monthly + extra * plan.extraBranch.monthly;
 }
 
-/** One year paid at once on annual billing: ten months of the monthly price (4,990 for Regular, 1 branch). */
+/** One year paid at once on annual billing: ten months of the plan price, plus each extra branch at its annual rate × 12 (4,990 for Regular with 1 branch, 7,978 with 2). */
 export function yearlyPrice(plan: Plan, branches: number): number {
-  return (plan.monthly + Math.max(0, branches - 1) * plan.extraBranch.monthly) * 10;
+  // same as the API's quote(): the plan's yearly price (10 months) + each extra branch at its annual rate × 12
+  return plan.monthly * 10 + Math.max(0, branches - 1) * plan.extraBranch.annual * 12;
 }
 
-/** Launch Partner price per month: 30% off the plan for 6 months; extra branches stay at full monthly price. */
+/** Launch Partner price per month on annual billing: 30% off the plan's annual price; extra branches stay full price. */
 export function foundingPrice(plan: Plan, branches: number): number {
-  return plan.foundingMonthly + Math.max(0, branches - 1) * plan.extraBranch.monthly;
+  return Math.round(plan.annual * 0.7) + Math.max(0, branches - 1) * plan.extraBranch.annual;
+}
+
+/** What a Launch Partner pays for the year (same as the API's quote). */
+export function foundingYearlyPrice(plan: Plan, branches: number): number {
+  return Math.round((plan.monthly * 10 * 70) / 100) + Math.max(0, branches - 1) * plan.extraBranch.annual * 12;
 }
 
 export const formatMoney = (n: number) => n.toLocaleString('en-US');

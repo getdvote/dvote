@@ -2,7 +2,7 @@ import { CrownStarIcon } from '@solar-icons/react/linear';
 import { fill, useI18n } from '@/i18n';
 import type { PlansData } from '@/lib/plans';
 
-/** "First 10 merchants: 30% off for 6 months — N spots left"; hidden when closed or full. */
+/** "First 10 merchants: 30% off the first year on annual billing — N spots left"; hidden when closed or full. */
 export function FoundingBanner({ data }: { data: PlansData }) {
   const { d } = useI18n();
   const f = data.founding;
