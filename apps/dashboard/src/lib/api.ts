@@ -149,7 +149,7 @@ export interface VendorPlan {
   /** What the plan includes (a trial or a shop without a plan: everything). */
   entitlements?: Entitlements;
   trialEndsAt: string | null;
-  /** An unpaid trial shop is deleted for good then. */
+  /** Old rows only: ended trials are no longer deleted by themselves (2026-11-07). */
   deleteAt: string | null;
 }
 
@@ -162,6 +162,51 @@ export interface PriceQuote {
   foundingApplied: boolean;
 }
 
+/** A plan change the merchant sent; the dvote team approves it after payment (2026-11-07). */
+export interface PlanRequest {
+  id: string;
+  plan: PlanName;
+  billingCycle: BillingCycle;
+  branches: number;
+  /** upgrade: starts on approval; downgrade / change (monthly ↔ annual): at the end of the paid period. */
+  kind: 'upgrade' | 'downgrade' | 'change';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  /** EGP to collect now (the upgrade's difference for the days left). */
+  amountDue: number;
+  /** The new plan's price per period. */
+  periodPrice: number;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+}
+
+export interface PlanChange {
+  plan: PlanName;
+  billingCycle: BillingCycle;
+  branches?: number;
+  keepBranchIds?: string[];
+  keepRewardIds?: string[];
+}
+
+/** POST /api/vendor/billing/preview: what a change would be. */
+export interface PlanChangePreview {
+  kind: PlanRequest['kind'];
+  branches: number;
+  amountDue: number;
+  periodPrice: number;
+  startsAt: string | null;
+}
+
+/** GET /api/admin/plan-requests */
+export interface AdminPlanRequest extends PlanRequest {
+  from: { plan: PlanName | null; billingCycle: BillingCycle | null; branches: number | null };
+  keepBranches: number;
+  keepRewards: number;
+  vendor: { id: string; name: string; slug: string; paidUntil: string | null; phone: string | null };
+  requestedBy: { name: string; email: string | null } | null;
+  reviewedBy: string | null;
+}
+
 /** GET /api/vendor/billing (merchant admin). */
 export interface Billing {
   currency: string;
@@ -171,17 +216,25 @@ export interface Billing {
   plan: PlanName | null;
   billingCycle: BillingCycle | null;
   branches: number;
+  /** Open branches the paid plan covers (null = no limit: a trial or a shop dvote runs). */
+  paidBranches: number | null;
+  openBranches: number;
+  activeRewards: number;
+  /** On a paid plan every change is a request dvote approves. */
+  requestsRequired: boolean;
+  pendingRequest: PlanRequest | null;
+  lastDecision: PlanRequest | null;
   price: PriceQuote | null;
   trialEndsAt: string | null;
   trialDays: number;
-  deleteAt: string | null;
   paidUntil: string | null;
   graceEndsAt: string | null;
   graceDays: number;
   founding: boolean;
   foundingUntil: string | null;
-  scheduled: { plan: PlanName; billingCycle: BillingCycle; startsAt: string | null; price: PriceQuote } | null;
-  plans: { id: PlanName; monthly: PriceQuote; annual: PriceQuote }[];
+  scheduled: { plan: PlanName; billingCycle: BillingCycle; branches: number; startsAt: string | null; price: PriceQuote } | null;
+  /** upgradeDueNow: on a paid plan, what moving up to it (same branches and billing) costs now; null otherwise. */
+  plans: { id: PlanName; monthly: PriceQuote; annual: PriceQuote; upgradeDueNow: number | null }[];
 }
 
 export interface FoundingStatus {
@@ -221,6 +274,11 @@ export interface Vendor {
   paidUntil?: string | null;
   nextPlan?: PlanName | null;
   nextBillingCycle?: BillingCycle | null;
+  /** Open branches the paid plan covers (null = no limit). */
+  paidBranches?: number | null;
+  nextPaidBranches?: number | null;
+  /** What the plan costs, itemised (null = no plan). */
+  price?: (PriceQuote & { branches: number; extraBranchPrice: number }) | null;
   trialEndsAt?: string | null;
   deleteAt?: string | null;
   selfSignup?: boolean;
@@ -906,11 +964,11 @@ export const api = {
     call<{ sent: true }>('POST', '/api/public/merchant-signup', body),
   /** A confirmed new account opens its shop (free trial). */
   signup: (body: { shopName: string; ownerName: string; phone: string }) =>
-    call<{ vendorId: string; trialEndsAt: string; deleteAt: string }>('POST', '/api/vendor/signup', body),
+    call<{ vendorId: string; trialEndsAt: string; deleteAt: string | null }>('POST', '/api/vendor/signup', body),
   /** Admin: activate a paid plan or extend a free trial. */
   vendorPlan: (
     vendorId: string,
-    body: { action: 'activate'; plan: PlanName; billingCycle: BillingCycle; founding?: boolean } | { action: 'extend'; days: number } | { action: 'renew' },
+    body: { action: 'activate'; plan: PlanName; billingCycle: BillingCycle; founding?: boolean; branches?: number } | { action: 'extend'; days: number } | { action: 'renew' },
   ) =>
     call<{
       planStatus: 'trial' | 'active';
@@ -920,9 +978,18 @@ export const api = {
       paidUntil: string | null;
       nextPlan: PlanName | null;
       nextBillingCycle: BillingCycle | null;
+      paidBranches: number | null;
+      nextPaidBranches: number | null;
       trialEndsAt: string | null;
       deleteAt: string | null;
     }>('POST', `/api/admin/vendors/${vendorId}/plan`, body),
+  /** Admin: delete a shop whose free trial ended, for good (type its name to confirm). */
+  deleteVendor: (vendorId: string, confirmName: string) => call<void>('DELETE', `/api/admin/vendors/${vendorId}`, { confirmName }),
+  /** Admin: merchants' plan change requests. */
+  planRequests: (q: { status?: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'all'; page?: number; pageSize?: number } = {}) =>
+    call<{ total: number; pending: number; items: AdminPlanRequest[] }>('GET', `/api/admin/plan-requests${qs({ ...q })}`),
+  approvePlanRequest: (id: string, note?: string) => call<PlanRequest>('POST', `/api/admin/plan-requests/${id}/approve`, { note }),
+  rejectPlanRequest: (id: string, note?: string) => call<PlanRequest>('POST', `/api/admin/plan-requests/${id}/reject`, { note }),
   /** Admin: the Launch Partners offer (spots and whether it is open). */
   founding: () => call<FoundingStatus>('GET', '/api/admin/settings/founding'),
   setFounding: (body: { total: number; open: boolean }) => call<FoundingStatus>('PUT', '/api/admin/settings/founding', body),
@@ -1084,6 +1151,17 @@ export interface BroadcastCampaign {
   status: 'draft' | 'scheduled' | 'repeating' | 'processing' | 'sent' | 'failed' | 'cancelled';
   nextAt: string | null; repeatDays: number | null; createdAt: string; accepted: number; deliveryStatus?: 'processing' | 'failed' | 'sent';
 }
+/** sent = Google accepted it for the pass; not_in_wallet = the card isn't saved; no read receipts exist. */
+export type BroadcastRecipientGroup = 'sent' | 'not_in_wallet' | 'skipped' | 'failed' | 'uncertain' | 'waiting';
+export interface BroadcastRecipients {
+  broadcast: { id: string; title: string; body: string; sentAt: string };
+  counts: Record<BroadcastRecipientGroup, number>;
+  recipients: number;
+  total: number;
+  page: number;
+  pageSize: number;
+  items: { cardId: string; name: string | null; shortCode: string | null; group: BroadcastRecipientGroup; reason: string | null; at: string | null }[];
+}
 export interface BroadcastCampaignInput extends MerchantCustomerQuery {
   clientDraftId?: string; draftMode?: 'now' | 'schedule' | 'repeat';
   name: string; body: string; mode: 'draft' | 'now' | 'schedule' | 'repeat'; nextAt?: string; repeatDays?: number;
@@ -1132,6 +1210,8 @@ export function createVendorApi(prefix = '/api/vendor', auth?: ClientAuth) {
     campaigns: () => request<BroadcastCampaign[]>('GET', '/api/vendor/broadcasts/campaigns'),
     saveCampaign: (body: BroadcastCampaignInput, id?: string) => request<{ id: string }>(id ? 'PATCH' : 'POST', `/api/vendor/broadcasts/campaigns${id ? `/${id}` : ''}`, body),
     cancelCampaign: (id: string) => request<{ id: string }>('POST', `/api/vendor/broadcasts/campaigns/${id}/cancel`),
+    broadcastRecipients: (id: string, q: { status?: BroadcastRecipientGroup; page?: number; pageSize?: number } = {}) =>
+      request<BroadcastRecipients>('GET', `/api/vendor/broadcasts/${encodeURIComponent(id)}/recipients${qs({ ...q })}`),
     nearbyNotifications: () => request<{ enabled: boolean; locations: number; branchIds: string[] | null }>('GET', '/api/vendor/broadcasts/nearby'),
     setNearbyNotifications: (enabled: boolean, branchIds?: string[]) =>
       request<{ enabled: boolean; locations: number }>('PATCH', '/api/vendor/broadcasts/nearby', { enabled, branchIds }),
@@ -1156,7 +1236,9 @@ export function createVendorApi(prefix = '/api/vendor', auth?: ClientAuth) {
     attention: () => request<{ items: AttentionItem[] }>('GET', '/api/vendor/attention'),
     goLive: () => request<GoLive>('GET', '/api/vendor/go-live'),
     billing: () => request<Billing>('GET', '/api/vendor/billing'),
-    changePlan: (plan: PlanName, billingCycle: BillingCycle) => request<Billing>('PUT', '/api/vendor/billing/plan', { plan, billingCycle }),
+    changePlan: (change: PlanChange) => request<Billing>('PUT', '/api/vendor/billing/plan', change),
+    previewPlan: (change: PlanChange) => request<PlanChangePreview>('POST', '/api/vendor/billing/preview', change),
+    cancelPlanRequest: () => request<Billing>('DELETE', '/api/vendor/billing/request'),
     cancelScheduledPlan: () => request<Billing>('DELETE', '/api/vendor/billing/scheduled'),
     insights: (q: { from: string; to: string; compare?: 'previous' | 'none'; branchId?: string }) =>
       request<Insights>('GET', `/api/vendor/insights${qs({ ...q })}`),

@@ -155,6 +155,9 @@ await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${tile}"
 // Logos: white lockup for the espresso header, white symbol for the footer.
 const lockup = (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 665 208">${logoPaths.map((d) => `<path d="${d}" fill="${c}"/>`).join('')}</svg>`;
 await sharp(Buffer.from(lockup(W))).resize(280).png().toFile(join(out, 'logo-electric.png'));
+// Colour lockup (blue symbol, espresso word) for white emails: the API's billing reminders.
+const colourLockup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 665 208">${logoPaths.map((d, i) => `<path d="${d}" fill="${i < 5 ? Y : K}"/>`).join('')}</svg>`;
+await sharp(Buffer.from(colourLockup)).resize(280).png().toFile(join(out, 'logo-colour.png'));
 const sym = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 208 208">${logoPaths.slice(0, 5).map((d) => `<path d="${d}" fill="${W}"/>`).join('')}</svg>`;
 await sharp(Buffer.from(sym)).resize(96).png().toFile(join(out, 'symbol-electric.png'));
 
@@ -162,7 +165,7 @@ await sharp(Buffer.from(sym)).resize(96).png().toFile(join(out, 'symbol-electric
 const underline = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="24" viewBox="0 0 240 24">${path('M6 14C50 6 110 6 160 11S220 16 204 12', 'none', K, 3)}${path('M30 19C80 14 140 15 190 18', 'none', K, 2)}${spark(226, 10, 8, Y).replace('stroke-width="1"', 'stroke-width="1"')}${path('M226 2Q226 10 234 10Q226 10 226 18Q226 10 218 10Q226 10 226 2', 'none', K, 1.5)}</svg>`;
 await sharp(Buffer.from(underline)).resize(480).png().toFile(join(out, 'underline.png'));
 
-for (const f of ['pattern-ink.png', 'logo-electric.png', 'symbol-electric.png', 'underline.png', ...Object.keys(cards).map((n) => `${n}.gif`)]) {
+for (const f of ['pattern-ink.png', 'logo-electric.png', 'logo-colour.png', 'symbol-electric.png', 'underline.png', ...Object.keys(cards).map((n) => `${n}.gif`)]) {
   console.log(f.padEnd(26), `${(statSync(join(out, f)).size / 1024).toFixed(0)} KB`);
 }
 

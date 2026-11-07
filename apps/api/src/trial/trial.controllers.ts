@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Param, Post, Req, UnauthorizedException, UseGuards, ForbiddenException, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
+import { Body, Controller, Delete, HttpCode, Param, Post, Req, UnauthorizedException, UseGuards, ForbiddenException, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConflictResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
@@ -32,6 +32,11 @@ export class StartSignupDto {
   @IsOptional() @IsIn(BILLING_CYCLES) billingCycle?: BillingCycle;
 }
 
+export class DeleteShopDto {
+  /** The shop's name, typed by the admin to confirm. */
+  @IsString() @MaxLength(120) confirmName: string;
+}
+
 export class PlanActionDto {
   @IsIn(['activate', 'extend', 'renew']) action: 'activate' | 'extend' | 'renew';
   @ValidateIf((o: PlanActionDto) => o.action === 'activate') @IsIn(PLANS) plan?: Plan;
@@ -39,6 +44,8 @@ export class PlanActionDto {
   @IsOptional() @IsIn(BILLING_CYCLES) billingCycle?: BillingCycle;
   /** Activate only: take (true) or give back (false) a Launch Partner spot; left out = unchanged. */
   @IsOptional() @IsBoolean() founding?: boolean;
+  /** Activate only: open branches the paid plan covers (default: what is open today). */
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(500) branches?: number;
   @ValidateIf((o: PlanActionDto) => o.action === 'extend') @Type(() => Number) @IsInt() @Min(1) @Max(60) days?: number;
 }
 
@@ -114,7 +121,7 @@ export class AdminPlanController {
   async plan(@Param('id', ParseUuidPipe) id: string, @Body() dto: PlanActionDto) {
     const v =
       dto.action === 'activate'
-        ? await this.trial.activate(id, dto.plan as Plan, dto.billingCycle, dto.founding)
+        ? await this.trial.activate(id, dto.plan as Plan, dto.billingCycle, dto.founding, dto.branches)
         : dto.action === 'renew'
           ? await this.trial.renew(id)
           : await this.trial.extend(id, dto.days as number);
@@ -126,9 +133,26 @@ export class AdminPlanController {
       paidUntil: v.paid_until?.toISOString() ?? null,
       nextPlan: v.next_plan,
       nextBillingCycle: v.next_billing_cycle,
+      paidBranches: v.paid_branches,
+      nextPaidBranches: v.next_paid_branches,
       trialEndsAt: v.trial_ends_at?.toISOString() ?? null,
       deleteAt: v.delete_at?.toISOString() ?? null,
       status: v.status,
     };
+  }
+}
+
+/** DELETE /api/admin/vendors/{id}: delete a shop whose free trial ended without a plan, for good. */
+@AdminApi('admin: plans')
+@Controller('admin/vendors')
+export class AdminDeleteShopController {
+  constructor(private readonly trial: TrialService) {}
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiBody({ type: DeleteShopDto })
+  @ApiConflictResponse({ description: 'not_deletable (not an ended trial)' })
+  async remove(@Param('id', ParseUuidPipe) id: string, @Body() dto: DeleteShopDto): Promise<void> {
+    await this.trial.deleteShop(id, dto.confirmName);
   }
 }

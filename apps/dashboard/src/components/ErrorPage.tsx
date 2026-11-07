@@ -91,19 +91,14 @@ export function WrongSitePage({ belongsTo, href }: { belongsTo: 'admin' | 'merch
 
 /**
  * A self sign-up shop whose 14-day free trial is over (API trial_ended): nothing else is
- * reachable. Points to the plans on dvote.co/pricing and says when the shop will be deleted.
+ * reachable. Points to the plans on dvote.co/pricing. The shop and its data are kept (since
+ * 2026-11-07 nothing is deleted by itself: only the dvote team deletes a shop, by hand).
  */
 export function TrialEndedPage() {
-  const { trial, signOut } = useAuth();
-  const deleteAt = trial?.deleteAt ? dayjs(trial.deleteAt).format('D MMMM YYYY') : null;
+  const { signOut } = useAuth();
   return (
     <NoticeFrame>
-      <ErrorState
-        icon={DangerTriangleIcon}
-        illustration="reward-unlocked"
-        title={t('trial.endedTitle')}
-        text={deleteAt ? t('trial.endedTextDate', { date: deleteAt }) : t('trial.endedText')}
-      >
+      <ErrorState icon={DangerTriangleIcon} illustration="reward-unlocked" title={t('trial.endedTitle')} text={t('trial.endedText')}>
         <Button asChild variant="brand">
           <a href={`${config.landingUrl}/pricing`}>{t('trial.seePlans')}</a>
         </Button>

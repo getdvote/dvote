@@ -12,6 +12,7 @@ import { StorageService } from './../src/storage/storage.service';
 import { SupabaseAdminService } from './../src/supabase/supabase-admin.service';
 import { TrialService } from './../src/trial/trial.service';
 import { TurnstileService } from './../src/trial/turnstile.service';
+import { EmailService, type Email } from './../src/trial/email.service';
 import { FakeStorage } from './helpers/fake-storage';
 import { createTestSigner, type TestSigner } from './helpers/test-auth';
 
@@ -32,6 +33,17 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     isConfigured: () => true,
   };
   const captcha = { verify: jest.fn((token?: string) => (token === 'ok' ? Promise.resolve() : Promise.reject(new ForbiddenException({ code: 'captcha_failed' })))) };
+  /** Reminder emails are captured, never sent. */
+  const mail: { enabled: boolean; sent: Email[]; fail: boolean; send: (e: Email) => Promise<void> } = {
+    enabled: false,
+    sent: [],
+    fail: false,
+    send: (e: Email): Promise<void> => {
+      if (mail.fail) return Promise.reject(new Error('down'));
+      mail.sent.push(e);
+      return Promise.resolve();
+    },
+  };
   const vendorIds: string[] = [];
   const http = () => request(app.getHttpServer());
 
@@ -62,6 +74,8 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       .useValue(fakeAuthAdmin)
       .overrideProvider(TurnstileService)
       .useValue(captcha)
+      .overrideProvider(EmailService)
+      .useValue(mail)
       .compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
@@ -82,6 +96,9 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     await prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe('SET LOCAL session_replication_role = replica');
       await tx.point_events.deleteMany({ where: { vendor_id: { in: v } } });
+      await tx.plan_requests.deleteMany({ where: { vendor_id: { in: v } } });
+      await tx.billing_reminders.deleteMany({ where: { vendor_id: { in: v } } });
+      await tx.rewards.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.cards.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.point_rules.deleteMany({ where: { vendor_id: { in: v } } });
       await tx.staff_users.deleteMany({ where: { vendor_id: { in: v } } });
@@ -127,11 +144,10 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     const res = await signup(a.token).expect(200);
     vendorIds.push(res.body.vendorId);
     const trialDays = (Date.parse(res.body.trialEndsAt) - Date.now()) / DAY;
-    const deleteDays = (Date.parse(res.body.deleteAt) - Date.now()) / DAY;
     expect(trialDays).toBeGreaterThan(13.99);
     expect(trialDays).toBeLessThan(14.01);
-    expect(deleteDays).toBeGreaterThan(29.99);
-    expect(deleteDays).toBeLessThan(30.01);
+    // no deletion date any more: an ended trial waits for the dvote team
+    expect(res.body.deleteAt).toBeNull();
 
     const v = await prisma.vendors.findUniqueOrThrow({ where: { id: res.body.vendorId }, include: { staff_users: true } });
     expect(v).toMatchObject({
@@ -183,7 +199,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     await prisma.vendors.update({ where: { id: vendorId }, data: { trial_ends_at: new Date(Date.now() - 1000) } });
     const ended = (await me(a.token).expect(403)).body;
     expect(ended).toMatchObject({ code: 'trial_ended' });
-    expect(ended.deleteAt).toEqual(expect.any(String));
+    expect(ended.deleteAt).toBeNull();
     const scan = await http().post('/api/vendor/scans/preview').set('Authorization', `Bearer ${a.token}`).send({ code: 'dvote:c1:x' });
     expect(scan.status).toBe(403);
     expect(scan.body.code).toBe('trial_ended');
@@ -210,6 +226,9 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       paidUntil: expect.any(String),
       nextPlan: null,
       nextBillingCycle: null,
+      // the paid plan covers the shop's open branches (at least one)
+      paidBranches: 1,
+      nextPaidBranches: null,
       trialEndsAt: null,
       deleteAt: null,
       status: 'active',
@@ -252,7 +271,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     expect(v).toMatchObject({ plan_status: 'trial', plan: 'loyal', billing_cycle: 'annual', founding: false });
   });
 
-  it('billing page: trial pick, upgrade now, downgrade at period end, grace, lock, renew', async () => {
+  it('billing page: trial pick saved; on a paid plan changes are requests dvote approves; upgrade prorated now, forced downgrade at period end', async () => {
     const a = await account();
     const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Billing ${run}` }).expect(200)).body;
     vendorIds.push(vendorId);
@@ -263,46 +282,95 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
         { vendor_id: vendorId, name: 'Old', status: 'closed' },
       ],
     });
-    const billing = () => http().get('/api/vendor/billing').set('Authorization', `Bearer ${a.token}`);
-    const choose = (plan: string, billingCycle: string) =>
-      http().put('/api/vendor/billing/plan').set('Authorization', `Bearer ${a.token}`).send({ plan, billingCycle });
+    const bearer = { Authorization: `Bearer ${a.token}` };
+    const billing = () => http().get('/api/vendor/billing').set(bearer);
+    const choose = (body: Record<string, unknown>) => http().put('/api/vendor/billing/plan').set(bearer).send(body);
+    const admin = (path: string, body: Record<string, unknown> = {}) =>
+      http().post(`/api/admin/plan-requests/${path}`).set('Authorization', `Bearer ${adminToken}`).send(body);
 
-    // trial: no plan yet, every plan priced for the 2 open branches
+    // trial: no plan yet, every plan priced for the 2 open branches; a pick is just saved
     let b = (await billing().expect(200)).body;
-    expect(b).toMatchObject({ state: 'trial', plan: null, branches: 2, trialDays: 14, paidUntil: null, scheduled: null });
+    expect(b).toMatchObject({ state: 'trial', plan: null, branches: 2, paidBranches: null, trialDays: 14, paidUntil: null, scheduled: null, pendingRequest: null, requestsRequired: false });
     expect(b.plans.find((p: { id: string }) => p.id === 'loyal').monthly).toMatchObject({ monthly: 999 + 399, perPeriod: 1398 });
-    // on a trial any pick applies at once (nothing is paid yet)
-    b = (await choose('chain', 'annual').expect(200)).body;
-    expect(b).toMatchObject({ state: 'trial', plan: 'chain', billingCycle: 'annual', price: { monthly: 1666 + 416, perPeriod: 19990 + 416 * 12 } });
-    await choose('gold', 'monthly').expect(400);
+    b = (await choose({ plan: 'chain', billingCycle: 'annual' }).expect(200)).body;
+    expect(b).toMatchObject({ state: 'trial', plan: 'chain', billingCycle: 'annual', pendingRequest: null });
+    await choose({ plan: 'gold', billingCycle: 'monthly' }).expect(400);
 
-    // dvote collects the money, activates Loyal monthly → paid for a month
+    // dvote collects the money, activates Loyal monthly → paid for a month, covering the 2 open branches
     await plan(adminToken, vendorId, { action: 'activate', plan: 'loyal', billingCycle: 'monthly' }).expect(200);
     b = (await billing().expect(200)).body;
-    expect(b).toMatchObject({ state: 'active', plan: 'loyal', billingCycle: 'monthly', price: { monthly: 1398 } });
+    expect(b).toMatchObject({ state: 'active', plan: 'loyal', billingCycle: 'monthly', paidBranches: 2, requestsRequired: true, price: { monthly: 1398 } });
     const paidUntil = b.paidUntil as string;
 
-    // upgrade: at once; switching to annual waits for the renewal
-    b = (await choose('chain', 'annual').expect(200)).body;
-    expect(b).toMatchObject({ plan: 'chain', billingCycle: 'monthly', paidUntil, scheduled: { plan: 'chain', billingCycle: 'annual', startsAt: paidUntil } });
-    // downgrade: scheduled for the end of the paid period, cancel drops it
-    b = (await choose('regular', 'monthly').expect(200)).body;
-    expect(b).toMatchObject({ plan: 'chain', scheduled: { plan: 'regular', billingCycle: 'monthly', price: { monthly: 499 + 299 } } });
-    b = (await http().delete('/api/vendor/billing/scheduled').set('Authorization', `Bearer ${a.token}`).expect(200)).body;
-    expect(b.scheduled).toBeNull();
-    await http().delete('/api/vendor/billing/scheduled').set('Authorization', `Bearer ${a.token}`).expect(409);
-    await choose('regular', 'monthly').expect(200);
+    // a third branch is past what the plan covers: refused (also reopening the closed one)
+    const third = await http().post('/api/vendor/branches').set(bearer).send({ name: 'Third' }).expect(409);
+    expect(third.body).toMatchObject({ code: 'plan_limit', limit: 'branches', max: 2, used: 2 });
+    const old = await prisma.branches.findFirstOrThrow({ where: { vendor_id: vendorId, name: 'Old' } });
+    expect((await http().patch(`/api/vendor/branches/${old.id}`).set(bearer).send({ status: 'active' }).expect(409)).body.limit).toBe('branches');
 
-    // the period ends: grace (still works, warned), the job moves the shop to the scheduled plan
+    // upgrade to Chain: a request, nothing changes yet; priced for the days left (about a whole month)
+    b = (await choose({ plan: 'chain', billingCycle: 'monthly' }).expect(200)).body;
+    expect(b).toMatchObject({ plan: 'loyal', pendingRequest: { plan: 'chain', kind: 'upgrade', status: 'pending', branches: 2 } });
+    const due = b.pendingRequest.amountDue as number;
+    expect(due).toBeGreaterThan(0);
+    expect(due).toBeLessThanOrEqual(1999 + 499 - 1398);
+    // one open request at a time
+    expect((await choose({ plan: 'regular', billingCycle: 'monthly' }).expect(409)).body.code).toBe('request_pending');
+    // the merchant takes it back; going up and down at once is two requests
+    await http().delete('/api/vendor/billing/request').set(bearer).expect(200);
+    await http().delete('/api/vendor/billing/request').set(bearer).expect(409);
+    expect((await choose({ plan: 'chain', billingCycle: 'monthly', branches: 1 }).expect(400)).body.code).toBe('split_change');
+    b = (await choose({ plan: 'chain', billingCycle: 'monthly', branches: 3 }).expect(200)).body;
+    const upId = b.pendingRequest.id as string;
+
+    // the admin sees it and approves: Chain with 3 branches at once, same paid period
+    const list = (await http().get('/api/admin/plan-requests').set('Authorization', `Bearer ${adminToken}`).expect(200)).body;
+    expect(list.items.find((r: { id: string }) => r.id === upId)).toMatchObject({ kind: 'upgrade', vendor: { id: vendorId }, from: { plan: 'loyal', branches: 2 } });
+    await http().get('/api/admin/plan-requests').set(bearer).expect(403);
+    expect((await admin(`${upId}/approve`, { note: 'Paid by Visa' }).expect(200)).body).toMatchObject({ status: 'approved', reviewNote: 'Paid by Visa' });
+    expect((await admin(`${upId}/approve`).expect(409)).body.code).toBe('request_not_pending');
+    b = (await billing().expect(200)).body;
+    expect(b).toMatchObject({ plan: 'chain', paidBranches: 3, paidUntil, pendingRequest: null, lastDecision: { id: upId, status: 'approved' } });
+    // now the third branch fits
+    const thirdBranch = (await http().post('/api/vendor/branches').set(bearer).send({ name: 'Third' }).expect(201)).body;
+
+    // things Regular doesn't have, to see the forced downgrade
+    await prisma.vendors.update({ where: { id: vendorId }, data: { wallet_nearby_enabled: true } });
+    const rewards = [];
+    for (let i = 0; i < 7; i++) {
+      rewards.push(await prisma.rewards.create({ data: { vendor_id: vendorId, name: `R${i} ${run}`, points_cost: 100 + i, sort_order: i } }));
+    }
+
+    // downgrade to Regular with 1 branch: must say which branch and which 5 rewards stay
+    expect((await choose({ plan: 'regular', billingCycle: 'monthly', branches: 1 }).expect(400)).body).toMatchObject({ code: 'keep_required', what: 'branches', count: 1 });
+    const main = await prisma.branches.findFirstOrThrow({ where: { vendor_id: vendorId, name: 'Main' } });
+    expect((await choose({ plan: 'regular', billingCycle: 'monthly', branches: 1, keepBranchIds: [main.id] }).expect(400)).body).toMatchObject({ code: 'keep_required', what: 'rewards', count: 5 });
+    const keepRewards = rewards.slice(2).map((r) => r.id);
+    expect((await choose({ plan: 'regular', billingCycle: 'monthly', branches: 1, keepBranchIds: [main.id], keepRewardIds: keepRewards.slice(1) }).expect(400)).body.code).toBe('invalid_keep');
+    b = (await choose({ plan: 'regular', billingCycle: 'monthly', branches: 1, keepBranchIds: [main.id], keepRewardIds: keepRewards }).expect(200)).body;
+    expect(b.pendingRequest).toMatchObject({ kind: 'downgrade', amountDue: 0, branches: 1 });
+    await admin(`${b.pendingRequest.id}/approve`).expect(200);
+    // approved: nothing is taken away before the end of the paid period
+    b = (await billing().expect(200)).body;
+    expect(b).toMatchObject({ plan: 'chain', paidBranches: 3, scheduled: { plan: 'regular', branches: 1, startsAt: paidUntil } });
+    expect(await prisma.branches.count({ where: { vendor_id: vendorId, status: 'active' } })).toBe(3);
+
+    // the period ends: the job forces the shop down (branches closed, rewards archived, nearby off; data kept)
     await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 2 * DAY) } });
     expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'chain' });
     expect((await trial.run()).switched).toBeGreaterThanOrEqual(1);
-    expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'regular', scheduled: null });
+    expect((await billing().expect(200)).body).toMatchObject({ state: 'grace', plan: 'regular', paidBranches: 1, scheduled: null });
+    const open = await prisma.branches.findMany({ where: { vendor_id: vendorId, status: 'active' }, select: { id: true } });
+    expect(open.map((x) => x.id)).toEqual([main.id]);
+    expect(await prisma.branches.count({ where: { id: thirdBranch.id, status: 'closed' } })).toBe(1);
+    const active = await prisma.rewards.findMany({ where: { vendor_id: vendorId, status: 'active' }, select: { id: true } });
+    expect(active.map((x) => x.id).sort()).toEqual([...keepRewards].sort());
+    expect(await prisma.rewards.count({ where: { vendor_id: vendorId } })).toBe(7);
+    expect((await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId } })).wallet_nearby_enabled).toBe(false);
 
     // grace over: locked everywhere (cards keep working: the public page stays up)
     await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 8 * DAY) } });
-    const locked = (await billing().expect(403)).body;
-    expect(locked).toMatchObject({ code: 'subscription_expired', paidUntil: expect.any(String) });
+    expect((await billing().expect(403)).body).toMatchObject({ code: 'subscription_expired', paidUntil: expect.any(String) });
     await me(a.token).expect(403);
     const { slug } = await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: { slug: true } });
     await http().get(`/api/public/vendors/${slug}`).expect(200);
@@ -312,11 +380,64 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     expect((Date.parse(ren.paidUntil) - Date.now()) / DAY).toBeGreaterThan(27);
     expect((await billing().expect(200)).body).toMatchObject({ state: 'active', plan: 'regular' });
 
-    // renewing early adds a period to the current end and starts a scheduled change
-    await choose('loyal', 'annual').expect(200); // upgrade now, annual from the renewal
-    const ren2 = (await plan(adminToken, vendorId, { action: 'renew' }).expect(200)).body;
-    expect(ren2).toMatchObject({ plan: 'loyal', billingCycle: 'annual', nextPlan: null });
-    expect((Date.parse(ren2.paidUntil) - Date.parse(ren.paidUntil)) / DAY).toBeGreaterThan(364);
+    // a rejected request changes nothing; a request made before the plan changed can't be approved
+    const rej = (await choose({ plan: 'loyal', billingCycle: 'annual' }).expect(200)).body.pendingRequest.id as string;
+    expect((await admin(`${rej}/reject`, { note: 'Not paid' }).expect(200)).body).toMatchObject({ status: 'rejected' });
+    expect((await billing().expect(200)).body).toMatchObject({ plan: 'regular', pendingRequest: null, lastDecision: { status: 'rejected', reviewNote: 'Not paid' } });
+    const stale = (await choose({ plan: 'loyal', billingCycle: 'monthly' }).expect(200)).body.pendingRequest.id as string;
+    await plan(adminToken, vendorId, { action: 'activate', plan: 'chain', billingCycle: 'monthly' }).expect(200);
+    expect((await admin(`${stale}/approve`).expect(409)).body.code).toBe('request_outdated');
+  });
+
+  it('reminder emails: 5 days before and on the end of a trial or paid period, once each, retried when sending fails', async () => {
+    const a = await account();
+    const { vendorId } = (await signup(a.token, { ...defaultForm, shopName: `Remind ${run}` }).expect(200)).body;
+    vendorIds.push(vendorId);
+    const mine = () => mail.sent.filter((e) => e.to === a.email);
+
+    // without Resend configured nothing is sent or recorded
+    await prisma.vendors.update({ where: { id: vendorId }, data: { trial_ends_at: new Date(Date.now() + 3 * DAY) } });
+    await trial.run();
+    expect(mine()).toHaveLength(0);
+    mail.enabled = true;
+    try {
+      // more than 5 days left: nothing yet
+      await prisma.vendors.update({ where: { id: vendorId }, data: { trial_ends_at: new Date(Date.now() + 6 * DAY) } });
+      await trial.run();
+      expect(mine()).toHaveLength(0);
+
+      // 3 days left: one email to the merchant admin, Arabic and English, with the billing link; never twice
+      const ends = new Date(Date.now() + 3 * DAY);
+      await prisma.vendors.update({ where: { id: vendorId }, data: { trial_ends_at: ends } });
+      await trial.run();
+      await trial.run();
+      expect(mine()).toHaveLength(1);
+      expect(mine()[0].subject).toContain('trial ends');
+      expect(mine()[0].text).toContain('Hi Omar,');
+      expect(mine()[0].text).toContain('/settings?tab=billing');
+      expect(mine()[0].html).toContain('dir="rtl"');
+
+      // the trial ends while sending fails: nothing recorded, tried again on the next run
+      await prisma.vendors.update({ where: { id: vendorId }, data: { trial_ends_at: new Date(Date.now() - 1000) } });
+      mail.fail = true;
+      await trial.run();
+      expect(mine()).toHaveLength(1);
+      mail.fail = false;
+      await trial.run();
+      expect(mine()).toHaveLength(2);
+      expect(mine()[1].subject).toContain('trial ended');
+
+      // a paid period: 5 days before, then on the end date
+      await plan(adminToken, vendorId, { action: 'activate', plan: 'regular', billingCycle: 'monthly' }).expect(200);
+      await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() + 4 * DAY) } });
+      await trial.run();
+      await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 1000) } });
+      await trial.run();
+      expect(mine().slice(2).map((e) => e.subject.split(' · ')[1])).toEqual([expect.stringContaining('renews'), 'subscription ended']);
+      expect(await prisma.billing_reminders.count({ where: { vendor_id: vendorId } })).toBe(4);
+    } finally {
+      mail.enabled = false;
+    }
   });
 
   it('billing is for the merchant admin only; renew needs an active plan', async () => {
@@ -347,7 +468,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       const taken = await prisma.vendors.count({ where: { founding: true } });
       const set = (await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: taken + 1, open: true }).expect(200)).body;
       expect(set).toEqual({ total: taken + 1, open: true, taken, left: 1 });
-      expect((await http().get('/api/public/plans').expect(200)).body.founding).toMatchObject({ left: 1, discountPercent: 30, months: 6 });
+      expect((await http().get('/api/public/plans').expect(200)).body.founding).toMatchObject({ left: 1, discountPercent: 30, months: 12 });
       await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: -1, open: true }).expect(400);
 
       const shops = [];
@@ -375,7 +496,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     }
   });
 
-  it('day 30: an unpaid trial shop is deleted with its data, images, logins and only-there customers; nothing else', async () => {
+  it('an ended trial is never deleted by itself; the admin deletes it by hand (typed name) with its data, images, logins and only-there customers; nothing else', async () => {
     const a = await account();
     const { vendorId } = (await signup(a.token, { shopName: `Doomed ${run}`, ownerName: 'Owner', phone: '01112345678' }).expect(200)).body;
     const keep = await account();
@@ -408,18 +529,27 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     await storage.upload('vendors', `${vendorId}/logo/a.webp`, Buffer.from('x'), 'image/webp');
     await storage.upload('vendors', `${keptId}/logo/b.webp`, Buffer.from('y'), 'image/webp');
 
-    // not due yet: nothing happens, and purge refuses
-    expect((await trial.run()).deleted).not.toContain(vendorId);
-    await expect(trial.purge(vendorId)).rejects.toThrow('not an overdue');
+    const del = (id: string, confirmName: string, token = adminToken) =>
+      http().delete(`/api/admin/vendors/${id}`).set('Authorization', `Bearer ${token}`).send({ confirmName });
+    const { name } = await prisma.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: { name: true } });
 
-    // day 30 passes for the doomed shop only
+    // a running trial can't be deleted, and neither purge nor the job deletes anything
+    expect((await del(vendorId, name).expect(409)).body.code).toBe('not_deletable');
+    await expect(trial.purge(vendorId)).rejects.toThrow();
+
+    // long past day 30, with an old deletion date: the job still keeps the shop (locked)
     await prisma.vendors.update({
       where: { id: vendorId },
-      data: { trial_ends_at: new Date(Date.now() - 2 * DAY), delete_at: new Date(Date.now() - 1000) },
+      data: { trial_ends_at: new Date(Date.now() - 40 * DAY), delete_at: new Date(Date.now() - 10 * DAY) },
     });
-    const { deleted } = await trial.run();
-    expect(deleted).toContain(vendorId);
-    expect(deleted).not.toContain(keptId);
+    await trial.run();
+    expect(await prisma.vendors.findUnique({ where: { id: vendorId }, select: { status: true } })).toEqual({ status: 'suspended' });
+
+    // only a platform admin, and only with the shop's exact name
+    await http().delete(`/api/admin/vendors/${vendorId}`).send({ confirmName: name }).expect(401);
+    expect((await del(vendorId, 'wrong name').expect(400)).body.code).toBe('name_mismatch');
+    await del(vendorId, name).expect(204);
+    expect((await del(keptId, 'anything').expect(409)).body.code).toBe('not_deletable');
 
     expect(await prisma.vendors.findUnique({ where: { id: vendorId } })).toBeNull();
     expect(await prisma.staff_users.count({ where: { vendor_id: vendorId } })).toBe(0);
@@ -439,7 +569,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
     // an admin-created (not self sign-up) shop is never deleted, whatever its dates
     const adminMade = await prisma.vendors.create({ data: { name: `Admin made ${run}` } });
     vendorIds.push(adminMade.id);
-    await expect(trial.purge(adminMade.id)).rejects.toThrow('not an overdue');
+    await expect(trial.purge(adminMade.id)).rejects.toThrow();
   });
 });
 

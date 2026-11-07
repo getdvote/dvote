@@ -5,6 +5,7 @@
  */
 import type {
   Billing,
+  AdminPlanRequest,
   PriceQuote,
   CardMemberPage,
   ActivityPage,
@@ -627,10 +628,27 @@ export const billing: Billing = {
   plan: 'loyal',
   billingCycle: 'monthly',
   branches: 3,
+  paidBranches: 3,
+  openBranches: 3,
+  activeRewards: 4,
+  requestsRequired: true,
+  pendingRequest: {
+    id: 'req-1',
+    plan: 'chain',
+    billingCycle: 'monthly',
+    branches: 3,
+    kind: 'upgrade',
+    status: 'pending',
+    amountDue: 1199,
+    periodPrice: 3497,
+    createdAt: new Date(Date.now() - 3_600_000).toISOString(),
+    reviewedAt: null,
+    reviewNote: null,
+  },
+  lastDecision: null,
   price: quote('loyal', 'monthly', 3, true),
   trialEndsAt: null,
   trialDays: 14,
-  deleteAt: null,
   paidUntil: new Date(Date.now() + 12 * DAY_MS).toISOString(),
   graceEndsAt: new Date(Date.now() + 19 * DAY_MS).toISOString(),
   graceDays: 7,
@@ -639,12 +657,66 @@ export const billing: Billing = {
   scheduled: {
     plan: 'regular',
     billingCycle: 'monthly',
+    branches: 3,
     startsAt: new Date(Date.now() + 12 * DAY_MS).toISOString(),
     price: quote('regular', 'monthly', 3, true),
   },
   plans: (['regular', 'loyal', 'chain'] as const).map((id) => ({
     id,
+    upgradeDueNow: id === 'chain' ? 1199 : null,
     monthly: quote(id, 'monthly', 3, true),
     annual: quote(id, 'annual', 3, true),
   })),
+};
+
+/** Admin Plan requests: one waiting upgrade, one waiting downgrade with what stays. */
+export const planRequests: { total: number; pending: number; items: AdminPlanRequest[] } = {
+  total: 2,
+  pending: 2,
+  items: [
+    {
+      ...billing.pendingRequest!,
+      from: { plan: 'loyal', billingCycle: 'monthly', branches: 3 },
+      keepBranches: 0,
+      keepRewards: 0,
+      vendor: { id: VENDOR_ID, name: 'Joy Corner', slug: 'joy-corner', paidUntil: billing.paidUntil, phone: '+201001234567' },
+      requestedBy: { name: 'Mona Admin', email: 'mona@joycorner.test' },
+      reviewedBy: null,
+    },
+    {
+      id: 'req-2',
+      plan: 'regular',
+      billingCycle: 'annual',
+      branches: 1,
+      kind: 'downgrade',
+      status: 'pending',
+      amountDue: 0,
+      periodPrice: 4990,
+      createdAt: new Date(Date.now() - 86_400_000).toISOString(),
+      reviewedAt: null,
+      reviewNote: null,
+      from: { plan: 'chain', billingCycle: 'monthly', branches: 4 },
+      keepBranches: 1,
+      keepRewards: 5,
+      vendor: { id: 'v-2', name: 'A café with a rather long name for small screens', slug: 'long-cafe', paidUntil: billing.paidUntil, phone: null },
+      requestedBy: { name: 'Karim', email: null },
+      reviewedBy: null,
+    },
+  ],
+};
+
+/** Who the latest broadcast reached (30 customers). */
+export const broadcastRecipients = {
+  broadcast: { id: 'b-1', title: 'Free coffee this weekend', body: 'Use your points at our shop.', sentAt: new Date(Date.now() - 7_200_000).toISOString() },
+  counts: { sent: 24, not_in_wallet: 4, skipped: 1, failed: 0, uncertain: 1, waiting: 0 },
+  recipients: 30,
+  total: 30,
+  page: 1,
+  pageSize: 50,
+  items: [
+    { cardId: 'c-1', name: 'Mona Ali', shortCode: 'CZW-QNM', group: 'sent' as const, reason: null, at: new Date().toISOString() },
+    { cardId: 'c-2', name: 'Ahmed Hassan', shortCode: 'KTR-PLX', group: 'not_in_wallet' as const, reason: 'not_saved', at: new Date().toISOString() },
+    { cardId: 'c-3', name: 'منى عبد الرحمن محمود', shortCode: 'BWQ-NRT', group: 'skipped' as const, reason: 'daily_limit', at: new Date().toISOString() },
+    { cardId: 'c-4', name: null, shortCode: null, group: 'uncertain' as const, reason: 'provider_error', at: null },
+  ],
 };

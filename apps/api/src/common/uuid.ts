@@ -10,8 +10,8 @@ export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** DTO field validator: use instead of class-validator's @IsUUID(). */
-export const IsUuid = () =>
-  Matches(UUID_PATTERN, { message: '$property must be a UUID' });
+export const IsUuid = (opts: { each?: boolean } = {}) =>
+  Matches(UUID_PATTERN, { message: '$property must be a UUID', each: opts.each });
 
 /** Route param pipe: use instead of Nest's ParseUUIDPipe. */
 @Injectable()

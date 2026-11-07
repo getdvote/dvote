@@ -138,6 +138,29 @@ export class Env {
   @IsString()
   TURNSTILE_SECRET_KEY?: string;
 
+  /**
+   * Resend API key (sending only) for the API's own emails: billing reminders 5 days before and on
+   * the end of a trial or paid period. Unset = no reminders are sent (nothing else changes).
+   */
+  @IsOptional()
+  @IsString()
+  RESEND_API_KEY?: string;
+
+  /** Sender of the API's emails; the domain must be verified in Resend. Default "dvote <no-reply@dvote.co>". */
+  @IsOptional()
+  @IsString()
+  EMAIL_FROM?: string;
+
+  /** Where replies to the API's emails go. Default getdvote@gmail.com. */
+  @IsOptional()
+  @IsString()
+  EMAIL_REPLY_TO?: string;
+
+  /** The merchant dashboard, linked from the emails. Default https://merchant.dvote.co. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  MERCHANT_WEB_URL?: string;
+
   /** Logo on the Google pass for a merchant without its own logo (public https image). */
   @IsOptional()
   @IsString()

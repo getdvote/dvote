@@ -15,9 +15,11 @@ import {
   BillListIcon as ActivityActive,
   SettingsIcon as SettingsActive,
   BoxIcon as KitActive,
+  CardTransferIcon as PlanRequestsActive,
 } from '@solar-icons/react/bold-duotone';
 import {
   ArrowRightUpIcon as ArrowUpRight,
+  CardTransferIcon as PlanRequestsIcon,
   ChartIcon as ChartColumn,
   ChatRoundLikeIcon as FeedbackIcon,
   ChevronsUpDownIcon as ChevronsUpDown,
@@ -41,6 +43,8 @@ import {
 import { Fragment, useState, useRef, type ComponentType, type ReactNode } from 'react';
 import { MotionConfig, motion } from 'motion/react';
 import { NavLink, useLocation } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +94,8 @@ export interface NavItem {
   /** A small button at the end of the row (e.g. preview), hidden when the sidebar is collapsed. */
   /** Not in the merchant's plan: a small lock after the label (the page explains and links to Billing). */
   locked?: boolean;
+  /** Things waiting (e.g. plan requests): a small number after the label; hidden at 0. */
+  count?: number;
   action?: {
     icon: ComponentType<{ className?: string }>;
     label: string;
@@ -126,6 +132,7 @@ const NAV: NavItem[] = [
   workspaceNav('activity', Activity, ActivityActive, 'Workspace'),
   { to: '/statistics', icon: ChartColumn, activeIcon: ChartColumnActive, label: 'Statistics', group: 'Workspace' },
 
+  { to: '/plan-requests', icon: PlanRequestsIcon, activeIcon: PlanRequestsActive, label: 'Plan requests', group: 'Platform' },
   { to: '/feedback', icon: FeedbackIcon, activeIcon: FeedbackActive, label: 'Merchant support', group: 'Platform' },
   workspaceNav('audit', Activity, ActivityActive, 'Platform'),
   { to: '/system', icon: Server, activeIcon: ServerActive, label: 'System', group: 'Platform', tab: true },
@@ -134,10 +141,31 @@ const NAV: NavItem[] = [
 export function AdminLayout({ children }: { children: ReactNode }) {
   useEnglishOnly();
   const { admin } = useAuth();
+  // plan requests waiting for the dvote team, shown next to the menu item
+  const waiting = useQuery({
+    queryKey: ['plan-requests', 'waiting-count'],
+    queryFn: () => api.planRequests({ status: 'pending', pageSize: 1 }),
+    refetchInterval: 60_000,
+    enabled: !!admin,
+  });
+  const nav = NAV.map((n) => (n.to === '/plan-requests' ? { ...n, count: waiting.data?.pending ?? 0 } : n));
   return (
-    <SideLayout nav={NAV} badge="ADMIN" identity={{ name: admin?.name ?? '', subtitle: admin?.email ?? '' }}>
+    <SideLayout nav={nav} badge="ADMIN" identity={{ name: admin?.name ?? '', subtitle: admin?.email ?? '' }}>
       {children}
     </SideLayout>
+  );
+}
+
+/** A small count after a menu label (99+ above 99). */
+function NavCount({ count }: { count: number }) {
+  return (
+    <span
+      data-nav-label
+      className="ms-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] leading-none font-semibold text-white tabular-nums"
+      aria-label={`${count} waiting`}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
   );
 }
 
@@ -184,6 +212,7 @@ function NavSection({ group, items, isActive }: { group?: string; items: NavItem
                   <NavIcon item={n} active={isActive(n.to)} />
                   <span data-nav-label>{n.label}</span>
                   {n.locked ? <LockKeyholeMinimalisticIcon data-nav-label className="ms-auto size-3.5 opacity-60" aria-label={t('planLock.locked')} /> : null}
+                  {n.count ? <NavCount count={n.count} /> : null}
                 </NavLink>
               </SidebarMenuButton>
               {n.action ? (
@@ -424,6 +453,7 @@ function ProfileMenu({
                 <NavLink to={n.to}>
                   <NavIcon item={n} active={isActive(n.to)} />
                   {n.label}
+                  {n.count ? <NavCount count={n.count} /> : null}
                 </NavLink>
               </DropdownMenuItem>
             ))}

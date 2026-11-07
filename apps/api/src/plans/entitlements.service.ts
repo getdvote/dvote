@@ -3,7 +3,7 @@ import type { StaffContext } from '../auth/staff-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { entitlementsFor, FEATURE_PLAN, type Entitlements, type Feature } from './entitlements';
 
-export type Limit = 'activeRewards' | 'staffPerBranch' | 'menuImages';
+export type Limit = 'activeRewards' | 'staffPerBranch' | 'menuImages' | 'branches';
 
 /**
  * Checks a merchant's plan before a vendor-side action. Errors: 403 `plan_required`
@@ -36,6 +36,7 @@ export class EntitlementsService {
   /** Before adding `adding` more of something: refuse if the shop would go over its plan's limit. */
   async checkLimit(ctx: StaffContext, limit: Limit, adding = 1): Promise<void> {
     if (ctx.adminId || adding <= 0) return;
+    if (limit === 'branches') return this.checkBranches(ctx.vendorId, adding);
     const e = await this.of(ctx.vendorId);
     let max = e.limits[limit];
     if (max === null) return;
@@ -57,6 +58,26 @@ export class EntitlementsService {
         max,
         used,
         plan: e.tier,
+      });
+    }
+  }
+
+  /**
+   * Open branches are limited to the number the paid plan covers (vendors.paid_branches; NULL on a
+   * trial or a shop dvote runs without a paid period = no limit). More needs a plan request.
+   */
+  private async checkBranches(vendorId: string, adding: number): Promise<void> {
+    const v = await this.prisma.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: { paid_branches: true, plan_status: true, plan: true } });
+    if (v.paid_branches === null) return;
+    const used = await this.prisma.branches.count({ where: { vendor_id: vendorId, status: 'active' } });
+    if (used + adding > v.paid_branches) {
+      throw new ConflictException({
+        code: 'plan_limit',
+        message: `Your plan covers ${v.paid_branches} branches. Request more branches on Billing.`,
+        limit: 'branches',
+        max: v.paid_branches,
+        used,
+        plan: entitlementsFor(v).tier,
       });
     }
   }

@@ -19,9 +19,13 @@ describe('plan prices', () => {
 import { addPeriod, quote } from './plans';
 
 describe('billing helpers', () => {
-  it('quotes plan + extra branches, Founding only on the base', () => {
+  it('quotes plan + extra branches; Launch Partner 30% only on the annual plan price', () => {
     expect(quote('loyal', 'monthly', 3)).toMatchObject({ base: 999, extraBranches: 798, monthly: 1797, perPeriod: 1797 });
-    expect(quote('loyal', 'monthly', 3, true)).toMatchObject({ base: 699, monthly: 699 + 798 });
+    // monthly billing: no Launch Partner discount
+    expect(quote('loyal', 'monthly', 3, true)).toMatchObject({ base: 999, monthly: 1797, foundingApplied: false });
+    // annual billing: 30% off the plan's yearly price, extra branches full price
+    expect(quote('loyal', 'annual', 1, true)).toMatchObject({ base: 583, perPeriod: 6993, foundingApplied: true });
+    expect(quote('loyal', 'annual', 3, true)).toMatchObject({ perPeriod: 6993 + 333 * 2 * 12 });
     expect(quote('regular', 'annual', 1)).toMatchObject({ monthly: 416, perPeriod: 4990 });
     expect(quote('loyal', 'annual', 2)).toMatchObject({ monthly: 833 + 333, perPeriod: 9990 + 333 * 12 });
     expect(quote('regular', 'annual', 1, true).base).toBe(291);
@@ -30,5 +34,24 @@ describe('billing helpers', () => {
     expect(addPeriod(new Date('2026-01-31T10:00:00Z'), 'monthly').toISOString()).toBe('2026-02-28T10:00:00.000Z');
     expect(addPeriod(new Date('2026-10-23T10:00:00Z'), 'monthly').toISOString()).toBe('2026-11-23T10:00:00.000Z');
     expect(addPeriod(new Date('2026-10-23T10:00:00Z'), 'annual').toISOString()).toBe('2027-10-23T10:00:00.000Z');
+  });
+});
+
+import { periodStart, prorate } from './plans';
+
+describe('upgrade proration', () => {
+  const until = new Date('2026-12-01T00:00:00Z');
+  it('charges the price difference for the days left', () => {
+    // November has 30 days; 15 left on Loyal 999 → Chain 1,999
+    expect(prorate(999, 1999, until, 'monthly', new Date('2026-11-16T00:00:00Z'))).toBe(500);
+    expect(prorate(999, 1999, until, 'monthly', new Date('2026-11-01T00:00:00Z'))).toBe(1000);
+  });
+  it('charges nothing when the period is over or the price is not higher', () => {
+    expect(prorate(999, 1999, until, 'monthly', new Date('2026-12-02T00:00:00Z'))).toBe(0);
+    expect(prorate(1999, 999, until, 'monthly', new Date('2026-11-16T00:00:00Z'))).toBe(0);
+  });
+  it('finds the start of the period', () => {
+    expect(periodStart(until, 'monthly').toISOString()).toBe('2026-11-01T00:00:00.000Z');
+    expect(periodStart(until, 'annual').toISOString()).toBe('2025-12-01T00:00:00.000Z');
   });
 });

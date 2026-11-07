@@ -63,6 +63,7 @@ import type {
 } from "../../lib/api";
 import { PlanNotice } from '../../components/plan-lock';
 import { useHasFeature } from '../../lib/entitlements';
+import { BroadcastStatusSheet } from './broadcast-status';
 
 const dateText = (v: string | null) =>
   v
@@ -88,6 +89,7 @@ const statusVariant = (status: string) =>
         : "outline";
 
 export function MyMessages() {
+  const [statusOf, setStatusOf] = useState<string | null>(null);
   const api = useVendorApi();
   const me = useMe();
   const allowed = me.role === "vendor_admin";
@@ -472,6 +474,7 @@ export function MyMessages() {
   );
   return (
     <>
+      <BroadcastStatusSheet id={statusOf} onClose={() => setStatusOf(null)} />
       <PageHeader
         title={t("nav.messages")}
         subtitle={t("broadcast.subtitle")}
@@ -617,13 +620,22 @@ export function MyMessages() {
                           <TableCell className="pe-4 text-end whitespace-nowrap">
                             {c.status === "sent" ||
                             legacy.some((l) => l.id === c.id) ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => start(c, true)}
-                              >
-                                {t("broadcast.again")}
-                              </Button>
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setStatusOf(c.id)}
+                                >
+                                  {t("broadcast.status.open")}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => start(c, true)}
+                                >
+                                  {t("broadcast.again")}
+                                </Button>
+                              </>
                             ) : [
                                 "draft",
                                 "scheduled",
@@ -699,6 +711,9 @@ export function MyMessages() {
             <CardContent className="space-y-4">
               <p className="max-w-2xl text-sm text-muted-foreground">
                 {t("broadcast.nearbyHint")}
+              </p>
+              <p className="max-w-2xl text-xs text-muted-foreground">
+                {t("broadcast.nearbyNoStatus")}
               </p>
               <p className="rounded-lg border bg-muted px-3 py-2 text-sm font-medium">
                 {t("broadcast.nearbyQuota")}
