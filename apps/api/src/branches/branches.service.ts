@@ -54,6 +54,13 @@ export class BranchesService {
     });
   }
 
+  /** One of the vendor's branches, else branch_not_found. */
+  async get(id: string, vendorId: string): Promise<branches> {
+    const branch = await this.prisma.branches.findUnique({ where: { id } });
+    if (!branch || branch.vendor_id !== vendorId) throw new NotFoundException({ code: 'branch_not_found' });
+    return branch;
+  }
+
   /** vendorId (vendor dashboard): the branch must belong to that vendor, else branch_not_found. */
   async update(id: string, dto: UpdateBranchDto, vendorId?: string): Promise<branches> {
     const branch = await this.prisma.branches.findUnique({ where: { id } });

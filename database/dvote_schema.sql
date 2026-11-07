@@ -969,3 +969,64 @@ DO $$ BEGIN
   IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ON scanner_pairings FROM anon; END IF;
   IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN REVOKE ALL ON scanner_pairings FROM authenticated; END IF;
 END $$;
+
+-- =====================================================================
+-- 14. PLAN REQUESTS + BILLING REMINDERS (migration 35_plan_requests, 2026-11-07)
+-- =====================================================================
+-- Until Paymob, a paid shop asks for plan / branch changes; the dvote team approves after payment.
+-- Upgrades start on approval (charged the difference for the days left); downgrades and billing
+-- switches start at the end of the paid period, forcing the shop down (extra branches closed, extra
+-- rewards archived, extra staff disabled, nearby off; nothing deleted). Trials are never deleted by
+-- themselves any more: delete_at stays for old rows only.
+ALTER TABLE vendors
+  ADD COLUMN paid_branches      integer,
+  ADD COLUMN next_paid_branches integer,
+  ADD COLUMN next_keep          jsonb,
+  ADD CONSTRAINT vendors_paid_branches_ck CHECK (paid_branches IS NULL OR paid_branches BETWEEN 1 AND 500),
+  ADD CONSTRAINT vendors_next_paid_branches_ck CHECK (next_paid_branches IS NULL OR next_paid_branches BETWEEN 1 AND 500);
+ALTER TABLE vendors DROP CONSTRAINT vendors_trial_dates_ck,
+  ADD CONSTRAINT vendors_trial_dates_ck CHECK (plan_status <> 'trial' OR trial_ends_at IS NOT NULL);
+
+CREATE TABLE plan_requests (
+    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id       uuid          NOT NULL REFERENCES vendors (id),
+    requested_by    uuid          NOT NULL,
+    from_plan       varchar(10),
+    from_cycle      varchar(7),
+    from_branches   integer,
+    plan            varchar(10)   NOT NULL,
+    billing_cycle   varchar(7)    NOT NULL,
+    branches        integer       NOT NULL,
+    keep_branch_ids uuid[]        NOT NULL DEFAULT '{}',
+    keep_reward_ids uuid[]        NOT NULL DEFAULT '{}',
+    amount_due      numeric(12,2) NOT NULL DEFAULT 0,
+    period_price    numeric(12,2) NOT NULL,
+    kind            varchar(10)   NOT NULL,
+    status          varchar(10)   NOT NULL DEFAULT 'pending',
+    reviewed_by     uuid          REFERENCES platform_admins (id),
+    reviewed_at     timestamptz,
+    review_note     varchar(500),
+    created_at      timestamptz   NOT NULL DEFAULT now(),
+    updated_at      timestamptz   NOT NULL DEFAULT now(),
+    CONSTRAINT plan_requests_staff_fk FOREIGN KEY (requested_by, vendor_id) REFERENCES staff_users (id, vendor_id),
+    CONSTRAINT plan_requests_plan_ck CHECK (plan IN ('regular', 'loyal', 'chain')),
+    CONSTRAINT plan_requests_cycle_ck CHECK (billing_cycle IN ('monthly', 'annual')),
+    CONSTRAINT plan_requests_branches_ck CHECK (branches BETWEEN 1 AND 500),
+    CONSTRAINT plan_requests_kind_ck CHECK (kind IN ('upgrade', 'downgrade', 'change')),
+    CONSTRAINT plan_requests_status_ck CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+    CONSTRAINT plan_requests_reviewed_ck CHECK ((status IN ('approved', 'rejected')) = (reviewed_at IS NOT NULL))
+);
+CREATE UNIQUE INDEX plan_requests_one_pending_uq ON plan_requests (vendor_id) WHERE status = 'pending';
+CREATE INDEX plan_requests_status_idx ON plan_requests (status, created_at DESC);
+CREATE TRIGGER plan_requests_updated_at BEFORE UPDATE ON plan_requests FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE billing_reminders (
+    id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id  uuid         NOT NULL REFERENCES vendors (id),
+    kind       varchar(20)  NOT NULL,
+    ends_at    timestamptz  NOT NULL,
+    email      varchar(255) NOT NULL,
+    created_at timestamptz  NOT NULL DEFAULT now(),
+    CONSTRAINT billing_reminders_kind_ck CHECK (kind IN ('trial_soon', 'trial_ended', 'paid_soon', 'paid_ended')),
+    CONSTRAINT billing_reminders_once_uq UNIQUE (vendor_id, kind, ends_at)
+);

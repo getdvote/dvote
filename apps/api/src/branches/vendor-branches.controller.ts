@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiCreatedResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import { EntitlementsService } from '../plans/entitlements.service';
 import { CurrentStaff } from '../auth/current-staff.decorator';
 import { StaffRoles, type StaffContext } from '../auth/staff-auth.guard';
 import { VendorApi } from '../auth/vendor-api.decorator';
@@ -11,7 +12,10 @@ import { BranchResponseDto, CreateBranchDto, PauseBranchDto, UpdateBranchDto } f
 @VendorApi('vendor: branches')
 @Controller('vendor/branches')
 export class VendorBranchesController {
-  constructor(private readonly branches: BranchesService) {}
+  constructor(
+    private readonly branches: BranchesService,
+    private readonly plans: EntitlementsService,
+  ) {}
 
   @Get()
   @StaffRoles('vendor_admin', 'branch_manager', 'viewer')
@@ -23,7 +27,9 @@ export class VendorBranchesController {
   @Post()
   @StaffRoles('vendor_admin')
   @ApiCreatedResponse({ type: BranchResponseDto })
+  @ApiConflictResponse({ description: 'plan_limit (limit branches): the paid plan covers no more open branches' })
   async create(@CurrentStaff() ctx: StaffContext, @Body() dto: CreateBranchDto): Promise<BranchResponseDto> {
+    await this.plans.checkLimit(ctx, 'branches');
     return BranchResponseDto.from(await this.branches.create(ctx.vendorId, dto));
   }
 
@@ -36,6 +42,11 @@ export class VendorBranchesController {
     @Param('id', ParseUuidPipe) id: string,
     @Body() dto: UpdateBranchDto,
   ): Promise<BranchResponseDto> {
+    // reopening a closed branch counts against the paid branches too
+    if (dto.status === 'active') {
+      const current = await this.branches.get(id, ctx.vendorId);
+      if (current.status !== 'active') await this.plans.checkLimit(ctx, 'branches');
+    }
     return BranchResponseDto.from(await this.branches.update(id, dto, ctx.vendorId));
   }
 

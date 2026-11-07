@@ -13,6 +13,7 @@ const PAGES = [
   ['customers', '/customers'],
   ['statistics', '/statistics'],
   ['feedback', '/feedback'],
+  ['plan-requests', '/plan-requests'],
   ['system', '/system'],
 ] as const;
 

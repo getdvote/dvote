@@ -19,6 +19,8 @@ import { TurnstileService } from './turnstile.service';
 import { TRIAL } from './trial-rules';
 import { addPeriod, BILLING_CYCLES, FOUNDING, PLANS, type BillingCycle, type Plan } from '../plans/plans';
 import { PlansService } from '../plans/plans.service';
+import { startScheduled } from '../billing/plan-enforcement';
+import { BillingRemindersService } from './billing-reminders.service';
 
 export { TRIAL } from './trial-rules';
 export { PLANS, type Plan };
@@ -35,6 +37,9 @@ const PLAN_SELECT = {
   paid_until: true,
   next_plan: true,
   next_billing_cycle: true,
+  paid_branches: true,
+  next_paid_branches: true,
+  next_keep: true,
   status: true,
 } as const;
 
@@ -58,10 +63,11 @@ export interface SignupInput {
 }
 
 /**
- * Merchant self sign-up with a free trial, the admin's plan controls, and the background job
- * that locks ended trials (status suspended: public pages, joining and the wallet stop) and
- * deletes unpaid trial shops for good on day 30. The dashboard and scans are blocked at the
- * exact minute by StaffAuthGuard (trial_ended); only `self_signup` shops are ever deleted.
+ * Merchant self sign-up with a free trial, the admin's plan controls, and the background job that
+ * locks ended trials (status suspended: public pages, joining and the wallet stop), starts scheduled
+ * downgrades and sends billing reminders. The dashboard and scans are blocked at the exact minute by
+ * StaffAuthGuard (trial_ended). Since 2026-11-07 nothing is deleted by itself: a locked trial stays
+ * until the dvote team activates it or deletes it by hand (`deleteShop`).
  */
 @Injectable()
 export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
@@ -75,6 +81,7 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly http: HttpAdapterHost,
     private readonly turnstile: TurnstileService,
     private readonly plans: PlansService,
+    private readonly reminders: BillingRemindersService,
   ) {}
 
   onApplicationBootstrap() {
@@ -155,7 +162,8 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
 
     const now = Date.now();
     const trialEndsAt = new Date(now + TRIAL.trialDays * DAY);
-    const deleteAt = new Date(now + TRIAL.deleteAfterDays * DAY);
+    // no deletion date any more: a locked trial waits for the dvote team (decided 2026-11-07)
+    const deleteAt = null;
     try {
       const vendor = await this.prisma.$transaction(async (tx) => {
         const v = await tx.vendors.create({
@@ -167,7 +175,6 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
             plan: picked,
             billing_cycle: picked ? (cycle ?? 'monthly') : null,
             trial_ends_at: trialEndsAt,
-            delete_at: deleteAt,
             self_signup: true,
           },
           select: { id: true },
@@ -202,8 +209,10 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
    * leaving it out keeps the shop's current Launch Partner status. The shop is paid for one period from
    * now (+1 month or +1 year); a scheduled change is dropped (this choice replaces it).
    */
-  async activate(vendorId: string, plan: Plan, billingCycle: BillingCycle = 'monthly', founding?: boolean, now = new Date()) {
+  async activate(vendorId: string, plan: Plan, billingCycle: BillingCycle = 'monthly', founding?: boolean, branches?: number, now = new Date()) {
     return this.prisma.$transaction(async (tx) => {
+      // the paid plan covers this many open branches (default: what is open today)
+      const paidBranches = branches ?? Math.max(1, await tx.branches.count({ where: { vendor_id: vendorId, status: 'active' } }));
       const v = await tx.vendors.findUnique({ where: { id: vendorId }, select: { id: true, founding_until: true } });
       if (!v) throw new NotFoundException({ code: 'vendor_not_found' });
       if (founding) await this.plans.takeFoundingSpot(tx, vendorId);
@@ -219,8 +228,11 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
           ...(founding && !v.founding_until ? { founding_until: foundingUntil } : {}),
           ...(founding === false ? { founding_until: null } : {}),
           paid_until: addPeriod(now, billingCycle),
+          paid_branches: paidBranches,
           next_plan: null,
           next_billing_cycle: null,
+          next_paid_branches: null,
+          next_keep: Prisma.DbNull,
           trial_ends_at: null,
           delete_at: null,
           status: 'active',
@@ -242,14 +254,9 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
       if (v.plan_status !== 'active' || !v.plan) {
         throw new ConflictException({ code: 'not_active', message: 'Activate a plan first.' });
       }
-      const plan = (v.next_plan ?? v.plan) as Plan;
-      const cycle = (v.next_billing_cycle ?? v.billing_cycle ?? 'monthly') as BillingCycle;
       const from = v.paid_until && v.paid_until > now ? v.paid_until : now;
-      return tx.vendors.update({
-        where: { id: vendorId },
-        data: { plan, billing_cycle: cycle, next_plan: null, next_billing_cycle: null, paid_until: addPeriod(from, cycle), status: 'active' },
-        select: PLAN_SELECT,
-      });
+      await startScheduled(tx, v, from);
+      return tx.vendors.findUniqueOrThrow({ where: { id: vendorId }, select: PLAN_SELECT });
     });
   }
 
@@ -263,58 +270,71 @@ export class TrialService implements OnApplicationBootstrap, OnModuleDestroy {
     if (v.plan_status !== 'trial') throw new ConflictException({ code: 'not_on_trial', message: 'This shop is not on a trial.' });
     const from = Math.max(Date.now(), v.trial_ends_at?.getTime() ?? 0);
     const trialEndsAt = new Date(from + days * DAY);
-    // the shop is never deleted before its new trial end
-    const deleteAt = new Date(Math.max(v.delete_at?.getTime() ?? 0, trialEndsAt.getTime()));
     return this.prisma.vendors.update({
       where: { id: vendorId },
-      data: { trial_ends_at: trialEndsAt, delete_at: deleteAt, status: 'active' },
+      data: { trial_ends_at: trialEndsAt, delete_at: null, status: 'active' },
       select: PLAN_SELECT,
     });
   }
 
   /**
-   * The background job: lock ended trials, delete overdue ones, and move shops whose paid period
-   * is over onto their scheduled plan (downgrade / cycle switch). Safe to run any time.
+   * The background job: lock ended trials, start scheduled downgrades / cycle switches whose paid
+   * period is over (the shop is forced down to the new plan), and send billing reminders. Nothing
+   * is deleted here any more (decided 2026-11-07). Safe to run any time.
    */
-  async run(now = new Date()): Promise<{ locked: number; deleted: string[]; switched: number }> {
-    const switched = await this.prisma.$executeRaw`
-      UPDATE vendors SET plan = next_plan, billing_cycle = next_billing_cycle, next_plan = NULL, next_billing_cycle = NULL
-      WHERE next_plan IS NOT NULL AND paid_until <= ${now}`;
+  async run(now = new Date()): Promise<{ locked: number; switched: number; reminders: number }> {
+    const due = await this.prisma.vendors.findMany({ where: { next_plan: { not: null }, paid_until: { lte: now } }, select: { id: true } });
+    let switched = 0;
+    for (const { id } of due) {
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          await tx.$queryRaw`SELECT id FROM vendors WHERE id = ${id}::uuid FOR UPDATE`;
+          const v = await tx.vendors.findUniqueOrThrow({ where: { id }, select: PLAN_SELECT });
+          if (!v.next_plan || !v.paid_until || v.paid_until > now) return;
+          await startScheduled(tx, v, null);
+          switched++;
+        });
+      } catch (err) {
+        this.log.warn(`Could not start the scheduled plan of shop ${id}: ${String(err)}`);
+      }
+    }
     const locked = await this.prisma.vendors.updateMany({
       where: { plan_status: 'trial', trial_ends_at: { lte: now }, status: 'active' },
       data: { status: 'suspended' },
     });
-    const due = await this.prisma.vendors.findMany({
-      where: { plan_status: 'trial', self_signup: true, delete_at: { lte: now } },
-      select: { id: true, name: true },
-    });
-    const deleted: string[] = [];
-    for (const v of due) {
-      try {
-        await this.purge(v.id);
-        deleted.push(v.id);
-        this.log.log(`Deleted unpaid trial shop "${v.name}" (${v.id}).`);
-      } catch (err) {
-        this.log.warn(`Could not delete trial shop ${v.id}: ${String(err)}`);
-      }
+    const reminders = await this.reminders.run(now);
+    return { locked: locked.count, switched, reminders };
+  }
+
+  /**
+   * Admin: delete a shop whose free trial ended without a paid plan, for good (decided 2026-11-07:
+   * by hand only). `confirmName` must be the shop's name, typed by the admin.
+   */
+  async deleteShop(vendorId: string, confirmName: string): Promise<void> {
+    const v = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { name: true, plan_status: true, trial_ends_at: true } });
+    if (!v) throw new NotFoundException({ code: 'vendor_not_found' });
+    if (v.plan_status !== 'trial' || !v.trial_ends_at || v.trial_ends_at > new Date()) {
+      throw new ConflictException({ code: 'not_deletable', message: 'Only a shop whose free trial ended without a paid plan can be deleted.' });
     }
-    return { locked: locked.count, deleted, switched };
+    if (confirmName.trim() !== v.name.trim()) throw new BadRequestException({ code: 'name_mismatch', message: 'Type the shop’s name exactly to delete it.' });
+    await this.purge(vendorId);
+    this.log.log(`Deleted ended trial shop "${v.name}" (${vendorId}) by hand.`);
   }
 
   /**
    * Deletes a trial shop and everything it owns, in one transaction (same order as
    * database/delete_vendor.sql), then its images and its team's sign-in accounts. Customers are
    * deleted only when they have no card anywhere else and no sign-in. Refuses anything that is
-   * not an unpaid self sign-up past its deletion date.
+   * not a shop whose free trial has ended.
    */
   async purge(vendorId: string): Promise<void> {
     const staffLogins: string[] = [];
     await this.prisma.$transaction(
       async (tx) => {
         const [v] = await tx.$queryRaw<{ ok: boolean }[]>`
-          SELECT (plan_status = 'trial' AND self_signup AND delete_at <= now()) AS ok
+          SELECT (plan_status = 'trial' AND trial_ends_at <= now()) AS ok
           FROM vendors WHERE id = ${vendorId}::uuid FOR UPDATE`;
-        if (!v?.ok) throw new Error('not an overdue self sign-up trial: not deleted');
+        if (!v?.ok) throw new ConflictException({ code: 'not_deletable' });
 
         for (const s of await tx.staff_users.findMany({ where: { vendor_id: vendorId }, select: { auth_user_id: true } })) {
           if (s.auth_user_id) staffLogins.push(s.auth_user_id);

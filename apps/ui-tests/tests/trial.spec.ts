@@ -73,7 +73,8 @@ for (const vp of KEY_VIEWPORTS) {
         await page.goto(DASHBOARD + '/');
         if (lang === 'en') {
           await expect(page.getByText('Your free trial has ended')).toBeVisible();
-          await expect(page.getByText(/deleted for good on 20 November 2026/)).toBeVisible();
+          // nothing is deleted by itself any more: the shop and its data are kept
+          await expect(page.getByText(/Your shop and its data are kept/)).toBeVisible();
         }
         await expect(page.locator('a[href="https://dvote.co/pricing"]')).toBeVisible();
         await expectGoodLayout(page, testInfo);

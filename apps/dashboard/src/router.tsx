@@ -27,6 +27,7 @@ import { MyBranches, MyRewards } from './pages/my/MySections';
 import { Overview } from './pages/Overview';
 import { Statistics } from './pages/Statistics';
 import { Feedback } from './pages/Feedback';
+import { PlanRequests } from './pages/PlanRequests';
 import { System } from './pages/System';
 import { VendorDetail } from './pages/VendorDetail';
 import { Vendors } from './pages/Vendors';
@@ -70,6 +71,7 @@ function Shell() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/feedback" element={<Feedback />} />
+          <Route path="/plan-requests" element={<PlanRequests />} />
           <Route path="/system" element={<System />} />
           {WORKSPACE_PAGES.map((p) => (
             <Route key={p.section} path={`/${p.section}`} element={<AdminWorkspace section={p.section} />} />

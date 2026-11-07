@@ -53,3 +53,9 @@ export function useHasFeature(feature: Feature): boolean {
   const e = useEntitlements();
   return !e || e.features[feature];
 }
+
+/**
+ * Active rewards each plan allows (same as the API's TIERS limits). A downgrade below what is active
+ * asks which rewards stay; the rest are archived at the end of the paid period.
+ */
+export const ACTIVE_REWARD_LIMIT: Record<PlanName, number | null> = { regular: 5, loyal: null, chain: null };

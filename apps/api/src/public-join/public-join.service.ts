@@ -114,7 +114,8 @@ export class PublicJoinService {
       },
       // a branch's own storefront when the page is opened for it (?b=), else the shop's
       sections: readStorefront(v.branches.find((b) => b.id === branchId)?.storefront ?? v.storefront).sections,
-      menu: v.vendor_images.map((i) => this.storage.publicUrl(BUCKETS.vendors, i.storage_path)),
+      // a plan with fewer menu pages (after a downgrade) shows only the first ones; the rest stay saved
+      menu: v.vendor_images.slice(0, entitlementsFor(v).limits.menuImages ?? undefined).map((i) => this.storage.publicUrl(BUCKETS.vendors, i.storage_path)),
       // plans without remove_branding show "Powered by dvote" on the storefront
       poweredBy: !entitlementsFor(v).features.remove_branding,
     };
