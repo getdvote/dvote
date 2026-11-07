@@ -28,6 +28,7 @@ export class EmailService {
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: this.config.get('EMAIL_FROM', { infer: true }) || 'dvote <no-reply@dvote.co>',
+        reply_to: this.config.get('EMAIL_REPLY_TO', { infer: true }) || 'getdvote@gmail.com',
         to: [email.to],
         subject: email.subject,
         html: email.html,
