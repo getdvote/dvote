@@ -47,7 +47,7 @@ export function FoundingSettings() {
           <DialogHeader>
             <DialogTitle>Launch Partners</DialogTitle>
             <DialogDescription>
-              30% off the plan for the first 6 months. dvote.co shows how many spots are left. {data ? `${data.taken} taken now.` : ''}
+              30% off the plan on annual billing, for their first year. dvote.co shows how many spots are left. {data ? `${data.taken} taken now.` : ''}
             </DialogDescription>
           </DialogHeader>
           <Field label="Total spots" htmlFor="founding-total" hint="Taken spots count too. 0–100.">

@@ -468,7 +468,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       const taken = await prisma.vendors.count({ where: { founding: true } });
       const set = (await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: taken + 1, open: true }).expect(200)).body;
       expect(set).toEqual({ total: taken + 1, open: true, taken, left: 1 });
-      expect((await http().get('/api/public/plans').expect(200)).body.founding).toMatchObject({ left: 1, discountPercent: 30, months: 6 });
+      expect((await http().get('/api/public/plans').expect(200)).body.founding).toMatchObject({ left: 1, discountPercent: 30, months: 12 });
       await http().put('/api/admin/settings/founding').set('Authorization', `Bearer ${adminToken}`).send({ total: -1, open: true }).expect(400);
 
       const shops = [];

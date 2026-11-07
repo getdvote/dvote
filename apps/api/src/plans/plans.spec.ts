@@ -19,9 +19,13 @@ describe('plan prices', () => {
 import { addPeriod, quote } from './plans';
 
 describe('billing helpers', () => {
-  it('quotes plan + extra branches, Founding only on the base', () => {
+  it('quotes plan + extra branches; Launch Partner 30% only on the annual plan price', () => {
     expect(quote('loyal', 'monthly', 3)).toMatchObject({ base: 999, extraBranches: 798, monthly: 1797, perPeriod: 1797 });
-    expect(quote('loyal', 'monthly', 3, true)).toMatchObject({ base: 699, monthly: 699 + 798 });
+    // monthly billing: no Launch Partner discount
+    expect(quote('loyal', 'monthly', 3, true)).toMatchObject({ base: 999, monthly: 1797, foundingApplied: false });
+    // annual billing: 30% off the plan's yearly price, extra branches full price
+    expect(quote('loyal', 'annual', 1, true)).toMatchObject({ base: 583, perPeriod: 6993, foundingApplied: true });
+    expect(quote('loyal', 'annual', 3, true)).toMatchObject({ perPeriod: 6993 + 333 * 2 * 12 });
     expect(quote('regular', 'annual', 1)).toMatchObject({ monthly: 416, perPeriod: 4990 });
     expect(quote('loyal', 'annual', 2)).toMatchObject({ monthly: 833 + 333, perPeriod: 9990 + 333 * 12 });
     expect(quote('regular', 'annual', 1, true).base).toBe(291);

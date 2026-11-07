@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { fill, useI18n } from '@/i18n';
 import { signupUrl } from '@/lib/config';
-import { formatMoney, foundingPrice, MAX_BRANCHES, monthlyPrice, PLAN_IDS, planById, yearlyPrice, type Cycle, type Plan, type PlansData } from '@/lib/plans';
+import { formatMoney, foundingPrice, foundingYearlyPrice, MAX_BRANCHES, monthlyPrice, PLAN_IDS, planById, yearlyPrice, type Cycle, type Plan, type PlansData } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
 /** The three plans side by side. Each card has a branch slider (1–20); they move together. */
@@ -27,7 +27,8 @@ function PlanCard({ plan, index, data, cycle, branches, setBranches }: { plan: P
   const money = (n: number) => (language === 'ar' ? `${formatMoney(n)} ${cur}` : `${cur} ${formatMoney(n)}`);
   const foundingOpen = data.founding.open && data.founding.left > 0;
   const price = monthlyPrice(plan, cycle, branches);
-  const founding = foundingOpen && cycle === 'monthly' ? foundingPrice(plan, branches) : null;
+  // Launch Partners get 30% off on annual billing only
+  const founding = foundingOpen && cycle === 'annual' ? foundingPrice(plan, branches) : null;
   const extra = cycle === 'annual' ? plan.extraBranch.annual : plan.extraBranch.monthly;
   const branchLabel = branches === 1 ? fill(d.pricing.branchCount, { count: 1 }) : fill(d.pricing.branchCountPlural, { count: branches });
 
@@ -60,8 +61,10 @@ function PlanCard({ plan, index, data, cycle, branches, setBranches }: { plan: P
         </p>
         <p className="mt-2 text-[14px] text-muted-foreground">
           {founding !== null
-            ? d.pricing.foundingPrice
-            : cycle === 'annual'
+            ? fill(d.pricing.foundingPrice, { currency: cur, amount: formatMoney(foundingYearlyPrice(plan, branches)) })
+            : foundingOpen
+              ? d.pricing.foundingMonthlyHint
+              : cycle === 'annual'
               ? fill(d.pricing.perYear, { currency: cur, amount: formatMoney(yearlyPrice(plan, branches)) })
               : d.pricing.billedMonthly}
         </p>
