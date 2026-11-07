@@ -259,6 +259,9 @@ model vendors {
   next_plan             String?             @db.VarChar(10)
   next_billing_cycle    String?             @db.VarChar(7)
   founding_until        DateTime?           @db.Timestamptz(6)
+  paid_branches         Int?
+  next_paid_branches    Int?
+  next_keep             Json?
   admin_actions         admin_actions[]
   branches              branches[]
   cards                 cards[]
@@ -734,4 +737,42 @@ model platform_settings {
   updated_by      String?          @db.Uuid
   updated_at      DateTime         @default(now()) @db.Timestamptz(6)
   platform_admins platform_admins? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// Plan change requests (migration 35): the dvote team approves or rejects; CHECKs and the one-pending index live in SQL.
+model plan_requests {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id       String    @db.Uuid
+  requested_by    String    @db.Uuid
+  from_plan       String?   @db.VarChar(10)
+  from_cycle      String?   @db.VarChar(7)
+  from_branches   Int?
+  plan            String    @db.VarChar(10)
+  billing_cycle   String    @db.VarChar(7)
+  branches        Int
+  keep_branch_ids String[]  @default([]) @db.Uuid
+  keep_reward_ids String[]  @default([]) @db.Uuid
+  amount_due      Decimal   @default(0) @db.Decimal(12, 2)
+  period_price    Decimal   @db.Decimal(12, 2)
+  kind            String    @db.VarChar(10)
+  status          String    @default("pending") @db.VarChar(10)
+  reviewed_by     String?   @db.Uuid
+  reviewed_at     DateTime? @db.Timestamptz(6)
+  review_note     String?   @db.VarChar(500)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([status, created_at(sort: Desc)], map: "plan_requests_status_idx")
+}
+
+/// One row per billing reminder email sent (migration 35).
+model billing_reminders {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id  String   @db.Uuid
+  kind       String   @db.VarChar(20)
+  ends_at    DateTime @db.Timestamptz(6)
+  email      String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([vendor_id, kind, ends_at], map: "billing_reminders_once_uq")
 }

@@ -85,6 +85,8 @@ Test: `https://api.dvote.co/api/health` → ok. Until the API is live, storefron
 2. Create an API key (sending only).
 3. Supabase → Authentication → Emails → **SMTP**: host `smtp.resend.com`, port `465`, user `resend`, password = the API key, sender `no-reply@dvote.co`, name `dvote`.
 4. Rate limits: ~100 emails / hour. Test an invite and "Forgot password?".
+5. The API's own billing reminder emails use the same Resend account: Railway variables `RESEND_API_KEY` (a second sending-only key), `EMAIL_FROM=dvote <no-reply@dvote.co>`, `MERCHANT_WEB_URL=https://merchant.dvote.co`. Without the key no reminders are sent.
+6. After migration `35_plan_requests` on the cloud: re-run `database/supabase_lockdown.sql` (new tables `plan_requests`, `billing_reminders`).
 
 ## 8. Google Wallet
 1. Pay & Wallet Console → Google Wallet API → **Request publishing access** (website `https://dvote.co`, privacy `https://m.dvote.co/privacy`, screenshots of a pass).

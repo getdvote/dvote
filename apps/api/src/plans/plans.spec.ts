@@ -32,3 +32,22 @@ describe('billing helpers', () => {
     expect(addPeriod(new Date('2026-10-23T10:00:00Z'), 'annual').toISOString()).toBe('2027-10-23T10:00:00.000Z');
   });
 });
+
+import { periodStart, prorate } from './plans';
+
+describe('upgrade proration', () => {
+  const until = new Date('2026-12-01T00:00:00Z');
+  it('charges the price difference for the days left', () => {
+    // November has 30 days; 15 left on Loyal 999 → Chain 1,999
+    expect(prorate(999, 1999, until, 'monthly', new Date('2026-11-16T00:00:00Z'))).toBe(500);
+    expect(prorate(999, 1999, until, 'monthly', new Date('2026-11-01T00:00:00Z'))).toBe(1000);
+  });
+  it('charges nothing when the period is over or the price is not higher', () => {
+    expect(prorate(999, 1999, until, 'monthly', new Date('2026-12-02T00:00:00Z'))).toBe(0);
+    expect(prorate(1999, 999, until, 'monthly', new Date('2026-11-16T00:00:00Z'))).toBe(0);
+  });
+  it('finds the start of the period', () => {
+    expect(periodStart(until, 'monthly').toISOString()).toBe('2026-11-01T00:00:00.000Z');
+    expect(periodStart(until, 'annual').toISOString()).toBe('2025-12-01T00:00:00.000Z');
+  });
+});

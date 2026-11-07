@@ -202,7 +202,7 @@ export const PRIVACY: Record<'en' | 'ar', LegalDoc> = {
 export const TERMS: Record<'en' | 'ar', LegalDoc> = {
   en: {
     title: 'Terms of use',
-    updated: 'Last updated: 21 October 2026',
+    updated: 'Last updated: 7 November 2026',
     intro:
       'These terms apply when you join a shop’s loyalty card on dvote, use the card in Google Wallet or Apple Wallet, or use this website. By joining, you agree to them.',
     sections: [
@@ -270,8 +270,10 @@ export const TERMS: Record<'en' | 'ar', LegalDoc> = {
         bullets: [
           'A shop can create a dvote account on the merchant dashboard and use every feature free for 14 days. No payment card is needed for the trial.',
           'When the 14 days end, the account is locked until the shop subscribes to a paid plan: the dashboard shows only the subscription message, staff cannot scan cards, and the shop’s page and new sign-ups stop.',
-          'If no paid plan is active 30 days after sign-up, the shop’s account and all of its data are deleted for good and cannot be recovered: its branches, team, rewards, images, and its customers’ cards, points and history at that shop. Customers’ cards at other shops are not affected.',
-          'Plans are monthly and priced by the number of branches (see the pricing page on dvote.co). The shop is responsible for its own rewards and for what it tells its customers.',
+          'A locked account and its data are kept, so the shop can subscribe later and carry on. dvote may delete a locked trial account for good, with all of its data (its branches, team, rewards, images, and its customers’ cards, points and history at that shop), after telling the shop or when the shop asks. Customers’ cards at other shops are not affected.',
+          'Plans are paid monthly or yearly and priced by the number of branches the plan covers (see the pricing page on dvote.co). To change plan or add branches, the shop sends a request from its dashboard; it starts once dvote confirms the payment. Moving up costs the price difference for the days left in the paid period. Moving down starts at the end of the paid period: branches, rewards and team members beyond the new plan are closed, archived or switched off then (nothing is deleted), and features it doesn’t include stop.',
+          'dvote emails the shop 5 days before its trial or paid period ends, and again on the end date.',
+          'The shop is responsible for its own rewards and for what it tells its customers.',
         ],
       },
       {
@@ -286,7 +288,7 @@ export const TERMS: Record<'en' | 'ar', LegalDoc> = {
   },
   ar: {
     title: 'شروط الاستخدام',
-    updated: 'آخر تحديث: 21 أكتوبر 2026',
+    updated: 'آخر تحديث: 7 نوفمبر 2026',
     intro:
       'الشروط دي بتنطبق لما تشترك في كارت نقط محل على dvote، أو تستخدم الكارت في Google Wallet أو Apple Wallet، أو تستخدم الموقع ده. باشتراكك، إنت موافق عليها.',
     sections: [
@@ -354,8 +356,10 @@ export const TERMS: Record<'en' | 'ar', LegalDoc> = {
         bullets: [
           'المحل يقدر يعمل حساب على dvote من داشبورد التاجر ويستخدم كل المميزات مجانًا لمدة 14 يوم، من غير ما يدفع حاجة.',
           'لما الـ 14 يوم يخلصوا، الحساب بيتقفل لحد ما المحل يشترك في باقة مدفوعة: الداشبورد مش بيعرض غير رسالة الاشتراك، والموظفين ما يقدروش يعملوا سكان للكروت، وصفحة المحل والاشتراكات الجديدة بيقفوا.',
-          'لو مفيش باقة مدفوعة مفعّلة بعد 30 يوم من التسجيل، حساب المحل وكل بياناته بيتمسحوا نهائيًا وما يترجعوش: فروعه وفريقه ومكافآته وصوره، وكروت زباينه ونقطهم وسجلهم في المحل ده. كروت الزباين في المحلات التانية مش بتتأثر.',
-          'الباقات شهرية وسعرها حسب عدد الفروع (شوف صفحة الأسعار على dvote.co). المحل مسؤول عن مكافآته وعن اللي بيقوله لزباينه.',
+          'الحساب المقفول وبياناته بيفضلوا محفوظين، عشان المحل يقدر يشترك بعدين ويكمّل. dvote ممكن تمسح حساب تجربة مقفول نهائيًا بكل بياناته (فروعه وفريقه ومكافآته وصوره، وكروت زباينه ونقطهم وسجلهم في المحل ده) بعد ما تبلّغ المحل أو لما المحل يطلب. كروت الزباين في المحلات التانية مش بتتأثر.',
+          'الباقات بتتدفع شهري أو سنوي، وسعرها حسب عدد الفروع اللي الباقة بتغطيها (شوف صفحة الأسعار على dvote.co). عشان المحل يغيّر باقته أو يزوّد فروع، بيبعت طلب من الداشبورد، والتغيير بيبدأ أول ما dvote تأكد الدفع. الترقية بتتكلّف فرق السعر للأيام الباقية من المدة المدفوعة. التخفيض بيبدأ في آخر المدة المدفوعة: الفروع والمكافآت وأعضاء الفريق اللي زيادة عن الباقة الجديدة بيتقفلوا أو يتأرشفوا وقتها (من غير ما حاجة تتمسح)، والمميزات اللي مش فيها بتقف.',
+          'dvote بتبعت إيميل للمحل قبل ما التجربة أو المدة المدفوعة تخلص بـ 5 أيام، وتاني يوم ما تخلص.',
+          'المحل مسؤول عن مكافآته وعن اللي بيقوله لزباينه.',
         ],
       },
       {

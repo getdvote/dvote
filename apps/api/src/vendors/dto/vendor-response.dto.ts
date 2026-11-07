@@ -1,3 +1,4 @@
+import { PLAN_PRICES, quote, type BillingCycle, type Plan, type PriceQuote } from '../../plans/plans';
 import { ApiProperty } from '@nestjs/swagger';
 import type { vendors } from '../../generated/prisma/client.js';
 import { vendor_status } from '../../generated/prisma/enums.js';
@@ -60,7 +61,14 @@ export class VendorResponseDto {
   @ApiProperty({ type: String, nullable: true, enum: ['monthly', 'annual'] }) nextBillingCycle: string | null;
 
   @ApiProperty({ type: String, nullable: true }) trialEndsAt: string | null;
-  @ApiProperty({ type: String, nullable: true, description: 'Unpaid trial shops are deleted for good then' }) deleteAt: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Old rows only: trials are no longer deleted by themselves' }) deleteAt: string | null;
+  @ApiProperty({ type: Number, nullable: true, description: 'Open branches the paid plan covers (null = no limit)' }) paidBranches: number | null;
+  @ApiProperty({ type: Number, nullable: true, description: 'Branches the scheduled change covers' }) nextPaidBranches: number | null;
+  @ApiProperty({
+    nullable: true,
+    description: 'What the plan costs and what it is made of: base (incl. the first branch), extra branches, Launch Partner discount',
+  })
+  price: (PriceQuote & { branches: number; extraBranchPrice: number }) | null;
   @ApiProperty({ description: 'Signed up by itself (merchant.dvote.co/signup)' }) selfSignup: boolean;
 
   @ApiProperty({ description: 'Branches (any status)' })
@@ -104,6 +112,9 @@ export class VendorResponseDto {
       nextBillingCycle: v.next_billing_cycle,
       trialEndsAt: v.trial_ends_at?.toISOString() ?? null,
       deleteAt: v.delete_at?.toISOString() ?? null,
+      paidBranches: v.paid_branches,
+      nextPaidBranches: v.next_paid_branches,
+      price: priceOf(v),
       selfSignup: v.self_signup,
       branchCount: v._count.branches,
       staffCount: v._count.staff_users,
@@ -111,4 +122,15 @@ export class VendorResponseDto {
       updatedAt: v.updated_at.toISOString(),
     };
   }
+}
+
+/** The shop's price, itemised the same way as the merchant's Billing page. */
+function priceOf(v: vendors & { _count: { branches: number } }): VendorResponseDto['price'] {
+  if (!v.plan) return null;
+  const plan = v.plan as Plan;
+  const cycle = (v.billing_cycle as BillingCycle | null) ?? 'monthly';
+  const branches = Math.max(1, v.paid_branches ?? v._count.branches);
+  const founding = v.founding && !!v.founding_until && v.founding_until > new Date();
+  const p = PLAN_PRICES.find((x) => x.id === plan)!;
+  return { ...quote(plan, cycle, branches, founding), branches, extraBranchPrice: cycle === 'annual' ? p.extraBranch.annual : p.extraBranch.monthly };
 }

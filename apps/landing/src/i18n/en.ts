@@ -249,7 +249,7 @@ export const en = {
       { label: 'Extra branches', values: ['+EGP 299/mo (249 annual)', '+EGP 399/mo (333 annual)', '+EGP 499/mo (416 annual)'] },
     ],
     faq: [
-      { q: 'How does the free trial work?', a: 'Sign up and use every feature for 14 days with nothing to pay. At the end you pick a plan. If you don’t, the dashboard closes and the trial shop is deleted after 30 days.' },
+      { q: 'How does the free trial work?', a: 'Sign up and use every feature for 14 days with nothing to pay. At the end you pick a plan. If you don’t, the dashboard closes until you subscribe; your shop and data are kept.' },
       { q: 'Can I change plans later?', a: 'Yes. Move up or down at any time; the new price applies from your next bill.' },
       { q: 'How does annual billing work?', a: 'Pay for 10 months and get 12, about 17% less than paying monthly. The price per month is shown when you pick Annual.' },
       { q: 'How are branches priced?', a: 'Each plan price includes your first branch. Every extra branch adds EGP 299 on Regular, EGP 399 on Loyal or EGP 499 on Chain per month. No branch limits on any plan.' },

@@ -90,3 +90,29 @@ export function quote(plan: Plan, cycle: BillingCycle, branches: number, foundin
   const perPeriod = cycle === 'annual' ? off(p.annualTotal) + extraBranches * 12 : monthly;
   return { base, extraBranches, monthly, perPeriod, foundingApplied: founding };
 }
+
+/** The start of the paid period that ends at `paidUntil` (one month or year before it). */
+export function periodStart(paidUntil: Date, cycle: BillingCycle): Date {
+  const months = cycle === 'annual' ? 12 : 1;
+  const d = new Date(paidUntil);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, lastDay));
+  return d;
+}
+
+/**
+ * What an upgrade costs now (decided 2026-11-07): the difference between the new and the current
+ * price per period, for the share of the paid period that is left. Rounded up to whole EGP; 0 when
+ * the period is over or the new price is not higher.
+ */
+export function prorate(currentPerPeriod: number, newPerPeriod: number, paidUntil: Date, cycle: BillingCycle, now = new Date()): number {
+  const start = periodStart(paidUntil, cycle).getTime();
+  const total = paidUntil.getTime() - start;
+  const left = Math.min(Math.max(paidUntil.getTime() - now.getTime(), 0), total);
+  const diff = newPerPeriod - currentPerPeriod;
+  if (diff <= 0 || left <= 0 || total <= 0) return 0;
+  return Math.ceil((diff * left) / total);
+}
