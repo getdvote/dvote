@@ -412,7 +412,8 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       await trial.run();
       await trial.run();
       expect(mine()).toHaveLength(1);
-      expect(mine()[0].subject).toContain('Your dvote free trial ends');
+      expect(mine()[0].subject).toContain('trial ends');
+      expect(mine()[0].text).toContain('Hi Omar,');
       expect(mine()[0].text).toContain('/settings?tab=billing');
       expect(mine()[0].html).toContain('dir="rtl"');
 
@@ -424,7 +425,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       mail.fail = false;
       await trial.run();
       expect(mine()).toHaveLength(2);
-      expect(mine()[1].subject).toContain('free trial has ended');
+      expect(mine()[1].subject).toContain('trial ended');
 
       // a paid period: 5 days before, then on the end date
       await plan(adminToken, vendorId, { action: 'activate', plan: 'regular', billingCycle: 'monthly' }).expect(200);
@@ -432,7 +433,7 @@ describe('Self sign-up, 14-day free trial, plan activation and deletion of unpai
       await trial.run();
       await prisma.vendors.update({ where: { id: vendorId }, data: { paid_until: new Date(Date.now() - 1000) } });
       await trial.run();
-      expect(mine().slice(2).map((e) => e.subject.split(' · ')[1])).toEqual([expect.stringContaining('renews'), 'Your dvote subscription has ended']);
+      expect(mine().slice(2).map((e) => e.subject.split(' · ')[1])).toEqual([expect.stringContaining('renews'), 'subscription ended']);
       expect(await prisma.billing_reminders.count({ where: { vendor_id: vendorId } })).toBe(4);
     } finally {
       mail.enabled = false;

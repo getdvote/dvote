@@ -151,6 +151,11 @@ export class Env {
   @IsString()
   EMAIL_FROM?: string;
 
+  /** Where replies to the API's emails go. Default getdvote@gmail.com. */
+  @IsOptional()
+  @IsString()
+  EMAIL_REPLY_TO?: string;
+
   /** The merchant dashboard, linked from the emails. Default https://merchant.dvote.co. */
   @IsOptional()
   @IsUrl({ require_tld: false, require_protocol: true })

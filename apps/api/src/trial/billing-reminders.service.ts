@@ -39,8 +39,9 @@ export class BillingRemindersService {
     if (!this.email.enabled) return 0;
     let sent = 0;
     for (const due of await this.due(now)) {
-      const to = await this.recipient(due.vendorId);
-      if (!to) continue;
+      const person = await this.recipient(due.vendorId);
+      if (!person) continue;
+      const to = person.email;
       // claim it first, so two runs never send the same email
       const claimed = await this.prisma.$executeRaw`
         INSERT INTO billing_reminders (vendor_id, kind, ends_at, email)
@@ -48,7 +49,7 @@ export class BillingRemindersService {
         ON CONFLICT (vendor_id, kind, ends_at) DO NOTHING`;
       if (!claimed) continue;
       try {
-        await this.email.send({ to, ...reminderEmail(due, this.merchantUrl()) });
+        await this.email.send({ to, ...reminderEmail(due, this.merchantUrl(), person.name) });
         sent++;
       } catch (err) {
         // not sent: forget the claim so the next run tries again
@@ -78,12 +79,12 @@ export class BillingRemindersService {
     ];
   }
 
-  /** The shop's merchant admin, else the shop's contact email. */
-  private async recipient(vendorId: string): Promise<string | null> {
-    const admin = await this.prisma.staff_users.findFirst({ where: { vendor_id: vendorId, role: 'vendor_admin', status: 'active' }, select: { email: true } });
-    if (admin?.email) return admin.email;
+  /** The shop's merchant admin (with their name for the greeting), else the shop's contact email. */
+  private async recipient(vendorId: string): Promise<{ email: string; name: string | null } | null> {
+    const admin = await this.prisma.staff_users.findFirst({ where: { vendor_id: vendorId, role: 'vendor_admin', status: 'active' }, select: { email: true, name: true } });
+    if (admin?.email) return { email: admin.email, name: admin.name };
     const v = await this.prisma.vendors.findUnique({ where: { id: vendorId }, select: { contact_email: true } });
-    return v?.contact_email ?? null;
+    return v?.contact_email ? { email: v.contact_email, name: null } : null;
   }
 
   private merchantUrl(): string {
@@ -97,45 +98,67 @@ function dateText(d: Date, lang: 'ar' | 'en') {
   return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Cairo' }).format(d);
 }
 
-/** Arabic first (the dashboard's default language), then English. */
-export function reminderEmail(due: Due, merchantUrl: string): { subject: string; html: string; text: string } {
+/** The colour logo for white emails (built by docs/email-templates/src/build-assets.mjs). */
+export const EMAIL_LOGO_URL = 'https://dvote.co/email/logo-colour.png';
+
+/**
+ * Arabic first (the dashboard's default language), then English. Written like an account email: white,
+ * a small logo and slogan, a greeting by name, a text link (no banner or big button), a quiet footer.
+ * Inbox providers sort that as a personal / transactional message rather than marketing.
+ */
+export function reminderEmail(due: Due, merchantUrl: string, personName: string | null = null, logoUrl = EMAIL_LOGO_URL): { subject: string; html: string; text: string } {
   const ar = dateText(due.endsAt, 'ar');
   const en = dateText(due.endsAt, 'en');
   const link = `${merchantUrl}/settings?tab=billing`;
   const lock = BILLING.graceDays;
+  const first = personName?.trim().split(/\s+/)[0] || null;
   const texts: Record<ReminderKind, { subject: string; ar: string; en: string }> = {
     trial_soon: {
-      subject: `تجربتك المجانية على dvote بتخلص ${ar} · Your dvote free trial ends ${en}`,
-      ar: `التجربة المجانية لـ ${due.name} بتخلص يوم ${ar}. اختار باقة وكلّمنا عشان تدفع، علشان لوحة التحكم والمسح يفضلوا شغالين.`,
-      en: `The free trial for ${due.name} ends on ${en}. Pick a plan and contact us to pay, so your dashboard and scanning keep working.`,
+      subject: `${due.name}: تجربة dvote بتخلص ${ar} · trial ends ${en}`,
+      ar: `التجربة المجانية لـ ${due.name} بتخلص يوم ${ar}. عشان لوحة التحكم والمسح يفضلوا شغالين، اختار باقة من صفحة الاشتراك وكلّمنا عشان الدفع.`,
+      en: `The free trial for ${due.name} ends on ${en}. To keep your dashboard and scanning working, pick a plan on your billing page and contact us to pay.`,
     },
     trial_ended: {
-      subject: `تجربتك المجانية على dvote خلصت · Your dvote free trial has ended`,
-      ar: `التجربة المجانية لـ ${due.name} خلصت يوم ${ar}، ولوحة التحكم والمسح اتقفلوا. بياناتك محفوظة: اشترك في باقة وهنفتحلك المحل تاني.`,
-      en: `The free trial for ${due.name} ended on ${en}, so the dashboard and scanning are locked. Your data is kept: subscribe to a plan and we'll open the shop again.`,
+      subject: `${due.name}: تجربة dvote خلصت · trial ended`,
+      ar: `التجربة المجانية لـ ${due.name} خلصت يوم ${ar}، فلوحة التحكم والمسح اتقفلوا. بياناتك محفوظة، وأول ما تشترك في باقة هنفتحلك المحل تاني.`,
+      en: `The free trial for ${due.name} ended on ${en}, so the dashboard and scanning are locked. Your data is kept, and once you subscribe to a plan we'll open the shop again.`,
     },
     paid_soon: {
-      subject: `اشتراكك في dvote بيتجدد ${ar} · Your dvote subscription renews ${en}`,
+      subject: `${due.name}: اشتراك dvote بيتجدد ${ar} · renews ${en}`,
       ar: `اشتراك ${due.name} مدفوع لحد ${ar}. كلّمنا عشان تجدد قبلها، علشان ما يحصلش أي توقف.`,
       en: `The subscription for ${due.name} is paid until ${en}. Contact us to renew before then so nothing stops.`,
     },
     paid_ended: {
-      subject: `اشتراكك في dvote خلص · Your dvote subscription has ended`,
-      ar: `اشتراك ${due.name} خلص يوم ${ar}. عندك ${lock} أيام قبل ما لوحة التحكم والمسح يتقفلوا. جدد اشتراكك دلوقتي.`,
-      en: `The subscription for ${due.name} ended on ${en}. You have ${lock} days before the dashboard and scanning lock. Renew now.`,
+      subject: `${due.name}: اشتراك dvote خلص · subscription ended`,
+      ar: `اشتراك ${due.name} خلص يوم ${ar}. عندك ${lock} أيام قبل ما لوحة التحكم والمسح يتقفلوا، فجدد اشتراكك قبلها.`,
+      en: `The subscription for ${due.name} ended on ${en}. You have ${lock} days before the dashboard and scanning lock, so please renew before then.`,
     },
   };
   const t = texts[due.kind];
-  const button = (label: string) =>
-    `<a href="${esc(link)}" style="display:inline-block;background:#1F3DFF;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px">${label}</a>`;
-  const html = `<!doctype html><html><body style="margin:0;background:#F8F4F1;font-family:Arial,Helvetica,sans-serif;color:#18100F">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;padding:32px">
-<tr><td style="font-size:22px;font-weight:700;padding-bottom:24px">dvote</td></tr>
-<tr><td dir="rtl" style="text-align:right;font-size:16px;line-height:1.7;padding-bottom:16px">${esc(t.ar)}</td></tr>
-<tr><td dir="rtl" style="text-align:right;padding-bottom:28px">${button('افتح صفحة الاشتراك')}</td></tr>
-<tr><td style="border-top:1px solid #EFE9E3;padding-top:24px;font-size:15px;line-height:1.6;padding-bottom:16px">${esc(t.en)}</td></tr>
-<tr><td>${button('Open billing')}</td></tr>
-</table></td></tr></table></body></html>`;
-  return { subject: t.subject, html, text: `${t.ar}\n\n${t.en}\n\n${link}` };
+  const hiAr = first ? `أهلًا ${first}،` : 'أهلًا،';
+  const hiEn = first ? `Hi ${first},` : 'Hi,';
+  const a = (label: string) => `<a href="${esc(link)}" style="color:#1F3DFF">${label}</a>`;
+  const p = 'margin:0 0 14px;font-size:15px;line-height:1.6';
+  const small = 'margin:0;font-size:12px;line-height:1.6;color:#6B5F57';
+  const html = `<!doctype html><html><body style="margin:0;padding:24px 16px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#18100F">
+<div style="max-width:560px">
+<a href="https://dvote.co" style="text-decoration:none"><img src="${logoUrl}" width="104" height="33" alt="dvote" style="display:block;border:0"></a>
+<p style="${small};margin:6px 0 24px">Loyalty cards in your customers' wallet · كروت ولاء في محفظة زباينك</p>
+<div dir="rtl" style="text-align:right">
+<p style="${p}">${esc(hiAr)}</p>
+<p style="${p}">${esc(t.ar)}</p>
+<p style="${p}">صفحة الاشتراك: ${a(esc(link))}</p>
+<p style="${p}">لو عندك أي سؤال، رد على الإيميل ده.<br>فريق dvote</p>
+</div>
+<hr style="border:none;border-top:1px solid #EFE9E3;margin:24px 0">
+<p style="${p}">${esc(hiEn)}</p>
+<p style="${p}">${esc(t.en)}</p>
+<p style="${p}">Your billing page: ${a(esc(link))}</p>
+<p style="${p}">Any questions? Just reply to this email.<br>The dvote team</p>
+<hr style="border:none;border-top:1px solid #EFE9E3;margin:24px 0 16px">
+<p style="${small}">You get this email because you manage ${esc(due.name)} on dvote. · وصلك الإيميل ده عشان إنت مسؤول ${esc(due.name)} على dvote.</p>
+<p style="${small};margin-top:6px">dvote · Made in Egypt · <a href="https://dvote.co" style="color:#6B5F57">dvote.co</a></p>
+</div></body></html>`;
+  const text = `${hiAr}\n\n${t.ar}\n\nصفحة الاشتراك: ${link}\n\nلو عندك أي سؤال، رد على الإيميل ده.\nفريق dvote\n\n---\n\n${hiEn}\n\n${t.en}\n\nYour billing page: ${link}\n\nAny questions? Just reply to this email.\nThe dvote team\n\n---\nYou get this email because you manage ${due.name} on dvote. dvote · Made in Egypt · https://dvote.co`;
+  return { subject: t.subject, html, text };
 }
